@@ -1,0 +1,189 @@
+{
+  "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py.",
+  "spots": [
+    {
+      "id": "grotfjord",
+      "name": "Grøtfjord",
+      "area": "Kvaløya",
+      "enabled": true,
+      "spot": {
+        "lat": 69.77881795520848,
+        "lon": 18.535261165845586
+      },
+      "offshore": {
+        "lat": 69.866,
+        "lon": 18.1098
+      },
+      "barentswatch_point": {
+        "lat": 69.7786019375892,
+        "lon": 18.53546451183891
+      },
+      "swell_window": [
+        291,
+        310
+      ],
+      "offshore_wind": [
+        76,
+        166
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Stranda vender mot VNV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        291,
+        310
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 19 km ut, retning 300.5 grader."
+    },
+    {
+      "id": "ersfjordstranda",
+      "name": "Ersfjordstranda",
+      "area": "Senja",
+      "enabled": true,
+      "spot": {
+        "lat": 69.48391859134674,
+        "lon": 17.399405245844136
+      },
+      "offshore": {
+        "lat": 69.5764,
+        "lon": 17.0514
+      },
+      "barentswatch_point": null,
+      "swell_window": [
+        294,
+        320
+      ],
+      "offshore_wind": [
+        90,
+        180
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Stranda i bunnen av bukta vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        294,
+        323
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 17 km ut, retning 307.0 grader."
+    },
+    {
+      "id": "russelv",
+      "name": "Russelv",
+      "area": "Lyngen",
+      "enabled": true,
+      "spot": {
+        "lat": 69.94838010045854,
+        "lon": 20.219788523026782
+      },
+      "offshore": {
+        "lat": 70.3581,
+        "lon": 20.4291
+      },
+      "barentswatch_point": null,
+      "swell_window": [
+        [
+          5,
+          15
+        ],
+        [
+          349,
+          356
+        ]
+      ],
+      "offshore_wind": [
+        90,
+        180
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Stranda vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        348,
+        19
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 46 km ut, retning 10.0 grader."
+    },
+    {
+      "id": "lenangsoyra",
+      "name": "Lenangsøyra",
+      "area": "Lyngen",
+      "enabled": true,
+      "spot": {
+        "lat": 69.84748282299432,
+        "lon": 19.989858393792392
+      },
+      "offshore": {
+        "lat": 70.3349,
+        "lon": 20.4737
+      },
+      "barentswatch_point": null,
+      "swell_window": [
+        15,
+        23
+      ],
+      "offshore_wind": [
+        155,
+        245
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Spoten ligger ytterst på et nes som peker mot NNØ, land bak mot SSV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        12,
+        23
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 57 km ut, retning 19.0 grader."
+    },
+    {
+      "id": "steinkrossa",
+      "name": "Steinkrøssa",
+      "area": "Senja",
+      "enabled": true,
+      "spot": {
+        "lat": 69.49170665860727,
+        "lon": 17.258503590863537
+      },
+      "offshore": {
+        "lat": 69.6125,
+        "lon": 17.1506
+      },
+      "barentswatch_point": null,
+      "swell_window": [
+        316,
+        9
+      ],
+      "offshore_wind": [
+        175,
+        265
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Kysten vender mot NØ inn i bukta (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        316,
+        9
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 14 km ut, retning 342.5 grader."
+    }
+  ]
+}

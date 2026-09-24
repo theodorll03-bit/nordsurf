@@ -1,0 +1,6 @@
+{
+  "_info": "Varsler sendes når en spot får minst min_stars i brukbart lys innen hours_ahead timer. Tom spots-liste betyr alle spots.",
+  "min_stars": 3,
+  "hours_ahead": 36,
+  "spots": []
+}

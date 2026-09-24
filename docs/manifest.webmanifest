@@ -1,0 +1,10 @@
+{
+  "name": "Nordsurf",
+  "short_name": "Nordsurf",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0F1B21",
+  "theme_color": "#0F1B21",
+  "lang": "nb",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

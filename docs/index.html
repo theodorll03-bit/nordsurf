@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F1F3F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1B21" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Nordsurf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --surface:#F1F3F2; --raised:#FFFFFF; --ink:#16252D; --muted:#52646C; --line:#D5DCDE;
+  --star:#A86F08; --night:#DDE3E5; --selected:#16252D; --on-selected:#FFFFFF;
+  --display:"Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body:system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  color-scheme: light dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
+    --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+  }
+}
+:root[data-theme="dark"]{
+  --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
+  --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--surface);color:var(--ink);font:17px/1.4 var(--body);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--star);outline-offset:2px;border-radius:6px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 120px}
+
+/* Sample-banner */
+.sample{margin:12px 0 0;padding:10px 14px;border:1px dashed var(--muted);border-radius:10px;font-size:15px;color:var(--muted)}
+
+/* Topp */
+header.top{padding:20px 0 8px}
+.back{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 8px 0 0;background:none;border:0;color:var(--ink);font-size:17px;cursor:pointer}
+h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
+.sub{color:var(--muted);font-size:15px;margin:0}
+
+/* Stjerner: signaturelementet */
+.stars{display:inline-flex;gap:3px;vertical-align:middle}
+.stars svg{width:22px;height:22px;display:block}
+.stars.big svg{width:34px;height:34px}
+.st-solid{fill:var(--star);stroke:var(--star);stroke-width:1.2}
+.st-faded{fill:none;stroke:var(--star);stroke-width:1.6;stroke-dasharray:2.4 2;opacity:.8}
+.st-empty{fill:none;stroke:var(--line);stroke-width:1.4}
+
+/* Spotliste */
+.list{margin:16px 0;background:var(--raised);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%;text-align:left;padding:14px 16px;min-height:44px;background:none;border:0;border-top:1px solid var(--line);cursor:pointer}
+.row:first-child{border-top:0}
+.row:active{background:var(--surface)}
+.row .name{font:700 21px/1.2 var(--display)}
+.row .area{color:var(--muted);font-size:15px}
+.row .facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted);font-size:15px}
+.row .best{grid-column:1/-1;font-size:15px}
+.chev{color:var(--muted);font-size:22px;line-height:1}
+
+/* Detalj */
+.now{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 4px}
+.verdict{font-size:17px;margin:6px 0 0}
+.warn{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;background:var(--raised);border-radius:12px;font-size:15px}
+.warn b{font-weight:600}
+
+/* Timestripe med lys og mørke */
+.strip-wrap{margin:20px -16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.strip-wrap::-webkit-scrollbar{display:none}
+.strip{display:flex;padding:0 16px;gap:0}
+.day{display:flex;flex-direction:column;padding-right:10px}
+.day-label{font-size:13px;color:var(--muted);height:20px;padding-left:2px;white-space:nowrap}
+.hours{display:flex}
+.h{width:30px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:6px 0 4px;background:none;border:0;cursor:pointer;border-radius:8px}
+.h.dark{background:var(--night)}
+.h.dusk{background:color-mix(in srgb,var(--night) 50%,transparent)}
+.h.sel{background:var(--selected);color:var(--on-selected)}
+.bar{width:14px;display:flex;flex-direction:column-reverse;gap:2px}
+.pip{height:12px;border-radius:3px;background:var(--star)}
+.pip.f{background:none;border:1.5px dashed var(--star)}
+.pip.z{height:3px;background:var(--line)}
+.h .hl{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.h.sel .hl{color:var(--on-selected)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:10px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* Detaljgrid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:18px 0 0;background:var(--line);border-radius:14px;overflow:hidden}
+.cell{background:var(--raised);padding:12px 14px}
+.cell .k{font-size:13px;color:var(--muted)}
+.cell .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.cell .n{font-size:13px;color:var(--muted);margin-top:2px}
+.cell.wide{grid-column:1/-1}
+
+/* Verktøylinje nederst */
+.toolbar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none}
+.toolbar[hidden]{display:none}
+.primary{pointer-events:auto;min-height:50px;padding:0 28px;border:0;border-radius:25px;background:var(--selected);color:var(--on-selected);font-weight:600;font-size:17px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+
+/* Tabbar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:6px 16px calc(6px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+@media (prefers-reduced-transparency: reduce){nav.tabs{background:var(--surface);backdrop-filter:none}}
+.tab{flex:0 1 160px;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer}
+.tab svg{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--ink)}
+body.has-tabs .toolbar{bottom:64px}
+
+/* Ark (sheet) */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92%;overflow:auto;background:var(--raised);border-radius:16px 16px 0 0;padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(100%);visibility:hidden;transition:transform .28s ease,visibility 0s .28s}
+.sheet.open{transform:none;visibility:visible;transition:transform .28s ease}
+.scrim.open{display:block}
+@media (prefers-reduced-motion: reduce){.sheet{transition:none}}
+.grabber{width:36px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 8px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.sheet-head h2{font:700 20px/1.2 var(--display);margin:0}
+.link{background:none;border:0;min-height:44px;padding:0 4px;color:var(--ink);font-size:17px;cursor:pointer}
+.field{margin:18px 0 0}
+.field > .lbl{font-size:15px;color:var(--muted);margin:0 0 8px}
+.starpick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.starpick button{min-height:56px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:var(--muted)}
+.starpick button b{font-size:20px;color:var(--ink)}
+.starpick button[aria-pressed="true"]{border-color:var(--selected);background:var(--selected)}
+.starpick button[aria-pressed="true"] b,.starpick button[aria-pressed="true"]{color:var(--on-selected)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;font-size:15px}
+.chips button[aria-pressed="true"]{border-color:var(--selected);background:var(--selected);color:var(--on-selected)}
+select,input[type="datetime-local"]{font:inherit;font-size:17px;min-height:44px;width:100%;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.save{width:100%;margin-top:24px}
+.save:disabled{opacity:.4}
+
+/* Logger */
+h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
+.calib{background:var(--raised);border-radius:14px;padding:14px 16px;margin:0 0 10px}
+.calib .t{font-weight:600}
+.calib p{margin:4px 0 0;color:var(--muted);font-size:15px}
+.logrow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.logrow:first-child{border-top:0}
+.logrow .m{color:var(--muted);font-size:15px;grid-column:1/-1}
+.del{background:none;border:0;color:var(--muted);min-height:44px;min-width:44px;cursor:pointer;font-size:15px}
+.empty{color:var(--muted);padding:18px 16px;margin:0}
+.toast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:var(--selected);color:var(--on-selected);padding:10px 18px;border-radius:20px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.form{background:var(--raised);border-radius:14px;padding:14px 16px;margin:0 0 10px}
+.form label{display:block;font-size:15px;color:var(--muted);margin:10px 0 6px}
+.form input[type=text],.form input[type=password]{font:inherit;font-size:17px;min-height:44px;width:100%;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.form p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.ghost{background:none;border:1.5px solid var(--line);border-radius:22px;min-height:44px;padding:0 18px;cursor:pointer;font-size:15px}
+</style>
+</head>
+<body class="has-tabs">
+<main class="wrap" id="app" aria-live="polite"></main>
+
+<nav class="tabs" aria-label="Hovedmeny">
+  <button class="tab" data-tab="varsel" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 16c2.2 0 2.2-1.6 4.4-1.6S8.6 16 10.8 16s2.2-1.6 4.4-1.6S17.4 16 19.6 16 22 14.4 22 14.4V18c0 .2-.2 1.6-2.4 1.6s-2.2-1.6-4.4-1.6-2.2 1.6-4.4 1.6S8.6 18 6.4 18 4.2 19.6 2 19.6zM4 12.5C4 8.4 7.4 5 11.5 5c2.4 0 4.6 1.2 6 3-3-.8-6.2.6-7.5 3.5-.6 1.3-.8 2.4-.8 3.2-1.4-.5-3.3-.8-5.2-.9 0-.1 0-.2 0-.3z"/></svg>
+    Varsel
+  </button>
+  <button class="tab" data-tab="logger">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>
+    Logger
+  </button>
+  <button class="tab" data-tab="innstillinger">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.1 6.8l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg>
+    Innstillinger
+  </button>
+</nav>
+
+<div class="toolbar" id="toolbar" hidden><button class="primary" id="logBtn">Logg økt</button></div>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <button class="link" id="cancelLog">Avbryt</button>
+    <h2 id="sheetTitle">Logg økt</h2>
+    <span style="width:60px"></span>
+  </div>
+  <div class="field"><p class="lbl">Spot</p><select id="logSpot"></select></div>
+  <div class="field"><p class="lbl">Når</p><input type="datetime-local" id="logTime"></div>
+  <div class="field"><p class="lbl">Hvor bra var det?</p><div class="starpick" id="starPick"></div></div>
+  <div class="field"><p class="lbl">Størrelse (valgfritt)</p><div class="chips" data-group="size"></div></div>
+  <div class="field"><p class="lbl">Vind (valgfritt)</p><div class="chips" data-group="wind"></div></div>
+  <button class="primary save" id="saveLog" disabled>Lagre økt</button>
+</section>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ---------- Oppsett ---------- */
+const TZ = "Europe/Oslo";
+const LOG_KEY = "nordsurf.logs.v1";
+const SIZES = ["Flatt","Knehøy","Hoftehøy","Brysthøy","Over hodet"];
+const WINDS = ["Offshore","Onshore","Rotete","Blankt"];
+const SIZE_M = {"Flatt":0, "Knehøy":0.5, "Hoftehøy":0.9, "Brysthøy":1.3, "Over hodet":2.0};
+const MIN_SIZE_LOGS = 5;
+const STAR_WORDS = ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"];
+const PICK_WORDS = ["Flatt","Dårlig","Ok","Bra","Topp","Rått"];
+const WIND_WORD = {offshore:"offshore", onshore:"onshore", sideonshore:"side-onshore"};
+const $ = s => document.querySelector(s);
+const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
+const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
+const fmtHour = new Intl.DateTimeFormat("nb-NO",{hour:"2-digit",timeZone:TZ});
+const fmtTime = new Intl.DateTimeFormat("nb-NO",{hour:"2-digit",minute:"2-digit",timeZone:TZ});
+const fmtDay = new Intl.DateTimeFormat("nb-NO",{weekday:"long",timeZone:TZ});
+const fmtDate = new Intl.DateTimeFormat("nb-NO",{weekday:"short",day:"numeric",month:"short",timeZone:TZ});
+const dayKey = d => new Intl.DateTimeFormat("sv-SE",{timeZone:TZ}).format(d);
+
+let DATA = null, state = {tab:"varsel", spot:null, sel:0}, logDraft = {};
+
+function compass(deg){
+  if(deg==null) return "–";
+  const n=["N","NNØ","NØ","ØNØ","Ø","ØSØ","SØ","SSØ","S","SSV","SV","VSV","V","VNV","NV","NNV"];
+  return n[Math.round(((deg%360)+360)%360/22.5)%16];
+}
+function relDay(d){
+  const today = dayKey(new Date()), k = dayKey(d);
+  const tmr = dayKey(new Date(Date.now()+864e5));
+  if(k===today) return "i dag";
+  if(k===tmr) return "i morgen";
+  return fmtDay.format(d);
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+/* ---------- Stjerner ---------- */
+const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
+function starsSVG(solid, faded, big){
+  let out = "";
+  for(let i=0;i<5;i++){
+    const cls = i<solid ? "st-solid" : i<solid+faded ? "st-faded" : "st-empty";
+    out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" d="${STAR_PATH}"/></svg>`;
+  }
+  const label = `${solid} av 5 stjerner` + (faded ? `, ${faded} tapt på vind eller tidevann` : "");
+  return `<span class="stars${big?" big":""}" role="img" aria-label="${label}">${out}</span>`;
+}
+
+/* ---------- Beste vindu ---------- */
+function bestWindow(spot){
+  const hrs = spot.hours.filter(h => h.daylight !== false && new Date(h.t) >= new Date(Date.now()-36e5));
+  if(!hrs.length) return null;
+  const max = Math.max(...hrs.map(h=>h.stars));
+  if(max < 2) return {none:true};
+  let start=null, end=null;
+  for(const h of hrs){
+    const gap = end ? new Date(h.t) - new Date(end.t) : 0;
+    if(h.stars===max && (!start || gap<=36e5)){ if(!start) start=h; end=h; }
+    else if(start) break;
+  }
+  return {stars:max, start:new Date(start.t), end:new Date(new Date(end.t).getTime()+36e5)};
+}
+function bestText(spot){
+  const b = bestWindow(spot);
+  if(!b) return "Ingen data i lyse timer";
+  if(b.none) return "Ingen brukbare vinduer de neste tre dagene";
+  return `Best ${relDay(b.start)} ${fmtHour.format(b.start)}–${fmtHour.format(b.end)}, ${b.stars} ${b.stars===1?"stjerne":"stjerner"}`;
+}
+function currentHour(spot){
+  const now = Date.now();
+  let idx = spot.hours.findIndex(h => new Date(h.t).getTime() + 36e5 > now);
+  return Math.max(0, idx);
+}
+
+/* ---------- Visninger ---------- */
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current", t.dataset.tab===state.tab ? "page" : "false"));
+  $("#toolbar").hidden = !(state.tab==="varsel" && state.spot!=null);
+  if(state.tab==="logger") return renderLogs();
+  if(state.tab==="innstillinger") return renderSettings();
+  if(state.spot!=null) return renderSpot();
+  renderList();
+}
+
+function sampleBanner(){
+  return DATA.sample ? `<p class="sample"><b>Oppdiktet vær, ikke dagens varsel.</b> Dette er bare for å vise hvordan appen ser ut. Ekte varsel kommer når henteren har kjørt.</p>` : "";
+}
+
+function renderList(){
+  const gen = new Date(DATA.generated);
+  let rows = DATA.spots.map((s,i)=>{
+    const h = s.hours[currentHour(s)];
+    if(!h) return "";
+    const facts = [
+      h.height!=null ? `${nf1.format(h.height)} m` : null,
+      h.period!=null ? `${nf0.format(h.period)} s` : null,
+      h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
+    ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
+    return `<button class="row" data-spot="${i}">
+      <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
+      <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
+      <span class="facts">${facts}${h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":"")}</span>
+      <span class="best">${bestText(s)}</span>
+    </button>`;
+  }).join("");
+  $("#app").innerHTML = `${sampleBanner()}
+    <header class="top"><h1>Varsel</h1><p class="sub">${DATA.sample?"Eksempel, ikke ekte data":`Oppdatert ${relDay(gen)} kl. ${fmtTime.format(gen)}`}</p></header>
+    <div class="list">${rows}</div>`;
+  document.querySelectorAll(".row").forEach(b=>b.onclick=()=>{
+    state.spot = +b.dataset.spot; state.sel = currentHour(DATA.spots[state.spot]); render(); window.scrollTo(0,0);
+  });
+}
+
+function heightSourceText(h){
+  if(h.height_source==="barentswatch") return "BarentsWatch";
+  if(h.height_source==="svell_ute") return `Svell ute × ${nf1.format(h.transfer).replace(/,0$/,"")}${h.turn>=10?", dreiing":""}`;
+  return h.turn!=null && h.turn>=10 ? "met.no, justert" : "met.no";
+}
+function nextTide(spot, t){
+  const after = (spot.tide_events||spot.tide||[]).filter(x=>new Date(x.time) >= t);
+  return after[0] || null;
+}
+function lightClass(x){
+  const l = x.light || (x.daylight===false ? "mørkt" : "dag");
+  return l==="mørkt" ? " dark" : l==="skumring" ? " dusk" : "";
+}
+function lightText(spot, t){
+  const d = (spot.light_days||{})[dayKey(t)];
+  if(!d) return {k:"Lys", v:"–", n:""};
+  if(!d.start) return {k:"Lys", v:"Mørkt hele dagen", n:"Ingen brukbart lys"};
+  return {k:"Brukbart lys", v:`${fmtTime.format(new Date(d.start))}–${fmtTime.format(new Date(d.end))}`,
+    n: d.sun ? "Fra skumring til skumring" : "Mørketid, bare skumring"};
+}
+
+function renderSpot(){
+  const s = DATA.spots[state.spot];
+  const h = s.hours[state.sel];
+  const t = new Date(h.t);
+  const fw = h.faded_wind ?? h.faded, ft = h.faded_tide ?? 0;
+  const losses = [fw?`${WIND_WORD[h.wind_type]||""}vinden tar ${fw}`:null, ft?`tidevannet tar ${ft}`:null].filter(Boolean);
+  const verdict = h.faded
+    ? `${STAR_WORDS[h.stars]}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
+    : `${STAR_WORDS[h.stars]}.`;
+
+  // Timestripe gruppert per dag
+  const days = {};
+  s.hours.forEach((x,i)=>{ const k=dayKey(new Date(x.t)); (days[k]=days[k]||[]).push([x,i]); });
+  const strip = Object.values(days).map(list=>{
+    const d = new Date(list[0][0].t);
+    const cols = list.map(([x,i])=>{
+      let pips = "";
+      for(let k=0;k<x.stars;k++) pips += `<span class="pip"></span>`;
+      for(let k=0;k<x.faded;k++) pips += `<span class="pip f"></span>`;
+      if(!x.stars && !x.faded) pips = `<span class="pip z"></span>`;
+      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}`;
+      return `<button class="h${lightClass(x)}${i===state.sel?" sel":""}" data-i="${i}" aria-label="${lbl}" aria-pressed="${i===state.sel}">
+        <span class="bar">${pips}</span><span class="hl">${fmtHour.format(new Date(x.t))}</span></button>`;
+    }).join("");
+    return `<div class="day"><span class="day-label">${relDay(d)}</span><div class="hours">${cols}</div></div>`;
+  }).join("");
+
+  // Advarsel om dreining
+  let warn = "";
+  if(h.height_source==="barentswatch"){
+    warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.</span></div>`;
+  } else if(h.likely_flat && (h.turn==null || h.turn<=25)){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${h.dir_offshore}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
+  } else if(h.likely_flat){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet dreier ${h.turn}° inn i bukta.</b> Så stor dreining betyr som regel at det er mye mindre enn modellene viser. Høyden er justert kraftig ned.</span></div>`;
+  } else if(h.uncertain){
+    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> Svellet dreier ${h.turn}° og høyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
+  }
+
+  const tide = nextTide(s,t);
+  const lt = lightText(s,t);
+  const tideNow = h.tide ? `${h.tide.rising?"Stigende":"Fallende"}, ${h.tide.state}` : "–";
+  const tidePref = s.tide && s.tide.length ? `Spoten liker ${s.tide.join(" og ")} vann` : "Spoten tåler alt tidevann";
+
+  $("#app").innerHTML = `${sampleBanner()}
+    <header class="top">
+      <button class="back" id="back"><span aria-hidden="true" style="font-size:24px">‹</span> Varsel</button>
+      <h1>${esc(s.name)}</h1>
+      <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":""}</p>
+    </header>
+    <div class="now">${starsSVG(h.stars,h.faded,true)}</div>
+    <p class="verdict">${verdict}</p>
+    <p class="sub" style="margin-top:6px">${bestText(s)}</p>
+    ${warn}
+    <div class="strip-wrap" id="stripWrap"><div class="strip">${strip}</div></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--star)"></i>Stjerner</span>
+      <span><i class="sw" style="border:1.5px dashed var(--star)"></i>Tapt på vind eller tidevann</span>
+      <span><i class="sw" style="background:color-mix(in srgb,var(--night) 50%,transparent);border:1px solid var(--line)"></i>Skumring</span>
+      <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
+    </div>
+    <div class="grid">
+      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h)}</div></div>
+      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore??"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
+      <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
+      <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${WIND_WORD[h.wind_type]||""} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
+      <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
+      <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
+      <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":"–"} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
+    </div>`;
+
+  $("#back").onclick = ()=>{ state.spot=null; render(); };
+  document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
+    const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
+  });
+}
+
+/* ---------- Logger ---------- */
+function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){ return []; } }
+function saveLogs(l){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(l)); return true; }catch(e){ return false; } }
+
+function forecastAt(spotId, t){
+  const s = DATA.spots.find(x=>x.id===spotId); if(!s) return null;
+  const key = new Date(Math.floor(t.getTime()/36e5)*36e5).toISOString().slice(0,13)+":00Z";
+  return s.hours.find(h=>h.t===key) || null;
+}
+
+function renderLogs(){
+  const logs = loadLogs().sort((a,b)=>b.t.localeCompare(a.t));
+  const calib = DATA.spots.map(s=>{
+    const withF = logs.filter(l=>l.spot===s.id && l.forecastStars!=null);
+    if(!withF.length) return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen logger med varsel å sammenligne mot ennå.</p></div>`;
+    const hits = withF.filter(l=>Math.abs(l.stars-l.forecastStars)<=1).length;
+    const bias = withF.reduce((a,l)=>a+(l.stars-l.forecastStars),0)/withF.length;
+    const dir = Math.abs(bias)<0.5 ? "Varselet ligger omtrent riktig." : bias>0 ? `Varselet undervurderer med ${nf1.format(bias)} stjerner i snitt.` : `Varselet overvurderer med ${nf1.format(-bias)} stjerner i snitt.`;
+    return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor én stjerne.</p></div>`;
+  }).join("");
+  const heightCal = DATA.spots.map(s=>{
+    const pts = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null && l.swellOffshore>0.2)
+      .map(l=>SIZE_M[l.size]/l.swellOffshore).sort((a,b)=>a-b);
+    if(pts.length < MIN_SIZE_LOGS){
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${MIN_SIZE_LOGS-pts.length} økt${MIN_SIZE_LOGS-pts.length===1?"":"er"} til med størrelse valgt for å lære hvor mye av svellet som når stranda.</p></div>`;
+    }
+    const med = pts[Math.floor(pts.length/2)];
+    const now = (s.hours[0]||{}).transfer ?? 0.7;
+    if(s.calibration && s.calibration.transfer){
+      return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(s.calibration.transfer*100)} % av svellet når stranda</div>
+        <p>Lært automatisk fra ${s.calibration.size_logs} økter og brukt i varselet.</p></div>`;
+    }
+    return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(med*100)} % av svellet når stranda</div>
+      <p>Lært fra ${pts.length} økter. Appen bruker nå ${nf0.format(now*100)} %. Sett <b>"transfer": ${med.toFixed(2)}</b> for ${esc(s.id)} i spots.json.</p></div>`;
+  }).join("");
+  const rows = logs.map(l=>{
+    const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
+    const extra = [l.size,l.wind].filter(Boolean).join(", ");
+    const fc = l.forecastStars!=null ? `Varsel: ${l.forecastStars}` : "Uten varsel";
+    return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${starsSVG(l.stars,0)}</span>
+      <button class="del" data-id="${l.id}" aria-label="Slett økt ${fmtDate.format(d)}">Slett</button>
+      <span class="m">${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
+  }).join("");
+  $("#app").innerHTML = `<header class="top"><h1>Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
+    <h2 class="sec">Treffsikkerhet</h2>${calib}
+    <h2 class="sec">Bølgehøyde</h2>${heightCal}
+    <h2 class="sec">Økter</h2>
+    <div class="list">${rows || `<p class="empty">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" id="newLog">Logg økt</button></div>`;
+  document.querySelectorAll(".del").forEach(b=>b.onclick=()=>{
+    const all = loadLogs(); const removed = all.find(l=>l.id===b.dataset.id);
+    saveLogs(all.filter(l=>l.id!==b.dataset.id)); markDeleted(b.dataset.id); renderLogs(); syncLogs();
+    toast("Økt slettet", "Angre", ()=>{ unmarkDeleted(removed.id); saveLogs([...loadLogs(), removed]); renderLogs(); syncLogs(); });
+  });
+  $("#newLog").onclick = ()=>openSheet();
+}
+
+/* ---------- Synk til privat GitHub-repo ---------- */
+const SYNC_KEY = "nordsurf.sync.v1", DEL_KEY = "nordsurf.deleted.v1";
+function loadSync(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } }
+function saveSync(s){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify(s)); }catch(e){} }
+function loadDeleted(){ try{ return JSON.parse(localStorage.getItem(DEL_KEY)) || []; }catch(e){ return []; } }
+function markDeleted(id){ try{ localStorage.setItem(DEL_KEY, JSON.stringify([...new Set([...loadDeleted(), id])])); }catch(e){} }
+function unmarkDeleted(id){ try{ localStorage.setItem(DEL_KEY, JSON.stringify(loadDeleted().filter(x=>x!==id))); }catch(e){} }
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+const unb64 = s => decodeURIComponent(escape(atob(s.replace(/\n/g,""))));
+let syncing = false;
+async function syncLogs(manual){
+  const cfg = loadSync();
+  if(!cfg.repo || !cfg.token){ if(manual) toast("Legg inn repo og nøkkel først"); return; }
+  if(syncing) return; syncing = true;
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/logs.json`;
+  const headers = {Authorization:`Bearer ${cfg.token}`, Accept:"application/vnd.github+json"};
+  try{
+    let remote = {logs:[], deleted:[]}, sha;
+    const r = await fetch(url,{headers, cache:"no-store"});
+    if(r.ok){ const j = await r.json(); sha = j.sha; remote = JSON.parse(unb64(j.content)); }
+    else if(r.status!==404) throw new Error(r.status===401?"Nøkkelen er ugyldig eller utløpt":`GitHub svarte ${r.status}`);
+    const deleted = [...new Set([...(remote.deleted||[]), ...loadDeleted()])];
+    const byId = {};
+    [...(remote.logs||[]), ...loadLogs()].forEach(l=>byId[l.id]=l);
+    const merged = Object.values(byId).filter(l=>!deleted.includes(l.id));
+    const body = JSON.stringify({logs:merged, deleted}, null, 1);
+    const put = await fetch(url,{method:"PUT", headers, body: JSON.stringify({message:"Oppdater logger", content:b64(body), ...(sha?{sha}:{})})});
+    if(!put.ok) throw new Error(put.status===409?"Konflikt, prøv igjen":`Lagring feilet (${put.status})`);
+    saveLogs(merged);
+    saveSync({...cfg, last:new Date().toISOString(), error:null});
+    if(manual) toast(`Synket ${merged.length} økter`);
+  }catch(e){
+    saveSync({...cfg, error:e.message});
+    if(manual) toast(`Synk feilet: ${e.message}`);
+  }finally{
+    syncing = false;
+    if(state.tab==="innstillinger") renderSettings();
+    if(state.tab==="logger") renderLogs();
+  }
+}
+
+function renderSettings(){
+  const cfg = loadSync(), n = DATA.notify || {};
+  const status = cfg.error ? `Siste synk feilet: ${esc(cfg.error)}`
+    : cfg.last ? `Sist synket ${relDay(new Date(cfg.last))} kl. ${fmtTime.format(new Date(cfg.last))}` : "Ikke synket ennå";
+  $("#app").innerHTML = `<header class="top"><h1>Innstillinger</h1></header>
+    <h2 class="sec">Varsler</h2>
+    <div class="form">
+      <p>Du får varsel når en spot får <b>${n.min_stars??3} stjerner eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
+      <p>Varslene kommer i ntfy-appen. Grensen endres i notify.json.</p>
+    </div>
+    <h2 class="sec">Sikkerhetskopi av logger</h2>
+    <div class="form">
+      <p>Loggene lagres i et privat GitHub-repo. Da mister du dem ikke, og varselet lærer av dem automatisk.</p>
+      <label for="syncRepo">Repo</label><input type="text" id="syncRepo" placeholder="brukernavn/nordsurf-logger" value="${esc(cfg.repo||"")}" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="syncToken">Tilgangsnøkkel</label><input type="password" id="syncToken" placeholder="github_pat_..." value="${esc(cfg.token||"")}" autocomplete="off">
+      <p>${status}</p>
+      <div class="row-btns"><button class="primary" id="saveSync" style="min-height:44px">Lagre og synk</button></div>
+    </div>
+    <h2 class="sec">Eksport</h2>
+    <div class="form"><p>${loadLogs().length} økter på denne telefonen.</p>
+      <div class="row-btns"><button class="ghost" id="export">Eksporter logger</button></div></div>`;
+  $("#saveSync").onclick = ()=>{
+    saveSync({...loadSync(), repo:$("#syncRepo").value.trim(), token:$("#syncToken").value.trim(), error:null});
+    syncLogs(true);
+  };
+  $("#export").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(loadLogs(),null,2)],{type:"application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "nordsurf-logger.json"; a.click();
+  };
+}
+
+/* ---------- Loggeark ---------- */
+function localInputValue(d){
+  const p = new Intl.DateTimeFormat("sv-SE",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
+  return p.replace(" ","T");
+}
+function openSheet(){
+  logDraft = {spot: DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null};
+  $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
+  $("#logTime").value = localInputValue(new Date());
+  $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
+  document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
+  document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
+  $("#saveLog").disabled = true;
+  $("#starPick").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    $("#starPick").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true"); logDraft.stars = +b.dataset.n; $("#saveLog").disabled = false;
+  });
+  document.querySelectorAll(".chips").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const on = b.getAttribute("aria-pressed")==="true";
+    g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed", on ? "false" : "true");
+    logDraft[g.dataset.group] = on ? null : b.textContent;
+  }));
+  $("#sheet").classList.add("open"); $("#scrim").classList.add("open"); $("#sheet").setAttribute("aria-hidden","false");
+  setTimeout(()=>$("#starPick button").focus(), 50);
+}
+function closeSheet(){
+  $("#sheet").classList.remove("open"); $("#scrim").classList.remove("open"); $("#sheet").setAttribute("aria-hidden","true");
+}
+$("#cancelLog").onclick = closeSheet; $("#scrim").onclick = closeSheet;
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeSheet(); });
+$("#logBtn").onclick = openSheet;
+$("#saveLog").onclick = ()=>{
+  const spot = $("#logSpot").value;
+  const t = new Date($("#logTime").value);
+  const f = forecastAt(spot, t);
+  const entry = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot, t: t.toISOString(),
+    stars: logDraft.stars, size: logDraft.size, wind: logDraft.wind,
+    forecastStars: f ? f.stars : null, forecastFaded: f ? f.faded : null,
+    forecastHeight: f ? f.height : null, swellOffshore: f ? f.swell_offshore : null};
+  const ok = saveLogs([...loadLogs(), entry]);
+  closeSheet();
+  toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");
+  syncLogs();
+  if(state.tab==="logger") renderLogs();
+};
+
+let toastTimer;
+function toast(msg, action, fn){
+  const el = $("#toast"); el.innerHTML = esc(msg);
+  if(action){ el.style.pointerEvents="auto"; const b=document.createElement("button"); b.className="link"; b.style.color="inherit"; b.style.textDecoration="underline"; b.textContent=action; b.onclick=()=>{fn(); el.classList.remove("show");}; el.append(" ", b); }
+  else el.style.pointerEvents="none";
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("show"), 4000);
+}
+
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  if(t.dataset.tab==="varsel" && state.tab==="varsel") state.spot = null; // trykk igjen = tilbake til lista
+  state.tab = t.dataset.tab; render(); window.scrollTo(0,0);
+});
+
+/* ---------- Oppstart ---------- */
+async function start(){
+  $("#app").innerHTML = `<header class="top"><h1>Varsel</h1><p class="sub">Henter varsel…</p></header>`;
+  try{
+    DATA = window.__FORECAST__ || await (await fetch("data/forecast.json",{cache:"no-cache"})).json();
+    if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
+    render();
+    syncLogs();
+  }catch(e){
+    $("#app").innerHTML = `<header class="top"><h1>Varsel</h1></header><p class="empty">Fant ikke varseldata. Kjør henteren (fetcher/fetch.py) eller vent på neste automatiske kjøring.</p>`;
+  }
+}
+start();
+if("serviceWorker" in navigator && location.protocol==="https:" && !window.__FORECAST__) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
