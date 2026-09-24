@@ -200,6 +200,11 @@ def barentswatch_point(lat, lon):
     r.raise_for_status()
     data = r.json()
     rows = data if isinstance(data, list) else data.get("forecast") or data.get("data") or []
+    if os.environ.get("BW_DEBUG"):
+        for row in rows:
+            print(f"  DEBUG bw {lat},{lon}: t={row.get('forecastTime')} "
+                  f"h={row.get('totalSignificantWaveHeight')} dir={row.get('totalMeanWaveDirection')} "
+                  f"period={row.get('totalPeakPeriod')} source={row.get('source')}")
     out = {}
     for row in rows:
         t = row.get("forecastTime") or row.get("time") or row.get("validTime")

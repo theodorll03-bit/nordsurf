@@ -32,6 +32,7 @@ jobs:
           LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           APP_URL: ${{ secrets.APP_URL }}
+          BW_DEBUG: ${{ vars.BW_DEBUG }}
       - name: Lagre nytt varsel
         run: |
           git config user.name "nordsurf-bot"
