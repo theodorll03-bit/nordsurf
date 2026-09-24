@@ -1,6 +1,7 @@
 """Henter rådata fra kildene. Alle tider i UTC, nøkkel = 'YYYY-MM-DDTHH:00Z'."""
 
 import os
+import time
 import datetime as dt
 import xml.etree.ElementTree as ET
 
@@ -21,9 +22,16 @@ def parse_iso(s: str) -> dt.datetime:
 
 
 def _get(url, params=None, headers=None):
-    r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
-    r.raise_for_status()
-    return r
+    # Ett ekstra forsøk: kildene timer av og til ut forbigående (sett i Actions-kjøringer)
+    try:
+        r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
+        r.raise_for_status()
+        return r
+    except (requests.Timeout, requests.ConnectionError):
+        time.sleep(2)
+        r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
+        r.raise_for_status()
+        return r
 
 
 # ---------- met.no ----------
