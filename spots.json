@@ -72,11 +72,13 @@
         2.0
       ],
       "max_height": 3.5,
+      "transfer": 0.15,
       "_offshore_vind": "Stranda i bunnen av bukta vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         294,
         323
       ],
+      "_transfer": "Grov startgjetning satt 25.09.2026: BarentsWatch viste 0,2-0,3 m rett ved stranda mens svell ute var 1,72 m (transfer 0,7 ga 1,14 m selv med retningsfaktoren inkludert). Samme mønster som Grøtfjord. Basert på kun én observasjon - juster når du har logget noen økter eller BarentsWatch-punktet virker igjen.",
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 17 km ut, retning 307.0 grader."
     },
     {

@@ -54,19 +54,26 @@ def spot_height(hour, spot=None):
 
     1. BarentsWatch, når den finnes (finmasket kystmodell).
     2. Bare svellet ute (Open-Meteo), uten vindsjø, ganget med spotens
-       faktor og dreiningsregelen. Faktoren læres fra loggene dine.
-    3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
+       faktor, dreiningsregelen og hvor godt retningen treffer vinduet.
+       Faktoren læres fra loggene dine.
+    3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen
+       og retningen.
+
+    Retningen teller med her, ikke bare på stjernene: en retning nær kanten
+    av vinduet betyr mindre svellenergi når stranda, selv om den teknisk
+    sett er innenfor.
     """
     if hour.get("bw_height") is not None:
         return hour["bw_height"], "barentswatch"
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
+    dir_factor = direction_score(hour.get("dir_offshore"), spot) if spot else 1.0
     if hour.get("swell_offshore") is not None:
-        h = hour["swell_offshore"] * transfer * refraction_factor(hour.get("turn"))
+        h = hour["swell_offshore"] * transfer * refraction_factor(hour.get("turn")) * dir_factor
         return h, "svell_ute"
     h = hour.get("height_spot_model")
     if h is None:
         return None, None
-    return h * refraction_factor(hour.get("turn")), "metno_korrigert"
+    return h * refraction_factor(hour.get("turn")) * dir_factor, "metno_korrigert"
 
 
 # ---------- Svellstjerner ----------
@@ -121,12 +128,14 @@ def direction_score(d, spot):
 
 
 def swell_stars(hour, spot):
-    h, _ = spot_height(hour, spot)
-    score = (
-        height_score(h, spot)
-        * period_score(hour.get("period"), spot)
-        * direction_score(hour.get("dir_offshore"), spot)
-    )
+    h, source = spot_height(hour, spot)
+    score = height_score(h, spot) * period_score(hour.get("period"), spot)
+    if source == "barentswatch":
+        # BarentsWatch måler høyden direkte på spoten - retningens effekt på
+        # energien er allerede med i det tallet. For de andre kildene er
+        # retningen alt bakt inn i h via spot_height(), så her ville en ny
+        # multiplikasjon telt den samme rabatten to ganger.
+        score *= direction_score(hour.get("dir_offshore"), spot)
     return int(5 * score + 1e-9)  # rund ned
 
 

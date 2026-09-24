@@ -57,4 +57,14 @@ just_outside = rate({"swell_offshore": 1.76, "dir_offshore": 313.3, "turn": 13.6
 show("Grøtfjord 25.09, 3 grader utenfor vinduet", just_outside)
 assert just_outside["stars"] == 0 and just_outside["likely_flat"]
 
+# Retning skal telle på selve høyden, ikke bare stjernene: midt i vinduet
+# skal gi høyere meter-tall enn en retning nær kanten, selv om begge er
+# teknisk sett innenfor.
+center = rate({"swell_offshore": 2.0, "dir_offshore": 300.5, "turn": 5, "period": 11,
+               "wind_speed": 1, "wind_dir": 120}, G)
+edge = rate({"swell_offshore": 2.0, "dir_offshore": 291, "turn": 5, "period": 11,
+             "wind_speed": 1, "wind_dir": 120}, G)
+show("Retning midt i vinduet", center); show("Retning i kanten av vinduet", edge)
+assert center["height"] > edge["height"]
+
 print("Alle tester ok")
