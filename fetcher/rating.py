@@ -191,6 +191,7 @@ def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     potential = swell_stars(hour, spot)
     h, source = spot_height(hour, spot)
+    dir_hit = direction_score(hour.get("dir_offshore"), spot)
     # Ærlighet: uten BarentsWatch og med dreining vet vi mindre. Maks 3 stjerner.
     uncertain = source != "barentswatch" and (hour.get("turn") or 0) >= 10
     if uncertain:
@@ -208,9 +209,12 @@ def rate(hour, spot):
         "height_source": source,
         "transfer": spot.get("transfer", DEFAULT_TRANSFER),
         "uncertain": uncertain,
+        # Hvor mye av svellet som treffer, basert på retning i vinduet.
+        # Brukes til å justere selve høyden, ikke bare stjernene.
+        "direction_hit": round(dir_hit, 3),
         # Trolig flatt: svellet må bøye seg kraftig inn, eller kommer utenfor vinduet
         "likely_flat": source != "barentswatch" and (
             (hour.get("turn") is not None and hour["turn"] > 25)
-            or direction_score(hour.get("dir_offshore"), spot) <= 0.1
+            or dir_hit <= 0.1
         ),
     }

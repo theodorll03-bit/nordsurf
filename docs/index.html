@@ -317,6 +317,18 @@ function heightSourceText(h){
   if(h.height_source==="svell_ute") return `Svell ute × ${nf1.format(h.transfer).replace(/,0$/,"")}${h.turn>=10?", dreiing":""}`;
   return h.turn!=null && h.turn>=10 ? "met.no, justert" : "met.no";
 }
+function windowText(spot){
+  const w = spot.swell_window;
+  if(!w) return "";
+  const secs = Array.isArray(w[0]) ? w : [w];
+  return "Vindu " + secs.map(([a,b])=>`${a}–${b}°`).join(", ");
+}
+function directionHitText(h){
+  if(h.direction_hit==null) return "";
+  if(h.direction_hit <= 0.1) return "Utenfor vinduet";
+  if(h.direction_hit >= 0.95) return "Midt i vinduet";
+  return "I vinduet, ikke midt i";
+}
 function nextTide(spot, t){
   const after = (spot.tide_events||spot.tide||[]).filter(x=>new Date(x.time) >= t);
   return after[0] || null;
@@ -365,11 +377,11 @@ function renderSpot(){
   if(h.height_source==="barentswatch"){
     warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.</span></div>`;
   } else if(h.likely_flat && (h.turn==null || h.turn<=25)){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${h.dir_offshore}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${Math.round(h.dir_offshore)}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
   } else if(h.likely_flat){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet dreier ${h.turn}° inn i bukta.</b> Så stor dreining betyr som regel at det er mye mindre enn modellene viser. Høyden er justert kraftig ned.</span></div>`;
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet dreier ${Math.round(h.turn)}° inn i bukta.</b> Så stor dreining betyr som regel at det er mye mindre enn modellene viser. Høyden er justert kraftig ned.</span></div>`;
   } else if(h.uncertain){
-    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> Svellet dreier ${h.turn}° og høyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
+    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> Svellet dreier ${Math.round(h.turn)}° og høyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
   }
 
   const tide = nextTide(s,t);
@@ -396,7 +408,8 @@ function renderSpot(){
     </div>
     <div class="grid">
       <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h)}</div></div>
-      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore??"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
+      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
+      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.direction_hit!=null?nf0.format(h.direction_hit*100)+" %":"–"}</div><div class="n">${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${WIND_WORD[h.wind_type]||""} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
