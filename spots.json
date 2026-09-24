@@ -52,7 +52,10 @@
         "lat": 69.5764,
         "lon": 17.0514
       },
-      "barentswatch_point": null,
+      "barentswatch_point": {
+        "lat": 69.48391859134674,
+        "lon": 17.399405245844136
+      },
       "swell_window": [
         294,
         320
@@ -87,7 +90,10 @@
         "lat": 70.3581,
         "lon": 20.4291
       },
-      "barentswatch_point": null,
+      "barentswatch_point": {
+        "lat": 69.94838010045854,
+        "lon": 20.219788523026782
+      },
       "swell_window": [
         [
           5,
@@ -128,7 +134,10 @@
         "lat": 70.3349,
         "lon": 20.4737
       },
-      "barentswatch_point": null,
+      "barentswatch_point": {
+        "lat": 69.84748282299432,
+        "lon": 19.989858393792392
+      },
       "swell_window": [
         15,
         23
@@ -163,7 +172,10 @@
         "lat": 69.6125,
         "lon": 17.1506
       },
-      "barentswatch_point": null,
+      "barentswatch_point": {
+        "lat": 69.49170665860727,
+        "lon": 17.258503590863537
+      },
       "swell_window": [
         316,
         9
