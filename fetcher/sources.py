@@ -196,22 +196,21 @@ def barentswatch_point(lat, lon):
         timeout=TIMEOUT,
     )
     if r.status_code == 204:  # ingen data for dette punktet
-        print(f"  DEBUG barentswatch: 204 ingen data for {lat},{lon}")
         return {}
     r.raise_for_status()
     data = r.json()
     rows = data if isinstance(data, list) else data.get("forecast") or data.get("data") or []
-    print(f"  DEBUG barentswatch: status={r.status_code} rows={len(rows)} sample={rows[:1]}")
     out = {}
     for row in rows:
         t = row.get("forecastTime") or row.get("time") or row.get("validTime")
-        h = (
-            row.get("totalSignificantWaveHeight")
-            or row.get("significantWaveHeight")
-            or row.get("waveHeight")
-            or row.get("hs")
-            or row.get("value")
-        )
+        h = next(
+            (
+                row[k]
+                for k in ("totalSignificantWaveHeight", "significantWaveHeight", "waveHeight", "hs", "value")
+                if row.get(k) is not None
+            ),
+            None,
+        )  # 0.0 (flatt hav) er en gyldig verdi, ikke "mangler" - "or" ville feilaktig hoppet videre
         if t is not None and h is not None:
             out[hour_key(parse_iso(t))] = float(h)
     return out
