@@ -9,7 +9,7 @@ import requests
 
 CONTACT = os.environ.get("UA_CONTACT", "ukjent-kontakt")
 HEADERS = {"User-Agent": f"nordsurf/0.1 ({CONTACT})"}
-TIMEOUT = 30
+TIMEOUT = 45
 
 
 def hour_key(ts: dt.datetime) -> str:
