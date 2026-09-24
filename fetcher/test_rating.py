@@ -50,4 +50,11 @@ base = {"bw_height": 1.4, "dir_offshore": 300.5, "turn": 3, "period": 15, "wind_
 lo = rate({**base, "tide": {"state": "lav"}}, T); hi = rate({**base, "tide": {"state": "høy"}}, T)
 show("Liker lavt vann, fjære", lo); show("Liker lavt vann, flo", hi)
 assert lo["stars"] == 5 and hi["stars"] == 4 and hi["faded_tide"] == 1
+# Observert 25.09.2026: svell ute 313 grader, vinduet er [291,310] - bare 3
+# grader utenfor. Helt flatt i praksis, ingen delvis kreditt nær kanten.
+just_outside = rate({"swell_offshore": 1.76, "dir_offshore": 313.3, "turn": 13.6,
+                      "period": 9.2, "wind_speed": 1.6, "wind_dir": 79}, G)
+show("Grøtfjord 25.09, 3 grader utenfor vinduet", just_outside)
+assert just_outside["stars"] == 0 and just_outside["likely_flat"]
+
 print("Alle tester ok")

@@ -115,8 +115,9 @@ def direction_score(d, spot):
             best = max(best, 1.0 - 0.2 * angle_diff(d, center) / (width / 2))
     if best:
         return best
-    off = min(distance_to_sector(d, s) for s in window_sectors(spot))
-    return 0.5 if off <= 20 else 0.1
+    # Utenfor vinduet: observert 25.09.2026 at 3 grader utenfor holdt Grøtfjord
+    # helt flatt. Ingen delvis kreditt nær kanten - utenfor er utenfor.
+    return 0.1
 
 
 def swell_stars(hour, spot):
