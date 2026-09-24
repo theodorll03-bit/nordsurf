@@ -22,16 +22,19 @@ def parse_iso(s: str) -> dt.datetime:
 
 
 def _get(url, params=None, headers=None):
-    # Ett ekstra forsøk: kildene timer av og til ut forbigående (sett i Actions-kjøringer)
-    try:
-        r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
-        r.raise_for_status()
-        return r
-    except (requests.Timeout, requests.ConnectionError):
-        time.sleep(2)
-        r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
-        r.raise_for_status()
-        return r
+    # Kildene timer av og til ut forbigående når flere spots hentes tett etter
+    # hverandre (sett i Actions-kjøringer). Prøv opp til tre ganger med pause.
+    last_err = None
+    for attempt, wait in enumerate((0, 3, 8)):
+        if wait:
+            time.sleep(wait)
+        try:
+            r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
+            r.raise_for_status()
+            return r
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_err = e
+    raise last_err
 
 
 # ---------- met.no ----------
