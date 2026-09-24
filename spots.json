@@ -32,12 +32,14 @@
         2.0
       ],
       "max_height": 3.5,
+      "transfer": 0.15,
       "_offshore_vind": "Stranda vender mot VNV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         291,
         310
       ],
-      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 19 km ut, retning 300.5 grader."
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 19 km ut, retning 300.5 grader.",
+      "_transfer": "Grov startgjetning satt 25.09.2026: BarentsWatch-kartet viste 0,2-0,3 m reell høyde mens svell ute var 1,76 m (transfer 0,7 ga 1,11 m, alt for høyt). 0,15 er midt i det estimerte området. Basert på kun én observasjon - juster når du har logget noen økter eller BarentsWatch-punktet virker igjen."
     },
     {
       "id": "ersfjordstranda",
