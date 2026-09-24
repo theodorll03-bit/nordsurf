@@ -182,10 +182,9 @@ def barentswatch_token():
 def barentswatch_point(lat, lon):
     """Bølgehøyde fra BarentsWatch for et punkt. {time: height}
 
-    Innlogging er ferdig. Selve punkt-endepunktet må fylles inn etter at du har
-    registrert klienten: åpne 'Waveforecast OpenAPI doc' på
-    developer.barentswatch.no/docs/waveforecast, finn endepunktet for punktvarsel,
-    og sett BW_POINT_URL (se README). Uten det brukes met.no med dreiningsregelen.
+    Bruker /v1/waveforecastpoint/nearest/all (se Waveforecast OpenAPI doc).
+    BW_POINT_URL (se README) må ha ?x={lon}&y={lat} - x er lengdegrad, y er
+    breddegrad. Uten BW_POINT_URL/token brukes met.no med dreiningsregelen.
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -196,14 +195,17 @@ def barentswatch_point(lat, lon):
         headers={**HEADERS, "Authorization": f"Bearer {token}"},
         timeout=TIMEOUT,
     )
+    if r.status_code == 204:  # ingen data for dette punktet
+        return {}
     r.raise_for_status()
     data = r.json()
     rows = data if isinstance(data, list) else data.get("forecast") or data.get("data") or []
     out = {}
     for row in rows:
-        t = row.get("time") or row.get("forecastTime") or row.get("validTime")
+        t = row.get("forecastTime") or row.get("time") or row.get("validTime")
         h = (
-            row.get("significantWaveHeight")
+            row.get("totalSignificantWaveHeight")
+            or row.get("significantWaveHeight")
             or row.get("waveHeight")
             or row.get("hs")
             or row.get("value")
