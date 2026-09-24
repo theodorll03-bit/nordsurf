@@ -207,6 +207,8 @@ def barentswatch_point(lat, lon):
                   f"period={row.get('totalPeakPeriod')} source={row.get('source')}")
     out = {}
     for row in rows:
+        if "totalMeanWaveDirection" in row and row.get("totalMeanWaveDirection") is None:
+            continue  # modellen har ingen data for denne timen (sett som h=0.0, dir=None, period~1.2s)
         t = row.get("forecastTime") or row.get("time") or row.get("validTime")
         h = next(
             (
