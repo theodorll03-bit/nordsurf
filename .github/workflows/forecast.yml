@@ -37,6 +37,11 @@ jobs:
         run: |
           git config user.name "nordsurf-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/data/forecast.json data/notified.json data/bw_calibration.json 2>/dev/null || git add docs/data/forecast.json
+          # Hver for seg, ikke i én kommando: git add feiler atomisk hvis én
+          # path mangler (f.eks. data/bw_calibration.json før den er skrevet
+          # første gang), og da ble de andre filene aldri lagt til heller.
+          git add docs/data/forecast.json
+          git add data/notified.json 2>/dev/null || true
+          git add data/bw_calibration.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel"
           git push
