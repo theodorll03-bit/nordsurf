@@ -1,0 +1,126 @@
+/* ---------- Kart ---------- */
+#mapRoot{position:fixed;top:0;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:1;background:var(--surface)}
+#mapRoot[hidden]{display:none}
+#mapEl{position:absolute;inset:0}
+#mapEl .leaflet-control-attribution{font-size:11px;background:color-mix(in srgb,var(--raised) 82%,transparent)}
+#mapEl .leaflet-control-attribution a{color:var(--ink)}
+
+/* Kartverkets gråtonekart snus for mørk modus - tjenesten har ingen egen mørk variant */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) #mapEl .leaflet-tile-pane{filter:invert(96%) brightness(.95) contrast(.92)}
+}
+:root[data-theme="dark"] #mapEl .leaflet-tile-pane{filter:invert(96%) brightness(.95) contrast(.92)}
+
+/* Flytende kontroller */
+.map-top{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;display:flex;flex-direction:column;gap:10px;z-index:20}
+.map-top[hidden]{display:none}
+.map-round{width:44px;height:44px;border-radius:50%;border:0;background:var(--raised);color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.map-round svg{width:22px;height:22px}
+.map-round[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
+
+/* Tidsvelger */
+.map-time{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));padding:10px 16px 14px;background:linear-gradient(to top,color-mix(in srgb,var(--surface) 92%,transparent) 60%,transparent);z-index:15}
+.map-time[hidden]{display:none}
+.map-time-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.map-time-head .lbl{font-weight:600;font-size:15px}
+.map-now{min-height:32px;padding:0 14px;border-radius:16px;border:1.5px solid var(--line);background:var(--raised);color:var(--ink);font-size:13px;cursor:pointer}
+.map-now[hidden]{display:none}
+.map-slider-wrap{position:relative;height:34px}
+.map-slider-track{position:absolute;left:0;right:0;top:14px;height:6px;border-radius:3px;overflow:hidden;background:var(--line);display:flex}
+.map-slider-track span{flex:1 1 0;height:100%}
+.map-slider-track span.dusk{background:color-mix(in srgb,var(--night) 60%,var(--line))}
+.map-slider-track span.dark{background:var(--night)}
+.map-slider-track span.bwbreak{box-shadow:inset 2px 0 0 var(--muted)}
+.map-slider{position:absolute;inset:0;width:100%;height:34px;margin:0;opacity:0;cursor:pointer}
+.map-slider-thumb{position:absolute;top:3px;width:28px;height:28px;border-radius:50%;background:var(--selected);border:3px solid var(--raised);box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;transform:translateX(-50%)}
+@media (prefers-reduced-motion: no-preference){.map-slider-thumb{transition:left .12s linear}}
+
+/* Mini-ratingring i merker og samlemerker */
+.mm-seg{fill:none;stroke-width:3}
+.mm-seg.solid{stroke:var(--star)}
+.mm-seg.faded{stroke:var(--star);stroke-dasharray:1.5 1.5;opacity:.85}
+.mm-seg.empty{stroke:var(--muted)}
+
+/* Spotmerke */
+.spot-icon,.cluster-icon,.disc-icon{overflow:visible!important}
+.spot-icon .spot-mark{position:absolute;left:0;top:0;transform:translate(calc(-50% + var(--push-x,0px)),calc(-19px + var(--push-y,0px)))}
+@media (prefers-reduced-motion: no-preference){.spot-icon .spot-mark{transition:transform .3s ease}}
+.cluster-icon .cluster-mark{position:absolute;left:0;top:0;transform:translate(-50%,-50%)}
+.spot-mark{all:unset;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-width:44px;min-height:44px;justify-content:center}
+.spot-mark .plate{display:flex;align-items:center;gap:4px;background:var(--raised);border-radius:14px;padding:3px 8px 3px 3px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.spot-mark .ring{width:32px;height:32px;flex:0 0 auto}
+.spot-mark .mm-h{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.spot-mark .name{font-size:12px;color:var(--ink);background:color-mix(in srgb,var(--surface) 80%,transparent);padding:1px 6px;border-radius:8px;white-space:nowrap;opacity:0;transform:translateY(-2px)}
+.spot-mark.show-name .name{opacity:1;transform:none}
+@media (prefers-reduced-motion: no-preference){.spot-mark .name{transition:opacity .15s,transform .15s}}
+.spot-mark.good .plate{box-shadow:0 2px 10px rgba(0,0,0,.28);outline:2px solid var(--star);outline-offset:-1px}
+.spot-mark.good .ring{width:36px;height:36px}
+.spot-mark.night .plate{opacity:.6}
+.spot-mark .moon{position:absolute;top:-3px;right:-3px;width:14px;height:14px}
+.spot-mark.dim{opacity:.35}
+@media (prefers-reduced-motion: no-preference){.spot-mark .plate,.spot-mark .ring circle,.spot-mark .ring path{transition:opacity .2s}}
+
+/* Samlemerke */
+.cluster-mark{all:unset;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-width:44px;min-height:44px;justify-content:center}
+.cluster-mark .plate{display:flex;align-items:center;gap:6px;background:var(--selected);color:var(--on-selected);border-radius:20px;padding:6px 14px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-weight:700;font-size:14px;white-space:nowrap}
+.cluster-mark .ring{width:26px;height:26px;flex:0 0 auto}
+
+/* Skiva */
+.disc-wrap{position:absolute;pointer-events:none;z-index:10;width:200px;height:200px;margin-left:-100px;margin-top:-100px}
+.disc-wrap svg{width:100%;height:100%;overflow:visible}
+.disc-wrap .hit{pointer-events:auto;cursor:pointer}
+.disc-window{fill:var(--window-fill);stroke:var(--window);stroke-width:2}
+.disc-swell{fill:none;stroke:var(--swell);stroke-width:3;stroke-linecap:round}
+.disc-swell.edge{opacity:.55}
+.disc-swell.miss{stroke:var(--swell-miss);stroke-dasharray:5 4;opacity:.9}
+.disc-swell-crest{fill:none;stroke:var(--swell);stroke-width:2;stroke-linecap:round}
+.disc-swell-crest.edge{opacity:.55}
+.disc-swell-crest.miss{stroke:var(--swell-miss);opacity:.9}
+.disc-wind-base{stroke:var(--wind);fill:none}
+.disc-wind-tick{stroke:var(--wind)}
+.disc-wind-head{fill:var(--wind)}
+/* Rulling: flytter et gjentagende mønster ett avstandssteg med transform (GPU-
+   billig), ikke stroke-dashoffset (tvinger repaint hver frame og var årsaken
+   til at animasjonen - og zoom samtidig med den - ble hakkete). */
+@media (prefers-reduced-motion: no-preference){
+  .disc-crests:not(.miss),.disc-wind-ticks{animation:rollstep linear infinite}
+}
+@keyframes rollstep{ to{ transform:translate(var(--dx),var(--dy)); } }
+.disc-ring-seg{fill:none;stroke-width:9}
+.disc-ring-seg.solid{stroke:var(--star)}
+.disc-ring-seg.faded{stroke:var(--star);stroke-dasharray:3 3;opacity:.8}
+.disc-ring-seg.empty{stroke:var(--muted)}
+.disc-miss-label{font-size:12px;fill:var(--muted);font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.disc-dir-label{font-size:12px;fill:var(--ink);font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+@media (prefers-reduced-motion: no-preference){
+  .disc-window{transition:transform .3s ease;transform-origin:100px 100px}
+  .disc-group-rot{transition:transform .4s ease}
+  .disc-ring-seg{transition:opacity .18s ease}
+}
+.disc-enter .disc-window{animation:discwindow .3s ease both}
+.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup{animation:discfade .25s ease .25s both}
+@keyframes discwindow{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes discfade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .disc-enter .disc-window,.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup{animation:none}
+  .disc-crests,.disc-wind-ticks{animation:none}
+}
+
+/* Høydeplate under skiva */
+.disc-plate{position:absolute;pointer-events:auto;cursor:pointer;transform:translate(-50%,0);z-index:11;background:var(--raised);border-radius:14px;padding:8px 14px;box-shadow:0 4px 14px rgba(0,0,0,.22);text-align:center;min-width:96px}
+.disc-plate .big{font:700 22px/1.1 var(--display)}
+.disc-plate .mid{font-size:14px;color:var(--muted);margin-top:1px}
+.disc-plate .src{font-size:12px;color:var(--muted);margin-top:2px}
+.disc-plate .chev{color:var(--muted);font-size:12px}
+@media (prefers-reduced-motion: no-preference){.disc-plate{transition:opacity .2s}}
+
+/* Forklaring */
+.map-explain{position:fixed;left:12px;right:12px;top:calc(130px + env(safe-area-inset-top,0px));z-index:22;background:var(--raised);border-radius:14px;padding:14px 16px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:14px}
+.map-explain .erow{display:flex;align-items:center;gap:10px;margin:6px 0}
+.map-explain .sw{width:18px;height:12px;border-radius:3px;flex:0 0 auto}
+.map-explain .close{position:absolute;top:8px;right:8px;min-width:44px;min-height:44px;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+
+/* Kart-ark (spot-detaljer) */
+#mScrim{z-index:30}
+#mSheet{z-index:31}
+.map-sheet .grid{margin-top:14px}

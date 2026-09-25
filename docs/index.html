@@ -14,10 +14,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/map.css">
 <style>
 :root{
   --surface:#F1F3F2; --raised:#FFFFFF; --ink:#16252D; --muted:#52646C; --line:#D5DCDE;
   --star:#A86F08; --night:#DDE3E5; --selected:#16252D; --on-selected:#FFFFFF;
+  /* Kart: grønt (vindu) og blått (vind) er faste valg. Svell er lilla, ikke
+     blågrønn/turøs - det ville ligget for nært vindfargen for fargeblinde
+     på det gråtonede kartet. Rav-gult (--star) er forbeholdt rating. */
+  --window:#1E7A46; --window-fill:rgba(30,122,70,.16); --swell:#6D3FCE; --swell-miss:#8B98A0; --wind:#1C5FD6;
   --display:"Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body:system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   color-scheme: light dark;
@@ -29,11 +35,13 @@
   :root:not([data-theme="light"]){
     --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
     --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+    --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
   }
 }
 :root[data-theme="dark"]{
   --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
   --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+  --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -166,11 +174,16 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 </head>
 <body class="has-tabs">
 <main class="wrap" id="app" aria-live="polite"></main>
+<div id="mapRoot" hidden></div>
 
 <nav class="tabs" aria-label="Hovedmeny">
   <button class="tab" data-tab="varsel" aria-current="page">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 16c2.2 0 2.2-1.6 4.4-1.6S8.6 16 10.8 16s2.2-1.6 4.4-1.6S17.4 16 19.6 16 22 14.4 22 14.4V18c0 .2-.2 1.6-2.4 1.6s-2.2-1.6-4.4-1.6-2.2 1.6-4.4 1.6S8.6 18 6.4 18 4.2 19.6 2 19.6zM4 12.5C4 8.4 7.4 5 11.5 5c2.4 0 4.6 1.2 6 3-3-.8-6.2.6-7.5 3.5-.6 1.3-.8 2.4-.8 3.2-1.4-.5-3.3-.8-5.2-.9 0-.1 0-.2 0-.3z"/></svg>
     Varsel
+  </button>
+  <button class="tab" data-tab="kart">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15 4l-6 2-5.5-2A1 1 0 0 0 2 5v13.5a1 1 0 0 0 1.3 1L9 17.5l5.5 2a1.5 1.5 0 0 0 .5.1c.2 0 .3 0 .5-.1l5.5-2A1 1 0 0 0 22 16.5V3a1 1 0 0 0-1.3-1L15 4zm-1 1.7v11.6l-4-1.5V4.2l4 1.5zM4 6l4 1.5v11.6L4 17.6V6zm16 12l-4 1.4V7.8l4-1.4v11.6z"/></svg>
+    Kart
   </button>
   <button class="tab" data-tab="logger">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>
@@ -281,6 +294,11 @@ function currentHour(spot){
 function render(){
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current", t.dataset.tab===state.tab ? "page" : "false"));
   $("#toolbar").hidden = !(state.tab==="varsel" && state.spot!=null);
+  const isMap = state.tab==="kart";
+  $("#mapRoot").hidden = !isMap;
+  $("#app").hidden = isMap;
+  if(isMap){ window.SurfMap && SurfMap.show(); return; }
+  window.SurfMap && SurfMap.hide();
   if(state.tab==="logger") return renderLogs();
   if(state.tab==="innstillinger") return renderSettings();
   if(state.spot!=null) return renderSpot();
@@ -655,5 +673,7 @@ async function start(){
 start();
 if("serviceWorker" in navigator && location.protocol==="https:" && !window.__FORECAST__) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/map.js"></script>
 </body>
 </html>
