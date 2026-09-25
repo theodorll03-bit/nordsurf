@@ -90,7 +90,12 @@ def build_spot(spot, now, learned, bw_calib, run_id):
         sp, off, mar, w = ocean_spot.get(k), ocean_off.get(k), marine.get(k), weather.get(k)
         if not sp and not mar:
             continue
-        dir_off = pick((off or {}).get("dir"), (mar or {}).get("dir"))
+        # Svellretningen skal ALDRI komme fra met.no sin samlede sjøtilstand
+        # (svell 1, svell 2 og vindsjø blandet) - bare fra Open-Meteo sitt
+        # svellfelt (GFS Wave, med standardmodellen som reserve, se sources.py).
+        # met.no brukes fortsatt til reservehøyden (metno_korrigert under) og
+        # til dreiningsdiagnosen (turn), via dir_spot.
+        dir_off = (mar or {}).get("dir")
         dir_spot = (sp or {}).get("dir")
         turn = angle_diff(dir_off, dir_spot) if dir_off is not None and dir_spot is not None else None
         light = sun.light(s["lat"], s["lon"], t)
@@ -100,6 +105,10 @@ def build_spot(spot, now, learned, bw_calib, run_id):
             "height_offshore": pick((off or {}).get("height"), (mar or {}).get("height")),
             "height_spot_model": (sp or {}).get("height"),
             "swell_offshore": (mar or {}).get("swell_height"),
+            "swell_model": (mar or {}).get("swell_model"),
+            "secondary_swell_height": (mar or {}).get("secondary_swell_height"),
+            "secondary_swell_dir": (mar or {}).get("secondary_swell_dir"),
+            "secondary_swell_period": (mar or {}).get("secondary_swell_period"),
             "bw_height": bwk.get("height") if bwk else None,
             "bw_dir": bwk.get("dir") if bwk else None,
             "bw_period": bwk.get("period") if bwk else None,
@@ -116,6 +125,11 @@ def build_spot(spot, now, learned, bw_calib, run_id):
         }
         hour.update(rate(hour, spot))
         hours.append(hour)
+
+    gfs_hours = sum(1 for h in hours if h.get("swell_model") == "gfs")
+    std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
+    none_hours = sum(1 for h in hours if h.get("swell_model") is None)
+    REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
 
     new_pairs = calibrate.bw_pairs_for_run(hours, run_id)
     merged_pairs = calibrate.merge_bw_pairs(bw_pairs_existing, new_pairs, now)

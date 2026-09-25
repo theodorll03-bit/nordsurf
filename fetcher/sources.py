@@ -89,29 +89,81 @@ def metno_sun(lat, lon, date: dt.date):
 
 # ---------- Open-Meteo (periode og offshore-svell) ----------
 
-def openmeteo_marine(lat, lon):
-    r = _get(
-        "https://marine-api.open-meteo.com/v1/marine",
-        {
-            "latitude": lat,
-            "longitude": lon,
-            "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,"
-            "swell_wave_direction,swell_wave_peak_period",
-            "timezone": "GMT",
-            "forecast_days": 5,
-        },
-    )
+# GFS Wave sitt svellfelt er nærmest Windy i egen sjekk (25.09.2026, Ersfjordstranda
+# kl. 14): retning 262° og høyde 0,88 m mot Windys 266°/0,8 m. ECMWF WAM ble også
+# testet, men den modellen har ingen svelldekomponering i det hele tatt på
+# Open-Meteo (bare total sjøtilstand) - derfor ikke brukt. Open-Meteo sin egen
+# standardmodell ("best_match", her MeteoFrance Wave) traff dårligere (275°) og
+# brukes bare som reserve når GFS mangler data for et punkt eller en time.
+OPENMETEO_SWELL_MODEL = "ncep_gfswave025"
+
+
+def _openmeteo_fetch(lat, lon, model=None):
+    """Rådata fra Open-Meteo Marine, ev. med en bestemt modell valgt eksplisitt
+    via `models`. {time: {height, swell_height, swell_dir, swell_period,
+    secondary_swell_height, secondary_swell_dir, secondary_swell_period}}"""
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,"
+        "swell_wave_direction,swell_wave_period,secondary_swell_wave_height,"
+        "secondary_swell_wave_direction,secondary_swell_wave_period",
+        "timezone": "GMT",
+        "forecast_days": 5,
+    }
+    if model:
+        params["models"] = model
+    r = _get("https://marine-api.open-meteo.com/v1/marine", params)
     h = r.json()["hourly"]
+    n = len(h["time"])
+    missing = [None] * n
     out = {}
     for i, t in enumerate(h["time"]):
         key = t + "Z" if len(t) == 16 else t
         key = key[:13] + ":00Z"
-        period = h["swell_wave_peak_period"][i] or h["wave_period"][i]
         out[key] = {
-            "height": h["wave_height"][i],          # total: svell + vindsjø
-            "swell_height": h["swell_wave_height"][i],  # bare svellet
-            "dir": h["swell_wave_direction"][i] or h["wave_direction"][i],
-            "period": period,
+            "height": h["wave_height"][i],  # total: svell + vindsjø
+            "swell_height": h["swell_wave_height"][i],
+            "swell_dir": h["swell_wave_direction"][i],
+            "swell_period": h["swell_wave_period"][i],
+            "secondary_swell_height": h.get("secondary_swell_wave_height", missing)[i],
+            "secondary_swell_dir": h.get("secondary_swell_wave_direction", missing)[i],
+            "secondary_swell_period": h.get("secondary_swell_wave_period", missing)[i],
+        }
+    return out
+
+
+def openmeteo_marine(lat, lon):
+    """Hovedsvellet (retning, høyde, periode), fra GFS Wave. Faller tilbake til
+    Open-Meteo sin standardmodell for en time der GFS ikke har svelldata for
+    punktet. Totalhøyden (inkl. vindsjø) og sekundærsvellet følger med, men
+    sekundærsvellet lagres bare - det skal ikke vises eller brukes i ratingen.
+    {time: {height, swell_height, dir, period, swell_model,
+    secondary_swell_height, secondary_swell_dir, secondary_swell_period}}
+    swell_model er "gfs", "standard" eller None (ingen av kildene har svelldata)."""
+    primary = _openmeteo_fetch(lat, lon, model=OPENMETEO_SWELL_MODEL)
+    fallback = _openmeteo_fetch(lat, lon, model=None)
+    out = {}
+    for k in sorted(set(primary) | set(fallback)):
+        p, f = primary.get(k, {}), fallback.get(k, {})
+        if p.get("swell_height") is not None and p.get("swell_dir") is not None:
+            src, model = p, "gfs"
+        elif f.get("swell_height") is not None and f.get("swell_dir") is not None:
+            src, model = f, "standard"
+        else:
+            src, model = p, None
+        height = p.get("height")
+        if height is None:
+            height = f.get("height")
+        out[k] = {
+            "height": height,
+            "swell_height": src.get("swell_height"),
+            "dir": src.get("swell_dir"),
+            "period": src.get("swell_period"),
+            "swell_model": model,
+            "secondary_swell_height": src.get("secondary_swell_height"),
+            "secondary_swell_dir": src.get("secondary_swell_dir"),
+            "secondary_swell_period": src.get("secondary_swell_period"),
         }
     return out
 

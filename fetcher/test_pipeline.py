@@ -4,6 +4,8 @@ from pathlib import Path
 import sources, fetch, notify, calibrate
 from rating import DEFAULT_TRANSFER
 
+real_openmeteo_marine = sources.openmeteo_marine  # før noe under mokker den ut
+
 # Loggen skal læres mot toppfaktoren ved direkte treff: forhold = størrelse / (svellOffshore * directness).
 # Gamle logger uten feltet antas direkte (directness 1.0) - se lengre ned, uendret 0.42-sjekk.
 # Her: fem logger med directness 0.5 skal gi dobbelt så høyt forhold som samme logger uten directness ville gjort.
@@ -152,5 +154,43 @@ ws_no_bw = notify.windows(spot_no_bw, min_stars=3, hours_ahead=100, now=now3)
 covered_no_bw = sum(len(w["hours"]) for w in ws_no_bw)
 print("6h timer dekket uten bw_until (skal være 20, alle timer):", covered_no_bw)
 assert covered_no_bw == 20
+
+# ---------- 7a: svellretning skal ALDRI komme fra met.no sin samlede sjøtilstand ----------
+sources.metno_ocean = lambda la, lo: hourly(lambda i: {"height": 1.8, "dir": 325, "water_temp": 8})
+sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 266, "period": 13, "swell_model": "gfs"})
+tmp3 = Path(tempfile.mkdtemp())
+fetch.OUT = tmp3 / "forecast.json"
+fetch.BW_CALIB = tmp3 / "bw_calibration.json"
+notify.STATE = tmp3 / "notified.json"
+fetch.main()
+f3 = json.loads(fetch.OUT.read_text())
+g3 = next(s for s in f3["spots"] if s["id"] == "grotfjord")
+dir0 = g3["hours"][0]["dir_offshore"]
+print("7a svellretning met.no=325 vs Open-Meteo hovedsvell=266 -> dir_offshore:", dir0)
+assert dir0 == 266
+
+# ---------- 7b: openmeteo_marine faller tilbake til standardmodellen når GFS mangler svelldata for en time ----------
+def fake_openmeteo_fetch(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:
+        return {
+            "2026-01-01T00:00Z": {"height": 1.5, "swell_height": 1.0, "swell_dir": 260, "swell_period": 11,
+                                   "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None},
+            "2026-01-01T01:00Z": {"height": 1.4, "swell_height": None, "swell_dir": None, "swell_period": None,
+                                   "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None},
+        }
+    return {  # standardmodellen (reserve) - har data begge timer, også der GFS mangler
+        "2026-01-01T00:00Z": {"height": 1.5, "swell_height": 0.9, "swell_dir": 250, "swell_period": 9,
+                               "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None},
+        "2026-01-01T01:00Z": {"height": 1.4, "swell_height": 0.8, "swell_dir": 240, "swell_period": 8,
+                               "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None},
+    }
+real_openmeteo_fetch = sources._openmeteo_fetch
+sources._openmeteo_fetch = fake_openmeteo_fetch
+result = real_openmeteo_marine(69.5, 17.0)
+sources._openmeteo_fetch = real_openmeteo_fetch
+print("7b GFS har data kl 00, mangler kl 01:", result["2026-01-01T00:00Z"]["dir"], result["2026-01-01T00:00Z"]["swell_model"],
+      "|", result["2026-01-01T01:00Z"]["dir"], result["2026-01-01T01:00Z"]["swell_model"])
+assert result["2026-01-01T00:00Z"]["dir"] == 260 and result["2026-01-01T00:00Z"]["swell_model"] == "gfs"
+assert result["2026-01-01T01:00Z"]["dir"] == 240 and result["2026-01-01T01:00Z"]["swell_model"] == "standard"
 
 print("Pipeline ok")
