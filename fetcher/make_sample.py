@@ -44,7 +44,7 @@ out_spots = []
 for s in spots:
     pub = {k: v for k, v in s.items() if not k.startswith("_")}
     hrs = [hour(s, i, now + dt.timedelta(hours=i)) for i in range(72)]
-    out_spots.append({**pub, "hours": hrs, "tide_events": TIDES, "calibration": {},
+    out_spots.append({**pub, "hours": hrs, "tide_events": TIDES, "bw_until": None, "calibration": {},
                       "light_days": sun.light_days(s["spot"]["lat"], s["spot"]["lon"], now)})
 
 out = ROOT / "docs" / "data" / "forecast.json"

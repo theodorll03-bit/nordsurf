@@ -180,11 +180,12 @@ def barentswatch_token():
 
 
 def barentswatch_point(lat, lon):
-    """Bølgehøyde fra BarentsWatch for et punkt. {time: height}
+    """Bølgehøyde, retning og periode fra BarentsWatch for et punkt, i
+    tretimersteg opp til ca 60 timer frem. {time: {"height","dir","period"}}
 
     Bruker /v1/waveforecastpoint/nearest/all (se Waveforecast OpenAPI doc).
     BW_POINT_URL (se README) må ha ?x={lon}&y={lat} - x er lengdegrad, y er
-    breddegrad. Uten BW_POINT_URL/token brukes met.no med dreiningsregelen.
+    breddegrad. Uten BW_POINT_URL/token brukes reservemodellen.
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -202,11 +203,6 @@ def barentswatch_point(lat, lon):
     r.raise_for_status()
     data = r.json()
     rows = data if isinstance(data, list) else data.get("forecast") or data.get("data") or []
-    if os.environ.get("BW_DEBUG"):
-        for row in rows:
-            print(f"  DEBUG bw {lat},{lon}: t={row.get('forecastTime')} "
-                  f"h={row.get('totalSignificantWaveHeight')} dir={row.get('totalMeanWaveDirection')} "
-                  f"period={row.get('totalPeakPeriod')} source={row.get('source')}")
     out = {}
     for row in rows:
         if "totalMeanWaveDirection" in row and row.get("totalMeanWaveDirection") is None:
@@ -220,8 +216,58 @@ def barentswatch_point(lat, lon):
             ),
             None,
         )  # 0.0 (flatt hav) er en gyldig verdi, ikke "mangler" - "or" ville feilaktig hoppet videre
-        if t is not None and h is not None:
-            out[hour_key(parse_iso(t))] = float(h)
+        if t is None or h is None:
+            continue
+        d = row.get("totalMeanWaveDirection")
+        p = row.get("totalPeakPeriod")
+        out[hour_key(parse_iso(t))] = {
+            "height": float(h),
+            "dir": float(d) if d is not None else None,
+            "period": float(p) if p is not None else None,
+        }
+    return out
+
+
+def _lerp(a, b, frac):
+    if a is None or b is None:
+        return None
+    return a + (b - a) * frac
+
+
+def _lerp_circular(a, b, frac):
+    """Korteste vei rundt 0/360 grader, f.eks 350 -> 10 midt mellom gir 0, ikke 180."""
+    if a is None or b is None:
+        return None
+    diff = ((b - a + 180) % 360) - 180
+    return (a + diff * frac) % 360
+
+
+def bw_interpolate(raw):
+    """Fyller BarentsWatch sine tretimerspunkter (fra barentswatch_point) til
+    én verdi per hele time. Høyde og periode: lineær interpolasjon. Retning:
+    sirkulær. Interpolerer bare mellom punkter maks 3 timer fra hverandre -
+    mangler et punkt midt i serien, står timene i hullet uten BarentsWatch.
+    Ekstrapolerer aldri forbi første/siste punkt. {time: {height,dir,period,interpolated}}
+    """
+    if not raw:
+        return {}
+    times = sorted(raw)
+    out = {t: {**raw[t], "interpolated": False} for t in times}
+    for t0, t1 in zip(times, times[1:]):
+        d0, d1 = parse_iso(t0), parse_iso(t1)
+        gap = round((d1 - d0).total_seconds() / 3600)
+        if not (0 < gap <= 3):
+            continue  # hull i serien - ikke fyll, og ikke ekstrapoler
+        v0, v1 = raw[t0], raw[t1]
+        for step in range(1, gap):
+            frac = step / gap
+            tk = hour_key(d0 + dt.timedelta(hours=step))
+            out[tk] = {
+                "height": _lerp(v0.get("height"), v1.get("height"), frac),
+                "dir": _lerp_circular(v0.get("dir"), v1.get("dir"), frac),
+                "period": _lerp(v0.get("period"), v1.get("period"), frac),
+                "interpolated": True,
+            }
     return out
 
 

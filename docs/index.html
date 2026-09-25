@@ -87,6 +87,8 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 .h.dark{background:var(--night)}
 .h.dusk{background:color-mix(in srgb,var(--night) 50%,transparent)}
 .h.sel{background:var(--selected);color:var(--on-selected)}
+.h.resmodel{opacity:.55}
+.h.bw-break{border-left:2px dashed var(--muted);margin-left:2px;padding-left:4px}
 .bar{width:14px;display:flex;flex-direction:column-reverse;gap:2px}
 .pip{height:12px;border-radius:3px;background:var(--star)}
 .pip.f{background:none;border:1.5px dashed var(--star)}
@@ -261,11 +263,13 @@ function bestWindow(spot){
   }
   return {stars:max, start:new Date(start.t), end:new Date(new Date(end.t).getTime()+36e5)};
 }
+function toHourKey(d){ return d.toISOString().slice(0,13)+":00Z"; }
 function bestText(spot){
   const b = bestWindow(spot);
   if(!b) return "Ingen data i lyse timer";
   if(b.none) return "Ingen brukbare vinduer de neste tre dagene";
-  return `Best ${relDay(b.start)} ${fmtHour.format(b.start)}–${fmtHour.format(b.end)}, ${b.stars} ${b.stars===1?"stjerne":"stjerner"}`;
+  const anslag = spot.bw_until && toHourKey(b.start) > spot.bw_until ? " (anslag)" : "";
+  return `Best ${relDay(b.start)} ${fmtHour.format(b.start)}–${fmtHour.format(b.end)}, ${b.stars} ${b.stars===1?"stjerne":"stjerner"}${anslag}`;
 }
 function currentHour(spot){
   const now = Date.now();
@@ -312,9 +316,15 @@ function renderList(){
   });
 }
 
-function heightSourceText(h){
-  if(h.height_source==="barentswatch") return "BarentsWatch";
-  if(h.height_source==="svell_ute") return `Svell ute × ${nf1.format(h.transfer).replace(/,0$/,"")}${h.turn>=10?", dreiing":""}`;
+function heightSourceText(h, spot){
+  if(h.height_source==="barentswatch") return h.bw_interpolated ? "BarentsWatch (interpolert)" : "BarentsWatch";
+  if(h.height_source==="svell_ute"){
+    const t = nf1.format(h.transfer).replace(/,0$/,"");
+    const cal = (spot&&spot.calibration)||{};
+    const src = cal.transfer_source==="barentswatch" ? " (lært fra BarentsWatch)" : cal.transfer_source==="logs" ? " (lært fra loggene dine)" : "";
+    if(h.directness>=0.999) return `Svell ute × ${t}, direkte treff${src}`;
+    return `Svell ute × ${t} × ${nf0.format(h.directness*100)} % (skrått inn)${src}`;
+  }
   return h.turn!=null && h.turn>=10 ? "met.no, justert" : "met.no";
 }
 function windowText(spot){
@@ -324,10 +334,10 @@ function windowText(spot){
   return "Vindu " + secs.map(([a,b])=>`${a}–${b}°`).join(", ");
 }
 function directionHitText(h){
-  if(h.direction_hit==null) return "";
-  if(h.direction_hit <= 0.1) return "Utenfor vinduet";
-  if(h.direction_hit >= 0.95) return "Midt i vinduet";
-  return "I vinduet, ikke midt i";
+  if(h.directness==null) return "";
+  if(h.directness < 0.667) return "Utenfor vinduet";
+  if(h.directness >= 0.999) return "Midt i vinduet";
+  return "I kanten av vinduet";
 }
 function nextTide(spot, t){
   const after = (spot.tide_events||spot.tide||[]).filter(x=>new Date(x.time) >= t);
@@ -365,23 +375,30 @@ function renderSpot(){
       for(let k=0;k<x.stars;k++) pips += `<span class="pip"></span>`;
       for(let k=0;k<x.faded;k++) pips += `<span class="pip f"></span>`;
       if(!x.stars && !x.faded) pips = `<span class="pip z"></span>`;
-      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}`;
-      return `<button class="h${lightClass(x)}${i===state.sel?" sel":""}" data-i="${i}" aria-label="${lbl}" aria-pressed="${i===state.sel}">
+      const isReserve = !!(s.bw_until && x.t > s.bw_until);
+      const isBreak = isReserve && (i===0 || !(s.bw_until && s.hours[i-1].t > s.bw_until));
+      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}${isReserve?", anslag":""}`;
+      return `<button class="h${lightClass(x)}${i===state.sel?" sel":""}${isReserve?" resmodel":""}${isBreak?" bw-break":""}" data-i="${i}" aria-label="${lbl}" aria-pressed="${i===state.sel}">
         <span class="bar">${pips}</span><span class="hl">${fmtHour.format(new Date(x.t))}</span></button>`;
     }).join("");
     return `<div class="day"><span class="day-label">${relDay(d)}</span><div class="hours">${cols}</div></div>`;
   }).join("");
 
-  // Advarsel om dreining
+  // Advarsel om retning/dreining
   let warn = "";
   if(h.height_source==="barentswatch"){
-    warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.</span></div>`;
-  } else if(h.likely_flat && (h.turn==null || h.turn<=25)){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${Math.round(h.dir_offshore)}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
-  } else if(h.likely_flat){
+    const interp = h.bw_interpolated ? " Denne timen er interpolert mellom to BarentsWatch-punkter." : "";
+    warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.${interp}</span></div>`;
+  } else if(h.height_source==="svell_ute" && h.directness < 0.667){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${Math.round(h.dir_offshore)}°), utenfor vinduet.</b> Bare ${nf0.format(h.directness*100)} % av høyden ved direkte treff bøyer seg inn. Usikkert, maks 3 stjerner.</span></div>`;
+  } else if(h.height_source==="svell_ute" && h.directness < 1){
+    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Svellet kommer i kanten av vinduet (${compass(h.dir_offshore)}, ${Math.round(h.dir_offshore)}°).</b> ${nf0.format(h.directness*100)} % av høyden ved direkte treff når inn.</span></div>`;
+  } else if(h.height_source==="metno_korrigert" && h.likely_flat && (h.turn==null || h.turn<=25)){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
+  } else if(h.height_source==="metno_korrigert" && h.likely_flat){
     warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet dreier ${Math.round(h.turn)}° inn i bukta.</b> Så stor dreining betyr som regel at det er mye mindre enn modellene viser. Høyden er justert kraftig ned.</span></div>`;
   } else if(h.uncertain){
-    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> Svellet dreier ${Math.round(h.turn)}° og høyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
+    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> ${h.turn!=null?`Svellet dreier ${Math.round(h.turn)}° og h`:"H"}øyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
   }
 
   const tide = nextTide(s,t);
@@ -407,9 +424,9 @@ function renderSpot(){
       <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
     </div>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h)}</div></div>
+      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h,s)}</div></div>
       <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
-      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.direction_hit!=null?nf0.format(h.direction_hit*100)+" %":"–"}</div><div class="n">${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}</div></div>
+      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${WIND_WORD[h.wind_type]||""} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
@@ -444,19 +461,29 @@ function renderLogs(){
     return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor én stjerne.</p></div>`;
   }).join("");
   const heightCal = DATA.spots.map(s=>{
-    const pts = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null && l.swellOffshore>0.2)
-      .map(l=>SIZE_M[l.size]/l.swellOffshore).sort((a,b)=>a-b);
+    // Samme formel som fetcher/calibrate.py: forhold mot toppfaktoren ved
+    // DIREKTE treff, ikke ved skrått svell. Gamle logger uten directness
+    // antas direkte (1.0). Svell langt utenfor vinduet (directness < 0.3)
+    // sier lite om direkte treff og hoppes over.
+    const pts = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null && l.swellOffshore>0.2 && (l.directness??1.0)>=0.3)
+      .map(l=>SIZE_M[l.size]/(l.swellOffshore*(l.directness??1.0))).sort((a,b)=>a-b);
+    const cal = s.calibration || {};
+    const pct = nf0.format((cal.transfer_used ?? (s.hours[0]||{}).transfer ?? 0.6) * 100);
+    if(cal.transfer_source==="logs"){
+      return `<div class="calib"><div class="t">${esc(s.name)}: ${pct} % av svellet når stranda ved direkte treff</div>
+        <p>Lært automatisk fra ${cal.size_logs} økter du har logget, og brukt i varselet.</p></div>`;
+    }
+    if(cal.transfer_source==="barentswatch"){
+      return `<div class="calib"><div class="t">${esc(s.name)}: ${pct} % av svellet når stranda ved direkte treff</div>
+        <p>Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn).</p></div>`;
+    }
     if(pts.length < MIN_SIZE_LOGS){
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${MIN_SIZE_LOGS-pts.length} økt${MIN_SIZE_LOGS-pts.length===1?"":"er"} til med størrelse valgt for å lære hvor mye av svellet som når stranda.</p></div>`;
+      const bwNote = cal.bw_pairs ? ` Lærer også fra BarentsWatch i bakgrunnen (${cal.bw_pairs} par over ${cal.bw_days} døgn så langt, trenger ${40} par over minst 3 døgn).` : "";
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${MIN_SIZE_LOGS-pts.length} økt${MIN_SIZE_LOGS-pts.length===1?"":"er"} til med størrelse valgt for å lære hvor mye av svellet som når stranda ved direkte treff.${bwNote}</p></div>`;
     }
     const med = pts[Math.floor(pts.length/2)];
-    const now = (s.hours[0]||{}).transfer ?? 0.7;
-    if(s.calibration && s.calibration.transfer){
-      return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(s.calibration.transfer*100)} % av svellet når stranda</div>
-        <p>Lært automatisk fra ${s.calibration.size_logs} økter og brukt i varselet.</p></div>`;
-    }
-    return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(med*100)} % av svellet når stranda</div>
-      <p>Lært fra ${pts.length} økter. Appen bruker nå ${nf0.format(now*100)} %. Sett <b>"transfer": ${med.toFixed(2)}</b> for ${esc(s.id)} i spots.json.</p></div>`;
+    return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(med*100)} % av svellet når stranda ved direkte treff</div>
+      <p>Lært fra ${pts.length} økter. Appen bruker nå ${pct} % (${cal.transfer_source==="spots.json"?"satt i spots.json":"standardverdi"}). Sett <b>"transfer": ${med.toFixed(2)}</b> for ${esc(s.id)} i spots.json.</p></div>`;
   }).join("");
   const rows = logs.map(l=>{
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
@@ -591,7 +618,8 @@ $("#saveLog").onclick = ()=>{
   const entry = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot, t: t.toISOString(),
     stars: logDraft.stars, size: logDraft.size, wind: logDraft.wind,
     forecastStars: f ? f.stars : null, forecastFaded: f ? f.faded : null,
-    forecastHeight: f ? f.height : null, swellOffshore: f ? f.swell_offshore : null};
+    forecastHeight: f ? f.height : null, swellOffshore: f ? f.swell_offshore : null,
+    directness: f ? f.directness : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
   toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");

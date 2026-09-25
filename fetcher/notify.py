@@ -20,10 +20,19 @@ def load_settings():
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
+def notifiable_hours(spot):
+    """Spots med BarentsWatch skal bare varsle på ekte BarentsWatch-timer -
+    reservemodellen (etter bw_until) er for usikker til å varsle på. Spots
+    uten BarentsWatch i det hele tatt bruker alle timene, som før."""
+    if spot.get("bw_until"):
+        return [h for h in spot["hours"] if h.get("height_source") == "barentswatch"]
+    return spot["hours"]
+
+
 def windows(spot, min_stars, hours_ahead, now):
     """Sammenhengende timer i brukbart lys med minst min_stars. Beste vindu først."""
     out, cur = [], None
-    for h in spot["hours"]:
+    for h in notifiable_hours(spot):
         t = dt.datetime.fromisoformat(h["t"].replace("Z", "+00:00"))
         if t > now + dt.timedelta(hours=hours_ahead):
             break

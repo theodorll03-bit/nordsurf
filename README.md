@@ -67,7 +67,8 @@ Du får ett varsel per spot per dag, og et nytt bare hvis det blir bedre.
 ## Første kjøring
 
 Etter hver kjøring står det en **kilderapport** nederst i Actions-kjøringen: hver kilde for hver spot,
-med ok, tom eller feil. Se særlig etter:
+med ok, tom eller feil, samt "BarentsWatch periode" (første/siste tidspunkt og `bw_until`) og
+"Horisont" (hvor mange timer frem denne kjøringen faktisk dekker). Se særlig etter:
 - "Open-Meteo svellhøyde: tom". Da har havpunktet ingen svelldata, og spoten faller tilbake til met.no
 - "Kartverket tidevann: feil". Da virker ikke tidevannet
 - "BarentsWatch: feil" eller "tom"
@@ -87,14 +88,69 @@ Kystlinja er GSHHS i full oppløsning. Små skjær kan mangle, så sjekk trange 
 
 ## Bølgehøyde
 
-Høyden på spoten hentes slik, i rekkefølge:
-1. BarentsWatch, når den er koblet på
-2. Bare svellet ute fra Open-Meteo (uten vindsjø), ganget med spotens `transfer` og dreiningsregelen
-3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen
+BarentsWatch er hovedkilden når den er koblet på: den har sin egen finmaskede
+kystmodell som allerede tar hensyn til skjerming bak odder og øyer, og brukes
+**uten** noen faktor. BarentsWatch kommer i tretimerssteg (ca 58-60 timer
+frem) - henteren fyller inn hver time i mellom med interpolasjon (rett linje
+for høyde og periode, korteste vei rundt kompasset for retning), men
+ekstrapolerer aldri forbi siste ekte punkt. Hver spot har et felt `bw_until`
+i `forecast.json`: siste time med ekte BarentsWatch-data. I appen vises
+timene etter det bruddet nedtonet, med "(anslag)" på beste vindu hvis det
+treffer der.
 
-`transfer` er hvor stor del av svellet ute som faktisk når stranda. Starter på 0,7.
-Logg størrelse på øktene dine, så regner Logger-fanen ut riktig verdi etter 5 økter.
-Legg den inn i `spots.json`, f.eks. `"transfer": 0.42`.
+Etter `bw_until`, og for spots uten BarentsWatch i det hele tatt, brukes
+reservemodellen:
+1. Bare svellet ute fra Open-Meteo (uten vindsjø), ganget med spotens
+   `transfer` og hvor direkte svellet treffer spoten (se under).
+2. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
+
+Horisonten er normalt 120 timer (5 døgn), men stopper ved hvilken som helst
+kilde som har kortere data (Open-Meteo eller met.no vind) - det står i
+kilderapporten som "Horisont: X timer" per spot.
+
+`transfer` er hvor stor del av svellet ute som når stranda ved et **direkte**
+treff (rett inn i midten av svellvinduet). Den læres i denne rekkefølgen:
+1. Fra loggene dine (Logg størrelse på øktene, minst 5 med størrelse valgt)
+2. Automatisk fra BarentsWatch (se under)
+3. Verdien satt i `spots.json`, f.eks. `"transfer": 0.42`
+4. Standardverdien 0,6
+
+Bare det første treffet i rekkefølgen brukes - Logger-fanen viser hvilken
+kilde som gjelder for hver spot akkurat nå.
+
+### Automatisk kalibrering mot BarentsWatch
+
+For spots med BarentsWatch bygger henteren, ved hver kjøring, et forhold
+`bw_height / (svell_ute × directness)` for hver time der svellet ute klart
+dominerer bildet (minst 0,3 m, retningstreff minst 0,3, og svellet er minst
+70 % av total bølgehøyde ute) - bare ekte, ikke interpolerte, BarentsWatch-
+timer telles. Disse forholdene lagres i `data/bw_calibration.json` (ett
+tidsstemplet par per time, forkastes etter 30 døgn). Når det finnes minst 40
+par spredt over minst 3 forskjellige døgn, brukes medianen (avgrenset til
+0,05-1,2) som `transfer` for reservemodellen, helt uavhengig av loggene dine.
+Dette gir en fornuftig faktor selv for spots du aldri har logget økter på.
+
+### Retning: skyggen bak odder og øyer
+
+De fleste spotene ligger i le av en odde eller en øy, og svellet må bøye seg
+(diffraksjon) for å nå stranda når det ikke treffer rett i svellvinduet.
+Jo lenger fra vinduet, jo mindre høyde blir det igjen, og fallet er raskest
+rett utenfor kanten:
+
+| Retning | Andel av høyden ved direkte treff | Høyde med transfer 0,6 |
+|---|---|---|
+| Godt innenfor vinduet (5° eller mer fra kanten) | 100 % | 0,6 |
+| Akkurat på kanten | 67 % | 0,4 |
+| 5° utenfor | 33 % | 0,2 |
+| 10° utenfor | 17 % | 0,1 |
+| 20° utenfor | 5 % | 0,03 |
+| 30° eller mer utenfor | 0 % | 0 |
+
+Kantverdien (67 %) bygger på kystteknikk: langs skyggegrensen bak en odde er
+bølgehøyden omtrent 70 % av høyden ute for uregelmessige bølger fra flere
+retninger. Resten av kurven er et anslag - diffraksjon kan ikke beregnes
+presist for en surfespot uten mye mer detaljerte data. Loggene dine justerer
+bare `transfer` (toppfaktoren ved direkte treff), aldri selve kurven.
 
 ## Tidevann per spot
 
@@ -112,7 +168,14 @@ Solhøyden regnes ut lokalt, uten eksterne kall.
 Verdiene i `spots.json` er startverdier. Etter 10–15 logger per spot viser Logger-fanen
 om varselet over- eller undervurderer. Juster `ideal_height`, `swell_window` og
 `offshore_wind` ut fra det, og kjør `python fetcher/test_rating.py` for å sjekke at
-de kjente dagene fortsatt blir riktige.
+de kjente dagene fortsatt blir riktige. `transfer` trenger du normalt ikke justere selv
+lenger - se "Automatisk kalibrering mot BarentsWatch" over.
+
+## Varsler og BarentsWatch
+
+Spots med BarentsWatch varsler bare på timer der høyden faktisk kommer fra BarentsWatch
+(ekte eller interpolerte punkter) - aldri på reservemodellen etter `bw_until`, den er
+for usikker til å sende varsel på. Spots uten BarentsWatch varsler som før, på alle timene.
 
 ## Ting jeg ikke har kunnet teste
 

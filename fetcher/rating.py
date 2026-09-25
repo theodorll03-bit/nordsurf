@@ -32,11 +32,31 @@ def window_sectors(spot):
     return w if isinstance(w[0], list) else [w]
 
 
+def degrees_outside(d, spot):
+    """0 hvis retningen er innenfor en av sektorene i vinduet. Ellers minste
+    vinkelavstand til nærmeste kant. None hvis d er None."""
+    if d is None:
+        return None
+    return min(distance_to_sector(d, s) for s in window_sectors(spot))
+
+
+def degrees_inside(d, spot):
+    """For sektoren d ligger innenfor: minste vinkelavstand til de to
+    kantene. 0 hvis d er utenfor alle sektorer (eller None)."""
+    if d is None:
+        return 0
+    for start, end in window_sectors(spot):
+        if in_sector(d, [start, end]):
+            return min(angle_diff(d, start), angle_diff(d, end))
+    return 0
+
+
 # ---------- Høyde på spoten ----------
 
 def refraction_factor(turn):
     """Din dreiningsregel. Liten dreining: modellen treffer.
-    Stor dreining: svellet må bøye seg inn, modellen overdriver."""
+    Stor dreining: svellet må bøye seg inn, modellen overdriver.
+    Brukes bare for reserven (metno_korrigert) - svell_ute bruker directness()."""
     if turn is None:
         return 1.0
     if turn < 10:
@@ -46,34 +66,56 @@ def refraction_factor(turn):
     return 0.15
 
 
-DEFAULT_TRANSFER = 0.7  # startverdi til loggene har lært den ekte faktoren
+DEFAULT_TRANSFER = 0.6  # andel av svellet ute som når stranda ved DIREKTE treff
+EDGE_TAPER = 5  # grader innenfor kanten der høyden glir opp til 1.0
+# (grader utenfor vinduet, andel av høyden ved direkte treff). 0.667 på kanten
+# tilsvarer 0.4 når transfer er 0.6. Kalibrert mot kystteknikk (diffraksjon
+# bak en odde: ca 70% langs skyggegrensen for uregelmessige bølger), resten
+# er anslag. Læres ALDRI fra loggene - bare transfer gjør det.
+SHADOW_CURVE = [(0, 0.667), (5, 0.333), (10, 0.167), (20, 0.05), (30, 0.0)]
+
+
+def directness(d, spot):
+    """0 til 1: hvor stor andel av svellet ved direkte treff som når spoten,
+    basert på hvor retningen ligger i forhold til svellvinduet."""
+    if d is None:
+        return 0.7  # ukjent retning, nøytralt anslag
+    if degrees_outside(d, spot) == 0:
+        edge = SHADOW_CURVE[0][1]
+        deg_in = degrees_inside(d, spot)
+        if deg_in >= EDGE_TAPER:
+            return 1.0
+        return min(1.0, edge + (1.0 - edge) * deg_in / EDGE_TAPER)
+    deg_out = degrees_outside(d, spot)
+    if deg_out >= SHADOW_CURVE[-1][0]:
+        return SHADOW_CURVE[-1][1]
+    for (x0, y0), (x1, y1) in zip(SHADOW_CURVE, SHADOW_CURVE[1:]):
+        if x0 <= deg_out <= x1:
+            return y0 + (y1 - y0) * (deg_out - x0) / (x1 - x0)
+    return SHADOW_CURVE[-1][1]
 
 
 def spot_height(hour, spot=None):
     """Beste anslag på bølgehøyde på spoten, og hvilken kilde det kom fra.
 
-    1. BarentsWatch, når den finnes (finmasket kystmodell).
+    1. BarentsWatch, når den finnes (finmasket kystmodell som allerede tar
+       hensyn til skjerming bak odder og øyer).
     2. Bare svellet ute (Open-Meteo), uten vindsjø, ganget med spotens
-       faktor, dreiningsregelen og hvor godt retningen treffer vinduet.
-       Faktoren læres fra loggene dine.
-    3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen
-       og retningen.
-
-    Retningen teller med her, ikke bare på stjernene: en retning nær kanten
-    av vinduet betyr mindre svellenergi når stranda, selv om den teknisk
-    sett er innenfor.
+       faktor og directness() - hvor direkte svellet treffer vinduet.
+       Faktoren læres fra loggene dine. Bruker IKKE dreiningsregelen her,
+       ellers straffes skrått svell to ganger.
+    3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
     """
     if hour.get("bw_height") is not None:
         return hour["bw_height"], "barentswatch"
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
-    dir_factor = direction_score(hour.get("dir_offshore"), spot) if spot else 1.0
     if hour.get("swell_offshore") is not None:
-        h = hour["swell_offshore"] * transfer * refraction_factor(hour.get("turn")) * dir_factor
+        h = hour["swell_offshore"] * transfer * directness(hour.get("dir_offshore"), spot)
         return h, "svell_ute"
     h = hour.get("height_spot_model")
     if h is None:
         return None, None
-    return h * refraction_factor(hour.get("turn")) * dir_factor, "metno_korrigert"
+    return h * refraction_factor(hour.get("turn")), "metno_korrigert"
 
 
 # ---------- Svellstjerner ----------
@@ -111,31 +153,29 @@ def period_score(p, spot):
     return 1.0
 
 
-def direction_score(d, spot):
+def direction_score(d, spot, source=None):
+    """Retningsstraff for stjernene. Når høyden allerede kommer fra en kilde
+    som tar hensyn til retningen (svell_ute sin directness(), eller
+    BarentsWatch sin egen kystmodell), skal denne ikke straffe en gang til -
+    da ville samme rabatt telt dobbelt. Bare reserven (metno_korrigert, og
+    ukjent kilde) bruker den egentlige retningsstraffen."""
+    if source in ("svell_ute", "barentswatch"):
+        return 1.0
     if d is None:
         return 0.5
-    best = 0.0
-    for start, end in window_sectors(spot):
-        if in_sector(d, [start, end]):
-            width = max((end - start) % 360, 1)
-            center = (start + width / 2) % 360
-            best = max(best, 1.0 - 0.2 * angle_diff(d, center) / (width / 2))
-    if best:
-        return best
-    # Utenfor vinduet: observert 25.09.2026 at 3 grader utenfor holdt Grøtfjord
-    # helt flatt. Ingen delvis kreditt nær kanten - utenfor er utenfor.
-    return 0.1
+    off = degrees_outside(d, spot)
+    if off == 0:
+        return 1.0
+    return 0.5 if off <= 20 else 0.1
 
 
 def swell_stars(hour, spot):
     h, source = spot_height(hour, spot)
-    score = height_score(h, spot) * period_score(hour.get("period"), spot)
-    if source == "barentswatch":
-        # BarentsWatch måler høyden direkte på spoten - retningens effekt på
-        # energien er allerede med i det tallet. For de andre kildene er
-        # retningen alt bakt inn i h via spot_height(), så her ville en ny
-        # multiplikasjon telt den samme rabatten to ganger.
-        score *= direction_score(hour.get("dir_offshore"), spot)
+    score = (
+        height_score(h, spot)
+        * period_score(hour.get("period"), spot)
+        * direction_score(hour.get("dir_offshore"), spot, source)
+    )
     return int(5 * score + 1e-9)  # rund ned
 
 
@@ -191,9 +231,14 @@ def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     potential = swell_stars(hour, spot)
     h, source = spot_height(hour, spot)
-    dir_hit = direction_score(hour.get("dir_offshore"), spot)
-    # Ærlighet: uten BarentsWatch og med dreining vet vi mindre. Maks 3 stjerner.
-    uncertain = source != "barentswatch" and (hour.get("turn") or 0) >= 10
+    dir_hit = directness(hour.get("dir_offshore"), spot)
+    deg_out = degrees_outside(hour.get("dir_offshore"), spot)
+    # Ærlighet: uten BarentsWatch, med dreining eller utenfor vinduet vet vi
+    # mindre. Maks 3 stjerner. Svell godt innenfor vinduet, nær kanten, gjør
+    # IKKE varselet usikkert i seg selv.
+    uncertain = source != "barentswatch" and (
+        (hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0
+    )
     if uncertain:
         potential = min(potential, 3)
     lost_wind = min(potential, wind_penalty(hour.get("wind_speed"), hour.get("wind_dir"), spot))
@@ -209,12 +254,17 @@ def rate(hour, spot):
         "height_source": source,
         "transfer": spot.get("transfer", DEFAULT_TRANSFER),
         "uncertain": uncertain,
-        # Hvor mye av svellet som treffer, basert på retning i vinduet.
-        # Brukes til å justere selve høyden, ikke bare stjernene.
-        "direction_hit": round(dir_hit, 3),
-        # Trolig flatt: svellet må bøye seg kraftig inn, eller kommer utenfor vinduet
-        "likely_flat": source != "barentswatch" and (
-            (hour.get("turn") is not None and hour["turn"] > 25)
-            or dir_hit <= 0.1
+        # Hvor stor andel av svellet ved direkte treff som når spoten akkurat
+        # nå. Brukes til å justere selve høyden (for svell_ute), og vises i
+        # appen som "retningstreff".
+        "directness": round(dir_hit, 3),
+        # Trolig flatt: enten er beregnet høyde reelt lav, eller reserven
+        # (metno_korrigert) har stor dreining/retning langt utenfor vinduet -
+        # den kilden tar ikke selv hensyn til noen av delene.
+        "likely_flat": (h is not None and h < 0.35) or (
+            source == "metno_korrigert" and (
+                (hour.get("turn") is not None and hour["turn"] > 25)
+                or (deg_out is not None and deg_out > 20)
+            )
         ),
     }

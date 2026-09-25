@@ -19,12 +19,21 @@ from rating import angle_diff, rate
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
 OUT = ROOT / "docs" / "data" / "forecast.json"
-HOURS_AHEAD = 72
+BW_CALIB = ROOT / "data" / "bw_calibration.json"
+HOURS_AHEAD_MAX = 120  # 5 døgn, men stopper ved kortest tilgjengelige kilde
 REPORT = []  # kilderapport, vises i Actions
 
 
 def pick(*vals):
     return next((v for v in vals if v is not None), None)
+
+
+def _hours_available(source_dict, now):
+    """Timer fra now til siste tilgjengelige tidspunkt i kilden. 0 hvis tom."""
+    if not source_dict:
+        return 0
+    last = sources.parse_iso(max(source_dict))
+    return max(0, int((last - now).total_seconds() // 3600) + 1)
 
 
 def safe(spot, label, fn, *args, default=None):
@@ -39,11 +48,9 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
-def build_spot(spot, now, learned):
+def build_spot(spot, now, learned, bw_calib, run_id):
     name = spot["name"]
     print(name)
-    if learned.get("transfer"):
-        spot = {**spot, "transfer": learned["transfer"]}  # lært fra loggene slår startverdien
     s, o = spot["spot"], spot["offshore"]
     ocean_spot = safe(name, "met.no hav (spot)", sources.metno_ocean, s["lat"], s["lon"])
     ocean_off = safe(name, "met.no hav (ute)", sources.metno_ocean, o["lat"], o["lon"])
@@ -52,15 +59,32 @@ def build_spot(spot, now, learned):
     swell_values = [v.get("swell_height") for v in marine.values() if v.get("swell_height") is not None]
     if marine and not swell_values:
         REPORT.append((name, "Open-Meteo svellhøyde", "tom", "havpunktet gir ingen svellhøyde, bruker met.no"))
-    bw = {}
+
+    bw_raw = {}
     if spot.get("barentswatch_point"):
         p = spot["barentswatch_point"]
-        bw = safe(name, "BarentsWatch", sources.barentswatch_point, p["lat"], p["lon"])
+        bw_raw = safe(name, "BarentsWatch", sources.barentswatch_point, p["lat"], p["lon"])
+    bw_hourly = sources.bw_interpolate(bw_raw)
+    bw_until = max(bw_raw) if bw_raw else None
+    if bw_raw:
+        REPORT.append((name, "BarentsWatch periode", "ok", f"{min(bw_raw)} -> {max(bw_raw)}, bw_until {bw_until}"))
+
+    horizon = min(HOURS_AHEAD_MAX, _hours_available(marine, now), _hours_available(weather, now))
+    REPORT.append((name, "Horisont", "ok", f"{horizon} timer"))
+
     tides = safe(name, "Kartverket tidevann", sources.kartverket_tide, s["lat"], s["lon"],
-                 now - dt.timedelta(hours=12), now + dt.timedelta(hours=HOURS_AHEAD + 12), default=[])
+                 now - dt.timedelta(hours=12), now + dt.timedelta(hours=HOURS_AHEAD_MAX + 12), default=[])
+
+    # Effektiv transfer for reserven brukes med kalibreringshistorikk FRA FØR
+    # denne kjøringen - nye par fra akkurat nå legges til historikken lenger
+    # ned og gjelder først fra neste kjøring (unngår sirkularitet: parene
+    # bygges av bw_height/svell/directness og trenger ikke selve transferen).
+    bw_pairs_existing = bw_calib.get(spot["id"], [])
+    transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
+    spot = {**spot, "transfer": transfer_value}
 
     hours = []
-    for i in range(HOURS_AHEAD):
+    for i in range(horizon):
         t = now + dt.timedelta(hours=i)
         k = sources.hour_key(t)
         sp, off, mar, w = ocean_spot.get(k), ocean_off.get(k), marine.get(k), weather.get(k)
@@ -70,12 +94,16 @@ def build_spot(spot, now, learned):
         dir_spot = (sp or {}).get("dir")
         turn = angle_diff(dir_off, dir_spot) if dir_off is not None and dir_spot is not None else None
         light = sun.light(s["lat"], s["lon"], t)
+        bwk = bw_hourly.get(k)
         hour = {
             "t": k,
             "height_offshore": pick((off or {}).get("height"), (mar or {}).get("height")),
             "height_spot_model": (sp or {}).get("height"),
             "swell_offshore": (mar or {}).get("swell_height"),
-            "bw_height": bw.get(k),
+            "bw_height": bwk.get("height") if bwk else None,
+            "bw_dir": bwk.get("dir") if bwk else None,
+            "bw_period": bwk.get("period") if bwk else None,
+            "bw_interpolated": bwk.get("interpolated") if bwk else None,
             "dir_offshore": dir_off,
             "dir_spot": dir_spot,
             "turn": turn,
@@ -89,9 +117,24 @@ def build_spot(spot, now, learned):
         hour.update(rate(hour, spot))
         hours.append(hour)
 
+    new_pairs = calibrate.bw_pairs_for_run(hours, run_id)
+    merged_pairs = calibrate.merge_bw_pairs(bw_pairs_existing, new_pairs, now)
+    bw_calib[spot["id"]] = merged_pairs
+    bw_days = len({p["t"][:10] for p in merged_pairs})
+
     public = {k: v for k, v in spot.items() if not k.startswith("_")}
     light_days = sun.light_days(s["lat"], s["lon"], now)
-    return {**public, "hours": hours, "tide_events": tides, "calibration": learned, "light_days": light_days}
+    calibration = {
+        **learned,
+        "transfer_logs": learned.get("transfer"),
+        "transfer_bw": calibrate.bw_transfer(merged_pairs),
+        "bw_pairs": len(merged_pairs),
+        "bw_days": bw_days,
+        "transfer_used": transfer_value,
+        "transfer_source": transfer_source,
+    }
+    return {**public, "hours": hours, "tide_events": tides, "bw_until": bw_until,
+            "calibration": calibration, "light_days": light_days}
 
 
 def write_report():
@@ -107,16 +150,20 @@ def write_report():
 def main():
     config = json.loads(SPOTS.read_text(encoding="utf-8"))
     now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    run_id = now.isoformat()
     logs = safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[])
+    bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
     spots = []
     for s in config["spots"]:
         if s.get("enabled"):
-            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs)))
+            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(forecast, ensure_ascii=False), encoding="utf-8")
     print(f"Skrev {OUT}")
+    BW_CALIB.parent.mkdir(parents=True, exist_ok=True)
+    BW_CALIB.write_text(json.dumps(bw_calib, ensure_ascii=False, indent=1), encoding="utf-8")
     notify.run(forecast, now)
     write_report()
 
