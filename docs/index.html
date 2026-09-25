@@ -69,13 +69,27 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 
 /* Spotliste */
 .list{margin:16px 0;background:var(--raised);border-radius:14px;overflow:hidden}
-.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%;text-align:left;padding:14px 16px;min-height:44px;background:none;border:0;border-top:1px solid var(--line);cursor:pointer}
-.row:first-child{border-top:0}
+.spotrow{border-top:1px solid var(--line)}
+.spotrow:first-child{border-top:0}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%;text-align:left;padding:14px 16px;min-height:44px;background:none;border:0;cursor:pointer}
 .row:active{background:var(--surface)}
 .row .name{font:700 21px/1.2 var(--display)}
 .row .area{color:var(--muted);font-size:15px}
 .row .facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted);font-size:15px}
 .row .best{grid-column:1/-1;font-size:15px}
+
+/* Kommende dager */
+.daychips{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 16px 14px}
+.daychips::-webkit-scrollbar{display:none}
+.daychip{all:unset;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;min-height:44px;padding:8px 10px;border-radius:12px;background:var(--surface);cursor:pointer;box-sizing:border-box}
+.daychip .dc-day{font-size:12px;color:var(--muted);font-weight:600}
+.daychip .stars svg{width:11px;height:11px}
+.daychip .dc-h{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.daychip .dc-t{font-size:11px;color:var(--muted);white-space:nowrap}
+.daychip.good{background:color-mix(in srgb,var(--star) 16%,var(--surface));outline:1.5px solid var(--star);outline-offset:-1.5px}
+.daychip.anslag{opacity:.72}
+.daychip.dark .dc-dark{font-size:13px;color:var(--muted);margin-top:6px}
+.daychip:active{background:var(--line)}
 .chev{color:var(--muted);font-size:22px;line-height:1}
 
 /* Detalj */
@@ -231,6 +245,7 @@ const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
 const fmtHour = new Intl.DateTimeFormat("nb-NO",{hour:"2-digit",timeZone:TZ});
 const fmtTime = new Intl.DateTimeFormat("nb-NO",{hour:"2-digit",minute:"2-digit",timeZone:TZ});
 const fmtDay = new Intl.DateTimeFormat("nb-NO",{weekday:"long",timeZone:TZ});
+const fmtDayShort = new Intl.DateTimeFormat("nb-NO",{weekday:"short",timeZone:TZ});
 const fmtDate = new Intl.DateTimeFormat("nb-NO",{weekday:"short",day:"numeric",month:"short",timeZone:TZ});
 const dayKey = d => new Intl.DateTimeFormat("sv-SE",{timeZone:TZ}).format(d);
 
@@ -248,6 +263,12 @@ function relDay(d){
   if(k===tmr) return "i morgen";
   return fmtDay.format(d);
 }
+function relDayShort(d){
+  const r = relDay(d);
+  if(r==="i dag" || r==="i morgen") return r;
+  return fmtDayShort.format(d).replace(/\.$/,"");
+}
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
 /* ---------- Stjerner ---------- */
@@ -290,6 +311,40 @@ function currentHour(spot){
   return Math.max(0, idx);
 }
 
+/* ---------- Kommende dager ---------- */
+function dayChipsHtml(spot, spotIdx){
+  const days = new Map();
+  spot.hours.forEach((h,i)=>{ const k = dayKey(new Date(h.t)); if(!days.has(k)) days.set(k,[]); days.get(k).push([h,i]); });
+  const bw = spot.bw_until;
+  const chips = [...days.values()].map(list=>{
+    const d = new Date(list[0][0].t);
+    const shortLbl = relDayShort(d), fullLbl = cap(relDay(d));
+    const lit = list.filter(([h])=>h.daylight===true);
+    if(!lit.length){
+      return `<button type="button" class="daychip dark" data-spot="${spotIdx}" data-sel="${list[0][1]}" aria-label="${esc(fullLbl)}, mørkt hele dagen">
+        <span class="dc-day">${esc(shortLbl)}</span><span class="dc-dark">Mørkt</span>
+      </button>`;
+    }
+    let best = lit[0];
+    for(const pair of lit) if(pair[0].stars > best[0].stars) best = pair;
+    const [h, idx] = best;
+    const good = h.stars >= 3;
+    const anslag = !!(bw && h.t > bw);
+    const heightTxt = h.likely_flat ? "Flatt" : (h.height!=null ? nf1.format(h.height)+" m" : "–");
+    const heightSpoken = h.likely_flat ? "Flatt" : (h.height!=null ? nf1.format(h.height)+" meter" : "ingen data");
+    const timeTxt = fmtHour.format(new Date(h.t));
+    const cls = ["daychip", good?"good":"", anslag?"anslag":""].filter(Boolean).join(" ");
+    const lbl = `${fullLbl}, beste time klokka ${timeTxt.replace(/^0/,"")}, ${h.stars} av 5 stjerner, ${heightSpoken}${anslag?", anslag":""}`;
+    return `<button type="button" class="${cls}" data-spot="${spotIdx}" data-sel="${idx}" aria-label="${esc(lbl)}">
+      <span class="dc-day">${esc(shortLbl)}</span>
+      ${starsSVG(h.stars, h.faded)}
+      <span class="dc-h">${esc(heightTxt)}</span>
+      <span class="dc-t">${esc(timeTxt)}${anslag?' · anslag':''}</span>
+    </button>`;
+  }).join("");
+  return `<div class="daychips" role="list" aria-label="Kommende dager">${chips}</div>`;
+}
+
 /* ---------- Visninger ---------- */
 function render(){
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current", t.dataset.tab===state.tab ? "page" : "false"));
@@ -319,18 +374,24 @@ function renderList(){
       h.period!=null ? `${nf0.format(h.period)} s` : null,
       h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
     ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
-    return `<button class="row" data-spot="${i}">
-      <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
-      <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
-      <span class="facts">${facts}${h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":"")}</span>
-      <span class="best">${bestText(s)}</span>
-    </button>`;
+    return `<div class="spotrow">
+      <button class="row" data-spot="${i}">
+        <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
+        <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
+        <span class="facts">${facts}${h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":"")}</span>
+        <span class="best">${bestText(s)}</span>
+      </button>
+      ${dayChipsHtml(s, i)}
+    </div>`;
   }).join("");
   $("#app").innerHTML = `${sampleBanner()}
     <header class="top"><h1>Varsel</h1><p class="sub">${DATA.sample?"Eksempel, ikke ekte data":`Oppdatert ${relDay(gen)} kl. ${fmtTime.format(gen)}`}</p></header>
     <div class="list">${rows}</div>`;
   document.querySelectorAll(".row").forEach(b=>b.onclick=()=>{
     state.spot = +b.dataset.spot; state.sel = currentHour(DATA.spots[state.spot]); render(); window.scrollTo(0,0);
+  });
+  document.querySelectorAll(".daychip").forEach(b=>b.onclick=()=>{
+    state.spot = +b.dataset.spot; state.sel = +b.dataset.sel; state.scrollToSel = true; render(); window.scrollTo(0,0);
   });
 }
 
@@ -456,6 +517,11 @@ function renderSpot(){
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
+  if(state.scrollToSel){
+    state.scrollToSel = false;
+    const sel = $(".h.sel");
+    if(sel) sel.scrollIntoView({inline:"center", block:"nearest"});
+  }
 }
 
 /* ---------- Logger ---------- */
