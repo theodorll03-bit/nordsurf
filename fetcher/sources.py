@@ -195,6 +195,8 @@ def barentswatch_point(lat, lon):
         headers={**HEADERS, "Authorization": f"Bearer {token}"},
         timeout=TIMEOUT,
     )
+    if os.environ.get("BW_DEBUG"):
+        print(f"  DEBUG bw {lat},{lon}: status={r.status_code} body={r.text[:400]!r}")
     if r.status_code == 204:  # ingen data for dette punktet
         return {}
     r.raise_for_status()
