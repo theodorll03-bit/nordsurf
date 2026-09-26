@@ -281,12 +281,21 @@ def barentswatch_point(lat, lon):
     signifikant høyde (samme mål brukes gjennomgående, ellers sammenligner
     man epler og pærer mellom spots og mellom BarentsWatch og Open-Meteo).
 
-    Retning: totalMeanWaveDirection er retningen bølgene GÅR MOT (bekreftet
-    26.09.2026 med ekte data - median avvik ~140-150 grader mot Open-Meteo
-    sin "fra"-retning for de mest åpne spotene, ikke under ~40 grader som
-    "fra"-konvensjon ville gitt). Konverteres her til "fra", som resten av
-    appen (met.no, Open-Meteo) bruker - IKKE gjett dette om igjen andre
-    steder, "dir" i returverdien herfra er allerede "fra".
+    Retning: totalMeanWaveDirection er ALLEREDE "fra"-retningen, samme
+    konvensjon som met.no (som er datakilden bak BarentsWatch sin
+    bølgemodell). Ingen konvertering her.
+
+    Historikk (26.09.2026): en tidligere runde konkluderte "mot" ut fra
+    median vinkelavvik (~140-150 grader) mot Open-Meteo i en egen diagnose
+    (se diagnose_bw_direction.py), og koden konverterte da med +180. Det var
+    feil. Fasiten kom fra en ekte, verifiserbar hendelse: Unstad 26.09.2026
+    kl. 17:00 UTC hadde totalMeanWaveDirection = 296 grader. Unstad sin
+    `facing` (rett ut i vannet fra stranda) er 294,8 grader - så UKONVERTERT
+    verdi (296) traff nesten blink mot facing, og stemte med video fra
+    Lofoten Surfsenter samme time som viste bølger rett inn mot stranda.
+    Konvertering (+180) hadde gitt 116 grader, 179 fra facing - stikk
+    motsatt av virkeligheten. IKKE konverter dette om igjen andre steder,
+    "dir" i returverdien herfra er allerede "fra".
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -320,7 +329,7 @@ def barentswatch_point(lat, lon):
         if t is None or h is None:
             continue
         d = row.get("totalMeanWaveDirection")
-        d_from = (float(d) + 180) % 360 if d is not None else None  # mot -> fra
+        d_from = float(d) if d is not None else None  # allerede "fra", se docstring
         p = row.get("totalPeakPeriod")
         hmax = row.get("expectedMaximumWaveHeight")
         out[hour_key(parse_iso(t))] = {

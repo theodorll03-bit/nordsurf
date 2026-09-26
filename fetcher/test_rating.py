@@ -1,7 +1,7 @@
 """Tester ratingen mot det du faktisk har observert. Kjør: python fetcher/test_rating.py"""
 import json
 from pathlib import Path
-from rating import rate, period_factor, wind_penalty, effective_height
+from rating import rate, wind_penalty, breaking_height
 
 spots = {s["id"]: s for s in json.loads((Path(__file__).parent.parent / "spots.json").read_text())["spots"]}
 G, E, R = spots["grotfjord"], spots["ersfjordstranda"], spots["russelv"]
@@ -35,16 +35,27 @@ assert sv["height_source"] == "svell_ute" and sv["height"] == 0.6
 ok = rate({"bw_height": 1.2, "dir_offshore": 300, "bw_dir": G["facing"], "turn": 5, "period": 10, "wind_speed": 3, "wind_dir": 120}, G)
 show("Vanlig ok dag", ok); assert ok["stars"] == 4
 
-# 5 stjerner krever alt: EFFEKTIV høyde (høyde * periodefaktor, se
-# period_factor) nøyaktig midt i ideal_height, lang periode, midt i vinduet,
-# blankt. Ved 15 s periode (faktor 1,25) er det den ekte høyden 1,12 m -
-# ikke 1,4 m som før periodefaktoren fantes - som treffer midten (1,4 m
-# effektivt). Se README/samtalen 26.09.2026 for hvorfor: periodefaktoren
-# virker BARE i height_score, og løfter man i tillegg den ekte høyden til
-# 1,4 m ved 15 s blir den EFFEKTIVE høyden 1,75 m - forbi idealmidten, og
-# gir 4 stjerner, ikke 5. Testen bruker derfor høyden som faktisk treffer
-# midten ved denne perioden, ikke et gjettet tall.
-H_EPIC = round(MID / period_factor(15), 4)
+# 5 stjerner krever alt: SURFEHØYDE (Hb, se breaking_height) nøyaktig midt i
+# ideal_height, lang periode, midt i vinduet, blankt. Ved 15 s periode gir Hs
+# 0,7209 m en surfehøyde nøyaktig i midten (1,4 m) - funnet ved å løse
+# breaking_height(H, 15) == MID numerisk, ikke gjettet. Se README/samtalen
+# 26.09.2026 for bakgrunnen (periodefaktoren er fjernet, erstattet med den
+# ekte, empiriske Komar og Gaughan-formelen).
+def _solve_h_for_surf_height(target, period):
+    lo, hi = 0.05, 5.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if breaking_height(mid, period) < target:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+# IKKE avrund H_EPIC: breaking_height() er ikke-lineær (opphøyd i 0,4), så
+# selv en liten avrunding av H flytter Hb bort fra MID med nok til å velte
+# height_score sin eksakte 1,0-topp (og dermed 5. stjerne) - i motsetning
+# til den gamle, lineære period_factor-formelen, som tålte avrunding fint.
+H_EPIC = _solve_h_for_surf_height(MID, 15)
 epic = rate({"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}, G)
 show("Alt perfekt", epic); assert epic["stars"] == 5
 
@@ -70,10 +81,12 @@ show("Liker lavt vann, fjære", lo); show("Liker lavt vann, flo", hi)
 assert lo["stars"] == 5 and hi["stars"] == 4 and hi["faded_tide"] == 1
 # Observert 25.09.2026: svell ute 313 grader, vinduet er [291,310] - bare 3
 # grader utenfor. Helt flatt i praksis (0 stjerner, som stemmer). Skyggekurven
-# gir 0.47 m her (ikke under 0.35 m), så likely_flat er ikke satt for denne -
-# det er tilsiktet i den nye modellen: likely_flat er nå bare for reelt lav
-# beregnet høyde eller for reserven (metno_korrigert), ikke for svell_ute nær
-# kanten. Stjernene (den faktiske observasjonen) stemmer uansett.
+# gir 0,47 m Hs her (ikke under 0,35 m) - uten demping ville Komar og Gaughan
+# sin formel (lang periode, 9,2 s) urealistisk løftet dette til en surfbar
+# Hb (ca 0,82 m, "3 stjerner") fordi formelen ikke vet at svellet er
+# diffraktert rundt en odde og har mistet koherens. Dempes derfor med
+# directness (samme faktor som reduserer Hs), se rate() sin kommentar om
+# dette - godt innenfor vinduet endres ingenting.
 just_outside = rate({"swell_offshore": 1.76, "dir_offshore": 313.3, "turn": 13.6,
                       "period": 9.2, "wind_speed": 1.6, "wind_dir": 79}, G)
 show("Grøtfjord 25.09, 3 grader utenfor vinduet", just_outside)
@@ -141,38 +154,45 @@ show("6.3b: 0,9m/16s, 4 m/s onshore, kast 12 (eff. 6,4)", c4); assert c4["stars"
 
 c5 = rate({**base09, "period": 8, "wind_speed": 1, "wind_dir": 120}, G)
 show("6.4: 0,9m/8s, 1 m/s", c5)
-assert c5["stars"] in (2, 3) and c5["stars"] < c1["stars"]
+# Kort periode gir fortsatt lavere SURFEHØYDE enn lang periode ved samme Hs
+# (fysisk riktig - Komar og Gaughan), men begge havner nå innenfor samme
+# "ideell" score-platå for Grøtfjord ([0.8,2.0]), så stjernetallet i seg selv
+# skiller ikke lenger nødvendigvis - se den ekte surf_height-forskjellen i
+# stedet, som IKKE er en avrundingsartefakt.
+assert c5["surf_height"] < c1["surf_height"]
+assert c5["stars"] <= c1["stars"]
 
 # 6.5: offshore vind - ingen straff til 10 m/s, -1 fra der.
 assert wind_penalty(9, 120, G) == 0
 assert wind_penalty(12, 120, G) == 1
 print(f"{'6.5: offshore 9/12 m/s straff':<40} 0 1")
 
-# 6.6: periodefaktoren, inkludert interpolasjon ved 11,5 s.
-assert period_factor(7) == 0.9
-assert period_factor(10) == 1.0
-assert period_factor(13) == 1.15
-assert period_factor(18) == 1.3
-expected_11_5 = 1.0 + (1.15 - 1.0) * (11.5 - 10) / (13 - 10)
-assert abs(period_factor(11.5) - expected_11_5) < 1e-9
-print(f"{'6.6: periodefaktor 7/10/13/18/11.5s':<40} {period_factor(7)} {period_factor(10)} {period_factor(13)} {period_factor(18)} {period_factor(11.5)}")
+# 6.6: Komar og Gaughan sin bruddhøyde-formel, kontrollverdier (toleranse
+# 0,05 m - se spesifikasjonen 26.09.2026).
+assert abs(breaking_height(0.9, 15) - 1.67) < 0.05
+assert abs(breaking_height(1.0, 10) - 1.55) < 0.05
+assert abs(breaking_height(0.5, 8) - 0.81) < 0.05
+print(f"{'6.6: Hb kontrollverdier (0.9/15, 1.0/10, 0.5/8)':<40} "
+      f"{round(breaking_height(0.9,15),3)} {round(breaking_height(1.0,10),3)} {round(breaking_height(0.5,8),3)}")
 
-# 6.7: kalibreringen (og den viste høyden) bruker vanlig høyde, ikke effektiv
-# høyde - effective_height() skal bare brukes i height_score, aldri lekke ut
-# i "height"-feltet som logges/kalibreres mot.
-r_period = rate({"bw_height": 1.0, "dir_offshore": 300, "period": 16, "wind_speed": 1, "wind_dir": 120}, G)
-assert r_period["height"] == 1.0  # ikke 1.0 * 1.3 = 1.3
-assert effective_height(1.0, 16) == 1.3  # men height_score bruker 1.3 internt
-print(f"{'6.7: vist høyde vs effektiv (1,0 m/16s)':<40} vist={r_period['height']} effektiv={effective_height(1.0, 16)}")
+# 6.7: "height" (Hs, det kalibreringen mot BarentsWatch/loggene læres mot) er
+# fortsatt den ekte, urørte signifikante høyden - surf_height (det man ser i
+# appen) er en EGEN, separat størrelse (Hb * surf_factor), skal aldri lekke
+# inn i "height"-feltet.
+r_period = rate({"bw_height": 1.0, "dir_offshore": 300, "bw_dir": G["facing"], "period": 16, "wind_speed": 1, "wind_dir": 120}, G)
+assert r_period["height"] == 1.0
+# rate() runder surf_height til 2 desimaler i output - toleranse deretter.
+assert abs(r_period["surf_height"] - breaking_height(1.0, 16) * r_period["surf_factor"]) < 0.01
+print(f"{'6.7: Hs vs surfehøyde (1,0 m/16s)':<40} Hs={r_period['height']} surfehøyde={r_period['surf_height']}")
 
 # 6.8: breakdown finnes, har ett ledd per faktor pluss totalen, og totalen
-# stemmer med stjernene som faktisk ble gitt.
+# stemmer med stjernene som faktisk ble gitt. Signifikant høyde, svellandel,
+# retning ved spoten, periode, bruddhøyde, surf-faktor, surfehøyde, retning,
+# vind, tidevann, totalt - de tre nye (bruddhøyde/surf-faktor/surfehøyde,
+# 26.09.2026) erstatter den gamle "føles som"-teksten. BarentsWatch-periode-
+# linja er ikke med her, siden base09 ikke setter bw_period.
 bd = c4["breakdown"]
-# høyde, svellandel, retning ved spoten, periode, retning, vind, tidevann,
-# totalt - de to første BarentsWatch-linjene (svellandel, retning ved
-# spoten) er nye 26.09.2026. BarentsWatch-periode-linja er ikke med her,
-# siden base09 ikke setter bw_period.
-assert len(bd) == 8
+assert len(bd) == 11
 assert bd[-1].startswith("Totalt:")
 assert bd[-1].split("Totalt: ")[1].startswith(f"{c4['stars']} av 5")
 print(f"{'6.8: breakdown (0,9m/16s, kast 12)':<40}")
@@ -219,9 +239,11 @@ l4 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_
 show("7.4: samme, men BarentsWatch-retning 80 grader", l4)
 assert l4["height"] == 0.0 and l4["stars"] == 0
 
-# 7.5: retningskonvensjonen (bekreftet 26.09.2026 mot ekte data: "mot", ikke
-# "fra") - barentswatch_point() skal konvertere internt. Mokker bare
-# HTTP-laget, tester den ekte funksjonen.
+# 7.5: retningskonvensjonen (korrigert 26.09.2026 mot en ekte, verifiserbar
+# hendelse: Unstad kl. 17:00 UTC hadde totalMeanWaveDirection = 296 grader,
+# Unstad sin facing er 294,8 - ukonvertert verdi stemte med video som viste
+# bølger rett inn mot stranda. totalMeanWaveDirection ER "fra", ingen
+# konvertering). Mokker bare HTTP-laget, tester den ekte funksjonen.
 import os
 import sources as _sources
 
@@ -234,7 +256,7 @@ class _FakeBwResp:
     def raise_for_status(self): pass
     def json(self):
         return [{"forecastTime": "2026-01-01T00:00:00Z", "totalSignificantWaveHeight": 1.0,
-                  "totalMeanWaveDirection": 110, "totalPeakPeriod": 10.0, "expectedMaximumWaveHeight": 1.5}]
+                  "totalMeanWaveDirection": 296, "totalPeakPeriod": 10.0, "expectedMaximumWaveHeight": 1.5}]
 
 os.environ["BW_CLIENT_ID"], os.environ["BW_CLIENT_SECRET"] = "x", "y"
 os.environ["BW_POINT_URL"] = "https://example.test/{lat}/{lon}"
@@ -245,9 +267,9 @@ _sources._bw_token = None
 bw_result = _sources.barentswatch_point(69.0, 19.0)
 _sources.requests.post, _sources.requests.get, _sources._bw_token = _real_post, _real_get, _real_token
 bw_k0 = next(iter(bw_result))
-label_75 = "7.5: BarentsWatch mot 110 -> intern fra"
+label_75 = "7.5: BarentsWatch 296 er allerede fra, uendret"
 print(f"{label_75:<40} {bw_result[bw_k0]['dir']}")
-assert bw_result[bw_k0]["dir"] == 290
+assert bw_result[bw_k0]["dir"] == 296
 
 # 7.6: swell_share avgrenses til 0,2 og 1,0.
 assert _swell_share({"swell_offshore": 3.0, "height_offshore": 1.0})[0] == 1.0
@@ -278,5 +300,107 @@ assert covered_78 == 1
 
 # 7.9: Grøtfjord 24.09.2026 gir fortsatt 0 - se g/g2/w helt i toppen av filen.
 assert g["stars"] == 0 and g2["stars"] == 0 and w["stars"] == 0
+
+# ---------- 26.09.2026: surfehøyde (Komar og Gaughan) ----------
+import calibrate as _calibrate
+U = spots["unstad"]
+
+# 8.2: Unstad, ren syntetisk sjekk av selve formelen (Hs 0,9/T 15, offshore
+# 3 m/s, svell innenfor vinduet, BarentsWatch som kilde, retning rett inn) -
+# se disagree_reason()-svaret over for hvorfor den EKTE Unstad 26.09-timen
+# har en egen, urelatert retningskonflikt ved BarentsWatch-punktet.
+u_epic = rate({"bw_height": 0.9, "bw_dir": U["facing"], "dir_offshore": 295, "period": 15,
+               "wind_speed": 3, "wind_dir": 115}, U)
+show("8.2: Unstad, Hs 0,9/T 15, offshore 3 m/s", u_epic)
+assert abs(u_epic["surf_height"] - 1.67) < 0.05
+assert abs(u_epic["surf_height_sets"] - 2.12) < 0.05
+assert u_epic["stars"] >= 4
+
+# 8.2b (26.09.2026, oppfølging): svellet ute er i kanten av vinduet (253
+# grader, directness 0,667 - ville dempet Hb under den gamle regelen), men
+# BarentsWatch-retningen ved spoten er nesten nøyaktig facing (1 grad avvik,
+# spot_direction_factor 1,0) - BarentsWatch har allerede regnet med
+# bøyingen inn mot land og sier bølgene treffer rett på. Skal derfor IKKE
+# dempes (ekte hendelse: Unstad 26.09 kl. 17, 0,9 m/15 s, ga urettmessig
+# bare 1,1 m surfehøyde/1 stjerne før denne fiksen).
+u_edge = rate({"bw_height": 0.9, "bw_dir": U["facing"] - 1, "dir_offshore": 253, "period": 15,
+               "wind_speed": 1, "wind_dir": 115}, U)
+show("8.2b: Unstad, svell ute i kanten, BW-retning 1° fra facing", u_edge)
+assert abs(u_edge["surf_height"] - 1.67) < 0.05
+assert u_edge["spot_direction_factor"] == 1.0
+assert not u_edge["sources_disagree"]
+
+# 8.5: flat-sperren sin grense - rett under 0,35 m Hs er flatt uansett
+# periode, rett over gir en ekte surfehøyde fra formelen.
+under = rate({"bw_height": 0.34, "dir_offshore": 300, "bw_dir": G["facing"], "period": 16, "wind_speed": 1, "wind_dir": 120}, G)
+over = rate({"bw_height": 0.36, "dir_offshore": 300, "bw_dir": G["facing"], "period": 16, "wind_speed": 1, "wind_dir": 120}, G)
+print(f"{'8.5: flat-sperre 0,34/0,36 m Hs':<40} {under['stars']}/{under['surf_height']}  {over['stars']}/{over['surf_height']}")
+assert under["stars"] == 0 and under["surf_height"] == 0.0 and under["likely_flat"]
+assert over["surf_height"] is not None and over["surf_height"] > 0.0 and not over["likely_flat"]
+
+# 8.6: surf_factor læres som median(størrelse / Hb), avgrenset til 0,5-1,6,
+# standard 1,0 under MIN_LOGS. H valgt slik at Hb(H, 12) == 1,125 nøyaktig,
+# og logget størrelse "Hoftehøy" (0,9 m) gir da 0,9/1,125 = 0,8.
+H6 = _solve_h_for_surf_height(0.9 / 0.8, 12)
+logs6 = [{"spot": "x", "size": "Hoftehøy", "forecastHeight": H6, "forecastPeriod": 12, "directness": 1.0} for _ in range(6)]
+learned6 = _calibrate.learn("x", logs6)
+print("8.6: surf_factor med 6 logger (0,8 x Hb):", learned6)
+assert learned6["surf_factor"] == 0.8
+
+learned4 = _calibrate.learn("x", logs6[:4])
+print("8.6: surf_factor med 4 logger (under MIN_LOGS):", learned4)
+assert "surf_factor" not in learned4
+
+logs_low = [{"spot": "x", "size": "Flatt", "forecastHeight": 1.0, "forecastPeriod": 12, "directness": 1.0} for _ in range(5)]
+logs_high = [{"spot": "x", "size": "Dobbelt over hodet", "forecastHeight": 0.5, "forecastPeriod": 8, "directness": 1.0} for _ in range(5)]
+learned_low = _calibrate.learn("x", logs_low)
+learned_high = _calibrate.learn("x", logs_high)
+print("8.6: surf_factor-grenser (lav/høy):", learned_low["surf_factor"], learned_high["surf_factor"])
+assert learned_low["surf_factor"] == 0.5 and learned_high["surf_factor"] == 1.6
+
+# 8.6b (fra oppfølgingen 26.09.2026): logger med directness under 0,667
+# teller ikke i surf_factor - de var flate pga feil retning, ikke pga at
+# spoten generelt får mindre bølger enn formelen sier.
+logs_baddir = [{"spot": "x", "size": "Hoftehøy", "forecastHeight": H6, "forecastPeriod": 12, "directness": 0.5} for _ in range(6)]
+learned_baddir = _calibrate.learn("x", logs_baddir)
+print("8.6b: logger med directness 0,5 (skal IKKE gi surf_factor):", learned_baddir)
+assert "surf_factor" not in learned_baddir
+
+# 8.7: transfer læres ikke lenger fra loggene - learn() setter ikke "transfer".
+learned_transfer_check = _calibrate.learn("x", [
+    {"spot": "x", "size": "Hoftehøy", "swellOffshore": 1.2, "directness": 1.0, "stars": 3, "forecastStars": 3}
+    for _ in range(6)
+])
+print("8.7: learn() setter ikke transfer:", "transfer" in learned_transfer_check)
+assert "transfer" not in learned_transfer_check
+
+# 8.9: en observasjon (uten egen økt) teller likt som en logget økt i
+# surf_factor - samme felt (size/forecastHeight/forecastPeriod/directness)
+# betyr det samme uansett hvem som så det.
+logs_obs = [{"spot": "x", "size": "Hoftehøy", "forecastHeight": H6, "forecastPeriod": 12,
+             "directness": 1.0, "type": "observed", "source": "Instagram, Lofoten Surfsenter"} for _ in range(6)]
+learned_obs = _calibrate.learn("x", logs_obs)
+print("8.9: observasjoner teller i surf_factor:", learned_obs)
+assert learned_obs["surf_factor"] == 0.8
+
+# 8.10: period_score straffer bare kort periode nå (Grøtfjord min_period=8).
+from rating import period_score
+print(f"{'8.10: period_score 5/7/8/12s (min_period 8)':<40} "
+      f"{period_score(5, G)} {period_score(7, G)} {period_score(8, G)} {period_score(12, G)}")
+assert period_score(5, G) == 0.4   # under min_period - 2
+assert period_score(7, G) == 0.6   # under min_period
+assert period_score(8, G) == 1.0   # akkurat min_period: full uttelling
+assert period_score(12, G) == 1.0  # lang periode: ingen ekstra straff eller bonus her
+
+# Grøtfjord 26.09.2026 (denne samtalen): tredje dag på rad med flatt,
+# svellet kommer fra vest/rett utenfor vinduet. Ekte rådata fra kjøringen
+# 2026-09-26T15:00Z (BarentsWatch ved spoten, IKKE reservemodellen - godt
+# innenfor bw_until).
+g26 = rate({"bw_height": 0.33, "bw_dir": 114.0, "bw_period": 6.5, "swell_offshore": 2.18,
+            "height_offshore": 5.0, "dir_offshore": 272, "period": 15.6,
+            "height_spot_model": 2.4, "turn": 27.0, "wind_speed": 3.4, "wind_dir": 217.0,
+            "gust": 5.3, "tide": {"level": 0.0, "rising": False, "state": "lav"}}, G)
+show("Grøtfjord 26.09 (ekte data, BarentsWatch)", g26)
+assert g26["stars"] == 0 and g26["likely_flat"] and g26["height_source"] == "barentswatch"
 
 print("Alle tester ok")

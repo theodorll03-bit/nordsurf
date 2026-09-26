@@ -14,7 +14,7 @@ import calibrate
 import notify
 import sun
 import tide as tidemod
-from rating import angle_diff, rate
+from rating import angle_diff, rate, SURF_FACTOR_DEFAULT
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
@@ -97,7 +97,12 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     # bygges av bw_height/svell/directness og trenger ikke selve transferen).
     bw_pairs_existing = bw_calib.get(spot["id"], [])
     transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
-    spot = {**spot, "transfer": transfer_value}
+    # surf_factor har bare én kilde (loggene/observasjonene dine) - ingen
+    # rekkefølge å velge mellom som for transfer, bare standard 1,0 til det
+    # finnes nok logger (se calibrate.learn()).
+    surf_factor_value = learned.get("surf_factor", SURF_FACTOR_DEFAULT)
+    surf_factor_source = "logs" if learned.get("surf_factor") is not None else "standard"
+    spot = {**spot, "transfer": transfer_value, "surf_factor": surf_factor_value}
 
     hours = []
     for i in range(horizon):
@@ -180,6 +185,8 @@ def build_spot(spot, now, learned, bw_calib, run_id):
         "bw_days": bw_days,
         "transfer_used": transfer_value,
         "transfer_source": transfer_source,
+        "surf_factor_used": surf_factor_value,
+        "surf_factor_source": surf_factor_source,
     }
     return {**public, "hours": hours, "tide_events": tides, "bw_until": bw_until,
             "calibration": calibration, "light_days": light_days}

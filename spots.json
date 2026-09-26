@@ -1,5 +1,5 @@
 {
-  "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten).",
+  "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten). 26.09.2026: ideal_height og max_height er SURFEHØYDE (høyden der bølgene brekker, se rating.breaking_height) for alle spots, ikke Hs - Tromsø-spotene beholder samme tall som før ([0.8,2.0]/3.5), bare tolkningen er ny; Unstad er justert opp ([1.5,3.5]/5.5, tåler mer).",
   "spots": [
     {
       "id": "grotfjord",
@@ -255,10 +255,11 @@
       ],
       "min_period": 8,
       "ideal_height": [
-        0.8,
-        2.0
+        1.5,
+        3.5
       ],
-      "max_height": 3.5,
+      "max_height": 5.5,
+      "_ideal_height": "26.09.2026: ideal_height/max_height er nå SURFEHØYDE (der bølgene brekker), ikke Hs - Unstad tåler større bølger enn Tromsø-spotene, satt opp fra [0.8,2.0]/3.5.",
       "facing": 294.8,
       "_offshore_vind": "Stranda vender mot VNV (294,7 grader, bekreftet med to metoder: kort-rekkevidde åpen sektor og kystlinje-tangent fra GSHHS full oppløsning). Offshorevind er satt ut fra det. Avviker 25 grader fra forventet øst-vind (surf-forecast.com), innenfor 30-graders grensen. Lokale fallvinder vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [

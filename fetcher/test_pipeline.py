@@ -3,20 +3,22 @@ import json, math, datetime as dt, tempfile
 from pathlib import Path
 import requests
 import sources, fetch, notify, calibrate
-from rating import DEFAULT_TRANSFER
+from rating import DEFAULT_TRANSFER, breaking_height
 
 real_openmeteo_marine = sources.openmeteo_marine  # før noe under mokker den ut
 
-# Loggen skal læres mot toppfaktoren ved direkte treff: forhold = størrelse / (svellOffshore * directness).
-# Gamle logger uten feltet antas direkte (directness 1.0) - se lengre ned, uendret 0.42-sjekk.
-# Her: fem logger med directness 0.5 skal gi dobbelt så høyt forhold som samme logger uten directness ville gjort.
-direct_ratio = round(0.5 / (1.2 * 0.5), 2)
-half_directness_logs = [
-    {"spot": "x", "size": "Knehøy", "swellOffshore": 1.2, "directness": 0.5} for _ in range(5)
-]
-half_result = calibrate.learn("x", half_directness_logs)
-print("Læring med directness 0,5:", half_result, "| forventet forhold:", direct_ratio)
-assert half_result["transfer"] == direct_ratio == 0.83
+
+def _solve_h_for_hb(target, period):
+    """H slik at breaking_height(H, period) == target (bisek­sjon)."""
+    lo, hi = 0.05, 5.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if breaking_height(mid, period) < target:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
 
 def hourly(fn):
     now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
@@ -28,8 +30,13 @@ sources.metno_weather = lambda la, lo: hourly(lambda i: {"wind_speed": 2, "wind_
 now = dt.datetime.now(dt.timezone.utc)
 sources.kartverket_tide = lambda la, lo, a, b: [
     {"time": (now + dt.timedelta(minutes=372 * k - 300)).isoformat(), "type": "flo" if k % 2 else "fjære", "cm": 240 if k % 2 else 60} for k in range(16)]
+# 26.09.2026: transfer læres ikke lenger fra loggene (surfehøyde-endringen) -
+# H valgt slik at breaking_height(H, 12) == 0,9/0,8 = 1,125, så seks logger
+# med "Hoftehøy" (0,9 m) gir en kjent, etterprøvbar surf_factor (0,8).
+H_SURF_LOGS = _solve_h_for_hb(0.9 / 0.8, 12)
 sources.github_logs = lambda: [
-    {"id": str(i), "spot": "grotfjord", "stars": 1, "size": "Knehøy", "swellOffshore": 1.2, "forecastStars": 2} for i in range(6)]
+    {"id": str(i), "spot": "grotfjord", "stars": 1, "size": "Hoftehøy",
+     "forecastHeight": H_SURF_LOGS, "forecastPeriod": 12, "directness": 1.0, "forecastStars": 2} for i in range(6)]
 
 tmp = Path(tempfile.mkdtemp())
 fetch.OUT = tmp / "forecast.json"
@@ -41,8 +48,16 @@ import os; os.environ["NTFY_TOPIC"] = "test-topic"
 fetch.main()
 f = json.loads(fetch.OUT.read_text())
 g = next(s for s in f["spots"] if s["id"] == "grotfjord")
-print("Grøtfjord lært faktor:", g["calibration"], "| første time:", {k: g["hours"][0][k] for k in ("stars", "height", "height_source", "light", "tide")})
-assert g["calibration"]["transfer"] == 0.42 and g["hours"][0]["transfer"] == 0.42
+print("Grøtfjord lært faktor:", g["calibration"], "| første time:", {k: g["hours"][0][k] for k in ("stars", "height", "height_source", "light", "tide", "surf_height", "surf_factor")})
+# surf_factor er lært fra loggene (0,8, se H_SURF_LOGS over) og plumbet helt
+# gjennom henteren - inn i spot["surf_factor"] og videre inn i hver times
+# rate()-output. transfer læres derimot IKKE lenger fra loggene (fjernet
+# 26.09.2026) - uten BarentsWatch-kalibrering eller spots.json-verdi faller
+# den tilbake til DEFAULT_TRANSFER ("standard").
+assert g["calibration"]["surf_factor"] == 0.8 and g["calibration"]["surf_factor_used"] == 0.8
+assert g["hours"][0]["surf_factor"] == 0.8
+assert "transfer" not in g["calibration"] or g["calibration"].get("transfer") is None
+assert g["calibration"]["transfer_used"] == DEFAULT_TRANSFER and g["calibration"]["transfer_source"] == "standard"
 assert all("light" in h for h in g["hours"])
 print("Varsler sendt:", [m["title"] for m in sent])
 fetch.main()  # andre kjøring skal ikke sende samme varsel igjen
@@ -332,5 +347,17 @@ except RuntimeError:
 sources._openmeteo_fetch = real_openmeteo_fetch
 print("7e begge modellene feiler -> kaster fortsatt:", raised)
 assert raised
+
+# ---------- 8.8: SIZE_M-tabellen i docs/index.html og fetcher/calibrate.py
+# skal være identisk (ingen felles import mulig - statisk nettside uten
+# bundler, se README) ----------
+import re
+import calibrate as _calibrate_size
+html = (Path(__file__).parent.parent / "docs" / "index.html").read_text(encoding="utf-8")
+m = re.search(r'const SIZE_M = (\{[^}]*\});', html)
+assert m, "fant ikke SIZE_M i docs/index.html"
+js_size_m = json.loads(m.group(1))  # nøklene er allerede doble anførselstegn i JS-koden, gyldig JSON som den er
+print("8.8 SIZE_M i app vs henter:", js_size_m, "|", _calibrate_size.SIZE_M)
+assert js_size_m == _calibrate_size.SIZE_M
 
 print("Pipeline ok")

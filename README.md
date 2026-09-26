@@ -118,10 +118,14 @@ treffer der.
 Når BarentsWatch-svaret har feltet `expectedMaximumWaveHeight` (bekreftet
 mot BarentsWatch sin OpenAPI-spec for `/v1/waveforecastpoint/nearest/all`,
 schema `BwRasterWavePoint`), lagres den som `bw_height_max` og vises på
-detaljsiden og på høydeplata på kartet som "Sett opp til X m". Den brukes
-**aldri** i rangeringen eller kalibreringen - begge bygger på signifikant
-høyde (`bw_height`), som er det eneste målet som er sammenlignbart mellom
-BarentsWatch, Open-Meteo og loggene dine.
+detaljsiden og på høydeplata på kartet som "BarentsWatch venter opp til
+X m". Den brukes **aldri** i rangeringen eller kalibreringen - begge bygger
+på signifikant høyde (`bw_height`), som er det eneste målet som er
+sammenlignbart mellom BarentsWatch, Open-Meteo og loggene dine. Dette er
+BarentsWatch sitt EGET, uavhengige maks-anslag - ikke det samme som
+`surf_height_sets` (1,27 × surfehøyde, se "Surfehøyde" under), som er
+appens egen, formelbaserte anslag på settene. Begge vises der de er
+relevante, til sammenligning.
 
 ### Ekte svell fra vindsjø, og retning ved spoten
 
@@ -198,36 +202,111 @@ Horisonten er normalt 120 timer (5 døgn), men stopper ved hvilken som helst
 kilde som har kortere data (Open-Meteo eller met.no vind) - det står i
 kilderapporten som "Horisont: X timer" per spot.
 
-### Periode: lang periode bygger seg høyere opp
+### Surfehøyde
 
-Langt svell (lang periode) bygger seg høyere opp når det treffer grunnen enn
-kort svell med samme signifikante høyde ute. Ranger derfor rangeringen
-(`height_score`) mot en **effektiv høyde**: `høyde × periodefaktor`.
+26.09.2026: appen viser nå **surfehøyde** (høyden der bølgene brekker), ikke
+**Hs** (signifikant høyde, gjennomsnittet ute i vannet før bølgene treffer
+grunnen). Bakgrunnen var en konkret observasjon: appen viste 0,9 m/15 s for
+Unstad mens video fra Lofoten Surfsenter samme time viste bølger godt over
+hodet, tønner og offshore-sprøyt. 0,9 m var ikke feil - det var riktig Hs -
+men Hs er ikke det man ser eller logger fra stranda. Langt svell reiser seg
+mye mer enn kort svell med samme Hs når det treffer grunt vann.
 
-| Periode | Periodefaktor |
+Formelen (Komar og Gaughan, 1972), for høyden der bølgene brekker:
+
+    Hb = 0,39 × g^(1/5) × (T × H²)^(2/5)
+
+der H er Hs ved spoten (etter alle justeringer: BarentsWatch med svellandel
+og retningsfaktor, eller reservemodellen) og T er svellets periode **ute**
+(Open-Meteo sitt `swell_wave_period`, IKKE BarentsWatch sin periode ved
+spoten - se under). Settene (de største bølgene man venter på) er ca 1,27 ×
+Hb. Formelen er **empirisk og laget for rette, jevne sandstrender** -
+pointbreak og revbrekk kan avvike, derfor læres `surf_factor` per spot fra
+loggene dine (se under), i stedet for å stole blindt på formelen alene.
+
+**Perioden er gjennomsnittsperiode, ikke toppperiode.** Open-Meteo sin
+`swell_wave_peak_period` finnes i API-et, men GFS Wave (modellen appen
+bruker for selve svellet, se under) returnerer ingen verdi for det feltet -
+bare `swell_wave_period` (gjennomsnitt) er tilgjengelig for den modellen.
+Gjennomsnittsperiode er typisk ca 80 % av toppperioden, og formelen har T
+opphøyd i 0,4 - det gir omtrent 9 % lavere Hb enn med ekte toppperiode. Det
+er akseptabelt: feilen er jevn (samme retning hver gang), og `surf_factor`
+lærer den bort per spot fra loggene dine. Høyde, retning og periode for
+svellet kommer alltid fra samme modell (GFS Wave) - aldri blandet med en
+annen modell, selv om den skulle gi topperiode, siden de kan beskrive
+forskjellige svell.
+
+**BarentsWatch sin egen periode ved spoten** (`totalPeakPeriod`) brukes
+**ikke** i formelen - den var 10,5 s ved Unstad mens svellet ute var 15 s,
+trolig fordi et kystpunkt også fanger opp lokal småsjø. Den beholdes bare
+som informasjon og i vindsjø-sjekken (`bw_period_factor`, se over).
+
+**Demping for svell i kanten av eller utenfor vinduet.** Komar og Gaughan
+sin formel er laget for åpen kyst og vet ikke om svellet har bøyd seg rundt
+en odde (diffraksjon) - et slikt svell har bredere retningsspredning og
+mindre samlet energi, og bygger seg ikke opp som et rent svell. Uten
+demping ga formelen 3 stjerner for Grøtfjord 25.09.2026 (svell 3 grader
+utenfor vinduet, observert helt flatt). Bruddhøyden (Hb) dempes derfor med
+samme `directness` som allerede reduserer Hs for `svell_ute` - godt
+innenfor vinduet (directness 1,0) endres ingenting.
+
+**Flat-sperre.** Under 0,35 m Hs ved spoten er det uansett flatt i praksis -
+formelen gjør små bølger urealistisk store ved lang periode (0,3 m/11 s gir
+Hb ca 0,6 m), og Grøtfjord var helt flatt tre dager på rad (24.-26.09.2026)
+med rundt 0,3 m fra BarentsWatch. Under grensen settes surfehøyden til 0 og
+stjernene til 0, uansett hva formelen ellers ville gitt.
+
+**`ideal_height` og `max_height` i `spots.json` er nå surfehøyde**, ikke Hs.
+Tromsø-spotene beholder samme tall som før ([0,8, 2,0] / 3,5 m) - bare
+tolkningen er ny. Unstad er justert opp ([1,5, 3,5] / 5,5 m, tåler mer).
+
+#### `surf_factor`: lært fra loggene og observasjonene dine
+
+`surf_factor` er hvor godt formelen stemmer med det du faktisk ser på denne
+spesifikke spoten - `surfehøyde = Hb × surf_factor`. Læres som medianen av
+`(logget størrelse i meter) / Hb` på loggtidspunktet, avgrenset til
+0,5-1,6, standardverdi 1,0 til det finnes minst 5 logger. Bare logger der
+Hs ved spoten var minst 0,35 m (uten det kan ikke Hb regnes ut) og
+`directness` var minst 0,667 (retning godt innenfor vinduet - ellers ville
+en logg fra feil retning feilaktig lære ned faktoren for hele spoten, se
+demping over) telles med. Observasjoner (se "Loggetyper" under) teller likt
+som egne økter.
+
+Dette er en **egen, adskilt** læring fra `transfer` (se under) - de to skal
+ikke blandes, siden de måler forskjellige ting (surfehøyde mot det du ser,
+versus Hs mot Hs). `transfer` læres derfor **ikke lenger** fra loggene dine:
+
+1. Automatisk fra BarentsWatch (se under)
+2. Verdien satt i `spots.json`, f.eks. `"transfer": 0.42`
+3. Standardverdien 0,6
+
+Logger-fanen viser begge tallene per spot, med kilde.
+
+#### Loggetyper: egen økt eller observasjon
+
+Loggearket har et valg øverst: **Egen økt** (du surfet selv) eller
+**Observert** (du så forholdene selv, eller via en pålitelig kilde, uten å
+surfe - f.eks. en video fra et surfesenter). Observasjoner kan ha et
+valgfritt **kilde**-felt (f.eks. "Instagram, Lofoten Surfsenter"), og teller
+likt som egne økter i `surf_factor`, stjerne-bias og tidevann.
+
+#### Størrelser
+
+| Størrelse | Surfehøyde |
 |---|---|
-| 8 s eller kortere | 0,9 |
-| 10 s | 1,0 |
-| 13 s | 1,15 |
-| 16 s eller lengre | 1,3 |
+| Flatt | 0 m |
+| Knehøy | 0,5 m |
+| Hoftehøy | 0,9 m |
+| Brysthøy | 1,3 m |
+| Hodehøy | 1,8 m |
+| Over hodet | 2,4 m |
+| Dobbelt over hodet | 3,6 m |
 
-(Lineær interpolasjon mellom punktene.) Dette er **bare** til rangeringen -
-høyden du ser i appen, og høyden kalibreringen (`transfer` mot BarentsWatch
-og loggene dine) læres mot, er fortsatt den ekte signifikante høyden,
-urørt av periodefaktoren. Perioden straffer dermed ikke lenger dobbelt:
-`period_score` (i selve stjerneregnestykket) er gjort mildere og straffer nå
-bare KORT periode, ikke lenger ekstra uttelling for lang periode - den jobben
-gjør periodefaktoren i stedet.
-
-`transfer` er hvor stor del av svellet ute som når stranda ved et **direkte**
-treff (rett inn i midten av svellvinduet). Den læres i denne rekkefølgen:
-1. Fra loggene dine (Logg størrelse på øktene, minst 5 med størrelse valgt)
-2. Automatisk fra BarentsWatch (se under)
-3. Verdien satt i `spots.json`, f.eks. `"transfer": 0.42`
-4. Standardverdien 0,6
-
-Bare det første treffet i rekkefølgen brukes - Logger-fanen viser hvilken
-kilde som gjelder for hver spot akkurat nå.
+26.09.2026: Hodehøy og Dobbelt over hodet er nye, Over hodet endret fra
+2,0 til 2,4 m. Gamle logger beholder etiketten sin, men får den nye
+meterverdien. Samme tabell i `docs/index.html` og `fetcher/calibrate.py` -
+`test_pipeline.py` sjekker at de er like (ingen bundler til å dele en
+felles fil mellom app og henter).
 
 ### Automatisk kalibrering mot BarentsWatch
 
@@ -260,8 +339,9 @@ rett utenfor kanten:
 Kantverdien (67 %) bygger på kystteknikk: langs skyggegrensen bak en odde er
 bølgehøyden omtrent 70 % av høyden ute for uregelmessige bølger fra flere
 retninger. Resten av kurven er et anslag - diffraksjon kan ikke beregnes
-presist for en surfespot uten mye mer detaljerte data. Loggene dine justerer
-bare `transfer` (toppfaktoren ved direkte treff), aldri selve kurven.
+presist for en surfespot uten mye mer detaljerte data. Denne kurven (og
+`transfer`) læres aldri fra loggene - se "Surfehøyde" over for hva loggene
+dine faktisk lærer (`surf_factor`).
 
 ## Vind
 
@@ -297,7 +377,8 @@ vindtypen.
 
 Trykk på stjernene på detaljsiden (eller på ratingringen i kart-arket) for å
 åpne en forklaring av hvert ledd som påvirket ratingen for den valgte timen:
-høyde (med "føles som" hvis periodefaktoren gjør en reell forskjell),
+signifikant høyde, bruddhøyde (Hb) og surf-faktor (bare for BarentsWatch:
+også svellandel, BarentsWatch-periode og retning ved spoten), surfehøyde,
 periode, retning, vind og tidevann, samt totalen og hvor mange stjerner det
 ville blitt uten vind. `rate()` i `fetcher/rating.py` returnerer dette som
 et eget felt `breakdown` (en liste med ferdigformaterte linjer) - appen viser
@@ -317,10 +398,12 @@ Solhøyden regnes ut lokalt, uten eksterne kall.
 ## Kalibrering
 
 Verdiene i `spots.json` er startverdier. Etter 10–15 logger per spot viser Logger-fanen
-om varselet over- eller undervurderer. Juster `ideal_height`, `swell_window` og
-`offshore_wind` ut fra det, og kjør `python fetcher/test_rating.py` for å sjekke at
-de kjente dagene fortsatt blir riktige. `transfer` trenger du normalt ikke justere selv
-lenger - se "Automatisk kalibrering mot BarentsWatch" over.
+om varselet over- eller undervurderer. Juster `ideal_height` (surfehøyde, ikke Hs -
+se "Surfehøyde" over), `swell_window` og `offshore_wind` ut fra det, og kjør
+`python fetcher/test_rating.py` for å sjekke at de kjente dagene fortsatt blir riktige.
+`transfer` trenger du normalt ikke justere selv lenger - se "Automatisk kalibrering mot
+BarentsWatch" over. `surf_factor` justerer du heller ikke selv - den læres automatisk
+fra loggene og observasjonene dine.
 
 ## Varsler og BarentsWatch
 

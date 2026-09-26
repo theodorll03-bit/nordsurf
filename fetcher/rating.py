@@ -173,9 +173,10 @@ def barentswatch_height(hour, spot):
 def spot_height(hour, spot=None):
     """Beste anslag på bølgehøyde på spoten, hvilken kilde det kom fra, og
     (bare for BarentsWatch) detaljene bak beregningen (se barentswatch_height).
-    Dette er den VISTE høyden og høyden kalibreringen læres mot - IKKE den
-    "effektive" høyden ranger bruker (se effective_height/period_factor
-    lenger ned), som bare skal påvirke rangeringen, ikke tallet du ser.
+    Dette er Hs (signifikant høyde) ved spoten - grunnlaget for surf_height
+    (se breaking_height() lenger ned), IKKE selve surfehøyden man ser i
+    appen. Også det kalibreringen (transfer) læres mot - egen, fysisk
+    størrelse, ikke det man ser fra stranda (det er surf_factor sin jobb).
 
     1. BarentsWatch, når den finnes (finmasket kystmodell som allerede tar
        hensyn til skjerming bak odder og øyer) - se barentswatch_height().
@@ -198,38 +199,40 @@ def spot_height(hour, spot=None):
     return h * refraction_factor(hour.get("turn")), "metno_korrigert", None
 
 
+# ---------- Surfehøyde ----------
+# 26.09.2026: signifikant høyde (Hs, gjennomsnittet ute i vannet) er ikke det
+# surfere ser eller logger - det er høyden der bølgene BREKKER. Langt svell
+# reiser seg mye mer på grunt vann enn kort svell med samme Hs. Tidligere
+# forsøkte periodefaktoren (nå fjernet) å lappe dette med en svak, ufysisk
+# multiplikator bare i rangeringen. Nå brukes en ekte, empirisk formel, og
+# resultatet (surf_height) er det som faktisk vises og kalibreres mot.
+
+SURF_G = 9.81
+SURF_SETS_FACTOR = 1.27  # settene (de største bølgene) er ca 1.27x Hb
+FLAT_HS_THRESHOLD = 0.35  # under dette er det uansett flatt, se rate()
+SURF_FACTOR_DEFAULT = 1.0
+SURF_FACTOR_MIN, SURF_FACTOR_MAX = 0.5, 1.6
+
+
+def breaking_height(h, period):
+    """Hb, høyden der bølgene brekker - Komar og Gaughan (1972):
+    Hb = 0,39 * g^(1/5) * (T * H^2)^(2/5)
+    H = signifikant høyde ved spoten (m), T = svellets periode UTE i sekunder
+    (Open-Meteo - perioden endres ikke av grunning, se rate()). Empirisk
+    formel laget for rette, jevne SANDSTRENDER - pointbreak og revbrekk kan
+    avvike fra dette. Derfor læres en egen surf_factor per spot fra loggene
+    (se calibrate.py), i stedet for å stole blindt på formelen alene.
+    Kontrollverdier (Unstad 26.09.2026, etter at retningskonvensjonen ble
+    rettet): H 0,9 m/T 15 s -> Hb ca 1,67 m, sett ca 2,1 m - stemte med
+    video fra Lofoten Surfsenter samme time."""
+    if h is None or period is None or h <= 0:
+        return None
+    return 0.39 * SURF_G ** 0.2 * (period * h ** 2) ** 0.4
+
+
 # ---------- Svellstjerner ----------
 # Strengt med vilje: 5 stjerner skal være sjeldent. Hver faktor er 1.0 bare
 # når forholdene er virkelig gode, og stjernene rundes NED.
-
-PERIOD_FACTOR_POINTS = [(8, 0.9), (10, 1.0), (13, 1.15), (16, 1.3)]
-
-
-def period_factor(p):
-    """Langt svell bygger seg høyere opp når det treffer grunnen enn kort
-    svell med samme signifikante høyde ute. Brukes BARE til å justere
-    height_score (rangeringen) - aldri til selve høyde-tallet du ser eller
-    til kalibreringen mot BarentsWatch/loggene, som begge skal måle den
-    ekte, fysiske høyden uforstyrret. Lineær interpolasjon mellom punktene,
-    flatt ut utenfor endene."""
-    if p is None:
-        return 1.0
-    pts = PERIOD_FACTOR_POINTS
-    if p <= pts[0][0]:
-        return pts[0][1]
-    if p >= pts[-1][0]:
-        return pts[-1][1]
-    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
-        if x0 <= p <= x1:
-            return y0 + (y1 - y0) * (p - x0) / (x1 - x0)
-    return pts[-1][1]
-
-
-def effective_height(h, period):
-    """Høyden brukt bare i height_score - se period_factor()."""
-    if h is None:
-        return None
-    return h * period_factor(period)
 
 
 def height_score(h, spot):
@@ -248,18 +251,15 @@ def height_score(h, spot):
 
 
 def period_score(p, spot):
-    """Mildere enn før, og med vilje: nå som period_factor() (over) også
-    belønner lang periode via height_score, skal ikke denne straffe det
-    samme to ganger. Den skal bare straffe KORT periode (dårlig energi,
-    lite driv), ikke lenger gi ekstra uttelling for lang periode."""
+    """26.09.2026: breaking_height() (over) belønner nå lang periode
+    fysisk, via selve surfehøyden - denne skal ikke lenger gjøre det samme
+    en gang til. Bare straff for KORT periode (dårlig energi, lite driv)."""
     if p is None:
         return 0.5
     if p < spot["min_period"] - 2:
         return 0.4
     if p < spot["min_period"]:
         return 0.6
-    if p < 10:
-        return 0.85
     return 1.0
 
 
@@ -277,18 +277,6 @@ def direction_score(d, spot, source=None):
     if off == 0:
         return 1.0
     return 0.5 if off <= 20 else 0.1
-
-
-def swell_stars(hour, spot):
-    h, source, _ = spot_height(hour, spot)
-    period = hour.get("period")
-    eff_h = effective_height(h, period)
-    score = (
-        height_score(eff_h, spot)
-        * period_score(period, spot)
-        * direction_score(hour.get("dir_offshore"), spot, source)
-    )
-    return int(5 * score + 1e-9)  # rund ned
 
 
 # ---------- Vind ----------
@@ -458,27 +446,40 @@ def disagree_reason(hour, dir_hit, bw_detail):
     return f"Kildene er uenige. BarentsWatch viser {bw_txt}, men {' og '.join(reasons)}. Trolig ikke surfbart. Logg gjerne hva du ser."
 
 
-def build_breakdown(hour, spot, h, source, bw_detail, eff_h, period, hs, ps, dir_hit,
+def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
+                     surf_height_sets, low_hs, hb_damping, period, hs, ps, dir_hit,
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
                      potential, solid, lost_wind, lost_tide, uncertain,
                      sources_disagree, capped_from, disagree_cap):
     items = []
     if h is None:
-        items.append("Høyde: ingen data")
+        items.append("Signifikant høyde: ingen data")
     else:
-        pf = period_factor(period)
-        felt = f", føles som ca. {_fmt_m(eff_h)}" + (f" på {period:.0f} s" if period is not None else "") if (pf > 1.05 or pf < 0.95) else ""
-        items.append(f"Høyde {_fmt_m(h)}{felt}: {_height_word(hs)}")
+        items.append(f"Signifikant høyde {_fmt_m(h)} ute ved spoten")
     if source == "barentswatch" and bw_detail is not None:
         share_pct = round(bw_detail["swell_share"] * 100)
         items.append(f"Svellandel: {share_pct} % ({_share_word(bw_detail['swell_share'])})")
         if hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         items.append(f"Retning ved spoten: {_spot_dir_word(bw_detail['spot_direction_factor'])}")
-    if period is None:
-        items.append("Periode: ukjent")
-    else:
-        items.append(f"Periode {period:.0f} s: {_period_word(ps)}")
+    if h is not None:
+        if period is None:
+            items.append("Periode (ute): ukjent")
+        else:
+            items.append(f"Periode {period:.0f} s (ute): {_period_word(ps)}")
+        if low_hs:
+            items.append(f"Surfehøyde: flatt (signifikant høyde under {_fmt_m(FLAT_HS_THRESHOLD)})")
+        elif hb is None:
+            items.append("Surfehøyde: ingen data (mangler periode)")
+        else:
+            if hb_damping < 0.999:
+                damp = (" (dempet, bølgene ved spoten treffer skrått)" if source == "barentswatch"
+                        else " (dempet, svellet er i kanten av eller utenfor vinduet)")
+            else:
+                damp = ""
+            items.append(f"Bruddhøyde (Hb, Komar og Gaughan 1972) {_fmt_m(hb)}{damp}")
+            items.append(f"Surf-faktor {surf_factor:.2f}".replace(".", ","))
+            items.append(f"Surfehøyde {_fmt_m(surf_height)}, sett ca. {_fmt_m(surf_height_sets)}: {_height_word(hs)}")
     items.append(f"Retning: {_direction_word(dir_hit)}")
     if wind_speed is None:
         items.append("Vind: ukjent")
@@ -507,11 +508,50 @@ def build_breakdown(hour, spot, h, source, bw_detail, eff_h, period, hs, ps, dir
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     h, source, bw_detail = spot_height(hour, spot)
-    period = hour.get("period")
-    eff_h = effective_height(h, period)
-    hs = height_score(eff_h, spot)
-    ps = period_score(period, spot)
+    period = hour.get("period")  # Open-Meteo, svellet UTE - uendret av grunning
     dir_hit = directness(hour.get("dir_offshore"), spot)
+
+    # Flat-sperre: under FLAT_HS_THRESHOLD signifikant høyde ved spoten er
+    # det uansett flatt i praksis. Komar og Gaughan sin formel gjør små
+    # bølger urealistisk store ved lang periode (0,3 m/11 s gir Hb ca 0,6 m)
+    # - Grøtfjord 24.09.2026 var et ekte eksempel: 0,3 m fra BarentsWatch,
+    # helt flatt observert.
+    low_hs = h is not None and h < FLAT_HS_THRESHOLD
+    hb_raw = None if (h is None or low_hs) else breaking_height(h, period)
+    # 26.09.2026: svell i kanten av eller utenfor svellvinduet har bøyd seg
+    # rundt en odde (diffraksjon) - bredere retningsspredning, mindre samlet
+    # energi langs bølgefronten, og bygger seg IKKE opp på grunt vann som et
+    # rent, uforstyrret svell. Komar og Gaughan sin formel vet ikke det (laget
+    # for åpen kyst), og ga derfor for høy Hb for Grøtfjord 25.09.2026 (svell
+    # 3 grader utenfor vinduet, observert helt flatt, men formelen alene ga
+    # 3 stjerner). Dempes derfor - men med HVILKEN retning avhenger av kilden,
+    # for å ikke straffe retning to ganger:
+    # - svell_ute (og reserven, metno_korrigert): directness (dir_hit)
+    #   beskriver svellet UTE mot det tegnede vinduet - ingen annen kilde vet
+    #   noe om retningen ved selve spoten her.
+    # - barentswatch: dir_hit beskriver fortsatt bare svellet UTE, men
+    #   BarentsWatch sin egen kystmodell har ALLEREDE regnet ut hvordan
+    #   bølgene bøyer seg inn mot spoten (spot_direction_factor, fra
+    #   BarentsWatch-retningen ved punktet mot spotens facing) - det er et
+    #   bedre, mer direkte mål på bølgene AKKURAT DER enn det tegnede
+    #   vinduet. 26.09.2026: Unstad kl. 17 hadde dir_hit 0,667 (svellet ute
+    #   er akkurat i kanten av vinduet), men spot_direction_factor 1,0
+    #   (BarentsWatch-retningen traff facing på 1 grad) - riktig demping er
+    #   ingen demping her, BarentsWatch sier bølgene treffer rett på. Mangler
+    #   retning fra BarentsWatch: spot_direction_factor er da et nøytralt
+    #   anslag (1,0, ingen demping) - timen er allerede merket usikker for
+    #   det andre steder (uncertain, se under).
+    if source == "barentswatch" and bw_detail is not None:
+        hb_damping = bw_detail["spot_direction_factor"]
+    else:
+        hb_damping = dir_hit
+    hb = None if hb_raw is None else hb_raw * hb_damping
+    surf_factor = spot.get("surf_factor", SURF_FACTOR_DEFAULT)
+    surf_height = 0.0 if low_hs else (None if hb is None else hb * surf_factor)
+    surf_height_sets = None if surf_height is None else surf_height * SURF_SETS_FACTOR
+
+    hs = height_score(surf_height, spot)
+    ps = period_score(period, spot)
     ds = direction_score(hour.get("dir_offshore"), spot, source)
     score = hs * ps * ds
     potential = int(5 * score + 1e-9)  # rund ned
@@ -555,7 +595,8 @@ def rate(hour, spot):
     solid = potential - lost_wind - lost_tide
 
     breakdown = build_breakdown(
-        hour, spot, h, source, bw_detail, eff_h, period, hs, ps, dir_hit,
+        hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
+        surf_height_sets, low_hs, hb_damping, period, hs, ps, dir_hit,
         wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
         potential, solid, lost_wind, lost_tide, uncertain,
         sources_disagree, capped_from, disagree_cap,
@@ -569,6 +610,13 @@ def rate(hour, spot):
         "wind_type": wt,
         "height": None if h is None else round(h, 2),
         "height_source": source,
+        # Surfehøyde (der bølgene brekker) og settene - se breaking_height().
+        # Dette er tallet som vises og som logges/kalibreres mot (surf_factor),
+        # IKKE "height" over, som fortsatt er Hs (signifikant høyde ute).
+        "surf_height": None if surf_height is None else round(surf_height, 2),
+        "surf_height_sets": None if surf_height_sets is None else round(surf_height_sets, 2),
+        "breaking_height": None if hb is None else round(hb, 2),
+        "surf_factor": round(surf_factor, 3),
         "transfer": spot.get("transfer", DEFAULT_TRANSFER),
         "uncertain": uncertain,
         "breakdown": breakdown,
@@ -587,10 +635,11 @@ def rate(hour, spot):
         # skrått på stranda"). None hvis retning eller facing er ukjent.
         "spot_direction_diff": (round(bw_detail["spot_direction_diff"])
                                  if bw_detail and bw_detail["spot_direction_diff"] is not None else None),
-        # Trolig flatt: enten er beregnet høyde reelt lav, eller reserven
-        # (metno_korrigert) har stor dreining/retning langt utenfor vinduet -
-        # den kilden tar ikke selv hensyn til noen av delene.
-        "likely_flat": (h is not None and h < 0.35) or (
+        # Trolig flatt: enten er signifikant høyde reelt lav (surf_height er
+        # da tvunget til 0, uansett hva formelen ellers ville gitt), eller
+        # reserven (metno_korrigert) har stor dreining/retning langt utenfor
+        # vinduet - den kilden tar ikke selv hensyn til noen av delene.
+        "likely_flat": low_hs or (
             source == "metno_korrigert" and (
                 (hour.get("turn") is not None and hour["turn"] > 25)
                 or (deg_out is not None and deg_out > 20)

@@ -137,6 +137,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:18px 0 0;background:var(--line);border-radius:14px;overflow:hidden}
 .cell{background:var(--raised);padding:12px 14px}
 .cell .k{font-size:13px;color:var(--muted)}
+.infoBtn{all:unset;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:3px;border-radius:50%;color:var(--muted);font-size:12px;cursor:pointer;vertical-align:middle}
 .cell .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
 .cell .n{font-size:13px;color:var(--muted);margin-top:2px}
 .cell.wide{grid-column:1/-1}
@@ -259,6 +260,8 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
   </div>
   <div class="field"><p class="lbl">Spot</p><select id="logSpot"></select></div>
   <div class="field"><p class="lbl">Når</p><input type="datetime-local" id="logTime"></div>
+  <div class="field"><p class="lbl">Type</p><div class="chips excl" data-group="type"></div></div>
+  <div class="field" id="sourceField" hidden><p class="lbl">Kilde (valgfritt)</p><input type="text" id="logSource" placeholder="f.eks. Instagram, Lofoten Surfsenter"></div>
   <div class="field"><p class="lbl">Hvor bra var det?</p><div class="starpick" id="starPick"></div></div>
   <div class="field"><p class="lbl">Størrelse (valgfritt)</p><div class="chips" data-group="size"></div></div>
   <div class="field"><p class="lbl">Vind (valgfritt)</p><div class="chips" data-group="wind"></div></div>
@@ -280,13 +283,34 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 /* ---------- Oppsett ---------- */
 const TZ = "Europe/Oslo";
 const LOG_KEY = "nordsurf.logs.v1";
-const SIZES = ["Flatt","Knehøy","Hoftehøy","Brysthøy","Over hodet"];
+const SIZES = ["Flatt","Knehøy","Hoftehøy","Brysthøy","Hodehøy","Over hodet","Dobbelt over hodet"];
 const WINDS = ["Offshore","Onshore","Rotete","Blankt"];
-const SIZE_M = {"Flatt":0, "Knehøy":0.5, "Hoftehøy":0.9, "Brysthøy":1.3, "Over hodet":2.0};
+// Surfehøyde i meter (høyden der bølgene brekker), ikke Hs. 26.09.2026:
+// Hodehøy er ny, Over hodet endret fra 2,0 til 2,4, Dobbelt over hodet er
+// ny. Samme tabell i fetcher/calibrate.py - test_pipeline.py sjekker at de
+// er like.
+const SIZE_M = {"Flatt":0, "Knehøy":0.5, "Hoftehøy":0.9, "Brysthøy":1.3, "Hodehøy":1.8, "Over hodet":2.4, "Dobbelt over hodet":3.6};
+// Samme formel som fetcher/rating.py sin breaking_height() - brukt her bare
+// til BarentsWatch-punkt-sammenligningen i Logger-fanen (SIZE_M er nå
+// surfehøyde, bwHeight/bwHeightNear er fortsatt Hs, så de må regnes om
+// før de kan sammenlignes mot det du har logget).
+function breakingHeight(h, period){
+  if(h==null || period==null || h<=0) return null;
+  return 0.39 * Math.pow(9.81, 0.2) * Math.pow(period * h * h, 0.4);
+}
 const MIN_SIZE_LOGS = 5;
 const STAR_WORDS = ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"];
 const PICK_WORDS = ["Flatt","Dårlig","Ok","Bra","Topp","Rått"];
 const WIND_WORD = {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"};
+// "sidevind" inneholder allerede "vind" - "sidevind"+"vinden" ville gitt
+// "sidevindvinden". De andre (offshore/side-onshore/onshore) er låneord uten
+// "vind" i seg, og tåler "vinden" rett på (offshorevinden, onshorevinden,
+// side-onshorevinden er alle riktige som de er).
+function windNoun(type){
+  const w = WIND_WORD[type];
+  if(!w) return "vinden";
+  return w.endsWith("vind") ? w+"en" : w+"vinden";
+}
 function windLabel(h){
   // "blankt"/"nesten blankt" under 1,5/3 m/s, ellers vindtypen - se
   // fetcher/rating.py sin wind_label() (samme grenser, regnet ut server-side
@@ -419,8 +443,8 @@ function dayChipsHtml(spot, spotIdx){
     const [h, idx] = best;
     const good = h.stars >= 3;
     const anslag = !!(bw && h.t > bw);
-    const heightTxt = h.likely_flat ? "Flatt" : (h.height!=null ? nf1.format(h.height)+" m" : "–");
-    const heightSpoken = h.likely_flat ? "Flatt" : (h.height!=null ? nf1.format(h.height)+" meter" : "ingen data");
+    const heightTxt = h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" m" : "–");
+    const heightSpoken = h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" meter" : "ingen data");
     const timeTxt = fmtHour.format(new Date(h.t));
     const cls = ["daychip", good?"good":"", anslag?"anslag":""].filter(Boolean).join(" ");
     const lbl = `${fullLbl}, beste time klokka ${timeTxt.replace(/^0/,"")}, ${h.stars} av 5 stjerner, ${heightSpoken}${anslag?", anslag":""}`;
@@ -465,7 +489,7 @@ function renderList(){
     const h = s.hours[currentHour(s)];
     if(!h) return "";
     const facts = [
-      h.height!=null ? `${nf1.format(h.height)} m` : null,
+      !h.likely_flat && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : null,
       h.period!=null ? `${nf0.format(h.period)} s` : null,
       h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
     ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
@@ -492,22 +516,25 @@ function renderList(){
   wireFavButtons();
 }
 
-function heightSourceText(h, spot){
+// 26.09.2026: surfehøyde (der bølgene brekker) er nå det man ser først -
+// "height" (Hs, signifikant høyde ute) er bare forklaringen bak tallet, se
+// README "Surfehøyde".
+function surfHeadline(h){
+  if(h.likely_flat) return "Trolig flatt";
+  if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
+  const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";
+  return `${nf1.format(h.surf_height)} m${sets}`;
+}
+function surfSubtext(h){
+  if(h.height==null) return "Ingen data";
+  const period = h.period!=null ? `${nf0.format(h.period)} s` : "ukjent periode";
   if(h.height_source==="barentswatch"){
     const interp = h.bw_interpolated ? " (interpolert)" : "";
-    const share = h.swell_share!=null ? `, ${nf0.format(h.swell_share*100)} % svell` : "";
-    const total = h.bw_height!=null ? nf1.format(h.bw_height)+" m" : "–";
-    return `Svell ved spoten, av ${total} totalt i BarentsWatch${share}${interp}`;
+    return `${nf1.format(h.height)} m signifikant, ${period}, BarentsWatch${interp}`;
   }
-  if(h.height_source==="svell_ute"){
-    const t = nf1.format(h.transfer).replace(/,0$/,"");
-    const cal = (spot&&spot.calibration)||{};
-    const src = cal.transfer_source==="barentswatch" ? " (lært fra BarentsWatch)" : cal.transfer_source==="logs" ? " (lært fra loggene dine)" : "";
-    if(h.directness>=0.999) return `Svell ute × ${t}, direkte treff${src}`;
-    return `Svell ute × ${t} × ${nf0.format(h.directness*100)} % (skrått inn)${src}`;
-  }
-  return h.turn!=null && h.turn>=10 ? "met.no, justert" : "met.no";
+  return `${nf1.format(h.height)} m signifikant, ${period}, anslag`;
 }
+const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet - langt svell reiser seg mer når det treffer grunnen.";
 function windowText(spot){
   const w = spot.swell_window;
   if(!w) return "";
@@ -556,7 +583,7 @@ function renderSpot(){
   const h = s.hours[state.sel];
   const t = new Date(h.t);
   const fw = h.faded_wind ?? h.faded, ft = h.faded_tide ?? 0;
-  const losses = [fw?`${WIND_WORD[h.wind_type]||""}vinden tar ${fw}`:null, ft?`tidevannet tar ${ft}`:null].filter(Boolean);
+  const losses = [fw?`${windNoun(h.wind_type)} tar ${fw}`:null, ft?`tidevannet tar ${ft}`:null].filter(Boolean);
   const verdict = h.faded
     ? `${STAR_WORDS[h.stars]}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
     : `${STAR_WORDS[h.stars]}.`;
@@ -622,7 +649,7 @@ function renderSpot(){
       <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
     </div>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h,s)}${h.bw_height_max!=null?` · Sett opp til ${nf1.format(h.bw_height_max)} m`:""}</div></div>
+      <div class="cell"><div class="k">Høyde på spoten <button type="button" class="infoBtn" id="heightInfo" aria-label="Hva er surfehøyde?">ⓘ</button></div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div></div>
       <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
       <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
@@ -637,6 +664,7 @@ function renderSpot(){
   $("#back").onclick = ()=>{ state.spot=null; render(); };
   wireFavButtons();
   $("#bdOpen").onclick = ()=>openBreakdown(h);
+  $("#heightInfo").onclick = ()=>toast(SURF_HEIGHT_EXPLAINER, null, null, 9000);
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
@@ -744,30 +772,25 @@ function renderLogs(){
     const dir = Math.abs(bias)<0.5 ? "Varselet ligger omtrent riktig." : bias>0 ? `Varselet undervurderer med ${nf1.format(bias)} stjerner i snitt.` : `Varselet overvurderer med ${nf1.format(-bias)} stjerner i snitt.`;
     return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor én stjerne.</p></div>`;
   }).join("");
+  // 26.09.2026: transfer (modell mot modell, reserven mot BarentsWatch -
+  // læres ALDRI fra loggene lenger) og surf_factor (loggene/observasjonene
+  // dine mot Komar og Gaughan sin bruddhøyde-formel) er to adskilte tall,
+  // som ikke skal blandes - se README "Surfehøyde".
   const heightCal = DATA.spots.map(s=>{
-    // Samme formel som fetcher/calibrate.py: forhold mot toppfaktoren ved
-    // DIREKTE treff, ikke ved skrått svell. Gamle logger uten directness
-    // antas direkte (1.0). Svell langt utenfor vinduet (directness < 0.3)
-    // sier lite om direkte treff og hoppes over.
-    const pts = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null && l.swellOffshore>0.2 && (l.directness??1.0)>=0.3)
-      .map(l=>SIZE_M[l.size]/(l.swellOffshore*(l.directness??1.0))).sort((a,b)=>a-b);
     const cal = s.calibration || {};
-    const pct = nf0.format((cal.transfer_used ?? (s.hours[0]||{}).transfer ?? 0.6) * 100);
-    if(cal.transfer_source==="logs"){
-      return `<div class="calib"><div class="t">${esc(s.name)}: ${pct} % av svellet når stranda ved direkte treff</div>
-        <p>Lært automatisk fra ${cal.size_logs} økter du har logget, og brukt i varselet.</p></div>`;
-    }
-    if(cal.transfer_source==="barentswatch"){
-      return `<div class="calib"><div class="t">${esc(s.name)}: ${pct} % av svellet når stranda ved direkte treff</div>
-        <p>Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn).</p></div>`;
-    }
-    if(pts.length < MIN_SIZE_LOGS){
-      const bwNote = cal.bw_pairs ? ` Lærer også fra BarentsWatch i bakgrunnen (${cal.bw_pairs} par over ${cal.bw_days} døgn så langt, trenger ${40} par over minst 3 døgn).` : "";
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${MIN_SIZE_LOGS-pts.length} økt${MIN_SIZE_LOGS-pts.length===1?"":"er"} til med størrelse valgt for å lære hvor mye av svellet som når stranda ved direkte treff.${bwNote}</p></div>`;
-    }
-    const med = pts[Math.floor(pts.length/2)];
-    return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(med*100)} % av svellet når stranda ved direkte treff</div>
-      <p>Lært fra ${pts.length} økter. Appen bruker nå ${pct} % (${cal.transfer_source==="spots.json"?"satt i spots.json":"standardverdi"}). Sett <b>"transfer": ${med.toFixed(2)}</b> for ${esc(s.id)} i spots.json.</p></div>`;
+    const transferPct = nf0.format((cal.transfer_used ?? (s.hours[0]||{}).transfer ?? 0.6) * 100);
+    const transferSrcTxt = cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
+      : cal.transfer_source==="spots.json" ? "Satt i spots.json"
+      : cal.transfer_source==="logs" ? "Lært fra loggene dine"
+      : "Standardverdi";
+    const surfFactor = cal.surf_factor_used ?? 1.0;
+    const surfLogs = cal.surf_factor_logs ?? 0;
+    const surfSrcTxt = cal.surf_factor_source==="logs"
+      ? `Lært fra ${surfLogs} logger/observasjoner du har lagt inn`
+      : `Standardverdi (${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn før den læres automatisk)`;
+    return `<div class="calib"><div class="t">${esc(s.name)}</div>
+      <p><b>Transfer ${transferPct} %</b>: hvor mye av svellet ute som når stranda ved direkte treff, modell mot modell (reservemodellen mot BarentsWatch). ${transferSrcTxt}.</p>
+      <p><b>Surf-faktor ${nf1.format(surfFactor)}</b>: hvor godt Komar og Gaughan sin bruddhøyde-formel stemmer med det du faktisk ser her. ${surfSrcTxt}.</p></div>`;
   }).join("");
   // Hvilket BarentsWatch-punkt (250 m, brukt i varselet, eller 150 m, det
   // opprinnelige) som faktisk ligger nærmest det du har logget. Bytter
@@ -778,13 +801,13 @@ function renderLogs(){
       const left = MIN_SIZE_LOGS - withSize.length;
       return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${left} økt${left===1?"":"er"} til med størrelse valgt for å sammenligne BarentsWatch-punktene.</p></div>`;
     }
-    const withBoth = withSize.filter(l=>l.bwHeight!=null && l.bwHeightNear!=null);
+    const withBoth = withSize.filter(l=>l.bwHeight!=null && l.bwHeightNear!=null && l.forecastPeriod!=null);
     if(!withBoth.length){
       return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen av de ${withSize.length} øktene med størrelse har data fra begge punktene ennå.</p></div>`;
     }
     const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
-    const dev250 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-l.bwHeight)));
-    const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-l.bwHeightNear)));
+    const dev250 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeight,l.forecastPeriod))));
+    const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeightNear,l.forecastPeriod))));
     const better = dev250<=dev150 ? "250 m" : "150 m";
     return `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
       <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`;
@@ -806,9 +829,10 @@ function renderLogs(){
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
     const extra = [l.size,l.wind].filter(Boolean).join(", ");
     const fc = l.forecastStars!=null ? `Varsel: ${l.forecastStars}` : "Uten varsel";
+    const obs = l.type==="observed" ? `Observert${l.source?` (${esc(l.source)})`:""}. ` : "";
     return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${starsSVG(l.stars,0)}</span>
       <button class="del" data-id="${l.id}" aria-label="Slett økt ${fmtDate.format(d)}">Slett</button>
-      <span class="m">${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
+      <span class="m">${obs}${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
   }).join("");
   $("#app").innerHTML = `<header class="top"><h1>Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
     <h2 class="sec">Treffsikkerhet</h2>${calib}
@@ -978,18 +1002,31 @@ function localInputValue(d){
   return p.replace(" ","T");
 }
 function openSheet(){
-  logDraft = {spot: DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null};
+  logDraft = {spot: DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
   $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
   $("#logTime").value = localInputValue(new Date());
   $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
   document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
   document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
+  // Type: egen økt eller observert (sett selv, eller via en pålitelig kilde
+  // uten å surfe). Eksklusivt valg (alltid ett av de to), ikke en valgfri
+  // av/på-brikke som størrelse/vind - derfor egen håndtering under, ikke
+  // den generiske .chips-logikken (chips-en har klassen "excl" for det).
+  document.querySelector('[data-group="type"]').innerHTML = ["Egen økt","Observert"].map((v,i)=>`<button aria-pressed="${i===0}">${v}</button>`).join("");
+  $("#sourceField").hidden = true;
+  $("#logSource").value = "";
+  document.querySelector('[data-group="type"]').querySelectorAll("button").forEach((b,i)=>b.onclick=()=>{
+    document.querySelector('[data-group="type"]').querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    logDraft.type = i===0 ? "own" : "observed";
+    $("#sourceField").hidden = logDraft.type !== "observed";
+  });
   $("#saveLog").disabled = true;
   $("#starPick").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     $("#starPick").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
     b.setAttribute("aria-pressed","true"); logDraft.stars = +b.dataset.n; $("#saveLog").disabled = false;
   });
-  document.querySelectorAll(".chips").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".chips:not(.excl)").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
     const on = b.getAttribute("aria-pressed")==="true";
     g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
     b.setAttribute("aria-pressed", on ? "false" : "true");
@@ -1026,8 +1063,14 @@ $("#saveLog").onclick = ()=>{
   const f = forecastAt(spot, t);
   const entry = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot, t: t.toISOString(),
     stars: logDraft.stars, size: logDraft.size, wind: logDraft.wind,
+    // Egen økt eller observert (sett selv/pålitelig kilde uten å surfe) -
+    // teller likt i surf_factor/bias/tidevann, vises ulikt i Økter-lista.
+    type: logDraft.type, source: logDraft.type==="observed" ? ($("#logSource").value.trim() || null) : null,
     forecastStars: f ? f.stars : null, forecastFaded: f ? f.faded : null,
     forecastHeight: f ? f.height : null, swellOffshore: f ? f.swell_offshore : null,
+    // Perioden ute (Open-Meteo) på loggtidspunktet - trengs sammen med
+    // forecastHeight for å regne ut Hb (surf_factor-læringen).
+    forecastPeriod: f ? f.period : null,
     directness: f ? f.directness : null,
     // BarentsWatch 250 m (brukt i varselet) og 150 m (bare sammenligning),
     // slik de sto på tidspunktet du logget - se "hvilket punkt treffer best"
@@ -1047,11 +1090,11 @@ $("#saveLog").onclick = ()=>{
 };
 
 let toastTimer;
-function toast(msg, action, fn){
+function toast(msg, action, fn, duration){
   const el = $("#toast"); el.innerHTML = esc(msg);
   if(action){ el.style.pointerEvents="auto"; const b=document.createElement("button"); b.className="link"; b.style.color="inherit"; b.style.textDecoration="underline"; b.textContent=action; b.onclick=()=>{fn(); el.classList.remove("show");}; el.append(" ", b); }
   else el.style.pointerEvents="none";
-  el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("show"), 4000);
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("show"), duration||4000);
 }
 
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{

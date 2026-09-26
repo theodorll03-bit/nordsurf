@@ -163,8 +163,8 @@ function computeGroups(){
 function heightText(h){
   if(!h) return "–";
   if(h.likely_flat) return "Flatt";
-  if(h.height==null) return "–";
-  return nf1.format(h.height)+" m";
+  if(h.surf_height==null) return "–";
+  return nf1.format(h.surf_height)+" m";
 }
 
 function markerLabel(spot, h){
@@ -358,13 +358,14 @@ function discSvgMarkup(spot, h){
 
 function discPlateMarkup(spot, h){
   const flat = h && h.likely_flat;
-  const big = h ? (flat ? "Trolig flatt" : (h.height!=null?nf1.format(h.height)+" m":"–")) : "–";
+  const big = h ? (flat ? "Trolig flatt" : (h.surf_height!=null?nf1.format(h.surf_height)+" m":"–")) : "–";
+  const sets = h && !flat && h.surf_height_sets!=null ? `sett ${nf1.format(h.surf_height_sets)} m` : "";
   const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
   const night = h && (h.light==="mørkt" || h.daylight===false);
   const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : "anslag") : "";
-  const max = h && h.bw_height_max!=null ? `<div class="max">Sett opp til ${nf1.format(h.bw_height_max)} m</div>` : "";
+  const max = h && h.bw_height_max!=null ? `<div class="max">BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m</div>` : "";
   return `<div class="big">${esc(big)}</div>
-    <div class="mid">${[period, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
+    <div class="mid">${[sets, period, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
     ${max}
     <div class="src">${esc(src)} <span class="chev" aria-hidden="true">›</span></div>`;
 }
@@ -487,7 +488,7 @@ function fillMapSheet(spot, h){
     <button type="button" class="now" id="mSheetStars" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h?h.stars:0, h?h.faded:0, true)}</button>
     <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}</p>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&h.bw_height_max!=null?`<div class="n">Sett opp til ${nf1.format(h.bw_height_max)} m</div>`:""}</div>
+      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&!h.likely_flat&&h.surf_height_sets!=null?`<div class="n">Sett ${nf1.format(h.surf_height_sets)} m${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>`:""}</div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h&&h.period!=null?nf0.format(h.period)+" s":"–"}</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h&&h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${h?windLabel(h):""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div></div>

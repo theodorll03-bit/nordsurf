@@ -67,7 +67,15 @@ def describe(spot, w, now):
     s, e = local(w["start"]), local(w["end"] + dt.timedelta(hours=1))
     day = {0: "i dag", 1: "i morgen"}.get((s.date() - local(now).date()).days, ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"][s.weekday()])
     top = max(w["hours"], key=lambda h: h["stars"])
-    parts = [f"{top['height']:.1f} m".replace(".", ",") if top.get("height") is not None else None,
+    # Surfehøyde (der bølgene brekker), ikke Hs - se rating.breaking_height().
+    surf = top.get("surf_height")
+    sets = top.get("surf_height_sets")
+    height_txt = None
+    if surf is not None:
+        height_txt = f"{surf:.1f} m".replace(".", ",")
+        if sets is not None:
+            height_txt += f" (sett {sets:.1f} m)".replace(".", ",")
+    parts = [height_txt,
              f"{top['period']:.0f} s" if top.get("period") else None,
              top.get("wind_type")]
     return f"{spot['name']}: {w['best']} stjerner {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)

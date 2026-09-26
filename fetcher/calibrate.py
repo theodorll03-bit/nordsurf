@@ -1,10 +1,31 @@
-"""Lærer av loggene: hvor stor del av svellet ute som faktisk når stranda, og om varselet bommer.
-Lærer også en uavhengig transfer fra BarentsWatch, ved å sammenligne reservemodellens
-inngangsverdier (svell ute * directness) mot BarentsWatch sine egne, ekte målinger."""
+"""Lærer av loggene: surf_factor (hvor godt Komar og Gaughan sin bruddhøyde-
+formel stemmer med det du faktisk ser, per spot), og om varselet bommer på
+stjernene. Lærer også en uavhengig transfer fra BarentsWatch, ved å
+sammenligne reservemodellens inngangsverdier (svell ute * directness) mot
+BarentsWatch sine egne, ekte målinger - se bw_transfer()/effective_transfer().
+
+26.09.2026: transfer læres IKKE lenger fra loggene (størrelse / (svell ute *
+directness)) - den sammenlignet surfehøyde (det du ser) med Hs (signifikant
+høyde), som er to forskjellige fysiske størrelser. Loggene brukes nå bare
+til surf_factor (størrelse / Hb, se rating.breaking_height), i tillegg til
+tidevann/stjerne-bias som før."""
 import datetime as dt
 from statistics import median
 
-SIZE_M = {"Flatt": 0.0, "Knehøy": 0.5, "Hoftehøy": 0.9, "Brysthøy": 1.3, "Over hodet": 2.0}
+from rating import breaking_height, FLAT_HS_THRESHOLD, SURF_FACTOR_MIN, SURF_FACTOR_MAX
+
+DIRECTNESS_MIN_FOR_SURF_FACTOR = 0.667  # se learn()
+
+# Størrelser i meter SURFEHØYDE (høyden der bølgene brekker), ikke Hs.
+# 26.09.2026: Hodehøy er ny, Over hodet endret fra 2,0 til 2,4, Dobbelt over
+# hodet er ny. Gamle logger beholder etiketten sin, men får den nye
+# meterverdien - se README for hvor mange logger det gjaldt da endringen ble
+# gjort. Samme tabell finnes i docs/index.html - test_pipeline.py sjekker at
+# de er like.
+SIZE_M = {
+    "Flatt": 0.0, "Knehøy": 0.5, "Hoftehøy": 0.9, "Brysthøy": 1.3,
+    "Hodehøy": 1.8, "Over hodet": 2.4, "Dobbelt over hodet": 3.6,
+}
 MIN_LOGS = 5
 
 BW_MIN_PAIRS = 40  # trenger nok par før vi stoler på medianen
@@ -13,23 +34,31 @@ BW_MAX_AGE_DAYS = 30
 
 
 def learn(spot_id, logs):
+    """surf_factor = median(logget størrelse i meter / Hb fra formelen på
+    loggtidspunktet). Bare logger der Hs ved spoten (forecastHeight) var
+    minst FLAT_HS_THRESHOLD og perioden ute (forecastPeriod) er kjent - uten
+    dem kan ikke Hb regnes ut. Observasjoner (type "observed") teller likt
+    som egne økter (size/stjerner betyr det samme uansett hvem som så det).
+
+    26.09.2026: logger der directness var under DIRECTNESS_MIN_FOR_SURF_FACTOR
+    telles ikke. Grøtfjord var flatt tre dager på rad (24.-26.09.2026) fordi
+    svellet kom fra feil retning (skyggekurven/diffraksjon), ikke fordi
+    spoten generelt får mindre bølger enn formelen sier - en slik logg ville
+    feilaktig lært ned surf_factor for HELE spoten, ikke bare for skrått
+    svell (som allerede dempes for seg, se rating.rate())."""
     mine = [l for l in logs if l.get("spot") == spot_id]
-    # Forholdet skal være toppfaktoren ved DIREKTE treff, ikke ved skrått
-    # svell - del derfor på directness også. Logger uten feltet (gamle
-    # logger, eller loggført før denne endringen) antas direkte (1.0).
-    # Svell langt utenfor vinduet (directness under 0.3) sier lite om
-    # direkte treff og ville gitt urimelig store forhold - hoppes over.
     ratios = [
-        SIZE_M[l["size"]] / (l["swellOffshore"] * (l.get("directness") if l.get("directness") is not None else 1.0))
+        SIZE_M[l["size"]] / breaking_height(l["forecastHeight"], l["forecastPeriod"])
         for l in mine
         if l.get("size") in SIZE_M
-        and (l.get("swellOffshore") or 0) > 0.2
-        and (l.get("directness") if l.get("directness") is not None else 1.0) >= 0.3
+        and (l.get("forecastHeight") or 0) >= FLAT_HS_THRESHOLD
+        and l.get("forecastPeriod") is not None
+        and (l.get("directness") if l.get("directness") is not None else 1.0) >= DIRECTNESS_MIN_FOR_SURF_FACTOR
     ]
     stars = [l["stars"] - l["forecastStars"] for l in mine if l.get("forecastStars") is not None]
-    out = {"logs": len(mine), "size_logs": len(ratios)}
+    out = {"logs": len(mine), "surf_factor_logs": len(ratios)}
     if len(ratios) >= MIN_LOGS:
-        out["transfer"] = round(min(1.2, max(0.05, median(ratios))), 2)
+        out["surf_factor"] = round(min(SURF_FACTOR_MAX, max(SURF_FACTOR_MIN, median(ratios))), 2)
     if stars:
         out["bias"] = round(sum(stars) / len(stars), 2)
         out["hits"] = sum(1 for d in stars if abs(d) <= 1)
@@ -86,8 +115,10 @@ def bw_transfer(pairs):
 
 
 def effective_transfer(spot, learned, bw_pairs):
-    """Rekkefølge: 1) lært fra loggene dine, 2) lært fra BarentsWatch,
-    3) transfer satt i spots.json, 4) DEFAULT_TRANSFER."""
+    """Rekkefølge: 1) lært fra BarentsWatch, 2) transfer satt i spots.json,
+    3) DEFAULT_TRANSFER. 26.09.2026: learn() setter ikke lenger "transfer"
+    (se modul-docstringen) - "logs"-grenen under er bare igjen for at
+    rekkefølgen fortsatt virker om noe skulle sette den eksternt."""
     from rating import DEFAULT_TRANSFER
     if learned.get("transfer"):
         return learned["transfer"], "logs"
