@@ -198,6 +198,45 @@
         9
       ],
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 14 km ut, retning 342.5 grader."
+    },
+    {
+      "id": "unstad",
+      "name": "Unstad",
+      "area": "Lofoten",
+      "enabled": true,
+      "spot": {
+        "lat": 68.26921573424642,
+        "lon": 13.580784505303983
+      },
+      "offshore": {
+        "lat": 68.3134,
+        "lon": 13.3148
+      },
+      "barentswatch_point": {
+        "lat": 68.269784,
+        "lon": 13.57748
+      },
+      "swell_window": [
+        253,
+        335
+      ],
+      "offshore_wind": [
+        70,
+        160
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "_offshore_vind": "Stranda vender mot VNV (294,7 grader, bekreftet med to metoder: kort-rekkevidde åpen sektor og kystlinje-tangent fra GSHHS full oppløsning). Offshorevind er satt ut fra det. Avviker 25 grader fra forventet øst-vind (surf-forecast.com), innenfor 30-graders grensen. Lokale fallvinder vises ikke på kart, så bekreft lokalt.",
+      "swell_window_tegnet": [
+        253,
+        335
+      ],
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 12 km ut, retning 294 grader. GFS Wave gir svelldata for alle timer; ECMWF WAM gir ingen svelldekomponering (som ved de andre spotene).",
+      "_barentswatch": "Punkt 150 m ut fra spoten i retningen stranda vender (294,8 grader). Bekreftet via barentswatch.no (nettvisning) at punktet har reell bølgedata - stedet er navngitt 'Unnstadvika' der. Ikke testet direkte mot API-et (ingen BarentsWatch-nøkler lokalt), så bekreft i kilderapporten når henteren kjører mot ekte data."
     }
   ]
 }
