@@ -632,11 +632,80 @@ async function syncLogs(manual){
   }
 }
 
+function accountSectionHtml(){
+  const a = window.Auth && window.Auth.state;
+  if(!a || !a.ready){
+    return `<h2 class="sec">Konto</h2><div class="form"><p style="color:var(--muted)">Kobler til...</p></div>`;
+  }
+  if(!a.user){
+    return `<h2 class="sec">Konto</h2>
+      <div class="form">
+        <p>Logg inn for å lagre favoritter og skrive kommentarer på spots.</p>
+        <label for="authEmail">E-post</label>
+        <input type="email" id="authEmail" placeholder="deg@eksempel.no" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="email">
+        <p id="authMsg" style="color:var(--muted);display:none"></p>
+        <div class="row-btns"><button class="primary" id="authSend" style="min-height:44px">Send innloggingslenke</button></div>
+      </div>`;
+  }
+  const name = a.profile ? a.profile.display_name : "";
+  return `<h2 class="sec">Konto</h2>
+    <div class="form">
+      <p>Innlogget som ${esc(a.user.email)}.</p>
+      <label for="authName">Visningsnavn</label>
+      <input type="text" id="authName" maxlength="30" placeholder="Kari" value="${esc(name)}">
+      <div class="row-btns"><button class="primary" id="authSaveName" style="min-height:44px">Lagre navn</button></div>
+      <div class="row-btns"><button class="ghost" id="authLogout" style="min-height:44px">Logg ut</button></div>
+      <div class="row-btns"><button class="ghost" id="authDelete" style="min-height:44px">Slett konto</button></div>
+    </div>`;
+}
+function wireAccountSection(){
+  const a = window.Auth && window.Auth.state;
+  if(!a || !a.ready) return;
+  if(!a.user){
+    const send = $("#authSend");
+    if(send) send.onclick = async ()=>{
+      const email = $("#authEmail").value.trim();
+      const msg = $("#authMsg");
+      if(!email){ return; }
+      send.disabled = true;
+      try{
+        await Auth.sendLoginLink(email);
+        msg.textContent = "Sjekk e-posten din for innloggingslenke.";
+        msg.style.display = "block";
+      }catch(e){
+        msg.textContent = "Kunne ikke sende lenke: " + e.message;
+        msg.style.display = "block";
+      }finally{ send.disabled = false; }
+    };
+    return;
+  }
+  const saveBtn = $("#authSaveName");
+  if(saveBtn) saveBtn.onclick = async ()=>{
+    const name = $("#authName").value.trim();
+    if(!name) return;
+    saveBtn.disabled = true;
+    try{ await Auth.saveDisplayName(name); toast("Navn lagret"); }
+    catch(e){ toast("Kunne ikke lagre navn: " + e.message); }
+    finally{ saveBtn.disabled = false; }
+  };
+  const logoutBtn = $("#authLogout");
+  if(logoutBtn) logoutBtn.onclick = ()=>Auth.signOut();
+  const delBtn = $("#authDelete");
+  if(delBtn) delBtn.onclick = async ()=>{
+    if(!confirm("Slette kontoen din? Dette kan ikke angres.")) return;
+    delBtn.disabled = true;
+    try{ await Auth.deleteAccount(); toast("Kontoen er slettet"); }
+    catch(e){ toast("Sletting feilet: " + e.message); delBtn.disabled = false; }
+  };
+}
+window.addEventListener("authchange", ()=>{ if(state.tab==="innstillinger") renderSettings(); });
+
 function renderSettings(){
   const cfg = loadSync(), n = DATA.notify || {};
   const status = cfg.error ? `Siste synk feilet: ${esc(cfg.error)}`
     : cfg.last ? `Sist synket ${relDay(new Date(cfg.last))} kl. ${fmtTime.format(new Date(cfg.last))}` : "Ikke synket ennå";
   $("#app").innerHTML = `<header class="top"><h1>Innstillinger</h1></header>
+    ${accountSectionHtml()}
     <h2 class="sec">Varsler</h2>
     <div class="form">
       <p>Du får varsel når en spot får <b>${n.min_stars??3} stjerner eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
@@ -661,6 +730,7 @@ function renderSettings(){
     const blob = new Blob([JSON.stringify(loadLogs(),null,2)],{type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "nordsurf-logger.json"; a.click();
   };
+  wireAccountSection();
 }
 
 /* ---------- Loggeark ---------- */
@@ -741,5 +811,7 @@ if("serviceWorker" in navigator && location.protocol==="https:" && !window.__FOR
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="js/map.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/auth.js"></script>
 </body>
 </html>
