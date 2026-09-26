@@ -97,6 +97,9 @@ def directness(d, spot):
 
 def spot_height(hour, spot=None):
     """Beste anslag på bølgehøyde på spoten, og hvilken kilde det kom fra.
+    Dette er den VISTE høyden og høyden kalibreringen læres mot - IKKE den
+    "effektive" høyden ranger bruker (se effective_height/period_factor
+    lenger ned), som bare skal påvirke rangeringen, ikke tallet du ser.
 
     1. BarentsWatch, når den finnes (finmasket kystmodell som allerede tar
        hensyn til skjerming bak odder og øyer).
@@ -122,6 +125,36 @@ def spot_height(hour, spot=None):
 # Strengt med vilje: 5 stjerner skal være sjeldent. Hver faktor er 1.0 bare
 # når forholdene er virkelig gode, og stjernene rundes NED.
 
+PERIOD_FACTOR_POINTS = [(8, 0.9), (10, 1.0), (13, 1.15), (16, 1.3)]
+
+
+def period_factor(p):
+    """Langt svell bygger seg høyere opp når det treffer grunnen enn kort
+    svell med samme signifikante høyde ute. Brukes BARE til å justere
+    height_score (rangeringen) - aldri til selve høyde-tallet du ser eller
+    til kalibreringen mot BarentsWatch/loggene, som begge skal måle den
+    ekte, fysiske høyden uforstyrret. Lineær interpolasjon mellom punktene,
+    flatt ut utenfor endene."""
+    if p is None:
+        return 1.0
+    pts = PERIOD_FACTOR_POINTS
+    if p <= pts[0][0]:
+        return pts[0][1]
+    if p >= pts[-1][0]:
+        return pts[-1][1]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if x0 <= p <= x1:
+            return y0 + (y1 - y0) * (p - x0) / (x1 - x0)
+    return pts[-1][1]
+
+
+def effective_height(h, period):
+    """Høyden brukt bare i height_score - se period_factor()."""
+    if h is None:
+        return None
+    return h * period_factor(period)
+
+
 def height_score(h, spot):
     lo, hi = spot["ideal_height"]
     mx = spot["max_height"]
@@ -138,18 +171,18 @@ def height_score(h, spot):
 
 
 def period_score(p, spot):
+    """Mildere enn før, og med vilje: nå som period_factor() (over) også
+    belønner lang periode via height_score, skal ikke denne straffe det
+    samme to ganger. Den skal bare straffe KORT periode (dårlig energi,
+    lite driv), ikke lenger gi ekstra uttelling for lang periode."""
     if p is None:
         return 0.5
     if p < spot["min_period"] - 2:
-        return 0.3
+        return 0.4
     if p < spot["min_period"]:
-        return 0.5
+        return 0.6
     if p < 10:
-        return 0.65
-    if p < 12:
-        return 0.8
-    if p < 14:
-        return 0.92
+        return 0.85
     return 1.0
 
 
@@ -171,9 +204,11 @@ def direction_score(d, spot, source=None):
 
 def swell_stars(hour, spot):
     h, source = spot_height(hour, spot)
+    period = hour.get("period")
+    eff_h = effective_height(h, period)
     score = (
-        height_score(h, spot)
-        * period_score(hour.get("period"), spot)
+        height_score(eff_h, spot)
+        * period_score(period, spot)
         * direction_score(hour.get("dir_offshore"), spot, source)
     )
     return int(5 * score + 1e-9)  # rund ned
@@ -182,40 +217,73 @@ def swell_stars(hour, spot):
 # ---------- Vind ----------
 
 def wind_type(wind_dir, spot):
+    """Firedelt etter vinkelen mellom vindretningen og MIDTEN av spotens
+    offshore_wind-sektor (0 = rett fra land): offshore 0-45, side 45-100,
+    side-onshore 100-135, onshore 135-180."""
     if wind_dir is None:
         return None
     off_sector = spot["offshore_wind"]
-    if in_sector(wind_dir, off_sector):
-        return "offshore"
     center = (off_sector[0] + ((off_sector[1] - off_sector[0]) % 360) / 2) % 360
-    onshore_center = (center + 180) % 360
-    if angle_diff(wind_dir, onshore_center) <= 45:
-        return "onshore"
-    return "sideonshore"
+    a = angle_diff(wind_dir, center)
+    if a <= 45:
+        return "offshore"
+    if a <= 100:
+        return "side"
+    if a <= 135:
+        return "sideonshore"
+    return "onshore"
 
 
-def wind_penalty(speed, wind_dir, spot):
+def effective_wind(speed, gust):
+    """Når kastene er kraftigere enn middelvinden kjennes det verre enn
+    middelvinden alene skulle tilsi. Uten kastdata: bare middelvind."""
+    if speed is None:
+        return None
+    if gust is not None and gust > speed:
+        return speed + 0.3 * (gust - speed)
+    return speed
+
+
+WIND_PENALTY_TABLE = (
+    # (øvre grense effektiv vind eksklusiv, {vindtype: straff-funksjon(eff)})
+    (3, {"offshore": lambda e: 0, "side": lambda e: 0, "sideonshore": lambda e: 0, "onshore": lambda e: 0}),
+    (5, {"offshore": lambda e: 0, "side": lambda e: 0, "sideonshore": lambda e: 1, "onshore": lambda e: 1}),
+    (8, {"offshore": lambda e: 0, "side": lambda e: 1, "sideonshore": lambda e: 1, "onshore": lambda e: 2}),
+    (11, {"offshore": lambda e: 1 if e > 10 else 0, "side": lambda e: 2, "sideonshore": lambda e: 2, "onshore": lambda e: 3}),
+)
+
+
+def wind_penalty(speed, wind_dir, spot, gust=None):
     if speed is None:
         return 1  # ukjent vind: ikke gi full pott
-    if speed < 1.5:
-        return 0  # blankt
-    kind = wind_type(wind_dir, spot)
+    eff = effective_wind(speed, gust)
+    kind = wind_type(wind_dir, spot) or "onshore"  # ukjent retning: anta verste fall
+    for limit, table in WIND_PENALTY_TABLE:
+        if eff <= limit:
+            return table[kind](eff)
+    # over 11 m/s effektiv
     if kind == "offshore":
-        if speed > 12:
-            return 2
-        return 1 if speed > 9 else 0
-    if kind == "sideonshore":
-        if speed < 3:
-            return 1
-        return 2 if speed < 6 else 3
-    # onshore
-    if speed < 3:
-        return 1
-    if speed < 5:
-        return 2
-    if speed < 8:
+        return 2 if eff > 14 else 1
+    if kind == "side":
         return 3
-    return 5
+    if kind == "sideonshore":
+        return 3
+    return 4
+
+
+def wind_label(speed, wind_type_):
+    """Tekst for vinden på detaljsiden: 'blankt'/'nesten blankt' under
+    henholdsvis 1,5 og 3 m/s, ellers vindtypen (side/offshore/...)."""
+    if speed is None:
+        return None
+    if speed < 1.5:
+        return "blankt"
+    if speed < 3:
+        return "nesten blankt"
+    return wind_type_
+
+
+WIND_TYPE_WORD = {"offshore": "offshore", "side": "sidevind", "sideonshore": "side-onshore", "onshore": "onshore"}
 
 
 def tide_penalty(tide, spot):
@@ -227,11 +295,99 @@ def tide_penalty(tide, spot):
     return 0 if tide["state"] in ok else spot.get("tide_penalty", 1)
 
 
+# ---------- Forklaring (breakdown) ----------
+
+def _height_word(score):
+    if score <= 0:
+        return "flatt"
+    if score < 0.4:
+        return "svak"
+    if score < 0.7:
+        return "middels"
+    if score < 0.9:
+        return "god"
+    return "veldig god"
+
+
+def _period_word(score):
+    if score >= 1.0:
+        return "full uttelling"
+    if score >= 0.85:
+        return "god uttelling"
+    if score >= 0.6:
+        return "redusert"
+    return "sterkt redusert"
+
+
+def _direction_word(dir_hit):
+    if dir_hit is None:
+        return "ukjent"
+    if dir_hit >= 0.9:
+        return "treffer vinduet"
+    if dir_hit >= 0.5:
+        return "i utkanten av vinduet"
+    if dir_hit <= 0.001:
+        return "treffer ikke vinduet"
+    return "svakt inn i skyggen"
+
+
+def _fmt_m(v):
+    return f"{v:.1f}".replace(".", ",") + " m"
+
+
+def _fmt_penalty(n):
+    return "ingen effekt" if n == 0 else f"−{n}"
+
+
+def build_breakdown(hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
+                     wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
+                     potential, solid, lost_wind, lost_tide, uncertain, capped_from):
+    items = []
+    if h is None:
+        items.append("Høyde: ingen data")
+    else:
+        pf = period_factor(period)
+        felt = f", føles som ca. {_fmt_m(eff_h)}" + (f" på {period:.0f} s" if period is not None else "") if (pf > 1.05 or pf < 0.95) else ""
+        items.append(f"Høyde {_fmt_m(h)}{felt}: {_height_word(hs)}")
+    if period is None:
+        items.append("Periode: ukjent")
+    else:
+        items.append(f"Periode {period:.0f} s: {_period_word(ps)}")
+    items.append(f"Retning: {_direction_word(dir_hit)}")
+    if wind_speed is None:
+        items.append("Vind: ukjent")
+    else:
+        label = wind_label(wind_speed, WIND_TYPE_WORD.get(wt, wt or ""))
+        gusttxt = f" med kast {gust:.0f}" if gust is not None and gust > wind_speed else ""
+        items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}: {_fmt_penalty(wp)}")
+    if not spot.get("tide"):
+        items.append("Tidevann: spoten tåler alt")
+    elif not tide:
+        items.append("Tidevann: ukjent")
+    else:
+        items.append(f"Tidevann ({tide.get('state','?')}): {_fmt_penalty(tide_pen)}")
+    if capped_from is not None and capped_from > potential:
+        items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner (ingen BarentsWatch, og retning utenfor vinduet eller stor dreining)")
+    without_wind = min(potential, solid + lost_wind)
+    total = f"Totalt: {solid} av 5 stjerner"
+    if lost_wind > 0:
+        total += f" ({without_wind} uten vind)"
+    items.append(total)
+    return items
+
+
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
-    potential = swell_stars(hour, spot)
     h, source = spot_height(hour, spot)
+    period = hour.get("period")
+    eff_h = effective_height(h, period)
+    hs = height_score(eff_h, spot)
+    ps = period_score(period, spot)
     dir_hit = directness(hour.get("dir_offshore"), spot)
+    ds = direction_score(hour.get("dir_offshore"), spot, source)
+    score = hs * ps * ds
+    potential = int(5 * score + 1e-9)  # rund ned
+
     deg_out = degrees_outside(hour.get("dir_offshore"), spot)
     # Ærlighet: uten BarentsWatch, med dreining eller utenfor vinduet vet vi
     # mindre. Maks 3 stjerner. Svell godt innenfor vinduet, nær kanten, gjør
@@ -239,21 +395,35 @@ def rate(hour, spot):
     uncertain = source != "barentswatch" and (
         (hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0
     )
+    capped_from = potential if (uncertain and potential > 3) else None
     if uncertain:
         potential = min(potential, 3)
-    lost_wind = min(potential, wind_penalty(hour.get("wind_speed"), hour.get("wind_dir"), spot))
-    lost_tide = min(potential - lost_wind, tide_penalty(hour.get("tide"), spot))
+
+    wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
+    wt = wind_type(wind_dir, spot)
+    wp = wind_penalty(wind_speed, wind_dir, spot, gust)
+    lost_wind = min(potential, wp)
+    tide_pen = tide_penalty(hour.get("tide"), spot)
+    lost_tide = min(potential - lost_wind, tide_pen)
     solid = potential - lost_wind - lost_tide
+
+    breakdown = build_breakdown(
+        hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
+        wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
+        potential, solid, lost_wind, lost_tide, uncertain, capped_from,
+    )
+
     return {
         "stars": solid,
         "faded": lost_wind + lost_tide,
         "faded_wind": lost_wind,
         "faded_tide": lost_tide,
-        "wind_type": wind_type(hour.get("wind_dir"), spot),
+        "wind_type": wt,
         "height": None if h is None else round(h, 2),
         "height_source": source,
         "transfer": spot.get("transfer", DEFAULT_TRANSFER),
         "uncertain": uncertain,
+        "breakdown": breakdown,
         # Hvor stor andel av svellet ved direkte treff som når spoten akkurat
         # nå. Brukes til å justere selve høyden (for svell_ute), og vises i
         # appen som "retningstreff".

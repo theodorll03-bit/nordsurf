@@ -266,12 +266,20 @@ def barentswatch_token():
 
 
 def barentswatch_point(lat, lon):
-    """Bølgehøyde, retning og periode fra BarentsWatch for et punkt, i
-    tretimersteg opp til ca 60 timer frem. {time: {"height","dir","period"}}
+    """Bølgehøyde, retning, periode og maks bølgehøyde fra BarentsWatch for
+    et punkt, i tretimersteg opp til ca 60 timer frem.
+    {time: {"height","dir","period","max_height"}}
 
-    Bruker /v1/waveforecastpoint/nearest/all (se Waveforecast OpenAPI doc).
-    BW_POINT_URL (se README) må ha ?x={lon}&y={lat} - x er lengdegrad, y er
-    breddegrad. Uten BW_POINT_URL/token brukes reservemodellen.
+    Bruker /v1/waveforecastpoint/nearest/all (se Waveforecast OpenAPI doc,
+    schema BwRasterWavePoint). BW_POINT_URL (se README) må ha ?x={lon}&y={lat}
+    - x er lengdegrad, y er breddegrad. Uten BW_POINT_URL/token brukes
+    reservemodellen.
+
+    Maks bølgehøyde (feltet expectedMaximumWaveHeight, bekreftet mot
+    BarentsWatch sin OpenAPI-spec 26.09.2026) er bare til VISNING - den skal
+    ALDRI brukes i rangeringen eller kalibreringen, som begge bygger på
+    signifikant høyde (samme mål brukes gjennomgående, ellers sammenligner
+    man epler og pærer mellom spots og mellom BarentsWatch og Open-Meteo).
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -306,10 +314,12 @@ def barentswatch_point(lat, lon):
             continue
         d = row.get("totalMeanWaveDirection")
         p = row.get("totalPeakPeriod")
+        hmax = row.get("expectedMaximumWaveHeight")
         out[hour_key(parse_iso(t))] = {
             "height": float(h),
             "dir": float(d) if d is not None else None,
             "period": float(p) if p is not None else None,
+            "max_height": float(hmax) if hmax is not None else None,
         }
     return out
 
@@ -330,10 +340,11 @@ def _lerp_circular(a, b, frac):
 
 def bw_interpolate(raw):
     """Fyller BarentsWatch sine tretimerspunkter (fra barentswatch_point) til
-    én verdi per hele time. Høyde og periode: lineær interpolasjon. Retning:
-    sirkulær. Interpolerer bare mellom punkter maks 3 timer fra hverandre -
-    mangler et punkt midt i serien, står timene i hullet uten BarentsWatch.
-    Ekstrapolerer aldri forbi første/siste punkt. {time: {height,dir,period,interpolated}}
+    én verdi per hele time. Høyde, periode og maks høyde: lineær interpolasjon.
+    Retning: sirkulær. Interpolerer bare mellom punkter maks 3 timer fra
+    hverandre - mangler et punkt midt i serien, står timene i hullet uten
+    BarentsWatch. Ekstrapolerer aldri forbi første/siste punkt.
+    {time: {height,dir,period,max_height,interpolated}}
     """
     if not raw:
         return {}
@@ -352,6 +363,7 @@ def bw_interpolate(raw):
                 "height": _lerp(v0.get("height"), v1.get("height"), frac),
                 "dir": _lerp_circular(v0.get("dir"), v1.get("dir"), frac),
                 "period": _lerp(v0.get("period"), v1.get("period"), frac),
+                "max_height": _lerp(v0.get("max_height"), v1.get("max_height"), frac),
                 "interpolated": True,
             }
     return out

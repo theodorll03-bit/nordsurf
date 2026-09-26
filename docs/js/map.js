@@ -1,8 +1,8 @@
 /* ---------- Kart ----------
    Bruker DATA, $, esc, nf1, nf0, fmtHour, fmtTime, relDay, dayKey, compass,
-   WIND_WORD, lightClass, starsSVG, STAR_PATH, TZ fra hovedskriptet (samme
-   dokument, lastet før dette). Ikke en modul - vanlig <script> med tilgang
-   til de samme globalene. */
+   WIND_WORD, windLabel, lightClass, starsSVG, STAR_PATH, TZ, openBreakdown
+   fra hovedskriptet (samme dokument, lastet før dette). Ikke en modul -
+   vanlig <script> med tilgang til de samme globalene. */
 (function(){
 "use strict";
 
@@ -267,7 +267,7 @@ function discAriaLabel(spot, h, t){
   const dir = h.dir_offshore;
   const miss = h.directness!=null && h.directness < 0.667;
   const swellTxt = dir==null ? "Retning ukjent." : `Svell ${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" meter":""} fra ${compass(dir)}, ${Math.round(dir)} grader, ${miss?"treffer ikke":"treffer"} vinduet ${windowText(spot)} grader.`;
-  const windTxt = h.wind_speed!=null ? `Vind ${nf0.format(h.wind_speed)} meter per sekund fra ${compass(h.wind_dir)}, ${WIND_WORD[h.wind_type]||""}.` : "";
+  const windTxt = h.wind_speed!=null ? `Vind ${nf0.format(h.wind_speed)} meter per sekund fra ${compass(h.wind_dir)}, ${windLabel(h)}.` : "";
   const flatTxt = h.likely_flat ? " Trolig flatt." : "";
   return `${spot.name} kl. ${fmtHour.format(t)}. ${swellTxt} ${windTxt} ${h.stars} av 5 stjerner.${flatTxt}`;
 }
@@ -350,8 +350,10 @@ function discPlateMarkup(spot, h){
   const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
   const night = h && (h.light==="mørkt" || h.daylight===false);
   const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : "anslag") : "";
+  const max = h && h.bw_height_max!=null ? `<div class="max">Sett opp til ${nf1.format(h.bw_height_max)} m</div>` : "";
   return `<div class="big">${esc(big)}</div>
     <div class="mid">${[period, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
+    ${max}
     <div class="src">${esc(src)} <span class="chev" aria-hidden="true">›</span></div>`;
 }
 
@@ -470,17 +472,18 @@ function fillMapSheet(spot, h){
   $("#mSheetTitle").textContent = spot.name;
   const tideNow = h && h.tide ? `${h.tide.rising?"Stigende":"Fallende"}, ${h.tide.state}` : "–";
   $("#mSheetBody").innerHTML = `
-    <div class="now">${starsSVG(h?h.stars:0, h?h.faded:0, true)}</div>
+    <button type="button" class="now" id="mSheetStars" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h?h.stars:0, h?h.faded:0, true)}</button>
     <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}</p>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div></div>
+      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&h.bw_height_max!=null?`<div class="n">Sett opp til ${nf1.format(h.bw_height_max)} m</div>`:""}</div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h&&h.period!=null?nf0.format(h.period)+" s":"–"}</div></div>
-      <div class="cell"><div class="k">Vind</div><div class="v">${h&&h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${h?(WIND_WORD[h.wind_type]||""):""}</div></div>
+      <div class="cell"><div class="k">Vind</div><div class="v">${h&&h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${h?windLabel(h):""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div></div>
     </div>
     <div class="row-btns" style="margin-top:16px">
       <button class="primary" id="mSheetDetail" style="min-height:44px">Åpne detaljside</button>
     </div>`;
+  if(h && h.breakdown && h.breakdown.length) $("#mSheetStars").onclick = ()=>openBreakdown(h);
   $("#mSheetDetail").onclick = ()=>{
     closeMapSheet();
     state.tab = "varsel"; state.spot = DATA.spots.indexOf(spot); state.sel = spot.hours.indexOf(h) >=0 ? spot.hours.indexOf(h) : 0;

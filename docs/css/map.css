@@ -114,6 +114,7 @@
 .disc-plate{position:absolute;pointer-events:auto;cursor:pointer;transform:translate(-50%,0);z-index:11;background:var(--raised);border-radius:14px;padding:8px 14px;box-shadow:0 4px 14px rgba(0,0,0,.22);text-align:center;min-width:96px}
 .disc-plate .big{font:700 22px/1.1 var(--display)}
 .disc-plate .mid{font-size:14px;color:var(--muted);margin-top:1px}
+.disc-plate .max{font-size:12px;color:var(--muted);margin-top:1px}
 .disc-plate .src{font-size:12px;color:var(--muted);margin-top:2px}
 .disc-plate .chev{color:var(--muted);font-size:12px}
 @media (prefers-reduced-motion: no-preference){.disc-plate{transition:opacity .2s}}

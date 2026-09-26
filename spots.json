@@ -1,5 +1,5 @@
 {
-  "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py.",
+  "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten).",
   "spots": [
     {
       "id": "grotfjord",
@@ -15,6 +15,10 @@
         "lon": 18.1098
       },
       "barentswatch_point": {
+        "lat": 69.779773,
+        "lon": 18.529373
+      },
+      "barentswatch_point_near": {
         "lat": 69.779391,
         "lon": 18.531728
       },
@@ -54,6 +58,10 @@
         "lon": 17.0514
       },
       "barentswatch_point": {
+        "lat": 69.485517,
+        "lon": 17.394874
+      },
+      "barentswatch_point_near": {
         "lat": 69.484878,
         "lon": 17.396687
       },
@@ -93,6 +101,10 @@
         "lon": 20.4291
       },
       "barentswatch_point": {
+        "lat": 69.949979,
+        "lon": 20.215157
+      },
+      "barentswatch_point_near": {
         "lat": 69.949339,
         "lon": 20.21701
       },
@@ -137,6 +149,10 @@
         "lon": 20.4737
       },
       "barentswatch_point": {
+        "lat": 69.849744,
+        "lon": 19.989858
+      },
+      "barentswatch_point_near": {
         "lat": 69.848839,
         "lon": 19.989858
       },
@@ -175,6 +191,10 @@
         "lon": 17.1506
       },
       "barentswatch_point": {
+        "lat": 69.493305,
+        "lon": 17.263036
+      },
+      "barentswatch_point_near": {
         "lat": 69.492666,
         "lon": 17.261223
       },
@@ -213,6 +233,10 @@
         "lon": 13.3148
       },
       "barentswatch_point": {
+        "lat": 68.270164,
+        "lon": 13.575278
+      },
+      "barentswatch_point_near": {
         "lat": 68.269784,
         "lon": 13.57748
       },
@@ -236,7 +260,7 @@
         335
       ],
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 12 km ut, retning 294 grader. GFS Wave gir svelldata for alle timer; ECMWF WAM gir ingen svelldekomponering (som ved de andre spotene).",
-      "_barentswatch": "Punkt 150 m ut fra spoten i retningen stranda vender (294,8 grader). Bekreftet via barentswatch.no (nettvisning) at punktet har reell bølgedata - stedet er navngitt 'Unnstadvika' der. Ikke testet direkte mot API-et (ingen BarentsWatch-nøkler lokalt), så bekreft i kilderapporten når henteren kjører mot ekte data."
+      "_barentswatch": "barentswatch_point flyttet til 250 m ut (26.09.2026), samme retning som stranda vender (294,8 grader). barentswatch_point_near er det opprinnelige punktet 150 m ut, navngitt 'Unnstadvika' på barentswatch.no. Bekreft i kilderapporten at 250 m-punktet faktisk gir data."
     }
   ]
 }

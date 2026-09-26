@@ -60,14 +60,30 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     if marine and not swell_values:
         REPORT.append((name, "Open-Meteo svellhøyde", "tom", "havpunktet gir ingen svellhøyde, bruker met.no"))
 
+    # barentswatch_point (ca 250 m ut) er punktet ratingen og kalibreringen
+    # bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet)
+    # hentes i tillegg og lagres bare til sammenligning (bw_height_near) - se
+    # spots.json sin _info. Gir 250 m-punktet ingen data, brukes 150 m-punktet
+    # i ratingen for dette spotet også, og det logges i kilderapporten.
     bw_raw = {}
     if spot.get("barentswatch_point"):
         p = spot["barentswatch_point"]
-        bw_raw = safe(name, "BarentsWatch", sources.barentswatch_point, p["lat"], p["lon"])
-    bw_hourly = sources.bw_interpolate(bw_raw)
-    bw_until = max(bw_raw) if bw_raw else None
-    if bw_raw:
-        REPORT.append((name, "BarentsWatch periode", "ok", f"{min(bw_raw)} -> {max(bw_raw)}, bw_until {bw_until}"))
+        bw_raw = safe(name, "BarentsWatch (250 m)", sources.barentswatch_point, p["lat"], p["lon"])
+    bw_raw_near = {}
+    if spot.get("barentswatch_point_near"):
+        pn = spot["barentswatch_point_near"]
+        bw_raw_near = safe(name, "BarentsWatch (150 m)", sources.barentswatch_point, pn["lat"], pn["lon"])
+
+    bw_fallback = not bw_raw and bool(bw_raw_near)
+    bw_used = bw_raw_near if bw_fallback else bw_raw
+    if bw_fallback:
+        REPORT.append((name, "BarentsWatch 250 m", "feil", "ingen data - bruker 150 m-punktet i ratingen for dette spotet"))
+
+    bw_hourly = sources.bw_interpolate(bw_used)
+    bw_hourly_near = sources.bw_interpolate(bw_raw_near)
+    bw_until = max(bw_used) if bw_used else None
+    if bw_used:
+        REPORT.append((name, "BarentsWatch periode", "ok", f"{min(bw_used)} -> {max(bw_used)}, bw_until {bw_until}"))
 
     horizon = min(HOURS_AHEAD_MAX, _hours_available(marine, now), _hours_available(weather, now))
     REPORT.append((name, "Horisont", "ok", f"{horizon} timer"))
@@ -100,6 +116,7 @@ def build_spot(spot, now, learned, bw_calib, run_id):
         turn = angle_diff(dir_off, dir_spot) if dir_off is not None and dir_spot is not None else None
         light = sun.light(s["lat"], s["lon"], t)
         bwk = bw_hourly.get(k)
+        bwk_near = bw_hourly_near.get(k)
         hour = {
             "t": k,
             "height_offshore": pick((off or {}).get("height"), (mar or {}).get("height")),
@@ -113,6 +130,12 @@ def build_spot(spot, now, learned, bw_calib, run_id):
             "bw_dir": bwk.get("dir") if bwk else None,
             "bw_period": bwk.get("period") if bwk else None,
             "bw_interpolated": bwk.get("interpolated") if bwk else None,
+            # Maks bølgehøyde fra BarentsWatch - bare til visning, se
+            # sources.barentswatch_point sin docstring for hvorfor.
+            "bw_height_max": bwk.get("max_height") if bwk else None,
+            # 150 m-punktet, bare til sammenligning (Logger-fanen). Brukes
+            # ALDRI i ratingen eller kalibreringen - bw_height (over) er det.
+            "bw_height_near": bwk_near.get("height") if bwk_near else None,
             "dir_offshore": dir_off,
             "dir_spot": dir_spot,
             "turn": turn,

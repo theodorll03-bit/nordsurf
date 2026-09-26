@@ -2,7 +2,7 @@
 // CACHE-navnet må bumpes hver gang shell-filene endres (ny fane, nye
 // js/css-filer) - ellers oppdager ikke nettleseren at sw.js-scriptet er
 // likt som før og lar være å hente nytt innhold, sjøl om siden er pushet.
-const CACHE = "nordsurf-v5";
+const CACHE = "nordsurf-v6";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "js/map.js", "css/map.css", "js/auth.js"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));

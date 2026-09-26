@@ -71,7 +71,8 @@ med ok, tom eller feil, samt "BarentsWatch periode" (første/siste tidspunkt og 
 "Horisont" (hvor mange timer frem denne kjøringen faktisk dekker). Se særlig etter:
 - "Open-Meteo svellhøyde: tom". Da har havpunktet ingen svelldata, og spoten faller tilbake til met.no
 - "Kartverket tidevann: feil". Da virker ikke tidevannet
-- "BarentsWatch: feil" eller "tom"
+- "BarentsWatch (250 m)" eller "BarentsWatch (150 m)": "feil" eller "tom"
+- "BarentsWatch 250 m: feil - ingen data - bruker 150 m-punktet i ratingen for dette spotet". Selve ratingen fungerer fortsatt (150 m-punktet brukes), men verdt å sjekke om 250 m-punktet ligger på land eller utenfor dekningen
 
 Send meg rapporten, så fikser vi det som feiler.
 
@@ -90,13 +91,37 @@ Kystlinja er GSHHS i full oppløsning. Små skjær kan mangle, så sjekk trange 
 
 BarentsWatch er hovedkilden når den er koblet på: den har sin egen finmaskede
 kystmodell som allerede tar hensyn til skjerming bak odder og øyer, og brukes
-**uten** noen faktor. BarentsWatch kommer i tretimerssteg (ca 58-60 timer
+**uten** noen faktor. Hver spot har to BarentsWatch-punkter i `spots.json`:
+- `barentswatch_point` (ca 250 m ut fra stranda) - dette er punktet ratingen
+  og kalibreringen faktisk bruker (`bw_height` i timedataene).
+- `barentswatch_point_near` (ca 150 m ut, det opprinnelige punktet) - hentes
+  også, men bare til sammenligning (`bw_height_near`). Brukes ALDRI i
+  ratingen. Logger-fanen viser, når du har logget minst 5 økter med størrelse
+  for en spot, hvilket av de to punktene som faktisk lå nærmest det du
+  observerte (gjennomsnittlig avvik i meter) - punktet byttes aldri
+  automatisk, det er bare til orientering.
+
+Gir 250 m-punktet ingen data en gitt kjøring, faller henteren tilbake til
+150 m-punktet for RATINGEN også (for det spotet, den kjøringen) - det logges
+som egen linje i kilderapporten.
+
+BarentsWatch kommer i tretimerssteg (ca 58-60 timer
 frem) - henteren fyller inn hver time i mellom med interpolasjon (rett linje
 for høyde og periode, korteste vei rundt kompasset for retning), men
 ekstrapolerer aldri forbi siste ekte punkt. Hver spot har et felt `bw_until`
 i `forecast.json`: siste time med ekte BarentsWatch-data. I appen vises
 timene etter det bruddet nedtonet, med "(anslag)" på beste vindu hvis det
 treffer der.
+
+### Maks bølgehøyde
+
+Når BarentsWatch-svaret har feltet `expectedMaximumWaveHeight` (bekreftet
+mot BarentsWatch sin OpenAPI-spec for `/v1/waveforecastpoint/nearest/all`,
+schema `BwRasterWavePoint`), lagres den som `bw_height_max` og vises på
+detaljsiden og på høydeplata på kartet som "Sett opp til X m". Den brukes
+**aldri** i rangeringen eller kalibreringen - begge bygger på signifikant
+høyde (`bw_height`), som er det eneste målet som er sammenlignbart mellom
+BarentsWatch, Open-Meteo og loggene dine.
 
 Etter `bw_until`, og for spots uten BarentsWatch i det hele tatt, brukes
 reservemodellen:
@@ -107,6 +132,27 @@ reservemodellen:
 Horisonten er normalt 120 timer (5 døgn), men stopper ved hvilken som helst
 kilde som har kortere data (Open-Meteo eller met.no vind) - det står i
 kilderapporten som "Horisont: X timer" per spot.
+
+### Periode: lang periode bygger seg høyere opp
+
+Langt svell (lang periode) bygger seg høyere opp når det treffer grunnen enn
+kort svell med samme signifikante høyde ute. Ranger derfor rangeringen
+(`height_score`) mot en **effektiv høyde**: `høyde × periodefaktor`.
+
+| Periode | Periodefaktor |
+|---|---|
+| 8 s eller kortere | 0,9 |
+| 10 s | 1,0 |
+| 13 s | 1,15 |
+| 16 s eller lengre | 1,3 |
+
+(Lineær interpolasjon mellom punktene.) Dette er **bare** til rangeringen -
+høyden du ser i appen, og høyden kalibreringen (`transfer` mot BarentsWatch
+og loggene dine) læres mot, er fortsatt den ekte signifikante høyden,
+urørt av periodefaktoren. Perioden straffer dermed ikke lenger dobbelt:
+`period_score` (i selve stjerneregnestykket) er gjort mildere og straffer nå
+bare KORT periode, ikke lenger ekstra uttelling for lang periode - den jobben
+gjør periodefaktoren i stedet.
 
 `transfer` er hvor stor del av svellet ute som når stranda ved et **direkte**
 treff (rett inn i midten av svellvinduet). Den læres i denne rekkefølgen:
@@ -151,6 +197,46 @@ bølgehøyden omtrent 70 % av høyden ute for uregelmessige bølger fra flere
 retninger. Resten av kurven er et anslag - diffraksjon kan ikke beregnes
 presist for en surfespot uten mye mer detaljerte data. Loggene dine justerer
 bare `transfer` (toppfaktoren ved direkte treff), aldri selve kurven.
+
+## Vind
+
+Vindtype settes ut fra vinkelen mellom vindretningen og midten av spotens
+`offshore_wind`-sektor:
+
+| Vinkel fra offshore-sentrum | Type |
+|---|---|
+| 0-45° | offshore |
+| 45-100° | side (sidevind) |
+| 100-135° | side-onshore |
+| 135-180° | onshore |
+
+Kast som er kraftigere enn middelvinden teller med: **effektiv vind**
+`= vind + 0,3 × (kast − vind)` når kast > vind, ellers bare middelvinden.
+4 m/s med kast 12 m/s gir altså effektiv vind 6,4 m/s.
+
+Straffen (i stjerner) etter effektiv vind og type:
+
+| Effektiv vind | offshore | side | side-onshore | onshore |
+|---|---|---|---|---|
+| 0-3 m/s | 0 | 0 | 0 | 0 |
+| 3-5 m/s | 0 | 0 | −1 | −1 |
+| 5-8 m/s | 0 | −1 | −1 | −2 |
+| 8-11 m/s | 0 (−1 over 10) | −2 | −2 | −3 |
+| over 11 m/s | −1 (−2 over 14) | −3 | −3 | −4 |
+
+Straffen kan aldri bli større enn stjernene svellet i seg selv er verdt.
+Under 1,5 m/s vises teksten "blankt", 1,5-3 m/s "nesten blankt", ellers
+vindtypen.
+
+## Forklaring av ratingen
+
+Trykk på stjernene på detaljsiden (eller på ratingringen i kart-arket) for å
+åpne en forklaring av hvert ledd som påvirket ratingen for den valgte timen:
+høyde (med "føles som" hvis periodefaktoren gjør en reell forskjell),
+periode, retning, vind og tidevann, samt totalen og hvor mange stjerner det
+ville blitt uten vind. `rate()` i `fetcher/rating.py` returnerer dette som
+et eget felt `breakdown` (en liste med ferdigformaterte linjer) - appen viser
+bare det henteren faktisk regnet ut, den regner ikke selv.
 
 ## Tidevann per spot
 

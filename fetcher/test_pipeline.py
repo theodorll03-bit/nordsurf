@@ -156,6 +156,50 @@ covered_no_bw = sum(len(w["hours"]) for w in ws_no_bw)
 print("6h timer dekket uten bw_until (skal være 20, alle timer):", covered_no_bw)
 assert covered_no_bw == 20
 
+# ---------- 6i: 250 m-punktet brukes i ratingen, 150 m bare til sammenligning
+# (bw_height_near) - og 250 m uten data faller tilbake til 150 m for RATINGEN ----------
+spots_cfg = json.loads((Path(__file__).parent.parent / "spots.json").read_text())
+grot_spot = next(s for s in spots_cfg["spots"] if s["id"] == "grotfjord")
+lat250, lat150 = grot_spot["barentswatch_point"]["lat"], grot_spot["barentswatch_point_near"]["lat"]
+
+def bw_two_points_mock(la, lo):
+    now4 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    if abs(la - lat250) < abs(la - lat150):  # nærmest 250 m-punktet
+        return {sources.hour_key(now4): {"height": 1.5, "dir": 300.0, "period": 10.0, "max_height": 2.1}}
+    return {sources.hour_key(now4): {"height": 1.1, "dir": 300.0, "period": 10.0, "max_height": 1.7}}
+
+sources.barentswatch_point = bw_two_points_mock
+tmp6i = Path(tempfile.mkdtemp())
+fetch.OUT = tmp6i / "forecast.json"
+fetch.BW_CALIB = tmp6i / "bw_calibration.json"
+notify.STATE = tmp6i / "notified.json"
+fetch.main()
+f6i = json.loads(fetch.OUT.read_text())
+g6i = next(s for s in f6i["spots"] if s["id"] == "grotfjord")
+h6i = g6i["hours"][0]
+print("6i bw_height (250m)/bw_height_near (150m)/bw_height_max:", h6i["bw_height"], h6i["bw_height_near"], h6i["bw_height_max"])
+assert h6i["bw_height"] == 1.5 and h6i["bw_height_near"] == 1.1 and h6i["bw_height_max"] == 2.1
+assert h6i["height"] == 1.5  # ratingen bruker 250 m-punktet
+
+# 250 m-punktet gir ingen data -> ratingen skal falle tilbake til 150 m.
+def bw_250_empty_mock(la, lo):
+    now4 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    if abs(la - lat250) < abs(la - lat150):
+        return {}
+    return {sources.hour_key(now4): {"height": 1.1, "dir": 300.0, "period": 10.0, "max_height": 1.7}}
+
+sources.barentswatch_point = bw_250_empty_mock
+tmp6i2 = Path(tempfile.mkdtemp())
+fetch.OUT = tmp6i2 / "forecast.json"
+fetch.BW_CALIB = tmp6i2 / "bw_calibration.json"
+notify.STATE = tmp6i2 / "notified.json"
+fetch.main()
+f6i2 = json.loads(fetch.OUT.read_text())
+g6i2 = next(s for s in f6i2["spots"] if s["id"] == "grotfjord")
+h6i2 = g6i2["hours"][0]
+print("6i 250m tom -> bw_height (falt tilbake)/bw_height_near:", h6i2["bw_height"], h6i2["bw_height_near"])
+assert h6i2["bw_height"] == 1.1 and h6i2["bw_height_near"] == 1.1  # begge er 150 m-punktet nå
+
 # ---------- 7a: svellretning skal ALDRI komme fra met.no sin samlede sjøtilstand ----------
 sources.metno_ocean = lambda la, lo: hourly(lambda i: {"height": 1.8, "dir": 325, "water_temp": 8})
 sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 266, "period": 13, "swell_model": "gfs"})

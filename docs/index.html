@@ -105,7 +105,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 .chev{color:var(--muted);font-size:22px;line-height:1}
 
 /* Detalj */
-.now{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 4px}
+.now{all:unset;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 4px;cursor:pointer;min-height:44px}
 .verdict{font-size:17px;margin:6px 0 0}
 .warn{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;background:var(--raised);border-radius:12px;font-size:15px}
 .warn b{font-weight:600}
@@ -177,6 +177,14 @@ body.has-tabs .toolbar{bottom:64px}
 select,input[type="datetime-local"]{font:inherit;font-size:17px;min-height:44px;width:100%;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
 .save{width:100%;margin-top:24px}
 .save:disabled{opacity:.4}
+#bdScrim{z-index:40}
+#bdSheet{z-index:41}
+.breakdown{padding:4px 0 8px}
+.breakdown .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line);font-size:16px}
+.breakdown .row:first-child{border-top:0}
+.breakdown .row.total{font-weight:700;border-top:2px solid var(--line);margin-top:4px}
+.breakdown .row .lead{color:var(--ink)}
+.breakdown .row .eff{color:var(--muted);flex:0 0 auto;text-align:right}
 
 /* Logger */
 h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
@@ -256,6 +264,16 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
   <div class="field"><p class="lbl">Vind (valgfritt)</p><div class="chips" data-group="wind"></div></div>
   <button class="primary save" id="saveLog" disabled>Lagre økt</button>
 </section>
+<div class="scrim" id="bdScrim"></div>
+<section class="sheet" id="bdSheet" role="dialog" aria-modal="true" aria-labelledby="bdTitle" aria-hidden="true">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <span style="width:60px"></span>
+    <h2 id="bdTitle">Hvorfor denne ratingen?</h2>
+    <button class="link" id="bdClose">Lukk</button>
+  </div>
+  <div class="breakdown" id="bdBody"></div>
+</section>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -268,7 +286,16 @@ const SIZE_M = {"Flatt":0, "Knehøy":0.5, "Hoftehøy":0.9, "Brysthøy":1.3, "Ove
 const MIN_SIZE_LOGS = 5;
 const STAR_WORDS = ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"];
 const PICK_WORDS = ["Flatt","Dårlig","Ok","Bra","Topp","Rått"];
-const WIND_WORD = {offshore:"offshore", onshore:"onshore", sideonshore:"side-onshore"};
+const WIND_WORD = {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"};
+function windLabel(h){
+  // "blankt"/"nesten blankt" under 1,5/3 m/s, ellers vindtypen - se
+  // fetcher/rating.py sin wind_label() (samme grenser, regnet ut server-side
+  // for breakdown, men grid-cellen her trenger den uavhengig av breakdown).
+  if(h.wind_speed==null) return "";
+  if(h.wind_speed<1.5) return "blankt";
+  if(h.wind_speed<3) return "nesten blankt";
+  return WIND_WORD[h.wind_type]||"";
+}
 const $ = s => document.querySelector(s);
 const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
 const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
@@ -552,7 +579,7 @@ function renderSpot(){
       <div class="spot-title-row"><h1>${esc(s.name)}</h1>${favBtnHtml(s.id, false)}</div>
       <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":""}</p>
     </header>
-    <div class="now">${starsSVG(h.stars,h.faded,true)}</div>
+    <button type="button" class="now" id="bdOpen" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h.stars,h.faded,true)}</button>
     <p class="verdict">${verdict}</p>
     <p class="sub" style="margin-top:6px">${bestText(s)}</p>
     ${warn}
@@ -564,11 +591,11 @@ function renderSpot(){
       <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
     </div>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h,s)}</div></div>
+      <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h,s)}${h.bw_height_max!=null?` · Sett opp til ${nf1.format(h.bw_height_max)} m`:""}</div></div>
       <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
       <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
-      <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${WIND_WORD[h.wind_type]||""} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
+      <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${esc(windLabel(h))} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
       <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
       <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":"–"} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
@@ -578,6 +605,7 @@ function renderSpot(){
 
   $("#back").onclick = ()=>{ state.spot=null; render(); };
   wireFavButtons();
+  $("#bdOpen").onclick = ()=>openBreakdown(h);
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
@@ -710,6 +738,26 @@ function renderLogs(){
     return `<div class="calib"><div class="t">${esc(s.name)}: ${nf0.format(med*100)} % av svellet når stranda ved direkte treff</div>
       <p>Lært fra ${pts.length} økter. Appen bruker nå ${pct} % (${cal.transfer_source==="spots.json"?"satt i spots.json":"standardverdi"}). Sett <b>"transfer": ${med.toFixed(2)}</b> for ${esc(s.id)} i spots.json.</p></div>`;
   }).join("");
+  // Hvilket BarentsWatch-punkt (250 m, brukt i varselet, eller 150 m, det
+  // opprinnelige) som faktisk ligger nærmest det du har logget. Bytter
+  // ALDRI punkt selv - bare til orientering.
+  const bwCompare = DATA.spots.map(s=>{
+    const withSize = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null);
+    if(withSize.length < MIN_SIZE_LOGS){
+      const left = MIN_SIZE_LOGS - withSize.length;
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${left} økt${left===1?"":"er"} til med størrelse valgt for å sammenligne BarentsWatch-punktene.</p></div>`;
+    }
+    const withBoth = withSize.filter(l=>l.bwHeight!=null && l.bwHeightNear!=null);
+    if(!withBoth.length){
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen av de ${withSize.length} øktene med størrelse har data fra begge punktene ennå.</p></div>`;
+    }
+    const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+    const dev250 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-l.bwHeight)));
+    const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-l.bwHeightNear)));
+    const better = dev250<=dev150 ? "250 m" : "150 m";
+    return `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
+      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`;
+  }).join("");
   const rows = logs.map(l=>{
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
     const extra = [l.size,l.wind].filter(Boolean).join(", ");
@@ -721,6 +769,7 @@ function renderLogs(){
   $("#app").innerHTML = `<header class="top"><h1>Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
     <h2 class="sec">Treffsikkerhet</h2>${calib}
     <h2 class="sec">Bølgehøyde</h2>${heightCal}
+    <h2 class="sec">BarentsWatch-punkt</h2>${bwCompare}
     <h2 class="sec">Økter</h2>
     <div class="list">${rows || `<p class="empty">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" id="newLog">Logg økt</button></div>`;
@@ -908,7 +957,23 @@ function closeSheet(){
   $("#sheet").classList.remove("open"); $("#scrim").classList.remove("open"); $("#sheet").setAttribute("aria-hidden","true");
 }
 $("#cancelLog").onclick = closeSheet; $("#scrim").onclick = closeSheet;
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeSheet(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeSheet(); closeBreakdown(); } });
+
+/* ---------- Forklaring av ratingen ---------- */
+function breakdownRowHtml(line, isTotal){
+  const idx = line.indexOf(": ");
+  if(idx<0) return `<div class="row${isTotal?" total":""}"><span class="lead">${esc(line)}</span></div>`;
+  return `<div class="row${isTotal?" total":""}"><span class="lead">${esc(line.slice(0,idx))}</span><span class="eff">${esc(line.slice(idx+2))}</span></div>`;
+}
+function openBreakdown(h){
+  if(!h.breakdown || !h.breakdown.length) return;
+  $("#bdBody").innerHTML = h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
+  $("#bdSheet").classList.add("open"); $("#bdScrim").classList.add("open"); $("#bdSheet").setAttribute("aria-hidden","false");
+}
+function closeBreakdown(){
+  $("#bdSheet").classList.remove("open"); $("#bdScrim").classList.remove("open"); $("#bdSheet").setAttribute("aria-hidden","true");
+}
+$("#bdClose").onclick = closeBreakdown; $("#bdScrim").onclick = closeBreakdown;
 $("#logBtn").onclick = openSheet;
 $("#saveLog").onclick = ()=>{
   const spot = $("#logSpot").value;
@@ -918,7 +983,11 @@ $("#saveLog").onclick = ()=>{
     stars: logDraft.stars, size: logDraft.size, wind: logDraft.wind,
     forecastStars: f ? f.stars : null, forecastFaded: f ? f.faded : null,
     forecastHeight: f ? f.height : null, swellOffshore: f ? f.swell_offshore : null,
-    directness: f ? f.directness : null};
+    directness: f ? f.directness : null,
+    // BarentsWatch 250 m (brukt i varselet) og 150 m (bare sammenligning),
+    // slik de sto på tidspunktet du logget - se "hvilket punkt treffer best"
+    // i Logger-fanen.
+    bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
   toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");
