@@ -27,11 +27,13 @@ RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 def _get(url, params=None, headers=None):
     # Kildene timer av og til ut forbigående, eller svarer midlertidig med
     # 429/5xx, når flere spots hentes tett etter hverandre (sett i
-    # Actions-kjøringer, som deler IP-adresser med mange andre). Prøv opp til
-    # tre ganger med pause for begge tilfeller - men gi opp med en gang på en
-    # varig feil (f.eks. 404), der nytt forsøk aldri vil hjelpe.
+    # Actions-kjøringer, som deler IP-adresser med mange andre). Sett i live
+    # kjøring 26.09.2026: Open-Meteo brukte over 45s å svare i tre forsøk på
+    # rad for to spots samtidig - økt til fire forsøk med lengre pauser.
+    # Gir opp med en gang på en varig feil (f.eks. 404), der nytt forsøk
+    # aldri vil hjelpe.
     last_err = None
-    for attempt, wait in enumerate((0, 3, 8)):
+    for attempt, wait in enumerate((0, 4, 10, 20)):
         if wait:
             time.sleep(wait)
         try:
@@ -158,9 +160,23 @@ def openmeteo_marine(lat, lon):
     sekundærsvellet lagres bare - det skal ikke vises eller brukes i ratingen.
     {time: {height, swell_height, dir, period, swell_model,
     secondary_swell_height, secondary_swell_dir, secondary_swell_period}}
-    swell_model er "gfs", "standard" eller None (ingen av kildene har svelldata)."""
-    primary = _openmeteo_fetch(lat, lon, model=OPENMETEO_SWELL_MODEL)
-    fallback = _openmeteo_fetch(lat, lon, model=None)
+    swell_model er "gfs", "standard" eller None (ingen av kildene har svelldata).
+
+    Henter GFS- og standardmodell-kallene hver for seg: timer det ene ut
+    (sett i praksis - Open-Meteo kan svare tregt), skal ikke det andre
+    kastes bort også. Bare hvis BEGGE feiler gir funksjonen tomt resultat."""
+    try:
+        primary = _openmeteo_fetch(lat, lon, model=OPENMETEO_SWELL_MODEL)
+    except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+        print(f"  GFS Wave feilet for ({lat},{lon}), bruker bare standardmodellen: {e}")
+        primary = {}
+    try:
+        fallback = _openmeteo_fetch(lat, lon, model=None)
+    except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+        print(f"  Standardmodellen feilet for ({lat},{lon}), bruker bare GFS Wave: {e}")
+        fallback = {}
+    if not primary and not fallback:
+        raise RuntimeError("Både GFS Wave og standardmodellen feilet")
     out = {}
     for k in sorted(set(primary) | set(fallback)):
         p, f = primary.get(k, {}), fallback.get(k, {})

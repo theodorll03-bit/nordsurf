@@ -249,4 +249,32 @@ requests.get, sources.time.sleep = real_requests_get, real_sleep
 print("7d _get gir opp med en gang på 404, antall forsøk:", calls["n"])
 assert raised and calls["n"] == 1
 
+# ---------- 7e: openmeteo_marine mister ikke standardmodellen selv om GFS-
+# kallet timer ut (sett i live kjøring 26.09.2026 - Open-Meteo brukte over
+# 45s på GFS-kallet for to spots samtidig, og hele funksjonen kastet før den
+# rakk å prøve standardmodellen, som ellers hadde gitt data) ----------
+def flaky_openmeteo_fetch(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:
+        raise requests.Timeout("Read timed out (read timeout=45)")
+    return {"2026-01-01T00:00Z": {"height": 0.88, "swell_height": 0.56, "swell_dir": 271, "swell_period": 17.3,
+                                   "secondary_swell_height": 0.48, "secondary_swell_dir": 327, "secondary_swell_period": 6.55}}
+sources._openmeteo_fetch = flaky_openmeteo_fetch
+result = real_openmeteo_marine(70.35, 20.45)
+sources._openmeteo_fetch = real_openmeteo_fetch
+print("7e GFS-kallet timer ut -> faller likevel til standardmodellen:", result["2026-01-01T00:00Z"])
+assert result["2026-01-01T00:00Z"]["dir"] == 271 and result["2026-01-01T00:00Z"]["swell_model"] == "standard"
+
+# begge feiler -> skal fortsatt kaste, slik at safe() rapporterer det som feil
+def always_fails(lat, lon, model=None):
+    raise requests.Timeout("Read timed out (read timeout=45)")
+sources._openmeteo_fetch = always_fails
+try:
+    real_openmeteo_marine(70.35, 20.45)
+    raised = False
+except RuntimeError:
+    raised = True
+sources._openmeteo_fetch = real_openmeteo_fetch
+print("7e begge modellene feiler -> kaster fortsatt:", raised)
+assert raised
+
 print("Pipeline ok")
