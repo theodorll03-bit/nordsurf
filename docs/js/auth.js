@@ -11,7 +11,7 @@ const SUPABASE_URL = "https://gtkjuauggcpufmqhthay.supabase.co";
 const SUPABASE_KEY = "sb_publishable_jNPEaq6z-SNEuIGlBpD10A_nKycRGGa";
 
 let client = null;
-let state = { ready:false, user:null, profile:null };
+let state = { ready:false, user:null, profile:null, favorites:new Set() };
 const listeners = [];
 
 function notify(){
@@ -25,9 +25,16 @@ async function loadProfile(userId){
   return data;
 }
 
+async function loadFavorites(userId){
+  const { data, error } = await client.from("favorites").select("spot_id").eq("user_id", userId);
+  if(error){ console.error("Fant ikke favoritter", error); return new Set(); }
+  return new Set(data.map(r=>r.spot_id));
+}
+
 async function applySession(session){
   state.user = session ? session.user : null;
   state.profile = session ? await loadProfile(session.user.id) : null;
+  state.favorites = session ? await loadFavorites(session.user.id) : new Set();
 }
 
 async function init(){
@@ -65,6 +72,21 @@ async function saveDisplayName(name){
   notify();
 }
 
+async function toggleFavorite(spotId){
+  if(!client || !state.user) throw new Error("Ikke innlogget");
+  const userId = state.user.id;
+  if(state.favorites.has(spotId)){
+    const { error } = await client.from("favorites").delete().eq("user_id", userId).eq("spot_id", spotId);
+    if(error) throw error;
+    state.favorites.delete(spotId);
+  }else{
+    const { error } = await client.from("favorites").insert({ user_id:userId, spot_id:spotId });
+    if(error) throw error;
+    state.favorites.add(spotId);
+  }
+  notify();
+}
+
 async function deleteAccount(){
   if(!client || !state.user) return;
   const { data:{ session } } = await client.auth.getSession();
@@ -76,6 +98,6 @@ async function deleteAccount(){
   await client.auth.signOut();
 }
 
-window.Auth = { init, onChange, sendLoginLink, signOut, saveDisplayName, deleteAccount, get state(){ return state; } };
+window.Auth = { init, onChange, sendLoginLink, signOut, saveDisplayName, toggleFavorite, deleteAccount, get state(){ return state; } };
 init();
 })();

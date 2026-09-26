@@ -69,14 +69,26 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 
 /* Spotliste */
 .list{margin:16px 0;background:var(--raised);border-radius:14px;overflow:hidden}
-.spotrow{border-top:1px solid var(--line)}
+.spotrow{border-top:1px solid var(--line);position:relative}
 .spotrow:first-child{border-top:0}
-.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%;text-align:left;padding:14px 16px;min-height:44px;background:none;border:0;cursor:pointer}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%;text-align:left;padding:14px 54px 14px 16px;min-height:44px;background:none;border:0;cursor:pointer}
 .row:active{background:var(--surface)}
 .row .name{font:700 21px/1.2 var(--display)}
 .row .area{color:var(--muted);font-size:15px}
 .row .facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted);font-size:15px}
 .row .best{grid-column:1/-1;font-size:15px}
+
+/* Favoritt */
+.fav-btn-wrap{position:absolute;top:6px;right:2px;z-index:1}
+.fav-btn{all:unset;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%}
+.fav-btn svg{width:22px;height:22px;display:block}
+.fav-outline{fill:none;stroke:var(--muted);stroke-width:1.5}
+.fav-solid{fill:var(--star);stroke:var(--star)}
+.fav-btn[aria-pressed="true"]{background:color-mix(in srgb,var(--star) 16%,transparent)}
+@media (prefers-reduced-motion: no-preference){.fav-btn svg{transition:transform .15s ease}}
+.fav-btn:active svg{transform:scale(.85)}
+.spot-title-row{display:flex;align-items:center;gap:4px}
+.spot-title-row h1{flex:1;min-width:0}
 
 /* Kommende dager */
 .daychips{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 16px 14px}
@@ -283,6 +295,29 @@ function starsSVG(solid, faded, big){
   return `<span class="stars${big?" big":""}" role="img" aria-label="${label}">${out}</span>`;
 }
 
+function favIconSvg(active){
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${active?"fav-solid":"fav-outline"}" d="${STAR_PATH}"/></svg>`;
+}
+function isFavSpot(id){
+  return !!(window.Auth && Auth.state.favorites && Auth.state.favorites.has(id));
+}
+function favBtnHtml(id, wrap){
+  const active = isFavSpot(id);
+  const inner = `<button type="button" class="fav-btn" data-fav="${esc(id)}" aria-pressed="${active}" aria-label="${active?"Fjern fra favoritter":"Legg til favoritter"}">${favIconSvg(active)}</button>`;
+  return wrap ? `<div class="fav-btn-wrap">${inner}</div>` : inner;
+}
+async function toggleFavoriteUI(spotId){
+  if(!window.Auth || !Auth.state.user){
+    toast("Logg inn for å lagre favoritter", "Logg inn", ()=>{ state.tab = "innstillinger"; render(); window.scrollTo(0,0); });
+    return;
+  }
+  try{ await Auth.toggleFavorite(spotId); }
+  catch(e){ toast("Kunne ikke lagre favoritt: " + e.message); }
+}
+function wireFavButtons(){
+  document.querySelectorAll(".fav-btn").forEach(b=>b.onclick=()=>toggleFavoriteUI(b.dataset.fav));
+}
+
 /* ---------- Beste vindu ---------- */
 function bestWindow(spot){
   const hrs = spot.hours.filter(h => h.daylight !== false && new Date(h.t) >= new Date(Date.now()-36e5));
@@ -366,7 +401,13 @@ function sampleBanner(){
 
 function renderList(){
   const gen = new Date(DATA.generated);
-  let rows = DATA.spots.map((s,i)=>{
+  const order = DATA.spots.map((s,i)=>i).sort((a,b)=>{
+    const fa = isFavSpot(DATA.spots[a].id) ? 0 : 1;
+    const fb = isFavSpot(DATA.spots[b].id) ? 0 : 1;
+    return fa - fb;
+  });
+  let rows = order.map(i=>{
+    const s = DATA.spots[i];
     const h = s.hours[currentHour(s)];
     if(!h) return "";
     const facts = [
@@ -381,6 +422,7 @@ function renderList(){
         <span class="facts">${facts}${h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":"")}</span>
         <span class="best">${bestText(s)}</span>
       </button>
+      ${favBtnHtml(s.id, true)}
       ${dayChipsHtml(s, i)}
     </div>`;
   }).join("");
@@ -393,6 +435,7 @@ function renderList(){
   document.querySelectorAll(".daychip").forEach(b=>b.onclick=()=>{
     state.spot = +b.dataset.spot; state.sel = +b.dataset.sel; state.scrollToSel = true; render(); window.scrollTo(0,0);
   });
+  wireFavButtons();
 }
 
 function heightSourceText(h, spot){
@@ -488,7 +531,7 @@ function renderSpot(){
   $("#app").innerHTML = `${sampleBanner()}
     <header class="top">
       <button class="back" id="back"><span aria-hidden="true" style="font-size:24px">‹</span> Varsel</button>
-      <h1>${esc(s.name)}</h1>
+      <div class="spot-title-row"><h1>${esc(s.name)}</h1>${favBtnHtml(s.id, false)}</div>
       <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":""}</p>
     </header>
     <div class="now">${starsSVG(h.stars,h.faded,true)}</div>
@@ -514,6 +557,7 @@ function renderSpot(){
     </div>`;
 
   $("#back").onclick = ()=>{ state.spot=null; render(); };
+  wireFavButtons();
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
@@ -698,7 +742,11 @@ function wireAccountSection(){
     catch(e){ toast("Sletting feilet: " + e.message); delBtn.disabled = false; }
   };
 }
-window.addEventListener("authchange", ()=>{ if(state.tab==="innstillinger") renderSettings(); });
+window.addEventListener("authchange", ()=>{
+  if(!DATA) return; // ikke lastet ferdig ennå - start() sitt render() dekker det
+  if(state.tab==="innstillinger") renderSettings();
+  else if(state.tab==="varsel") render();
+});
 
 function renderSettings(){
   const cfg = loadSync(), n = DATA.notify || {};
