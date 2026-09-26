@@ -1,0 +1,26 @@
+name: Diagnoser BarentsWatch-retning
+
+# Engangsverktøy - kjøres bare manuelt fra Actions-fanen, aldri på schedule.
+# Skriver ikke noe til repoet, bare til kjøreloggen.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Sammenlign BarentsWatch- og Open-Meteo-retning
+        run: python fetcher/diagnose_bw_direction.py
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+          BW_POINT_URL: ${{ secrets.BW_POINT_URL }}
