@@ -1,6 +1,7 @@
 """Kjører hele henteren med falske kilder, uten nett. Kjør: python fetcher/test_pipeline.py"""
 import json, math, datetime as dt, tempfile
 from pathlib import Path
+import requests
 import sources, fetch, notify, calibrate
 from rating import DEFAULT_TRANSFER
 
@@ -208,5 +209,44 @@ sources._openmeteo_fetch = real_openmeteo_fetch
 print("7c GFS svarer med 0.0 pa alt (ingen dekning) -> faller til standardmodellen:", result["2026-01-01T00:00Z"])
 assert result["2026-01-01T00:00Z"]["dir"] == 271 and result["2026-01-01T00:00Z"]["swell_model"] == "standard"
 assert result["2026-01-01T00:00Z"]["height"] == 0.88
+
+# ---------- 7d: _get prøver igjen på midlertidige HTTP-feil (429/5xx), men
+# ikke på varige (sett i Actions: kildene svarer av og til med 503 når flere
+# spots hentes tett etter hverandre) ----------
+class FakeResp:
+    def __init__(self, status):
+        self.status_code = status
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            e = requests.HTTPError(f"{self.status_code}")
+            e.response = self
+            raise e
+    def json(self):
+        return {"ok": True}
+
+calls = {"n": 0}
+def flaky_get(url, params=None, headers=None, timeout=None):
+    calls["n"] += 1
+    return FakeResp(503) if calls["n"] < 3 else FakeResp(200)
+real_requests_get, real_sleep = requests.get, sources.time.sleep
+requests.get, sources.time.sleep = flaky_get, lambda s: None
+r = sources._get("https://example.test")
+requests.get = real_requests_get
+print("7d _get prøver igjen på 503, lykkes på forsøk", calls["n"])
+assert calls["n"] == 3 and r.json() == {"ok": True}
+
+calls["n"] = 0
+def always_404(url, params=None, headers=None, timeout=None):
+    calls["n"] += 1
+    return FakeResp(404)
+requests.get = always_404
+try:
+    sources._get("https://example.test")
+    raised = False
+except requests.HTTPError:
+    raised = True
+requests.get, sources.time.sleep = real_requests_get, real_sleep
+print("7d _get gir opp med en gang på 404, antall forsøk:", calls["n"])
+assert raised and calls["n"] == 1
 
 print("Pipeline ok")

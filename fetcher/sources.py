@@ -21,9 +21,15 @@ def parse_iso(s: str) -> dt.datetime:
     return dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+
 def _get(url, params=None, headers=None):
-    # Kildene timer av og til ut forbigående når flere spots hentes tett etter
-    # hverandre (sett i Actions-kjøringer). Prøv opp til tre ganger med pause.
+    # Kildene timer av og til ut forbigående, eller svarer midlertidig med
+    # 429/5xx, når flere spots hentes tett etter hverandre (sett i
+    # Actions-kjøringer, som deler IP-adresser med mange andre). Prøv opp til
+    # tre ganger med pause for begge tilfeller - men gi opp med en gang på en
+    # varig feil (f.eks. 404), der nytt forsøk aldri vil hjelpe.
     last_err = None
     for attempt, wait in enumerate((0, 3, 8)):
         if wait:
@@ -33,6 +39,10 @@ def _get(url, params=None, headers=None):
             r.raise_for_status()
             return r
         except (requests.Timeout, requests.ConnectionError) as e:
+            last_err = e
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code not in RETRYABLE_STATUS:
+                raise
             last_err = e
     raise last_err
 
