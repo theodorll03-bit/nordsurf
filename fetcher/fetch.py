@@ -126,6 +126,17 @@ def build_spot(spot, now, learned, bw_calib, run_id):
         hour.update(rate(hour, spot))
         hours.append(hour)
 
+    if not hours and horizon:
+        # Kildene rapporterte data (horisont > 0), men ingen enkelttime hadde
+        # verken met.no- eller Open-Meteo-data på forventet klokkeslett - tyder
+        # på at klokkeslettene i kildene ikke stemmer med "now" som ventet.
+        # Logg nok til å diagnostisere uten en ny runde med skjermbilder.
+        expected_k = sources.hour_key(now)
+        REPORT.append((name, "Ingen timer bygget", "feil",
+                       f"horisont {horizon}t men 0 bygget. Ventet nøkkel {expected_k}. "
+                       f"met.no hav (spot): {min(ocean_spot) if ocean_spot else '-'} .. {max(ocean_spot) if ocean_spot else '-'} ({len(ocean_spot)}t). "
+                       f"Open-Meteo: {min(marine) if marine else '-'} .. {max(marine) if marine else '-'} ({len(marine)}t)."))
+
     gfs_hours = sum(1 for h in hours if h.get("swell_model") == "gfs")
     std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
