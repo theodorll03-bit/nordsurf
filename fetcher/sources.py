@@ -280,6 +280,13 @@ def barentswatch_point(lat, lon):
     ALDRI brukes i rangeringen eller kalibreringen, som begge bygger på
     signifikant høyde (samme mål brukes gjennomgående, ellers sammenligner
     man epler og pærer mellom spots og mellom BarentsWatch og Open-Meteo).
+
+    Retning: totalMeanWaveDirection er retningen bølgene GÅR MOT (bekreftet
+    26.09.2026 med ekte data - median avvik ~140-150 grader mot Open-Meteo
+    sin "fra"-retning for de mest åpne spotene, ikke under ~40 grader som
+    "fra"-konvensjon ville gitt). Konverteres her til "fra", som resten av
+    appen (met.no, Open-Meteo) bruker - IKKE gjett dette om igjen andre
+    steder, "dir" i returverdien herfra er allerede "fra".
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -313,11 +320,12 @@ def barentswatch_point(lat, lon):
         if t is None or h is None:
             continue
         d = row.get("totalMeanWaveDirection")
+        d_from = (float(d) + 180) % 360 if d is not None else None  # mot -> fra
         p = row.get("totalPeakPeriod")
         hmax = row.get("expectedMaximumWaveHeight")
         out[hour_key(parse_iso(t))] = {
             "height": float(h),
-            "dir": float(d) if d is not None else None,
+            "dir": d_from,
             "period": float(p) if p is not None else None,
             "max_height": float(hmax) if hmax is not None else None,
         }

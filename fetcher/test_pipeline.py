@@ -99,14 +99,22 @@ assert before and all(h["height_source"] == "barentswatch" for h in before)
 assert after and all(h["height_source"] != "barentswatch" for h in after)
 
 # ---------- 6e: filtre for kalibreringspar ----------
+# spot_direction_factor og sources_disagree (26.09.2026, svell-mot-vindsjø-
+# fiksen): h_ok må ha spot_direction_factor >= 0.7 for i det hele tatt å
+# telle - de andre feilkassene (lav swell/directness/interpolert/reserve)
+# hadde det fra før.
 h_ok = {"t": "2026-02-01T00:00Z", "height_source": "barentswatch", "bw_interpolated": False,
-        "bw_height": 0.7, "swell_offshore": 1.0, "directness": 1.0, "height_offshore": 1.0}
+        "bw_height": 0.7, "swell_offshore": 1.0, "directness": 1.0, "height_offshore": 1.0,
+        "sources_disagree": False, "spot_direction_factor": 1.0}
 h_low_swell = {**h_ok, "t": "2026-02-01T01:00Z", "swell_offshore": 0.2}
 h_low_dir = {**h_ok, "t": "2026-02-01T02:00Z", "directness": 0.2}
 h_windsea = {**h_ok, "t": "2026-02-01T03:00Z", "swell_offshore": 0.5, "height_offshore": 2.0}
 h_interp = {**h_ok, "t": "2026-02-01T04:00Z", "bw_interpolated": True}
 h_reserve = {**h_ok, "t": "2026-02-01T05:00Z", "height_source": "svell_ute"}
-pairs_6e = calibrate.bw_pairs_for_run([h_ok, h_low_swell, h_low_dir, h_windsea, h_interp, h_reserve], "run1")
+h_disagree = {**h_ok, "t": "2026-02-01T06:00Z", "sources_disagree": True}
+h_bad_spot_dir = {**h_ok, "t": "2026-02-01T07:00Z", "spot_direction_factor": 0.3}
+pairs_6e = calibrate.bw_pairs_for_run(
+    [h_ok, h_low_swell, h_low_dir, h_windsea, h_interp, h_reserve, h_disagree, h_bad_spot_dir], "run1")
 print("6e kalibreringspar (skal være 1):", pairs_6e)
 assert len(pairs_6e) == 1 and pairs_6e[0]["t"] == h_ok["t"] and pairs_6e[0]["ratio"] == 0.7
 
@@ -158,15 +166,19 @@ assert covered_no_bw == 20
 
 # ---------- 6i: 250 m-punktet brukes i ratingen, 150 m bare til sammenligning
 # (bw_height_near) - og 250 m uten data faller tilbake til 150 m for RATINGEN ----------
+# Nøytral swell_share (svell == total, altså 1,0) og bw_dir rett på facing,
+# slik at "height" her bare tester punkt-valget, ikke swell_share/retning -
+# de har egne, dedikerte tester (Lenangsøyra-testene lenger ned).
 spots_cfg = json.loads((Path(__file__).parent.parent / "spots.json").read_text())
 grot_spot = next(s for s in spots_cfg["spots"] if s["id"] == "grotfjord")
 lat250, lat150 = grot_spot["barentswatch_point"]["lat"], grot_spot["barentswatch_point_near"]["lat"]
+sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 1.8, "swell_height": 1.8, "dir": grot_spot["facing"], "period": 13})
 
 def bw_two_points_mock(la, lo):
     now4 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
     if abs(la - lat250) < abs(la - lat150):  # nærmest 250 m-punktet
-        return {sources.hour_key(now4): {"height": 1.5, "dir": 300.0, "period": 10.0, "max_height": 2.1}}
-    return {sources.hour_key(now4): {"height": 1.1, "dir": 300.0, "period": 10.0, "max_height": 1.7}}
+        return {sources.hour_key(now4): {"height": 1.5, "dir": grot_spot["facing"], "period": 10.0, "max_height": 2.1}}
+    return {sources.hour_key(now4): {"height": 1.1, "dir": grot_spot["facing"], "period": 10.0, "max_height": 1.7}}
 
 sources.barentswatch_point = bw_two_points_mock
 tmp6i = Path(tempfile.mkdtemp())
@@ -186,7 +198,7 @@ def bw_250_empty_mock(la, lo):
     now4 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
     if abs(la - lat250) < abs(la - lat150):
         return {}
-    return {sources.hour_key(now4): {"height": 1.1, "dir": 300.0, "period": 10.0, "max_height": 1.7}}
+    return {sources.hour_key(now4): {"height": 1.1, "dir": grot_spot["facing"], "period": 10.0, "max_height": 1.7}}
 
 sources.barentswatch_point = bw_250_empty_mock
 tmp6i2 = Path(tempfile.mkdtemp())

@@ -23,10 +23,14 @@ def load_settings():
 def notifiable_hours(spot):
     """Spots med BarentsWatch skal bare varsle på ekte BarentsWatch-timer -
     reservemodellen (etter bw_until) er for usikker til å varsle på. Spots
-    uten BarentsWatch i det hele tatt bruker alle timene, som før."""
+    uten BarentsWatch i det hele tatt bruker alle timene, som før. Aldri
+    timer der kildene er uenige (sources_disagree) - BarentsWatch-høyden
+    ser grei ut, men er trolig mest vindsjø eller feil retning inn mot
+    stranda, altså ikke surfbart."""
+    hours = spot["hours"]
     if spot.get("bw_until"):
-        return [h for h in spot["hours"] if h.get("height_source") == "barentswatch"]
-    return spot["hours"]
+        hours = [h for h in hours if h.get("height_source") == "barentswatch"]
+    return [h for h in hours if not h.get("sources_disagree")]
 
 
 def windows(spot, min_stars, hours_ahead, now):

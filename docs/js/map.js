@@ -310,6 +310,17 @@ function discSvgMarkup(spot, h){
     swellMarkup = `<g class="disc-swellgroup" data-bearing="${bearing}">${line}${missing?"":crestGroup}${dirLabel}${missLabel}</g>`;
   }
 
+  // Ekstra, diskret pil ved sentrum: hvilken vei bølgene faktisk går ved
+  // BarentsWatch-punktet (bw_dir, allerede "fra"-konvertert), til
+  // sammenligning med hovedlinja (svellet ute, mot vinduet). Grå og
+  // stiplet hvis retningsfaktoren ved spoten er 0 (treffer ikke stranda).
+  let spotSwellMarkup = "";
+  if(h && h.height_source==="barentswatch" && h.bw_dir!=null){
+    const noHit = h.spot_direction_factor===0;
+    const q0 = polar(cx,cy,40,h.bw_dir), q1 = polar(cx,cy,14,h.bw_dir);
+    spotSwellMarkup = `<line class="disc-spot-swell${noHit?" miss":""}" x1="${q0.x.toFixed(2)}" y1="${q0.y.toFixed(2)}" x2="${q1.x.toFixed(2)}" y2="${q1.y.toFixed(2)}"/>`;
+  }
+
   let windMarkup = "";
   if(h && h.wind_speed!=null){
     const toBearing = norm360((h.wind_dir||0)+180);
@@ -339,6 +350,7 @@ function discSvgMarkup(spot, h){
   return `<svg viewBox="0 0 200 200">
     <g class="disc-windowgroup">${windowPaths}</g>
     ${swellMarkup}
+    ${spotSwellMarkup}
     ${windMarkup}
     <g>${ring}</g>
   </svg>`;

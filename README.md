@@ -123,6 +123,71 @@ detaljsiden og på høydeplata på kartet som "Sett opp til X m". Den brukes
 høyde (`bw_height`), som er det eneste målet som er sammenlignbart mellom
 BarentsWatch, Open-Meteo og loggene dine.
 
+### Ekte svell fra vindsjø, og retning ved spoten
+
+`totalSignificantWaveHeight` fra BarentsWatch er **total** bølgehøyde ute -
+svell og vindsjø slått sammen, uten skille. Høy totalhøyde kan altså komme
+fra ren vindsjø, som ikke oppfører seg som surfbare bølger og som ikke
+nødvendigvis går inn mot akkurat denne stranda. Henteren regner derfor ut,
+for hver time BarentsWatch brukes, hvor mye av totalhøyden som trolig er
+ekte svell, og om det svellet faktisk er på vei inn mot spoten:
+
+- **Svellandel** `swell_share = svell_offshore / høyde_offshore` (fra
+  Open-Meteo, samme punkt som resten av retningslogikken), avgrenset til
+  0,2-1,0. Ukjent (mangler en av verdiene) gir 1,0, altså ingen straff.
+- **BarentsWatch-periodefaktor**, fra `totalPeakPeriod` (bekreftet
+  toppperiode, ikke middelperiode, direkte fra feltnavnet i BarentsWatch sin
+  OpenAPI-spec - trenger derfor ingen justering av terskler):
+
+  | Toppperiode | Faktor |
+  |---|---|
+  | Under 6 s | 0,3 |
+  | 6-8 s | lineær 0,3 → 1,0 |
+  | 8 s eller mer | 1,0 |
+
+  Ukjent periode gir 1,0.
+- Disse to slås sammen med **minimum**, ikke produkt - begge er uavhengige
+  signaler på "er dette vindsjø", og skal ikke straffe samme ting to ganger.
+- **Retning ved spoten**: BarentsWatch sin `totalMeanWaveDirection` oppgis
+  som "mot" (bekreftet empirisk mot ekte data fra Open-Meteo GFS Wave, median
+  vinkelavvik 137-149° - se `fetcher/diagnose_bw_direction.py` og
+  `.github/workflows/diagnose_bw.yml` for selve målingen), og gjøres om til
+  "fra" med `(retning + 180) % 360` før den sammenlignes med spotens felt
+  `facing` i `spots.json` (grader, normalen rett ut fra stranda):
+
+  | Vinkel mellom bølgeretning og `facing` | Retningsfaktor |
+  |---|---|
+  | 0-30° | 1,0 |
+  | 30-60° | lineær 1,0 → 0,3 |
+  | over 60° | 0 |
+
+  Mangler retning fra BarentsWatch settes faktoren til 1,0, men timen merkes
+  usikker (`uncertain`).
+
+Høyden BarentsWatch faktisk bidrar med er
+`bw_height × min(svellandel, periodefaktor) × retningsfaktor`. Reservemodellen
+(svell ute × transfer × retningstreff) er upåvirket av dette - endringen
+gjelder bare når BarentsWatch er kilden.
+
+### Kilder uenige (`sources_disagree`)
+
+Når BarentsWatch viser minst 0,5 m, men minst ett av tegnene over sier
+"dette er nok ikke ekte surfbart svell mot akkurat denne stranda" -
+retningstreff ute under 67 %, svellandel under 50 %, eller retningsfaktor
+ved spoten under 50 % - settes `sources_disagree` til sann for timen.
+Ratingen kappes da til maks 1 stjerne (strengere enn den vanlige
+usikkerhetskappingen på 3 stjerner), og timen merkes usikker. Detaljsiden
+viser en advarsel øverst med årsaken, og lista/kommende dager kan aldri
+velge en slik time som "beste time" for dagen hvis det finnes andre timer
+uten konflikt. `notify.py` sender aldri varsel for disse timene, og
+kalibreringen mot BarentsWatch (`bw_pairs_for_run()`) hopper over dem, samt
+alle timer med retningsfaktor under 0,7. Logger-fanen viser, per spot, hvor
+mange av disse timene som faktisk ble logget som surfbare (2 stjerner eller
+mer) - mange treff der er et tegn på at regelen er for streng.
+
+`likely_flat` (under 0,35 m) er upåvirket av alt dette og gjelder uansett
+kilde.
+
 Etter `bw_until`, og for spots uten BarentsWatch i det hele tatt, brukes
 reservemodellen:
 1. Bare svellet ute fra Open-Meteo (uten vindsjø), ganget med spotens

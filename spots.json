@@ -36,6 +36,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 295,
       "_offshore_vind": "Stranda vender mot VNV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         291,
@@ -79,6 +80,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 315,
       "_offshore_vind": "Stranda i bunnen av bukta vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         294,
@@ -128,6 +130,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 315,
       "_offshore_vind": "Stranda vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         348,
@@ -170,6 +173,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 0,
       "_offshore_vind": "Spoten ligger ytterst på et nes som peker mot NNØ, land bak mot SSV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         12,
@@ -212,6 +216,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 45,
       "_offshore_vind": "Kysten vender mot NØ inn i bukta (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         316,
@@ -254,6 +259,7 @@
         2.0
       ],
       "max_height": 3.5,
+      "facing": 294.8,
       "_offshore_vind": "Stranda vender mot VNV (294,7 grader, bekreftet med to metoder: kort-rekkevidde åpen sektor og kystlinje-tangent fra GSHHS full oppløsning). Offshorevind er satt ut fra det. Avviker 25 grader fra forventet øst-vind (surf-forecast.com), innenfor 30-graders grensen. Lokale fallvinder vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         253,

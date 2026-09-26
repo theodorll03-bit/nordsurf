@@ -95,14 +95,90 @@ def directness(d, spot):
     return SHADOW_CURVE[-1][1]
 
 
+def swell_share(hour):
+    """Andel av totalhøyden ute (swell_offshore / height_offshore) som er
+    ekte svell - resten er vindsjø. BarentsWatch måler TOTALHØYDE (svell +
+    vindsjø sammen), så dette brukes til å anslå hvor mye av en
+    BarentsWatch-høyde som faktisk er svell. Avgrenset til 0,2-1,0 (under
+    0,2 sier forholdet for lite til å stole på). Mangler en av høydene:
+    1,0 (nøytralt) og "ukjent" (andre returverdi), IKKE straffet i seg selv,
+    men gjør timen mer usikker et annet sted."""
+    swell, total = hour.get("swell_offshore"), hour.get("height_offshore")
+    if swell is None or total is None or total <= 0:
+        return 1.0, False
+    return min(1.0, max(0.2, swell / total)), True
+
+
+BW_PERIOD_FACTOR_POINTS = [(6, 0.3), (8, 0.6)]  # deretter 1.0 fra og med 8s
+
+
+def bw_period_factor(period):
+    """Periodefaktor fra BarentsWatch sin egen periode (totalPeakPeriod -
+    TOPPPERIODE, bekreftet mot BarentsWatch sin OpenAPI-spec 26.09.2026,
+    derfor ingen nedjustering av grensene, som middelperiode ville trengt).
+    Ekstra, uavhengig sjekk på om det er vindsjø: kort periode er vindsjø
+    uansett hva swell_share sier. Mangler periode: 1,0 (nøytralt)."""
+    if period is None:
+        return 1.0
+    (x0, y0), (x1, y1) = BW_PERIOD_FACTOR_POINTS
+    if period < x0:
+        return y0
+    if period < x1:
+        return y0 + (y1 - y0) * (period - x0) / (x1 - x0)
+    return 1.0
+
+
+def spot_direction_factor(bw_dir_from, facing):
+    """0 til 1: går bølgene ved BarentsWatch-punktet inn mot stranda?
+    bw_dir_from er allerede konvertert til "fra" (se sources.barentswatch_point
+    - BarentsWatch sitt eget felt er retningen bølgene GÅR MOT). facing er
+    retningen rett ut i vannet fra stranda (spots.json). 0-30 grader avvik:
+    1,0. 30-60: lineært ned til 0,3. Over 60: 0. Mangler retning eller
+    facing: 1,0 (nøytralt, men "ukjent" i andre returverdi)."""
+    if bw_dir_from is None or facing is None:
+        return 1.0, False
+    diff = angle_diff(bw_dir_from, facing)
+    if diff <= 30:
+        return 1.0, True
+    if diff <= 60:
+        return 1.0 - 0.7 * (diff - 30) / 30, True
+    return 0.0, True
+
+
+def barentswatch_height(hour, spot):
+    """BarentsWatch gir totalhøyde (svell + vindsjø), ikke bare svell -
+    skalert her til et anslag på ekte svell ved spoten:
+    bw_height × min(swell_share, bw_period_factor) × spot_direction_factor.
+    min(), ikke produkt, av swell_share og periodefaktoren: de er to
+    uavhengige mål på samme spørsmål (er dette vindsjø?), og skal ikke
+    straffe dobbelt for det samme."""
+    bw = hour["bw_height"]
+    share, share_known = swell_share(hour)
+    pf = bw_period_factor(hour.get("bw_period"))
+    bw_dir = hour.get("bw_dir")
+    facing = spot.get("facing")
+    dirfac, dir_known = spot_direction_factor(bw_dir, facing)
+    h = bw * min(share, pf) * dirfac
+    detail = {
+        "swell_share": share, "swell_share_known": share_known,
+        "bw_period_factor": pf,
+        "spot_direction_factor": dirfac, "spot_direction_known": dir_known,
+        # Selve gradavviket (0-180), til visning ("70 grader skrått på
+        # stranda") - factoren alene sier ikke hvor mange grader det var.
+        "spot_direction_diff": angle_diff(bw_dir, facing) if dir_known else None,
+    }
+    return h, detail
+
+
 def spot_height(hour, spot=None):
-    """Beste anslag på bølgehøyde på spoten, og hvilken kilde det kom fra.
+    """Beste anslag på bølgehøyde på spoten, hvilken kilde det kom fra, og
+    (bare for BarentsWatch) detaljene bak beregningen (se barentswatch_height).
     Dette er den VISTE høyden og høyden kalibreringen læres mot - IKKE den
     "effektive" høyden ranger bruker (se effective_height/period_factor
     lenger ned), som bare skal påvirke rangeringen, ikke tallet du ser.
 
     1. BarentsWatch, når den finnes (finmasket kystmodell som allerede tar
-       hensyn til skjerming bak odder og øyer).
+       hensyn til skjerming bak odder og øyer) - se barentswatch_height().
     2. Bare svellet ute (Open-Meteo), uten vindsjø, ganget med spotens
        faktor og directness() - hvor direkte svellet treffer vinduet.
        Faktoren læres fra loggene dine. Bruker IKKE dreiningsregelen her,
@@ -110,15 +186,16 @@ def spot_height(hour, spot=None):
     3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
     """
     if hour.get("bw_height") is not None:
-        return hour["bw_height"], "barentswatch"
+        h, detail = barentswatch_height(hour, spot or {})
+        return h, "barentswatch", detail
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
     if hour.get("swell_offshore") is not None:
         h = hour["swell_offshore"] * transfer * directness(hour.get("dir_offshore"), spot)
-        return h, "svell_ute"
+        return h, "svell_ute", None
     h = hour.get("height_spot_model")
     if h is None:
-        return None, None
-    return h * refraction_factor(hour.get("turn")), "metno_korrigert"
+        return None, None, None
+    return h * refraction_factor(hour.get("turn")), "metno_korrigert", None
 
 
 # ---------- Svellstjerner ----------
@@ -203,7 +280,7 @@ def direction_score(d, spot, source=None):
 
 
 def swell_stars(hour, spot):
-    h, source = spot_height(hour, spot)
+    h, source, _ = spot_height(hour, spot)
     period = hour.get("period")
     eff_h = effective_height(h, period)
     score = (
@@ -331,6 +408,32 @@ def _direction_word(dir_hit):
     return "svakt inn i skyggen"
 
 
+def _share_word(share):
+    if share >= 0.9:
+        return "nesten bare svell"
+    if share >= 0.7:
+        return "mest svell"
+    if share >= 0.5:
+        return "blandet, en del vindsjø"
+    return "mest vindsjø"
+
+
+def _bw_period_word(pf):
+    if pf >= 1.0:
+        return "lang nok til å være ekte svell"
+    if pf >= 0.6:
+        return "i grenseland"
+    return "kort, trolig vindsjø"
+
+
+def _spot_dir_word(dirfac):
+    if dirfac >= 1.0:
+        return "rett inn mot stranda"
+    if dirfac > 0:
+        return "skrått inn mot stranda"
+    return "går ikke inn mot stranda"
+
+
 def _fmt_m(v):
     return f"{v:.1f}".replace(".", ",") + " m"
 
@@ -339,9 +442,26 @@ def _fmt_penalty(n):
     return "ingen effekt" if n == 0 else f"−{n}"
 
 
-def build_breakdown(hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
+def disagree_reason(hour, dir_hit, bw_detail):
+    """Kort norsk forklaring på HVA av 4a-betingelsene som slo inn, til
+    varselbanneret på detaljsiden (5c). Bygget her, ikke i appen - appen
+    skal bare vise det henteren faktisk regnet ut."""
+    reasons = []
+    if dir_hit is not None and dir_hit < 0.667:
+        reasons.append("svellet ute er utenfor vinduet")
+    if bw_detail["swell_share"] < 0.5:
+        reasons.append("det er mest vindsjø")
+    if bw_detail["spot_direction_factor"] < 0.5:
+        reasons.append("bølgene ved spoten går ikke inn mot stranda")
+    bw_h = hour.get("bw_height")
+    bw_txt = _fmt_m(bw_h) if bw_h is not None else "en del"
+    return f"Kildene er uenige. BarentsWatch viser {bw_txt}, men {' og '.join(reasons)}. Trolig ikke surfbart. Logg gjerne hva du ser."
+
+
+def build_breakdown(hour, spot, h, source, bw_detail, eff_h, period, hs, ps, dir_hit,
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
-                     potential, solid, lost_wind, lost_tide, uncertain, capped_from):
+                     potential, solid, lost_wind, lost_tide, uncertain,
+                     sources_disagree, capped_from, disagree_cap):
     items = []
     if h is None:
         items.append("Høyde: ingen data")
@@ -349,6 +469,12 @@ def build_breakdown(hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
         pf = period_factor(period)
         felt = f", føles som ca. {_fmt_m(eff_h)}" + (f" på {period:.0f} s" if period is not None else "") if (pf > 1.05 or pf < 0.95) else ""
         items.append(f"Høyde {_fmt_m(h)}{felt}: {_height_word(hs)}")
+    if source == "barentswatch" and bw_detail is not None:
+        share_pct = round(bw_detail["swell_share"] * 100)
+        items.append(f"Svellandel: {share_pct} % ({_share_word(bw_detail['swell_share'])})")
+        if hour.get("bw_period") is not None:
+            items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
+        items.append(f"Retning ved spoten: {_spot_dir_word(bw_detail['spot_direction_factor'])}")
     if period is None:
         items.append("Periode: ukjent")
     else:
@@ -366,7 +492,9 @@ def build_breakdown(hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
         items.append("Tidevann: ukjent")
     else:
         items.append(f"Tidevann ({tide.get('state','?')}): {_fmt_penalty(tide_pen)}")
-    if capped_from is not None and capped_from > potential:
+    if sources_disagree and disagree_cap is not None and disagree_cap > potential:
+        items.append(f"Kilder uenige: kappet fra {disagree_cap} til maks 1 stjerne")
+    elif capped_from is not None and capped_from > potential:
         items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner (ingen BarentsWatch, og retning utenfor vinduet eller stor dreining)")
     without_wind = min(potential, solid + lost_wind)
     total = f"Totalt: {solid} av 5 stjerner"
@@ -378,7 +506,7 @@ def build_breakdown(hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
 
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
-    h, source = spot_height(hour, spot)
+    h, source, bw_detail = spot_height(hour, spot)
     period = hour.get("period")
     eff_h = effective_height(h, period)
     hs = height_score(eff_h, spot)
@@ -391,12 +519,31 @@ def rate(hour, spot):
     deg_out = degrees_outside(hour.get("dir_offshore"), spot)
     # Ærlighet: uten BarentsWatch, med dreining eller utenfor vinduet vet vi
     # mindre. Maks 3 stjerner. Svell godt innenfor vinduet, nær kanten, gjør
-    # IKKE varselet usikkert i seg selv.
-    uncertain = source != "barentswatch" and (
-        (hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0
+    # IKKE varselet usikkert i seg selv. For BarentsWatch: usikkert hvis vi
+    # ikke har retning ved punktet (spot_direction_factor er da et nøytralt
+    # anslag, 1,0, ikke et ekte "treffer rett inn").
+    uncertain = (
+        (source != "barentswatch" and ((hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0))
+        or (source == "barentswatch" and bw_detail is not None and not bw_detail["spot_direction_known"])
     )
-    capped_from = potential if (uncertain and potential > 3) else None
-    if uncertain:
+    # Kildene uenige: BarentsWatch viser en reell totalhøyde (0,5 m+), men
+    # svellet ute er utenfor vinduet, mest av totalhøyden er vindsjø, eller
+    # bølgene ved BarentsWatch-punktet går ikke inn mot stranda. Strengere
+    # enn den vanlige usikkerhets-kappingen (maks 1, ikke 3) - dette er ikke
+    # bare mangel på data, men tegn på at det trolig ikke er surfbart.
+    sources_disagree = (
+        source == "barentswatch" and bw_detail is not None
+        and (hour.get("bw_height") or 0) >= 0.5
+        and (dir_hit < 0.667 or bw_detail["swell_share"] < 0.5 or bw_detail["spot_direction_factor"] < 0.5)
+    )
+    if sources_disagree:
+        uncertain = True
+
+    capped_from = potential if (uncertain and not sources_disagree and potential > 3) else None
+    disagree_cap = potential if (sources_disagree and potential > 1) else None
+    if sources_disagree:
+        potential = min(potential, 1)
+    elif uncertain:
         potential = min(potential, 3)
 
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
@@ -408,9 +555,10 @@ def rate(hour, spot):
     solid = potential - lost_wind - lost_tide
 
     breakdown = build_breakdown(
-        hour, spot, h, source, eff_h, period, hs, ps, dir_hit,
+        hour, spot, h, source, bw_detail, eff_h, period, hs, ps, dir_hit,
         wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
-        potential, solid, lost_wind, lost_tide, uncertain, capped_from,
+        potential, solid, lost_wind, lost_tide, uncertain,
+        sources_disagree, capped_from, disagree_cap,
     )
 
     return {
@@ -428,6 +576,17 @@ def rate(hour, spot):
         # nå. Brukes til å justere selve høyden (for svell_ute), og vises i
         # appen som "retningstreff".
         "directness": round(dir_hit, 3),
+        # Kildene (BarentsWatch-totalhøyde vs. ekte svell og retning ved
+        # spoten) er uenige - trolig ikke surfbart selv om høyden ser grei
+        # ut. Se disagree_reason() for hvorfor. Varsles ALDRI (notify.py).
+        "sources_disagree": sources_disagree,
+        "sources_disagree_reason": disagree_reason(hour, dir_hit, bw_detail) if sources_disagree else None,
+        "swell_share": round(bw_detail["swell_share"], 3) if bw_detail else None,
+        "spot_direction_factor": round(bw_detail["spot_direction_factor"], 3) if bw_detail else None,
+        # Gradavviket bak spot_direction_factor - til visning ("70 grader
+        # skrått på stranda"). None hvis retning eller facing er ukjent.
+        "spot_direction_diff": (round(bw_detail["spot_direction_diff"])
+                                 if bw_detail and bw_detail["spot_direction_diff"] is not None else None),
         # Trolig flatt: enten er beregnet høyde reelt lav, eller reserven
         # (metno_korrigert) har stor dreining/retning langt utenfor vinduet -
         # den kilden tar ikke selv hensyn til noen av delene.

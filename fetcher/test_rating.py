@@ -30,7 +30,9 @@ assert sv["height_source"] == "svell_ute" and sv["height"] == 0.6
 
 # 26.09.2026: mildere vind. En BarentsWatch-dag midt i idealhøyden med bare
 # 3 m/s offshore skal nå gi full pott - det er nesten ingen vind i praksis.
-ok = rate({"bw_height": 1.2, "dir_offshore": 300, "turn": 5, "period": 10, "wind_speed": 3, "wind_dir": 120}, G)
+# bw_dir = spotens facing (rett inn mot stranda) - uten den blir timen
+# "usikker" (se testene i bunnen for hvorfor) og ville feilaktig kappes.
+ok = rate({"bw_height": 1.2, "dir_offshore": 300, "bw_dir": G["facing"], "turn": 5, "period": 10, "wind_speed": 3, "wind_dir": 120}, G)
 show("Vanlig ok dag", ok); assert ok["stars"] == 4
 
 # 5 stjerner krever alt: EFFEKTIV høyde (høyde * periodefaktor, se
@@ -43,7 +45,7 @@ show("Vanlig ok dag", ok); assert ok["stars"] == 4
 # gir 4 stjerner, ikke 5. Testen bruker derfor høyden som faktisk treffer
 # midten ved denne perioden, ikke et gjettet tall.
 H_EPIC = round(MID / period_factor(15), 4)
-epic = rate({"bw_height": H_EPIC, "dir_offshore": 300.5, "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}, G)
+epic = rate({"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}, G)
 show("Alt perfekt", epic); assert epic["stars"] == 5
 
 # Nesten perfekt, men 11 s periode: skal ikke bli 5.
@@ -62,7 +64,7 @@ show("Perfekt svell, onshore 6 m/s", on); assert on["faded"] == 2
 # Tidevann: spot som bare liker lavt vann mister en stjerne på flo. Bruker
 # samme periode-justerte høyde som "Alt perfekt" - se forklaringen der.
 T = {**G, "tide": ["lav", "middels"]}
-base = {"bw_height": H_EPIC, "dir_offshore": 300.5, "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}
+base = {"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}
 lo = rate({**base, "tide": {"state": "lav"}}, T); hi = rate({**base, "tide": {"state": "høy"}}, T)
 show("Liker lavt vann, fjære", lo); show("Liker lavt vann, flo", hi)
 assert lo["stars"] == 5 and hi["stars"] == 4 and hi["faded_tide"] == 1
@@ -124,7 +126,7 @@ assert not near_edge["uncertain"]
 # ---------- 26.09.2026: mildere vind, effektiv høyde, breakdown ----------
 
 # 6.1-6.4: BarentsWatch 0,9 m, innenfor vinduet.
-base09 = {"bw_height": 0.9, "dir_offshore": 300}
+base09 = {"bw_height": 0.9, "dir_offshore": 300, "bw_dir": G["facing"]}
 c1 = rate({**base09, "period": 16, "wind_speed": 1, "wind_dir": 120}, G)
 show("6.1: 0,9m/16s, 1 m/s", c1); assert c1["stars"] == 4
 
@@ -166,7 +168,11 @@ print(f"{'6.7: vist høyde vs effektiv (1,0 m/16s)':<40} vist={r_period['height'
 # 6.8: breakdown finnes, har ett ledd per faktor pluss totalen, og totalen
 # stemmer med stjernene som faktisk ble gitt.
 bd = c4["breakdown"]
-assert len(bd) == 6  # høyde, periode, retning, vind, tidevann, totalt
+# høyde, svellandel, retning ved spoten, periode, retning, vind, tidevann,
+# totalt - de to første BarentsWatch-linjene (svellandel, retning ved
+# spoten) er nye 26.09.2026. BarentsWatch-periode-linja er ikke med her,
+# siden base09 ikke setter bw_period.
+assert len(bd) == 8
 assert bd[-1].startswith("Totalt:")
 assert bd[-1].split("Totalt: ")[1].startswith(f"{c4['stars']} av 5")
 print(f"{'6.8: breakdown (0,9m/16s, kast 12)':<40}")
@@ -180,5 +186,97 @@ assert g["stars"] == 0 and g2["stars"] == 0 and w["stars"] == 0
 common = rate({"bw_height": 1.0, "dir_offshore": 300, "turn": 3, "period": 11, "wind_speed": 1, "wind_dir": 120}, G)
 show("6.10: 1,0m/11s, blankt", common)
 assert common["stars"] <= 4
+
+# ---------- 26.09.2026: skill ekte svell fra vindsjø, retning ved spoten ----------
+from rating import swell_share as _swell_share
+L = spots["lenangsoyra"]
+
+# 7.1: Lenangsøyra 26.09.2026 - i praksis mest vindsjø, retning på tvers av
+# fjorden. Skal bli flatt og markert som uenige kilder.
+l1 = rate({"bw_height": 0.7, "bw_height_max": 1.4, "swell_offshore": 1.3, "dir_offshore": 277,
+           "height_offshore": 2.7, "period": 9, "bw_dir": 290,
+           "wind_speed": 7, "wind_dir": 200, "gust": 10}, L)
+show("7.1: Lenangsøyra 26.09 (mest vindsjø)", l1)
+assert l1["height"] < 0.35 and l1["likely_flat"] and l1["sources_disagree"] and l1["stars"] == 0
+
+# 7.2: samme dag, men med ekte nordlig svell rett inn mot stranda.
+l2 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
+           "period": 13, "bw_dir": 5, "wind_speed": 2, "wind_dir": None}, L)
+show("7.2: Lenangsøyra, ekte nordlig svell", l2)
+assert l2["stars"] >= 3 and not l2["sources_disagree"]
+
+# 7.3: samme som 7.2, men BarentsWatch-periode 5 s - tydelig vindsjø selv om
+# swell_share og retningen isolert sett ser fine ut.
+l3 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
+           "period": 13, "bw_dir": 5, "bw_period": 5, "wind_speed": 2, "wind_dir": None}, L)
+show("7.3: samme, men BarentsWatch-periode 5 s", l3)
+assert l3["height"] < l2["height"] and l3["stars"] < l2["stars"]
+
+# 7.4: samme som 7.2, men BarentsWatch-retning fra 80 grader - 70 grader
+# skrått på stranda (facing 0), altså for skrått til å telle som noe.
+l4 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
+           "period": 13, "bw_dir": 80, "wind_speed": 2, "wind_dir": None}, L)
+show("7.4: samme, men BarentsWatch-retning 80 grader", l4)
+assert l4["height"] == 0.0 and l4["stars"] == 0
+
+# 7.5: retningskonvensjonen (bekreftet 26.09.2026 mot ekte data: "mot", ikke
+# "fra") - barentswatch_point() skal konvertere internt. Mokker bare
+# HTTP-laget, tester den ekte funksjonen.
+import os
+import sources as _sources
+
+class _FakeTokenResp:
+    def raise_for_status(self): pass
+    def json(self): return {"access_token": "faketoken"}
+
+class _FakeBwResp:
+    status_code = 200
+    def raise_for_status(self): pass
+    def json(self):
+        return [{"forecastTime": "2026-01-01T00:00:00Z", "totalSignificantWaveHeight": 1.0,
+                  "totalMeanWaveDirection": 110, "totalPeakPeriod": 10.0, "expectedMaximumWaveHeight": 1.5}]
+
+os.environ["BW_CLIENT_ID"], os.environ["BW_CLIENT_SECRET"] = "x", "y"
+os.environ["BW_POINT_URL"] = "https://example.test/{lat}/{lon}"
+_real_post, _real_get, _real_token = _sources.requests.post, _sources.requests.get, _sources._bw_token
+_sources.requests.post = lambda *a, **k: _FakeTokenResp()
+_sources.requests.get = lambda *a, **k: _FakeBwResp()
+_sources._bw_token = None
+bw_result = _sources.barentswatch_point(69.0, 19.0)
+_sources.requests.post, _sources.requests.get, _sources._bw_token = _real_post, _real_get, _real_token
+bw_k0 = next(iter(bw_result))
+label_75 = "7.5: BarentsWatch mot 110 -> intern fra"
+print(f"{label_75:<40} {bw_result[bw_k0]['dir']}")
+assert bw_result[bw_k0]["dir"] == 290
+
+# 7.6: swell_share avgrenses til 0,2 og 1,0.
+assert _swell_share({"swell_offshore": 3.0, "height_offshore": 1.0})[0] == 1.0
+assert _swell_share({"swell_offshore": 0.05, "height_offshore": 1.0})[0] == 0.2
+print(f"{'7.6: swell_share avgrensning (3.0/1.0, 0.05/1.0)':<40} {_swell_share({'swell_offshore': 3.0, 'height_offshore': 1.0})[0]} {_swell_share({'swell_offshore': 0.05, 'height_offshore': 1.0})[0]}")
+
+# 7.7: uten retning fra BarentsWatch - retningsfaktor 1,0 (nøytralt), men
+# timen skal merkes usikker (vi vet ikke om bølgene faktisk treffer stranda).
+l7 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
+           "period": 13, "wind_speed": 2, "wind_dir": None}, L)
+show("7.7: Lenangsøyra uten BarentsWatch-retning", l7)
+assert l7["spot_direction_factor"] == 1.0 and l7["uncertain"]
+
+# 7.8: varsler sendes aldri for timer med sources_disagree.
+import notify as _notify
+now8 = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).replace(minute=0, second=0, microsecond=0)
+def _th8(i):
+    return _sources.hour_key(now8 + __import__("datetime").timedelta(hours=i))
+hours_78 = [
+    {"t": _th8(0), "stars": 4, "daylight": True, "height_source": "barentswatch", "sources_disagree": True},
+    {"t": _th8(1), "stars": 4, "daylight": True, "height_source": "barentswatch", "sources_disagree": False},
+]
+spot_78 = {"id": "test78", "name": "Test78", "hours": hours_78, "bw_until": _th8(1)}
+ws_78 = _notify.windows(spot_78, min_stars=3, hours_ahead=10, now=now8)
+covered_78 = sum(len(w["hours"]) for w in ws_78)
+print(f"{'7.8: varsler dekker (skal vaere 1, ikke 2)':<40} {covered_78}")
+assert covered_78 == 1
+
+# 7.9: Grøtfjord 24.09.2026 gir fortsatt 0 - se g/g2/w helt i toppen av filen.
+assert g["stars"] == 0 and g2["stars"] == 0 and w["stars"] == 0
 
 print("Alle tester ok")

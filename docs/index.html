@@ -367,10 +367,15 @@ function wireFavButtons(){
 function bestWindow(spot){
   const hrs = spot.hours.filter(h => h.daylight !== false && new Date(h.t) >= new Date(Date.now()-36e5));
   if(!hrs.length) return null;
-  const max = Math.max(...hrs.map(h=>h.stars));
+  // Timer der kildene er uenige (BarentsWatch-høyde, men trolig vindsjø
+  // eller feil retning) skal ikke bli "beste time" hvis det finnes andre
+  // timer uten den konflikten - bare fall tilbake til dem om ALT er usikkert.
+  const clean = hrs.filter(h=>!h.sources_disagree);
+  const pool = clean.length ? clean : hrs;
+  const max = Math.max(...pool.map(h=>h.stars));
   if(max < 2) return {none:true};
   let start=null, end=null;
-  for(const h of hrs){
+  for(const h of pool){
     const gap = end ? new Date(h.t) - new Date(end.t) : 0;
     if(h.stars===max && (!start || gap<=36e5)){ if(!start) start=h; end=h; }
     else if(start) break;
@@ -405,8 +410,12 @@ function dayChipsHtml(spot, spotIdx){
         <span class="dc-day">${esc(shortLbl)}</span><span class="dc-dark">Mørkt</span>
       </button>`;
     }
-    let best = lit[0];
-    for(const pair of lit) if(pair[0].stars > best[0].stars) best = pair;
+    // Samme regel som bestWindow(): en time der kildene er uenige skal ikke
+    // bli "beste time" for dagen hvis det finnes andre timer uten konflikt.
+    const litClean = lit.filter(([h])=>!h.sources_disagree);
+    const litPool = litClean.length ? litClean : lit;
+    let best = litPool[0];
+    for(const pair of litPool) if(pair[0].stars > best[0].stars) best = pair;
     const [h, idx] = best;
     const good = h.stars >= 3;
     const anslag = !!(bw && h.t > bw);
@@ -484,7 +493,12 @@ function renderList(){
 }
 
 function heightSourceText(h, spot){
-  if(h.height_source==="barentswatch") return h.bw_interpolated ? "BarentsWatch (interpolert)" : "BarentsWatch";
+  if(h.height_source==="barentswatch"){
+    const interp = h.bw_interpolated ? " (interpolert)" : "";
+    const share = h.swell_share!=null ? `, ${nf0.format(h.swell_share*100)} % svell` : "";
+    const total = h.bw_height!=null ? nf1.format(h.bw_height)+" m" : "–";
+    return `Svell ved spoten, av ${total} totalt i BarentsWatch${share}${interp}`;
+  }
   if(h.height_source==="svell_ute"){
     const t = nf1.format(h.transfer).replace(/,0$/,"");
     const cal = (spot&&spot.calibration)||{};
@@ -505,6 +519,21 @@ function directionHitText(h){
   if(h.directness < 0.667) return "Utenfor vinduet";
   if(h.directness >= 0.999) return "Midt i vinduet";
   return "I kanten av vinduet";
+}
+function offshoreShareText(h){
+  if(h.swell_offshore==null || !(h.height_offshore>0)) return "";
+  const pct = nf0.format(h.swell_offshore/h.height_offshore*100);
+  return `, av ${nf1.format(h.height_offshore)} m totalt (${pct} %, resten vindsjø)`;
+}
+function uteDirectionText(h, spot){
+  const hit = directionHitText(h);
+  if(!hit) return "";
+  const deg = h.dir_offshore!=null ? Math.round(h.dir_offshore)+"°" : "";
+  return `Ute: ${hit.toLowerCase()}${deg?` (${deg}, ${windowText(spot).toLowerCase()})`:""}.`;
+}
+function vedSpotenDirectionText(h){
+  if(h.height_source!=="barentswatch" || h.bw_dir==null || h.spot_direction_diff==null) return "";
+  return `Ved spoten: bølgene kommer fra ${compass(h.bw_dir)}, ${h.spot_direction_diff}° skrått på stranda.`;
 }
 function nextTide(spot, t){
   const after = (spot.tide_events||spot.tide||[]).filter(x=>new Date(x.time) >= t);
@@ -553,7 +582,9 @@ function renderSpot(){
 
   // Advarsel om retning/dreining
   let warn = "";
-  if(h.height_source==="barentswatch"){
+  if(h.sources_disagree){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Kildene er uenige.</b> ${esc(h.sources_disagree_reason.replace(/^Kildene er uenige\.\s*/, ""))}</span></div>`;
+  } else if(h.height_source==="barentswatch"){
     const interp = h.bw_interpolated ? " Denne timen er interpolert mellom to BarentsWatch-punkter." : "";
     warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.${interp}</span></div>`;
   } else if(h.height_source==="svell_ute" && h.directness < 0.667){
@@ -592,8 +623,8 @@ function renderSpot(){
     </div>
     <div class="grid">
       <div class="cell"><div class="k">Høyde på spoten</div><div class="v">${h.height!=null?nf1.format(h.height)+" m":"–"}</div><div class="n">${heightSourceText(h,s)}${h.bw_height_max!=null?` · Sett opp til ${nf1.format(h.bw_height_max)} m`:""}</div></div>
-      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${h.swell_offshore!=null&&h.height_offshore!=null?`, med vindsjø ${nf1.format(h.height_offshore)} m`:""}</div></div>
-      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}</div></div>
+      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
+      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${esc(windLabel(h))} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
@@ -758,6 +789,19 @@ function renderLogs(){
     return `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
       <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`;
   }).join("");
+  // Hvor ofte timer der kildene var uenige (BarentsWatch-høyde, men trolig
+  // vindsjø eller feil retning ved spoten - kappet til maks 1 stjerne)
+  // faktisk ble logget som surfbare. Mange treff her tyder på at regelen
+  // er for streng.
+  const disagreeStats = DATA.spots.map(s=>{
+    const flagged = logs.filter(l=>l.spot===s.id && l.sourcesDisagree);
+    if(!flagged.length){
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen økter logget når kildene var uenige ennå.</p></div>`;
+    }
+    const surfable = flagged.filter(l=>l.stars>=2).length;
+    return `<div class="calib"><div class="t">${esc(s.name)}: ${surfable} av ${flagged.length} var surfbare likevel</div>
+      <p>Gjelder økter logget mens BarentsWatch-høyden trolig var mest vindsjø eller ikke traff stranda. Mange treff her betyr at regelen kanskje er for streng.</p></div>`;
+  }).join("");
   const rows = logs.map(l=>{
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
     const extra = [l.size,l.wind].filter(Boolean).join(", ");
@@ -770,6 +814,7 @@ function renderLogs(){
     <h2 class="sec">Treffsikkerhet</h2>${calib}
     <h2 class="sec">Bølgehøyde</h2>${heightCal}
     <h2 class="sec">BarentsWatch-punkt</h2>${bwCompare}
+    <h2 class="sec">Uenige kilder</h2>${disagreeStats}
     <h2 class="sec">Økter</h2>
     <div class="list">${rows || `<p class="empty">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" id="newLog">Logg økt</button></div>`;
@@ -987,7 +1032,13 @@ $("#saveLog").onclick = ()=>{
     // BarentsWatch 250 m (brukt i varselet) og 150 m (bare sammenligning),
     // slik de sto på tidspunktet du logget - se "hvilket punkt treffer best"
     // i Logger-fanen.
-    bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null};
+    bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null,
+    // Hvor mye av BarentsWatch-høyden som er reelt svell og hvor godt det
+    // traff stranda, slik at Logger-fanen kan vise om sources_disagree-
+    // regelen er for streng eller for snill.
+    swellShare: f ? f.swell_share : null, spotDirectionFactor: f ? f.spot_direction_factor : null,
+    bwPeriod: f ? f.bw_period : null, bwDir: f ? f.bw_dir : null,
+    sourcesDisagree: f ? !!f.sources_disagree : false};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
   toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");

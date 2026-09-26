@@ -40,10 +40,19 @@ def learn(spot_id, logs):
 def bw_pairs_for_run(hours, run_id):
     """Kalibreringspar for denne kjøringen: bare RÅ (ikke interpolerte)
     BarentsWatch-timer der svellet ute klart dominerer bildet og retningen
-    treffer godt nok til at et forhold sier noe fornuftig om direkte treff."""
+    treffer godt nok til at et forhold sier noe fornuftig om direkte treff.
+    I tillegg (26.09.2026, svell-mot-vindsjø-fiksen): aldri timer der
+    kildene er uenige (sources_disagree), og bare der bølgene ved
+    BarentsWatch-punktet klart går inn mot stranda (spot_direction_factor
+    minst 0,7) - ellers lærer vi feil forhold fra en time som i
+    virkeligheten var mest vindsjø eller feil retning."""
     pairs = []
     for h in hours:
         if h.get("height_source") != "barentswatch" or h.get("bw_interpolated"):
+            continue
+        if h.get("sources_disagree"):
+            continue
+        if (h.get("spot_direction_factor") or 0) < 0.7:
             continue
         bw, swell, dn = h.get("bw_height"), h.get("swell_offshore"), h.get("directness")
         if bw is None or swell is None or dn is None:

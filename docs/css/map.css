@@ -80,6 +80,11 @@
 .disc-swell-crest{fill:none;stroke:var(--swell);stroke-width:2;stroke-linecap:round}
 .disc-swell-crest.edge{opacity:.55}
 .disc-swell-crest.miss{stroke:var(--swell-miss);opacity:.9}
+/* Kort, diskret pil ved sentrum: retningen ved BarentsWatch-punktet, til
+   sammenligning med hovedlinja (svellet ute). Grå og stiplet hvis den ikke
+   treffer stranda (retningsfaktor 0). */
+.disc-spot-swell{stroke:var(--swell);stroke-width:1.5;stroke-linecap:round;opacity:.75}
+.disc-spot-swell.miss{stroke:var(--muted);stroke-dasharray:3 3;opacity:.8}
 .disc-wind-base{stroke:var(--wind);fill:none}
 .disc-wind-tick{stroke:var(--wind)}
 .disc-wind-head{fill:var(--wind)}
