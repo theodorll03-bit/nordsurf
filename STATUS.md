@@ -3,7 +3,8 @@
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
 - **Oppgave 1 (ROADMAP)** ferdig: `exposure_baseline.py` bruker nå bredde-på-tvers/skyggelengde-fysikk og 300 m kysttoleranse. Tre av fire "ferdig når"-kriterier oppfylt fullt ut; det fjerde (Grøtfjord 311-330° lav eksponering fra geometri alene) er bare DELVIS oppfylt - se eget avsnitt.
-- **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Sikringen (150 graders grense) er bygget, testet og pushet. **MEN**: en videre skann viste at dette IKKE er 2 isolerte tilfeller - praktisk talt HELE det nåværende 48-timersvarselet for Grøtfjord, Ersfjordstranda og Unstad (3 av 6 spots) har samme 150-180 graders avvik. Fysikk-kontrollør svarte SPØR THEODOR allerede før jeg fant omfanget. **Stopper og venter på beskjed** - se eget avsnitt.
+- **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Sikringen (150 graders grense) er bygget, testet og pushet. Fant at praktisk talt hele 48-timersvarselet for Grøtfjord, Ersfjordstranda og Unstad har samme 150-180 graders avvik.
+- **Motgående vindsjø-hypotesen (offshorevind) testet mot dagens data: HOLDER IKKE.** Se eget avsnitt - bare 26 % av de anomale timene har offshorevind, og Unstad er rammet i 49 av 49 timer uavhengig av vindretning. Stopper her, per instruks, og venter på beskjed.
 - Oppgave 2, 3, 4 i ROADMAP.md: ikke startet ennå.
 
 ---
@@ -163,6 +164,44 @@ Lagt til 9.1 (Unstad, interpolert time), 9.2 (samme, rå time - bekrefter safegu
 
 ### Henteren
 Ikke kjørt lokalt - ingen BarentsWatch-nøkler tilgjengelig lokalt (samme begrensning som tidligere i prosjektet), så en lokal kjøring ville bare gitt degradert data. Fiksen tas i bruk av neste ordinære "Hent varsel"-kjøring i GitHub Actions (hver 3. time), som har ekte nøkler.
+
+---
+
+## Vindsjø-hypotesen (motgående vindsjø ved offshorevind) - testet mot dagens data
+
+Theodor sin hypotese: BarentsWatch sin `totalMeanWaveDirection` er gjennomsnittet for all sjø ved punktet. Offshorevind lager vindsjø som går UT fra stranda; 250 m ut blandet med innkommende svell kan snittet peke mot land. Grøtfjord/Ersfjordstranda/Unstad har offshorevind fra SØ-Ø, Russelv/Lenangsøyra/Steinkrøssa fra S-SV - det passer med hvilke spots som er rammet.
+
+### Tallene (alle 6 spots, neste 48 timer, 294 timer med både bw_dir og facing kjent)
+
+| | Antall | Andel |
+|---|---|---|
+| Timer med over 150° avvik | 121 | - |
+| ... av disse, offshorevind | 31 | **26 %** |
+| ... av disse, offshorevind over 5 m/s | 23 | 19 % |
+| Timer med offshorevind over 5 m/s | 102 | - |
+| ... av disse, over 150° avvik | 23 | **23 %** |
+
+### Per spot
+
+| Spot | Timer sjekket | Over 150° avvik | Med offshorevind | offshore_wind-sektor | facing |
+|---|---|---|---|---|---|
+| Grøtfjord | 49 | 33 | 8 | [76, 166] | 295 |
+| Ersfjordstranda | 49 | 39 | 17 | [90, 180] | 315 |
+| Unstad | 49 | **49 (alle)** | 6 | [70, 160] | 294,8 |
+| Russelv | 49 | 0 | 7 | [90, 180] | 315 |
+| Lenangsøyra | 49 | 0 | 47 | [155, 245] | 0 |
+| Steinkrøssa | 49 | 0 | 39 | [175, 265] | 45 |
+
+### Konklusjon: hypotesen holder ikke
+
+- Bare 26 % av de anomale timene har offshorevind i det hele tatt - 74 % har det IKKE. Hvis offshorevind var årsaken, skulle andelen vært høy, ikke lav.
+- Av timene med offshorevind over 5 m/s er det bare 23 % som viser avviket - 77 % av offshorevind-timene er helt fine.
+- **Unstad er det klareste moteksempelet**: alle 49 av 49 timer er rammet, men bare 6 av dem har offshorevind i det hele tatt. Avviket er der uansett vindretning på Unstad akkurat nå - det kan ikke være vindsjø fra offshorevind som lager det når det også er der ved side- og onshorevind.
+- Et kontrollpar som svekker en geografisk/regional forklaring også: Russelv og Ersfjordstranda har IDENTISK facing (315°) og praktisk talt identisk offshore_wind-sektor ([90,180] begge), men Russelv har 0 rammede timer mot Ersfjordstranda sine 39. Samme fysiske oppsett, helt forskjellig utfall.
+
+Jeg har ikke funnet noen alternativ forklaring som passer bedre i denne omgangen (undersøkte facing, offshore_wind-sektor og område/landsdel - ingen av dem skiller rent de tre rammede spotene fra de tre urammede). Unstad 26.09 kl. 17 (296° mot facing 294,8°, nesten nøyaktig treff) bekrefter fortsatt at "fra, ingen konvertering" er riktig konvensjon for API-feltet generelt - spørsmålet er hvorfor akkurat Grøtfjord, Ersfjordstranda og Unstad sine punkter avviker så mye akkurat nå, ikke om konvensjonen i seg selv er feil.
+
+**Stopper her per instruks (punkt 3).** Har IKKE gjort noen av endringene i punkt 2 (a-e), siden hypotesen ikke besto testen i punkt 1.
 
 ---
 
