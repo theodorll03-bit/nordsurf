@@ -4,7 +4,9 @@
 
 - **Oppgave 1 (ROADMAP)** ferdig: `exposure_baseline.py` bruker nå bredde-på-tvers/skyggelengde-fysikk og 300 m kysttoleranse. Tre av fire "ferdig når"-kriterier oppfylt fullt ut; det fjerde (Grøtfjord 311-330° lav eksponering fra geometri alene) er bare DELVIS oppfylt - se eget avsnitt.
 - **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Sikringen (150 graders grense) er bygget, testet og pushet. Fant at praktisk talt hele 48-timersvarselet for Grøtfjord, Ersfjordstranda og Unstad har samme 150-180 graders avvik.
-- **Motgående vindsjø-hypotesen (offshorevind) testet mot dagens data: HOLDER IKKE.** Se eget avsnitt - bare 26 % av de anomale timene har offshorevind, og Unstad er rammet i 49 av 49 timer uavhengig av vindretning. Stopper her, per instruks, og venter på beskjed.
+- **Motgående vindsjø-hypotesen (offshorevind) testet mot dagens data: HOLDER IKKE.** Se eget avsnitt - bare 26 % av de anomale timene har offshorevind, og Unstad er rammet i 49 av 49 timer uavhengig av vindretning.
+- **Ny hypotese (kilde/fileSource varierer): kan IKKE testes fullt ut herfra.** `diagnose_bw_direction.py` er utvidet til å hente source/fileSource, begge punkter og 48 timer, og til å sammenligne mot det som står i forecast.json - men jeg har verken `gh` CLI eller BarentsWatch-nøkler lokalt, så jeg kan ikke kjøre den selv. Fant derimot en LAGRET logg fra forrige diagnose-kjøring (26.09, i din Downloads-mappe) som gir et konkret, foreløpig funn - se eget avsnitt. Trenger deg til å trigge workflowen på nytt for de fulle tallene.
+- Ikke gjort noen kodeendring i rating.py/sources.py/fetch.py - bare i diagnoseverktøyet, som instruert.
 - Oppgave 2, 3, 4 i ROADMAP.md: ikke startet ennå.
 
 ---
@@ -202,6 +204,34 @@ Theodor sin hypotese: BarentsWatch sin `totalMeanWaveDirection` er gjennomsnitte
 Jeg har ikke funnet noen alternativ forklaring som passer bedre i denne omgangen (undersøkte facing, offshore_wind-sektor og område/landsdel - ingen av dem skiller rent de tre rammede spotene fra de tre urammede). Unstad 26.09 kl. 17 (296° mot facing 294,8°, nesten nøyaktig treff) bekrefter fortsatt at "fra, ingen konvertering" er riktig konvensjon for API-feltet generelt - spørsmålet er hvorfor akkurat Grøtfjord, Ersfjordstranda og Unstad sine punkter avviker så mye akkurat nå, ikke om konvensjonen i seg selv er feil.
 
 **Stopper her per instruks (punkt 3).** Har IKKE gjort noen av endringene i punkt 2 (a-e), siden hypotesen ikke besto testen i punkt 1.
+
+---
+
+## Ny hypotese: retningskonvensjonen varierer med datakilde (source/fileSource)
+
+### Kunne ikke kjøres fullt ut herfra
+Verken `gh` CLI eller BarentsWatch-nøkler er tilgjengelig i dette miljøet (bekreftet på nytt). Jeg kan derfor ikke hente rå API-data selv, slik oppdraget ber om i punkt 1. `fetcher/diagnose_bw_direction.py` er utvidet (ikke rating.py/sources.py/fetch.py) til å:
+- Hente RÅ data for BEGGE punktene (`barentswatch_point` og `barentswatch_point_near`) per spot, 48 timer frem (var 24, bare ett punkt).
+- Beholde `source` og `fileSource` per tidsverdi, i tillegg til punktet BarentsWatch faktisk valgte.
+- Bygge en tabell per spot/punkt/kilde: antall tidsverdier, og hvor mange som har over 150 grader avvik fra facing.
+- Sammenligne rå API-verdi mot det som faktisk står i det commitede `docs/data/forecast.json` for samme tidspunkt (punkt 4).
+
+**Du må trigge "Diagnoser BarentsWatch-retning"-workflowen på nytt** (samme som sist) for at jeg skal få disse tallene - koden er pushet og klar.
+
+### Et konkret funn fra den GAMLE, lagrede loggen (før source/fileSource ble lagt til)
+Fant en lagret logg fra forrige diagnose-kjøring i din Downloads-mappe (`logs_98149256530`, kjørt 26.09.2026 kl. 12:59 UTC - FØR retningskonverteringen noen gang ble lagt til i koden, så dette er en garantert rå, utolket verdi direkte fra BarentsWatch sitt API).
+
+For Unstad, tidsverdien 2026-09-26T15:00Z (kl. 17:00 norsk tid - SAMME time som senere ble brukt til å bekrefte "fra"-konvensjonen via videobevis): denne loggen viser **`totalMeanWaveDirection = 116`** grader, rått fra API-et.
+
+Dette er **ikke** det samme tallet som "296" fra den tidligere samtalen. Jeg har forsøkt å rekonstruere hvorfor, ved å spore når konverteringskoden faktisk var aktiv (lagt til i commit `9785e1b`, kl. 16:54:58 UTC samme dag - over 4 timer ETTER denne loggen ble laget), men kan ikke gi et sikkert svar uten å vite nøyaktig når API-et selv ble spurt de gangene "296" kom fram tidligere i samtalen - det kan ha vært en annen, senere spørring mot API-et for samme tidsverdi, ikke bare et regnestykke på denne loggen sitt tall.
+
+**Hvis** BarentsWatch sitt API faktisk svarte ULIKT for nøyaktig samme tidsverdi (2026-09-26T15:00Z, Unstad) ved to forskjellige spørringstidspunkt (116 rundt kl. 13:00, og et tall som senere ble regnet om fra "296" på et senere tidspunkt samme dag) - og de to tallene er nesten nøyaktig 180 grader fra hverandre (116 og 296) - er det en konkret, om enn ikke vanntett, indikasjon som peker i retning av nettopp DIN hypotese: at kilden (og dermed konvensjonen) for et gitt punkt kan endre seg mellom kjøringer. Jeg vil ikke konkludere på dette alene - den nye kjøringen med source/fileSource fanget opp vil gi et mye sikrere svar.
+
+### Punkt 3 (Unstad kl. 17, 26.09 - source/fileSource den dagen)
+Delvis besvart: fant loggen og det rå tallet (116), men DENNE versjonen av diagnoseskriptet fanget ikke opp `source`/`fileSource` ennå - de feltene ble lagt til i dag. Kan ikke svare på hvilken kilde/fileSource som var aktiv for akkurat den timen uten en ny kjøring.
+
+### Punkt 4 (rå API-verdi vs det som står i forecast.json)
+Kan ikke sjekkes uten en ny, fersk rå henting å sammenligne mot - lagt inn som en egen seksjon i diagnoseskriptet (sammenligner automatisk mot `docs/data/forecast.json` slik det ligger i repoet når workflowen kjører). Resultatet kommer med neste kjøring.
 
 ---
 
