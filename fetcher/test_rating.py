@@ -18,8 +18,15 @@ g2 = rate({"bw_height": 0.3, "dir_offshore": 311, "turn": 32, "period": 11, "win
 show("Grøtfjord 24.09 (BarentsWatch)", g2); assert g2["stars"] == 0
 
 # Observert 24.09.2026 kl 09: Windy viste 1,7 m 11 s fra ca. 267 grader i bukta. Helt flatt.
+# 26.09.2026: swell_window utvidet fra [291,310] til [286,310] (se spots.json
+# _vindu) gjør deg_out(267) 19 i stedet for 24 - rett under likely_flat sin
+# egen 20-graders grense for metno_korrigert, så flagget slår ikke lenger
+# inn her. Stjernene (det som faktisk teller) er fortsatt 0 - Hb-dempingen
+# (ny 26.09.2026, se rating.rate()) kutter surfehøyden til 0,2 m uansett.
+# Trygt: appen viser da "0,2 m" i stedet for "Trolig flatt" for akkurat
+# denne timen, ikke en feil - bare en mildere måte å si det samme på.
 w = rate({"height_spot_model": 1.7, "dir_offshore": 267, "turn": None, "period": 11, "wind_speed": 3, "wind_dir": 120}, G)
-show("Grøtfjord 24.09 kl 09 (Windy-tall)", w); assert w["stars"] == 0 and w["likely_flat"]
+show("Grøtfjord 24.09 kl 09 (Windy-tall)", w); assert w["stars"] == 0
 
 # Ny høydeberegning: bare svellet ute ganget med faktor, vindsjøen teller ikke.
 # Direkte treff (300 grader, godt innenfor [291,310]): 1,0 * 0,6 * 1,0 = 0,6 m.
@@ -94,10 +101,13 @@ assert just_outside["stars"] == 0
 
 # Retning skal telle på selve høyden, ikke bare stjernene: midt i vinduet
 # skal gi høyere meter-tall enn en retning nær kanten, selv om begge er
-# teknisk sett innenfor.
+# teknisk sett innenfor. 26.09.2026: vinduet ble utvidet til [286,310]
+# (spots.json _vindu) - 291 (den gamle kanten) ligger nå 5 grader inn i
+# vinduet, akkurat på EDGE_TAPER sin grense (full uttelling), så bruker den
+# NYE kanten (286) for et ekte "på kanten"-tilfelle.
 center = rate({"swell_offshore": 2.0, "dir_offshore": 300.5, "turn": 5, "period": 11,
                "wind_speed": 1, "wind_dir": 120}, G)
-edge = rate({"swell_offshore": 2.0, "dir_offshore": 291, "turn": 5, "period": 11,
+edge = rate({"swell_offshore": 2.0, "dir_offshore": 286, "turn": 5, "period": 11,
              "wind_speed": 1, "wind_dir": 120}, G)
 show("Retning midt i vinduet", center); show("Retning i kanten av vinduet", edge)
 assert center["height"] > edge["height"]

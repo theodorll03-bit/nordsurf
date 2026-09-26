@@ -23,7 +23,7 @@
         "lon": 18.531728
       },
       "swell_window": [
-        291,
+        286,
         310
       ],
       "offshore_wind": [
@@ -43,7 +43,8 @@
         310
       ],
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 19 km ut, retning 300.5 grader.",
-      "_transfer": "25.09.2026: fjernet den midlertidige transfer-overstyringen (0,15) fra samme dag. Den kompenserte for at gamle høydemodellen ikke hadde noen skyggekurve for retning utenfor vinduet. Nye modellen (directness i rating.py) gjør den samme jobben ved kilden, så standardverdien 0,6 gjelder igjen her."
+      "_transfer": "25.09.2026: fjernet den midlertidige transfer-overstyringen (0,15) fra samme dag. Den kompenserte for at gamle høydemodellen ikke hadde noen skyggekurve for retning utenfor vinduet. Nye modellen (directness i rating.py) gjør den samme jobben ved kilden, så standardverdien 0,6 gjelder igjen her.",
+      "_vindu": "26.09.2026: venstre kant utvidet fra 291 til 286 grader, bekreftet med fetcher/check_spot.py mot GSHHS full oppløsning - fri linje til åpent hav 286-315 grader (under 286 er det land ca 5 km unna). Høyre kant BEHOLDT på 310 (ikke utvidet til 315, som kystlinjedataene ellers ville tillatt): Grøtfjord var helt flatt 25.09.2026 med svell fra 313 grader, sannsynligvis fordi Gjøssøya og skjær ved vestspissen av Vengsøya skjermer mer enn GSHHS viser (dataene mangler små øyer/skjær). swell_window_tegnet uendret."
     },
     {
       "id": "ersfjordstranda",
@@ -203,8 +204,8 @@
         "lon": 17.261223
       },
       "swell_window": [
-        316,
-        9
+        315,
+        16
       ],
       "offshore_wind": [
         175,
@@ -222,7 +223,8 @@
         316,
         9
       ],
-      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 14 km ut, retning 342.5 grader."
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 14 km ut, retning 342.5 grader.",
+      "_vindu": "26.09.2026: swell_window utvidet fra [316,9] til [315,16], bekreftet med fetcher/check_spot.py mot GSHHS full oppløsning - fri linje til åpent hav 315-16 grader (under 315 går linja i land 0,4 km unna, over 16 treffer den en smal odde ca 5 km unna med åpent hav bak). swell_window_tegnet uendret."
     },
     {
       "id": "unstad",
