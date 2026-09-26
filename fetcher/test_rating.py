@@ -412,5 +412,47 @@ g26 = rate({"bw_height": 0.33, "bw_dir": 114.0, "bw_period": 6.5, "swell_offshor
             "gust": 5.3, "tide": {"level": 0.0, "rising": False, "state": "lav"}}, G)
 show("Grøtfjord 26.09 (ekte data, BarentsWatch)", g26)
 assert g26["stars"] == 0 and g26["likely_flat"] and g26["height_source"] == "barentswatch"
+# 27.09.2026: bw_dir 114 her er 179 grader fra facing (295) - samme mønster
+# som Unstad-feilen under. Regnes nå som en mistenkt datafeil (nøytral
+# retningsfaktor, IKKE lenger tvunget til 0 av retningen alene), men
+# stjernene forblir 0 uansett - svellandelen/perioden alene holder det
+# under flat-sperren. Se STATUS.md for det fulle mønsteret.
+assert g26["spot_direction_error"] is True
+
+# ---------- 27.09.2026: BarentsWatch-retning >150 grader fra facing er en datafeil ----------
+# Ekte hendelse: Unstad i morgen kl. 10 (2026-09-27T08:00Z) viste 0,0 m og
+# "Kildene er uenige", selv om svellet ute var 2,3 m fra 255 grader og
+# BarentsWatch sin egen nettside viste sammenlignbar høyde. bw_dir (115) var
+# 180 grader fra facing (294,8) - bølger går ikke rett ut fra en strand i
+# praksis, så dette regnes nå som en datafeil, ikke ekte retning.
+u_dir_error = rate({"bw_height": 0.61, "bw_dir": 115.0, "bw_period": 9.8, "swell_offshore": 2.3,
+                     "height_offshore": 3.3, "dir_offshore": 255, "period": 8.85,
+                     "wind_speed": 7.8, "wind_dir": 203.0, "gust": 13.0, "bw_interpolated": True}, U)
+show("9.1: Unstad i morgen kl 10 (BW-retning 180° avvik, datafeil)", u_dir_error)
+assert u_dir_error["spot_direction_factor"] == 1.0
+assert u_dir_error["spot_direction_error"] is True
+assert u_dir_error["uncertain"] is True
+assert u_dir_error["sources_disagree"] is False  # retningen alene skal ikke utløse dette
+assert u_dir_error["surf_height"] > 0  # ikke lenger tvunget til 0 av den feilaktige retningen
+
+# 9.2: samme, men rå (ikke interpolert) time - safeguarden skal virke likt
+# uansett bw_interpolated, siden interpolering ikke er årsaken til feilen
+# (bekreftet: begge de RÅ BarentsWatch-punktene rundt denne timen hadde
+# allerede samme, feilaktige retning - ikke noe interpolasjonen skapte).
+u_dir_error_raw = rate({"bw_height": 0.61, "bw_dir": 115.0, "bw_period": 9.8, "swell_offshore": 2.3,
+                         "height_offshore": 3.3, "dir_offshore": 255, "period": 8.85,
+                         "wind_speed": 7.8, "wind_dir": 203.0, "gust": 13.0, "bw_interpolated": False}, U)
+show("9.2: samme, rå (ikke interpolert) BarentsWatch-time", u_dir_error_raw)
+assert u_dir_error_raw["spot_direction_factor"] == u_dir_error["spot_direction_factor"]
+assert u_dir_error_raw["surf_height"] == u_dir_error["surf_height"]
+
+# 9.3: grensen - rett under 150 grader er fortsatt ekte (retningsfaktor 0,
+# IKKE en datafeil), rett over er en datafeil (retningsfaktor 1,0, nøytral).
+from rating import spot_direction_factor as _sdf
+just_under = _sdf(U["facing"] + 149, U["facing"])
+just_over = _sdf(U["facing"] + 151, U["facing"])
+print(f"{'9.3: grense 149/151 grader fra facing':<40} {just_under} {just_over}")
+assert just_under == (0.0, True, False)
+assert just_over == (1.0, True, True)
 
 print("Alle tester ok")

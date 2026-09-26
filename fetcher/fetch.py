@@ -170,6 +170,17 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
     REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
 
+    # 27.09.2026: BarentsWatch-retning ved spoten mer enn 150 grader fra
+    # facing er en datafeil, ikke fysikk (se rating.spot_direction_factor).
+    # Nøytraliseres allerede i ratingen (retningsfaktor 1,0, timen usikker) -
+    # denne linja er bare til synlighet, så mønsteret oppdages tidlig.
+    dir_error_hours = [h["t"] for h in hours if h.get("spot_direction_error")]
+    if dir_error_hours:
+        REPORT.append((name, "BarentsWatch-retning ved spoten", "feil",
+                       f"{len(dir_error_hours)} time(r) med over 150 grader avvik fra facing - "
+                       f"trolig datafeil, ikke brukt i ratingen: {', '.join(dir_error_hours[:5])}"
+                       + ("..." if len(dir_error_hours) > 5 else "")))
+
     new_pairs = calibrate.bw_pairs_for_run(hours, run_id)
     merged_pairs = calibrate.merge_bw_pairs(bw_pairs_existing, new_pairs, now)
     bw_calib[spot["id"]] = merged_pairs

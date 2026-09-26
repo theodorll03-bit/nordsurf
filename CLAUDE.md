@@ -25,6 +25,7 @@ Når en modell motsier en observasjon, er det modellen som er feil.
 - Surfehøyde: Komar og Gaughan (1972), Hb = 0,39 × g^(1/5) × (T × H²)^(2/5). Sett = 1,27 × Hb. Flat-sperre: Hs ved spoten under 0,35 m gir 0.
 - To kalibreringer som ikke skal blandes: transfer (Hs mot Hs, modell mot modell) og surf_factor (surfehøyde mot logger).
 - Maks bølgehøyde vises, men brukes aldri i ratingen.
+- BarentsWatch-retning ved spoten mer enn 150 grader fra facing er en datafeil, ikke fysikk.
 
 ## Krever Theodors ja (stopp og spør)
 - Endringer i svellvinduer, havpunkter, barentswatch_point, facing, offshorevind, exposure_override, ideal_height, max_height, SHADOW_CURVE, DEFAULT_TRANSFER, vindtabellen eller stjernegrenser.
