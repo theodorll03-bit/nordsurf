@@ -193,4 +193,20 @@ print("7b GFS har data kl 00, mangler kl 01:", result["2026-01-01T00:00Z"]["dir"
 assert result["2026-01-01T00:00Z"]["dir"] == 260 and result["2026-01-01T00:00Z"]["swell_model"] == "gfs"
 assert result["2026-01-01T01:00Z"]["dir"] == 240 and result["2026-01-01T01:00Z"]["swell_model"] == "standard"
 
+# ---------- 7c: GFS svarer med bokstavelig 0.0/0 (ikke null) der ruta ikke har
+# gyldig sjødekning (sett i Lyngen) - skal falle tilbake til standardmodellen,
+# ikke bli tolket som ekte (og retningsløs) flau sjø ----------
+def fake_openmeteo_fetch_zero(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:
+        return {"2026-01-01T00:00Z": {"height": 0.0, "swell_height": 0.0, "swell_dir": 0, "swell_period": 0.0,
+                                       "secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0}}
+    return {"2026-01-01T00:00Z": {"height": 0.88, "swell_height": 0.56, "swell_dir": 271, "swell_period": 17.3,
+                                   "secondary_swell_height": 0.48, "secondary_swell_dir": 327, "secondary_swell_period": 6.55}}
+sources._openmeteo_fetch = fake_openmeteo_fetch_zero
+result = real_openmeteo_marine(70.35, 20.45)
+sources._openmeteo_fetch = real_openmeteo_fetch
+print("7c GFS svarer med 0.0 pa alt (ingen dekning) -> faller til standardmodellen:", result["2026-01-01T00:00Z"])
+assert result["2026-01-01T00:00Z"]["dir"] == 271 and result["2026-01-01T00:00Z"]["swell_model"] == "standard"
+assert result["2026-01-01T00:00Z"]["height"] == 0.88
+
 print("Pipeline ok")

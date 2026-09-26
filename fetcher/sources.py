@@ -133,6 +133,14 @@ def _openmeteo_fetch(lat, lon, model=None):
     return out
 
 
+def _has_real_swell(v):
+    """True hvis kilden faktisk har svelldata for punktet. Enkelte modellpunkt
+    (sett i smale fjordløp der GFS Wave sitt 0.25-graders rutenett ikke har
+    gyldig sjødekning) svarer med bokstavelig 0.0/0 på alt i stedet for null -
+    skilles fra en ekte flau/stille sjø ved at retningen da også er nøyaktig 0."""
+    return v.get("swell_height") not in (None, 0) and v.get("swell_dir") is not None
+
+
 def openmeteo_marine(lat, lon):
     """Hovedsvellet (retning, høyde, periode), fra GFS Wave. Faller tilbake til
     Open-Meteo sin standardmodell for en time der GFS ikke har svelldata for
@@ -146,14 +154,14 @@ def openmeteo_marine(lat, lon):
     out = {}
     for k in sorted(set(primary) | set(fallback)):
         p, f = primary.get(k, {}), fallback.get(k, {})
-        if p.get("swell_height") is not None and p.get("swell_dir") is not None:
+        if _has_real_swell(p):
             src, model = p, "gfs"
-        elif f.get("swell_height") is not None and f.get("swell_dir") is not None:
+        elif _has_real_swell(f):
             src, model = f, "standard"
         else:
             src, model = p, None
         height = p.get("height")
-        if height is None:
+        if not height:  # None eller 0.0 - GFS har ikke gyldig dekning i punktet (se _has_real_swell)
             height = f.get("height")
         out[k] = {
             "height": height,
