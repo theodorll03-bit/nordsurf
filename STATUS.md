@@ -3,7 +3,7 @@
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
 - **Oppgave 1 (ROADMAP)** ferdig: `exposure_baseline.py` bruker nå bredde-på-tvers/skyggelengde-fysikk og 300 m kysttoleranse. Tre av fire "ferdig når"-kriterier oppfylt fullt ut; det fjerde (Grøtfjord 311-330° lav eksponering fra geometri alene) er bare DELVIS oppfylt - se eget avsnitt.
-- **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Rotårsak ikke fastslått med sikkerhet, men en konkret sikring er bygget og testet. **Fysikk-kontrollør svarte SPØR THEODOR på denne** - se eget avsnitt, venter på beskjed før jeg går videre i køen.
+- **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Sikringen (150 graders grense) er bygget, testet og pushet. **MEN**: en videre skann viste at dette IKKE er 2 isolerte tilfeller - praktisk talt HELE det nåværende 48-timersvarselet for Grøtfjord, Ersfjordstranda og Unstad (3 av 6 spots) har samme 150-180 graders avvik. Fysikk-kontrollør svarte SPØR THEODOR allerede før jeg fant omfanget. **Stopper og venter på beskjed** - se eget avsnitt.
 - Oppgave 2, 3, 4 i ROADMAP.md: ikke startet ennå.
 
 ---
@@ -117,16 +117,26 @@ Selve fysikken (bredde på tvers, skyggeformel, kysttoleranse, glatting) ble vur
 - **Ikke en interpoleringsfeil**: begge de RÅ (ikke-interpolerte) BarentsWatch-punktene som omgir timen (06:00Z og 09:00Z) hadde allerede samme feilaktige retning (115°) - feilen kommer fra selve API-svaret, ikke fra `_lerp_circular()`.
 - **`gh` CLI er ikke tilgjengelig** i dette miljøet (bekreftet på nytt) - kunne ikke trigge diagnose-workflowen selv, slik CLAUDE.md ber om når mulig. Kunne heller ikke slå opp hvilket rutepunkt BarentsWatch sitt API faktisk valgte som nærmeste (krever enten `gh workflow run` eller live API-nøkler, ingen av delene tilgjengelig lokalt).
 
-### Et bekymringsfullt mønster (ikke bare denne ene timen)
-Fant samme avvik i en ALLEREDE EKSISTERENDE, fast test (Grøtfjord 26.09, ekte data): `bw_dir=114` mot `facing=295`, ca. 179 grader avvik - praktisk talt identisk mønster.
+### OPPDATERT ETTER PUSH: dette er ikke 2 isolerte tilfeller - det er SYSTEMATISK i hele det nåværende varselet
+
+Etter at fiksen var committet og pushet, sjekket jeg CLAUDE.md sin egen stoppregel ("flytter stjernene med 2 eller mer... vis tabell før og etter") grundigere ved å skanne HELE 48-timersvinduet i det nåværende `docs/data/forecast.json` for alle timer med over 150 grader avvik. Resultatet er mye mer alvorlig enn de 2 tilfellene jeg først rapporterte:
+
+**Praktisk talt ALLE timer de neste 48+ timene for Grøtfjord, Ersfjordstranda OG Unstad** (3 av 6 spots) har `bw_dir` mellom ca. 150 og 180 grader fra `facing` - ikke unntaket, men normaltilstanden i akkurat denne kjøringen:
+- Grøtfjord: ca. 30 av 30+ sjekkede timer, stort sett 179°.
+- Ersfjordstranda: ca. 35 av 35+ sjekkede timer, stort sett 155°.
+- Unstad: praktisk talt SAMTLIGE timer i vinduet, stort sett 177-180°.
+- Russelv, Lenangsøyra, Steinkrøssa: **ingen** treff i samme skann - disse 3 spotene ser ut til å være upåvirket.
+
+Ingen av disse enkelttimene ga et 2-stjerners hopp (alle var allerede 0 stjerner, eller ble 0→1), så CLAUDE.md sin bokstavelige stoppregel (2+ stjerners endring) utløses ikke - men det er fordi høyden/vinden uansett holdt dem lave, IKKE fordi retningsfeilen er triviell. Den underliggende dataen for tre av seks spots er mistenkelig i praktisk talt hele det nåværende varselvinduet.
 
 | Time | Avvik fra facing | Svellandel (swell_share) |
 |---|---|---|
 | Unstad 26.09 kl. 17 (etablerte "fra"-konvensjonen) | ≈1° | 94 % (nesten ren svell) |
-| Grøtfjord 26.09 (fast test) | ≈179° | 44 % (mye vindsjø) |
-| Unstad i morgen kl. 10 | ≈180° | 70 % (en del vindsjø) |
+| Grøtfjord, Ersfjordstranda, Unstad - hele det nåværende 48t-vinduet | 150-180°, stort sett 155-180° | Variert, ikke konsekvent knyttet til vindsjøandel ved nærmere sjekk |
 
-**Uverifisert hypotese**: BarentsWatch sin `totalMeanWaveDirection` kan bruke en annen konvensjon (eller ha en datakvalitetsfeil) for den kombinerte sjøtilstanden når vindsjøandelen er stor nok til å dominere - bare 2 datapunkter, ikke bevist.
+**Vindsjø-hypotesen fra før svekkes** av at dette rammer så og si ALLE timer i vinduet, uavhengig av svellandel - noe mer grunnleggende enn "vindsjø forstyrrer retningsfeltet i enkelte timer" ser ut til å foregå. Mulige forklaringer jeg IKKE har kunnet undersøke uten `gh`/live API-tilgang: en modellversjon eller kjøring hos BarentsWatch som for øyeblikket har snudd konvensjonen for disse tre spotenes rutepunkter spesielt (kanskje geografisk/regionalt betinget), en feil i hvordan disse tre spotenes `barentswatch_point` treffer BarentsWatch sitt rutenett akkurat nå, eller noe helt annet. **Jeg vet ikke hvorfor akkurat disse tre spotene og ikke de tre andre.**
+
+**Dette er større enn en "spør Theodor om terskelen skal utvides"-sak. Det reiser spørsmålet om "fra, ingen konvertering"-konklusjonen fra i går fortsatt er riktig for disse tre spotenes rutepunkter akkurat nå, eller om noe har endret seg på BarentsWatch sin side siden den ble bekreftet.** Jeg har IKKE reversert eller endret konvensjonen - bare lagt til sikringen som eksplisitt bedt om - men jeg stopper her og venter på beskjed før jeg går videre i ROADMAP-køen, siden dette er nøyaktig den typen "modell mot observasjon"-spørsmål CLAUDE.md sier skal stoppes på.
 
 ### Fiksen (som eksplisitt beskrevet av Theodor)
 `rating.spot_direction_factor()`: avvik over 150 grader fra facing regnes nå som en DATAFEIL, ikke fysikk (bølger går ikke rett ut fra en strand i praksis). Gir nøytral retningsfaktor 1,0 (ikke 0), tvinger timen usikker (maks 3 stjerner), og hindrer at `sources_disagree` utløses av retningen alene. `fetch.py` varsler i kilderapporten når dette skjer, med tidspunktene.
