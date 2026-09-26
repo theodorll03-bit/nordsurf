@@ -87,6 +87,33 @@ async function toggleFavorite(spotId){
   notify();
 }
 
+async function listReports(spotId){
+  if(!client) return [];
+  const { data, error } = await client
+    .from("reports")
+    .select("id, user_id, text, wave_height_m, wind_impression, created_at, profiles(display_name)")
+    .eq("spot_id", spotId)
+    .order("created_at", { ascending:false })
+    .limit(20);
+  if(error){ console.error("Fant ikke rapporter", error); return []; }
+  return data;
+}
+
+async function postReport(spotId, text, waveHeight, windImpression){
+  if(!client || !state.user) throw new Error("Ikke innlogget");
+  const { error } = await client.from("reports").insert({
+    spot_id: spotId, user_id: state.user.id, text,
+    wave_height_m: waveHeight ?? null, wind_impression: windImpression ?? null,
+  });
+  if(error) throw error;
+}
+
+async function deleteReport(id){
+  if(!client) return;
+  const { error } = await client.from("reports").delete().eq("id", id);
+  if(error) throw error;
+}
+
 async function deleteAccount(){
   if(!client || !state.user) return;
   const { data:{ session } } = await client.auth.getSession();
@@ -98,6 +125,6 @@ async function deleteAccount(){
   await client.auth.signOut();
 }
 
-window.Auth = { init, onChange, sendLoginLink, signOut, saveDisplayName, toggleFavorite, deleteAccount, get state(){ return state; } };
+window.Auth = { init, onChange, sendLoginLink, signOut, saveDisplayName, toggleFavorite, listReports, postReport, deleteReport, deleteAccount, get state(){ return state; } };
 init();
 })();

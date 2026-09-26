@@ -196,6 +196,24 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 .form p{margin:6px 0 0;color:var(--muted);font-size:15px}
 .row-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .ghost{background:none;border:1.5px solid var(--line);border-radius:22px;min-height:44px;padding:0 18px;cursor:pointer;font-size:15px}
+
+/* Rapporter */
+.reports{background:var(--raised);border-radius:14px;padding:0 16px;margin:0 0 24px}
+.report{padding:12px 0;border-top:1px solid var(--line)}
+.report:first-child{border-top:0}
+.report-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.report-head b{font-size:15px}
+.report-time{color:var(--muted);font-size:13px}
+.report-del{all:unset;margin-left:auto;color:var(--muted);font-size:13px;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.report-extras{margin:4px 0 0;color:var(--muted);font-size:14px}
+.report-text{margin:4px 0 0;font-size:15px;white-space:pre-wrap;overflow-wrap:break-word}
+.report-form{padding:14px 0;border-top:1px solid var(--line)}
+.reports > .report-form:first-child{border-top:0}
+.report-form textarea{font:inherit;font-size:16px;width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);resize:vertical}
+.report-form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.report-form-row label{font-size:14px;color:var(--muted)}
+.report-form-row input[type=number]{font:inherit;font-size:16px;width:80px;min-height:40px;padding:0 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.report-form-row select{width:auto;min-height:40px}
 </style>
 </head>
 <body class="has-tabs">
@@ -554,7 +572,9 @@ function renderSpot(){
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
       <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
       <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":"–"} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
-    </div>`;
+    </div>
+    <h2 class="sec">Rapporter fra andre</h2>
+    <div class="reports" id="reportsSection"><p style="color:var(--muted);padding:14px 0">Laster…</p></div>`;
 
   $("#back").onclick = ()=>{ state.spot=null; render(); };
   wireFavButtons();
@@ -566,6 +586,83 @@ function renderSpot(){
     const sel = $(".h.sel");
     if(sel) sel.scrollIntoView({inline:"center", block:"nearest"});
   }
+  loadReportsUI(s.id);
+}
+
+/* ---------- Rapporter ---------- */
+const WIND_IMPRESSION_WORD = {offshore:"Offshore", onshore:"Onshore", side:"Sidevind", stille:"Stille"};
+function reportItemHtml(r){
+  const mine = !!(window.Auth && Auth.state.user && r.user_id === Auth.state.user.id);
+  const name = r.profiles && r.profiles.display_name ? esc(r.profiles.display_name) : "Ukjent";
+  const d = new Date(r.created_at);
+  const extras = [
+    r.wave_height_m!=null ? `${nf1.format(r.wave_height_m)} m` : null,
+    r.wind_impression ? WIND_IMPRESSION_WORD[r.wind_impression] : null,
+  ].filter(Boolean).join(" · ");
+  return `<div class="report">
+    <div class="report-head">
+      <b>${name}</b>
+      <span class="report-time">${relDay(d)} kl. ${fmtTime.format(d)}</span>
+      ${mine?`<button type="button" class="report-del" data-id="${esc(r.id)}">Slett</button>`:""}
+    </div>
+    ${extras?`<p class="report-extras">${esc(extras)}</p>`:""}
+    <p class="report-text">${esc(r.text)}</p>
+  </div>`;
+}
+function reportFormHtml(){
+  const a = window.Auth && Auth.state;
+  if(!a || !a.user){
+    return `<p style="color:var(--muted);padding:14px 0">Logg inn for å se og skrive rapporter.</p>`;
+  }
+  if(!a.profile){
+    return `<p style="color:var(--muted);padding:14px 0">Sett et visningsnavn i <a href="#" id="gotoKonto">Innstillinger</a> før du kan skrive rapporter.</p>`;
+  }
+  return `<div class="report-form">
+    <textarea id="reportText" maxlength="500" rows="3" placeholder="Hvordan var det i vannet?"></textarea>
+    <div class="report-form-row">
+      <label for="reportWave">Bølgehøyde</label>
+      <input type="number" id="reportWave" step="0.1" min="0" max="10" placeholder="m">
+      <label for="reportWind">Vind</label>
+      <select id="reportWind">
+        <option value="">Ikke oppgitt</option>
+        <option value="offshore">Offshore</option>
+        <option value="onshore">Onshore</option>
+        <option value="side">Sidevind</option>
+        <option value="stille">Stille</option>
+      </select>
+    </div>
+    <div class="row-btns"><button class="primary" id="reportSend" style="min-height:44px">Del rapport</button></div>
+  </div>`;
+}
+async function loadReportsUI(spotId){
+  const el = $("#reportsSection");
+  if(!el) return;
+  const a = window.Auth && Auth.state;
+  if(!a || !a.ready){ el.innerHTML = `<p style="color:var(--muted);padding:14px 0">Laster…</p>`; return; }
+  let listHtml = "";
+  if(a.user){
+    const reports = await Auth.listReports(spotId);
+    listHtml = reports.length ? reports.map(reportItemHtml).join("") : `<p style="color:var(--muted);padding:14px 0">Ingen rapporter ennå.</p>`;
+  }
+  if($("#reportsSection") !== el) return; // spot byttet mens vi ventet
+  el.innerHTML = listHtml + reportFormHtml();
+  const gk = $("#gotoKonto");
+  if(gk) gk.onclick = (e)=>{ e.preventDefault(); state.tab = "innstillinger"; render(); window.scrollTo(0,0); };
+  const send = $("#reportSend");
+  if(send) send.onclick = async ()=>{
+    const text = $("#reportText").value.trim();
+    if(!text) return;
+    const wave = $("#reportWave").value ? parseFloat($("#reportWave").value) : null;
+    const wind = $("#reportWind").value || null;
+    send.disabled = true;
+    try{ await Auth.postReport(spotId, text, wave, wind); await loadReportsUI(spotId); toast("Rapport delt"); }
+    catch(e){ toast("Kunne ikke dele rapport: " + e.message); send.disabled = false; }
+  };
+  document.querySelectorAll(".report-del").forEach(b=>b.onclick=async ()=>{
+    if(!confirm("Slette denne rapporten?")) return;
+    try{ await Auth.deleteReport(b.dataset.id); await loadReportsUI(spotId); }
+    catch(e){ toast("Kunne ikke slette: " + e.message); }
+  });
 }
 
 /* ---------- Logger ---------- */
