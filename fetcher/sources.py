@@ -409,6 +409,46 @@ def bw_interpolate(raw):
     return out
 
 
+def weather_interpolate(raw):
+    """Fyller met.no Locationforecast (metno_weather) sine timer til én verdi
+    per hele time. 27.09.2026: live sjekk viste at Locationforecast bare gir
+    ekte TIMESoppløsning ca. 51 timer fram (2026-09-27T15:00Z til
+    2026-09-29T18:00Z i den sjekken) - deretter hver 6. time, resten av
+    horisonten (til ca. 10 døgn). Uten interpolasjon mangler fem av seks
+    timer vind helt der, og fikk datafeil-straffen for ukjent vind (se
+    rating.wind_penalty()), selv om vinden i praksis endrer seg jevnt mellom
+    to kjente punkter. Vindstyrke, kast og lufttemperatur: lineær. Retning:
+    sirkulær (samme prinsipp som bw_interpolate()). Interpolerer bare mellom
+    punkter maks 6 timer fra hverandre (met.no sitt eget steg her - videre
+    enn BarentsWatch sine 3 timer). Ekstrapolerer aldri forbi siste punkt.
+    Sjekket: met.no Oceanforecast og Open-Meteo Marine har IKKE samme problem
+    (begge jevn timesoppløsning hele sin egen horisont, sjekket live samme
+    dag) - trenger derfor ingen tilsvarende interpolering.
+    {time: {wind_speed,wind_dir,gust,air_temp,wind_interpolated}}
+    """
+    if not raw:
+        return {}
+    times = sorted(raw)
+    out = {t: {**raw[t], "wind_interpolated": False} for t in times}
+    for t0, t1 in zip(times, times[1:]):
+        d0, d1 = parse_iso(t0), parse_iso(t1)
+        gap = round((d1 - d0).total_seconds() / 3600)
+        if not (0 < gap <= 6):
+            continue  # hull i serien - ikke fyll, og ikke ekstrapoler
+        v0, v1 = raw[t0], raw[t1]
+        for step in range(1, gap):
+            frac = step / gap
+            tk = hour_key(d0 + dt.timedelta(hours=step))
+            out[tk] = {
+                "wind_speed": _lerp(v0.get("wind_speed"), v1.get("wind_speed"), frac),
+                "wind_dir": _lerp_circular(v0.get("wind_dir"), v1.get("wind_dir"), frac),
+                "gust": _lerp(v0.get("gust"), v1.get("gust"), frac),
+                "air_temp": _lerp(v0.get("air_temp"), v1.get("air_temp"), frac),
+                "wind_interpolated": True,
+            }
+    return out
+
+
 # ---------- Loggene dine (privat GitHub-repo) ----------
 
 def github_logs():

@@ -3,7 +3,8 @@
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
 - **Ny spot: Tromvik (Kvaløya), lagt til utenom køen.** Svellvindu og havpunkt verifisert nøyaktig mot Theodors tall med `check_spot.py`. `exposure_baseline.py` kjørt på nytt (de 6 andre spotenes tall byte for byte uendret). Sammenligning mot Grøtfjord onsdag kl. 12 viser akkurat det tiltenkte: svell fra 319° gir Tromvik 3 stjerner (rett i vinduet) mens Grøtfjord forblir flatt (langt utenfor sitt) - de to spotene dekker hver sin del av retningene fra nordvest. Kartet grupperer og separerer de to riktig, ingen overlapp. BarentsWatch-dekning for punktene ikke bekreftet (ingen nøkler lokalt, samme kjente begrensning som alle andre spots). Se eget avsnitt.
-- **To nye feil lagt til ROADMAP.md (oppgave 1 og 2), IKKE startet ennå:** vinden forsvinner fra appen etter ca. 60 timer (met.no gir bare timesdata den første perioden, deretter hver 6. time - henteren matcher på eksakt time og mister fem av seks timer), og vindpila på spot-skiva er visuelt rotete (går tvers gjennom skiva, pilhodet havner under ratingringen).
+- **ROADMAP oppgave 1 (vinden forsvinner fra onsdag kl. 12): FERDIG.** Live sjekk (ingen nøkler trengs) bekreftet at bare met.no Locationforecast (vind) har problemet - time for time i ca. 51 timer, deretter hver 6. time. Oceanforecast og Open-Meteo Marine har begge jevnt tidssteg hele sin horisont - ingen retting trengt der. Ny `sources.weather_interpolate()` (lineær for styrke/kast/lufttemp, sirkulær for retning, maks 6 timers hull, aldri ekstrapolert), nytt felt `wind_interpolated`, "vind jevnet ut" i appen, ny kilderapport-rad per kilde som viser hvor tidssteget endrer seg. 71 timer (alle 7 spots) fikk endret stjerner i én lokal kjøring - alle +1 der, men fysikk-kontrollør fant selv én nedgang (+1 straff) i en egen, uavhengig kjøring senere samme dag - riktig oppførsel (ekte vind gir riktigere straff enn den gamle faste "ukjent vind"-gjetningen), ikke en garanti om at stjerner alltid går opp. Maks endring uansett 1, ikke 2+, i begge kjøringene. Se eget avsnitt.
+- **ROADMAP oppgave 2 (vindpila på spot-skiva): lagt til i ROADMAP.md, IKKE startet ennå.** Visuelt rotete (går tvers gjennom skiva, pilhodet havner under ratingringen) - krever et frontend-omdesign (vindvimpel utenfor ratingringen, klippesti for animasjonen) og skjermbilde-verifisering i flere fargemodus/vindretninger. Ikke påbegynt.
 - **ROADMAP oppgave 3 (Grøtfjord: "blåst ut" skilt fra ekte flatt): FERDIG.** Grøtfjord tirsdag kl. 14 viste "Trolig flatt"/0,0 m med 0,9 av 5,9 m totalt (84 % vindsjø) og 14 m/s side-onshore - ikke flatt, blåst ut. Ny `rating.is_blown_out()`: sann når `low_hs` (flat-sperren) slår inn PÅ TROSS AV en reell BarentsWatch-totalhøyde, fordi svellandelen er lav eller vinden er sterk onshore/side-onshore. Nytt felt `blown_out`, ny forklaringstekst, frontend viser "Blåst ut (X m)" (BarentsWatch sin egen totalhøyde) i stedet for den sterkt dempede nær-null-høyden. Stjernene fortsatt 0. Se eget avsnitt.
 - **ROADMAP oppgave 4a/4b (source/fileSource-hypotesen testet med data): FERDIG. 4c venter på neste Actions-kjøring.** Detaljsiden viste bølgene ved spoten fra Ø mens vinden var fra VSV - mistanke om at retningen er snudd for enkelte kilder. `sources.barentswatch_point()` lagrer nå `source`/`fileSource`/rå retning permanent. Ny plausibilitetssjekk (`fetch.bw_direction_plausible()`): i sterk vind/lav svellandel bør BarentsWatch-retningen følge vindretningen innenfor 60 grader - telt opp per source/fileSource, med og uten +180-omregningen. Endrer aldri ratingen selv. Ingen ekte data lokalt ennå - tabellen skrives i STATUS.md etter neste Actions-kjøring, og stopper for Theodors ja hvis én kilde konsekvent stemmer uten omregning. Se eget avsnitt.
 - **ROADMAP oppgave 6 (koble del C inn i ratingen): FERDIG, Theodor sa ja etter tre rettelser - committet.** Fysikk-kontrollør fant først at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling) - rettet ved å fjerne den ekstra dempingen for svell_ute/barentswatch. Theodor pekte deretter på at Ersfjordstranda sitt tilfelle (svell 4-6 grader UTENFOR vinduet OG den frie sektoren, bare når spoten via diffraksjon) er en ANNEN, ekte situasjon enn Unstad sin (fri linje) - samme fysikk som Grøtfjord 25.09.2026 (utenfor vinduet, helt flatt). Rettelse: ny `raw_exposure_zero()` - ekstra Hb-demping bare når RÅ (ikke glattet) geometrisk eksponering er nøyaktig 0. Fysikk-kontrollør fant deretter at dette ville dobbeltdempe Grøtfjord sin `exposure_override`-sone (317-330, rå eksponering også 0 der) - rettet ved å droppe den ekstra dempingen når en override dekker retningen (overriden ER allerede den kalibrerte sannheten). Endelig tabell: 13 timer med 2+ endring (Unstad opp 5, Steinkrøssa ned 1 - begge uendret fra Theodors "ja"), Ersfjordstranda og Grøtfjord helt tilbake til 0 endring. Se eget avsnitt.
@@ -573,6 +574,48 @@ Ingen ekte BarentsWatch-data lokalt (kjent begrensning), så ingen reelle tall �
 
 ---
 
+## Oppgave 1: vinden forsvinner fra onsdag kl. 12
+
+### Live sjekk av selve problemet (27.09.2026)
+Hentet met.no sine tre kilder direkte (ingen nøkler trengs, offentlig API) og målte tidssteget mellom påfølgende punkter:
+
+| Kilde | Jevnt tidssteg? |
+|---|---|
+| Locationforecast (vind) | NEI - time for time i ca. 51 timer (i denne sjekken: 2026-09-27T15:00Z til 2026-09-29T18:00Z), deretter hver 6. time i resten av horisonten (til ca. 10 døgn) |
+| Oceanforecast (met.no hav, spot og ute) | JA - jevnt tidssteg på 1 time hele sin egen horisont (201 timer, ca. 8,4 døgn), ingen endring funnet |
+| Open-Meteo Marine (svell ute) | JA - jevnt tidssteg på 1 time hele sin horisont (120 timer, 5 døgn) |
+
+**Konklusjon: bare vind (met.no Locationforecast) har problemet.** De to andre kildene trengte ingen retting - ingen unødvendig kode lagt til der. Siden Open-Meteo (120 timer) og `HOURS_AHEAD_MAX` (120 timer) uansett begrenser hele varselets horisont, rammer bruddet i praksis timene fra ca. time 51 til 120 - den siste dryge halvparten av 5-døgnsvarselet.
+
+### Hva som er gjort
+- Ny `sources.weather_interpolate(raw)`: samme mønster som den eksisterende `bw_interpolate()` (lineær for vindstyrke/kast/lufttemperatur, sirkulær - korteste vei - for retning), men tillater opptil 6 timer mellom punkter (met.no sitt eget steg her, mot BarentsWatch sine 3). Ekstrapolerer aldri forbi siste punkt. Feltet heter `wind_interpolated` (ikke det generiske "interpolated" som `bw_interpolate()` bruker internt) - siden vindfeltene spres direkte inn i timen med `**(w or {})` i `fetch.py`, uten en egen omdøping slik `bw_interpolated` får, måtte selve feltnavnet stemme fra kilden.
+- `fetch.py` kaller nå `sources.weather_interpolate()` på den rå met.no-responsen før den brukes - ingen time mister lenger vind fullstendig.
+- Frontend (`docs/index.html`): "vind jevnet ut" i liten tekst ved siden av vindtallene på detaljsiden når `wind_interpolated` er sann.
+- Ny `fetch._timestep_summary()`: finner horisont og hvor (om noe sted) tidssteget mellom påfølgende punkter endrer seg i en rå kildedict - ny kilderapport-rad ("kilde, tidssteg") for alle fire relevante kilder (met.no hav spot/ute, Open-Meteo svell, met.no vind), så mønsteret er synlig i hver kjøring, ikke bare denne engangssjekken.
+
+### Tester
+Ny seksjon 14 i `fetcher/test_rating.py`: vind hver 6. time gir korrekt lineært interpolerte mellomtimer (14.1, inkludert at retning 350→10 grader gir 0 midt mellom - sirkulært, ikke den feilaktige 180 en naiv lineær interpolasjon ville gitt), ingen ekstrapolering forbi siste punkt og ingen fylling over et hull større enn 6 timer (14.2), og at `_timestep_summary()` både finner en reell endring og korrekt rapporterer "jevnt tidssteg" når det ikke finnes noen å måle (14.3/14.3b). Alle eksisterende tester (inkludert `test_pipeline.py` sin egen, uendrede mock av `metno_weather`) fortsatt grønne.
+
+### Stjernetabell før og etter (timer der vinden nå er interpolert)
+Kjørte `rate()` for alle timer der `wind_interpolated` er sann i en ekte, lokal kjøring (71 timer totalt på tvers av alle 7 spots, denne konkrete kjøringen), FØR (vind fullstendig fjernet fra timen - det den gamle koden faktisk ga) mot ETTER (interpolert vind):
+
+| Spot | Interpolerte vindtimer | Opp | Ned | Uendret | Maks endring |
+|---|---|---|---|---|---|
+| Grøtfjord | 40 | 0 | 0 | 40 | 0 |
+| Tromvik | 40 | 15 | 0 | 25 | 1 |
+| Ersfjordstranda | 40 | 2 | 0 | 38 | 1 |
+| Russelv | 40 | 8 | 0 | 32 | 1 |
+| Lenangsøyra | 40 | 12 | 0 | 28 | 1 |
+| Steinkrøssa | 40 | 27 | 0 | 13 | 1 |
+| Unstad | 40 | 7 | 0 | 33 | 1 |
+
+71 av 280 timer endrer seg i denne kjøringen, alle +1, ingen 2+, ingen nedgang - men det er **hva som ble observert i denne konkrete kjøringen, ikke en garantert egenskap ved koden**. Fysikk-kontrollør gjorde en egen, uavhengig live-kjøring på et annet tidspunkt samme dag og fant et moteksempel: Grøtfjord fikk én time (53 timer ut) der straffen faktisk økte (fra den gamle, faste "ukjent vind"-straffen på 1, til en reell interpolert vind-straff på 2, siden vinden der viste seg å være sterk nok onshore til å fortjene mer enn standardstraffen). Det er **ikke en feil** - det er nøyaktig det korrekt interpolert vind skal gjøre: gi den EKTE straffen i stedet for en fast gjetning, som i praksis oftest (men ikke alltid) er mildere enn den gamle "ukjent vind = 1"-standarden. Rettet formuleringen her etter fysikk-kontrollør sitt funn - ingen kodeendring var nødvendig. CLAUDE.md sin 2-stjerners stoppregel er uansett ikke utløst av noen av kjøringene (maks endring er 1 begge steder) - ikke fordi CLAUDE.md har noe eksplisitt unntak for tidligere-ukjent vind (den har ikke det), men fordi disse timene (51-53+ timer ut) ligger utenfor det 48-timersvinduet regelen gjelder for.
+
+### Fysikk-kontrollør: **MÅ RETTES**, rettet før commit (kun STATUS.md, ingen kodeendring)
+Godkjente selve koden (`sources.weather_interpolate()`, `fetch.py`, `docs/index.html`) etter egen verifisering: testet `_lerp_circular()` med egne vinkelpar (45→315 og 359→1, begge riktig korteste-vei), kjørte `metno_weather()` live selv og bekreftet 6-timersgrensen er nøyaktig riktig (tidssteget er utelukkende 1 eller 6 timer, aldri noe annet, gjennom hele 84-punkts horisonten), sporet `wind_interpolated` hele veien fra `sources.py` til `docs/index.html` uten navnekollisjon, og bekreftet Oceanforecast/Open-Meteo faktisk ikke får noen interpolering lagt til (bare rapport-rader) - stemmer nøyaktig med det som er observert. Fant én ting å rette: STATUS.md sin påstand om at endringen "alltid" gir flere stjerner, aldri færre, var et overclaim basert på én kjøring - egen, uavhengig live-kjøring samme dag fant et legitimt moteksempel (se over). Rettet formuleringen til å skille "observert i denne kjøringen" fra "garantert egenskap". Alle 5 faste observasjoner i CLAUDE.md bekreftet uberørt (ingen av dem bruker `weather_interpolate()` eller går via `fetch.py` sin horisont-logikk).
+
+---
+
 ## Ny spot: Tromvik (Kvaløya)
 
 Lagt til utenom ROADMAP-køen, på direkte beskjed.
@@ -637,7 +680,7 @@ Egne geodesiberegninger (haversine, uavhengig av check_spot.py) bekreftet alle a
 ---
 
 ## Gjenstår (ROADMAP.md)
-- Oppgave 1 (vinden forsvinner etter ca. 60 timer): ikke startet.
+- Oppgave 1 (vinden forsvinner etter ca. 51-60 timer): ferdig, rapportert over.
 - Oppgave 2 (vindpila på spot-skiva): ikke startet.
 - Oppgave 3 (Grøtfjord: blåst ut vs. flatt): ferdig, rapportert over.
 - Oppgave 4 (source/fileSource-hypotesen): 4a og 4b ferdig, rapportert over. 4c venter på neste Actions-kjøring - da skrives tabellen i STATUS.md, og stopper hvis en kilde konsekvent stemmer bedre uten omregning.

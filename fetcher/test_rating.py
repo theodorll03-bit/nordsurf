@@ -782,4 +782,55 @@ _fetch.bw_plausibility_report([{**_mk_hour_plaus(), "bw_interpolated": True,
 assert len(_fetch.REPORT) == before5  # ingen ny rad - ingen ekte, gjeldende timer
 print("13.5: interpolert time ekskludert fra plausibilitetsrapporten")
 
+# ---------- 27.09.2026, ROADMAP oppgave 1: vind interpolert forbi met.no sitt
+# 6-timerssteg (live sjekket: Locationforecast går fra time- til 6-timerssteg
+# etter ca. 51 timer, se sources.weather_interpolate()) ----------
+
+# 14.1: vind hver 6. time gir verdier alle timer imellom (lineært for
+# styrke/kast/lufttemp), og retning 350 til 10 grader gir 0 midt mellom
+# (sirkulært, korteste vei - IKKE 180, som en naiv lineær interpolasjon
+# ville gitt).
+raw_weather = {
+    "2026-09-27T00:00Z": {"wind_speed": 4.0, "wind_dir": 350.0, "gust": 6.0, "air_temp": 8.0},
+    "2026-09-27T06:00Z": {"wind_speed": 10.0, "wind_dir": 10.0, "gust": 14.0, "air_temp": 10.0},
+}
+interp = _sources.weather_interpolate(raw_weather)
+assert len(interp) == 7  # 00, 01, ..., 06
+for k in ("2026-09-27T00:00Z", "2026-09-27T06:00Z"):
+    assert interp[k]["wind_interpolated"] is False
+mid = interp["2026-09-27T03:00Z"]
+print("14.1: vind hver 6. time - midt-time (03:00):", mid)
+assert mid["wind_interpolated"] is True
+assert abs(mid["wind_speed"] - 7.0) < 1e-9   # lineært, midt mellom 4 og 10
+assert abs(mid["gust"] - 10.0) < 1e-9
+assert abs(mid["air_temp"] - 9.0) < 1e-9
+assert mid["wind_dir"] == 0.0  # sirkulært: 350->10 korteste vei er via 0, ikke via 180
+
+# 14.2: ingen verdier ekstrapolert forbi siste punkt, og ingen fylt inn over
+# et hull på mer enn 6 timer (samme "ikke ekstrapoler/ikke fyll for langt"-
+# prinsipp som bw_interpolate()).
+raw_gap = {
+    "2026-09-27T00:00Z": {"wind_speed": 4.0, "wind_dir": 0.0, "gust": None, "air_temp": 8.0},
+    "2026-09-27T08:00Z": {"wind_speed": 6.0, "wind_dir": 0.0, "gust": None, "air_temp": 9.0},  # 8t hull - for langt
+}
+interp_gap = _sources.weather_interpolate(raw_gap)
+assert len(interp_gap) == 2  # ingen mellomtimer fylt inn over 8-timers hullet
+assert "2026-09-27T09:00Z" not in interp_gap  # ingen ekstrapolering forbi siste punkt
+print("14.2: ingen ekstrapolering, ingen fylling over hull > 6 timer")
+
+# 14.3: _timestep_summary() finner hvor tidssteget faktisk endrer seg (og
+# rapporterer "jevnt" når det bare er ett jevnt steg å måle, som med kun 2
+# punkter - ingen falsk endring).
+now14 = __import__("datetime").datetime(2026, 9, 27, 0, tzinfo=__import__("datetime").timezone.utc)
+horizon, txt = _fetch._timestep_summary(raw_weather, now14)
+print("14.3: _timestep_summary() med bare 2 punkter (ett jevnt steg)", horizon, txt)
+assert txt == "jevnt tidssteg hele horisonten"
+raw_change = {
+    "2026-09-27T00:00Z": {}, "2026-09-27T01:00Z": {}, "2026-09-27T02:00Z": {},
+    "2026-09-27T08:00Z": {}, "2026-09-27T14:00Z": {},
+}
+_, txt_change = _fetch._timestep_summary(raw_change, now14)
+print("14.3b: tidssteg-endring funnet:", txt_change)
+assert "1t til 6t" in txt_change and "T02:00Z" in txt_change
+
 print("Alle tester ok")

@@ -44,6 +44,29 @@ def _hours_available(source_dict, now):
     return max(0, int((last - now).total_seconds() // 3600) + 1)
 
 
+def _timestep_summary(raw, now):
+    """27.09.2026: horisont og hvor tidssteget mellom påfølgende tidspunkter
+    endrer seg for en RÅ kildedict (før evt. interpolering) - til
+    kilderapporten, se ROADMAP ("vinden forsvinner fra onsdag kl. 12").
+    met.no sitt Locationforecast (vind) går fra time- til 6-timerssteg etter
+    ca. 51 timer (live sjekket 27.09.2026) - Oceanforecast og Open-Meteo
+    Marine har IKKE samme problem, bekreftet her ved at de ikke viser noen
+    endring. Returnerer (horisont_timer, tekst)."""
+    if not raw:
+        return 0, "ingen data"
+    times = sorted(raw)
+    last = sources.parse_iso(times[-1])
+    horizon = max(0, int((last - now).total_seconds() // 3600) + 1)
+    parsed = [sources.parse_iso(t) for t in times]
+    prev_gap = None
+    for a, b in zip(parsed, parsed[1:]):
+        gap = round((b - a).total_seconds() / 3600)
+        if prev_gap is not None and gap != prev_gap:
+            return horizon, f"tidssteg endres fra {prev_gap}t til {gap}t ved {sources.hour_key(a)}"
+        prev_gap = gap
+    return horizon, "jevnt tidssteg hele horisonten"
+
+
 def resolve_exposure(spot, exposure_data, name):
     """Glattet OG rå eksponering (del C) for spoten, hvis den finnes og
     sjekksummen stemmer med spots.json sitt NÅVÆRENDE innhold - ellers
@@ -185,7 +208,18 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     ocean_spot = safe(name, "met.no hav (spot)", sources.metno_ocean, s["lat"], s["lon"])
     ocean_off = safe(name, "met.no hav (ute)", sources.metno_ocean, o["lat"], o["lon"])
     marine = safe(name, "Open-Meteo svell (ute)", sources.openmeteo_marine, o["lat"], o["lon"])
-    weather = safe(name, "met.no vind", sources.metno_weather, s["lat"], s["lon"])
+    weather_raw = safe(name, "met.no vind", sources.metno_weather, s["lat"], s["lon"])
+    # 27.09.2026, ROADMAP oppgave 1: Locationforecast (vind) går fra time- til
+    # 6-timerssteg etter ca. 51 timer - interpolert her (se
+    # sources.weather_interpolate() sin docstring) slik at ingen time mister
+    # vind helt og får datafeil-straffen for ukjent vind. Oceanforecast og
+    # Open-Meteo Marine sjekket for samme problem (se _timestep_summary()
+    # under) - ingen av dem trenger tilsvarende interpolering.
+    weather = sources.weather_interpolate(weather_raw)
+    for label, raw_src in (("met.no hav (spot)", ocean_spot), ("met.no hav (ute)", ocean_off),
+                            ("Open-Meteo svell (ute)", marine), ("met.no vind", weather_raw)):
+        _, txt = _timestep_summary(raw_src, now)
+        REPORT.append((name, f"{label}, tidssteg", "ok" if raw_src else "tom", txt))
     swell_values = [v.get("swell_height") for v in marine.values() if v.get("swell_height") is not None]
     if marine and not swell_values:
         REPORT.append((name, "Open-Meteo svellhøyde", "tom", "havpunktet gir ingen svellhøyde, bruker met.no"))
