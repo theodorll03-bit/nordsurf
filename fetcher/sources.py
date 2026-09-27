@@ -281,21 +281,34 @@ def barentswatch_point(lat, lon):
     signifikant høyde (samme mål brukes gjennomgående, ellers sammenligner
     man epler og pærer mellom spots og mellom BarentsWatch og Open-Meteo).
 
-    Retning: totalMeanWaveDirection er ALLEREDE "fra"-retningen, samme
-    konvensjon som met.no (som er datakilden bak BarentsWatch sin
-    bølgemodell). Ingen konvertering her.
+    Retning: totalMeanWaveDirection er retningen bølgene GÅR MOT (samme
+    konvensjon som pilene på BarentsWatch sitt eget kart) - konverteres her
+    til "fra", som resten av appen (met.no, Open-Meteo) bruker.
 
-    Historikk (26.09.2026): en tidligere runde konkluderte "mot" ut fra
-    median vinkelavvik (~140-150 grader) mot Open-Meteo i en egen diagnose
-    (se diagnose_bw_direction.py), og koden konverterte da med +180. Det var
-    feil. Fasiten kom fra en ekte, verifiserbar hendelse: Unstad 26.09.2026
-    kl. 17:00 UTC hadde totalMeanWaveDirection = 296 grader. Unstad sin
-    `facing` (rett ut i vannet fra stranda) er 294,8 grader - så UKONVERTERT
-    verdi (296) traff nesten blink mot facing, og stemte med video fra
-    Lofoten Surfsenter samme time som viste bølger rett inn mot stranda.
-    Konvertering (+180) hadde gitt 116 grader, 179 fra facing - stikk
-    motsatt av virkeligheten. IKKE konverter dette om igjen andre steder,
-    "dir" i returverdien herfra er allerede "fra".
+    Historikk (27.09.2026, andre runde - se CLAUDE.md sine faste
+    observasjoner og STATUS.md for hele sporet): en mellomliggende runde
+    (26.09.2026) konkluderte feilaktig at feltet allerede var "fra" og
+    fjernet konverteringen, ut fra et tall (296 grader) som viste seg å
+    komme fra en SENERE, allerede konvertert kilde, ikke fra selve API-et.
+    Fasiten kom fra en lagret, garantert rå logg (fra en diagnose-kjøring
+    26.09.2026 kl. 12:59 UTC, FØR noen konvertering i det hele tatt fantes i
+    koden): Unstad, tidsverdien 2026-09-26T15:00Z (kl. 17:00 norsk tid),
+    totalMeanWaveDirection = 116 grader, rått fra API-et. Konvertert
+    (+180) gir 296 grader, som treffer Unstad sin `facing` (294,8 grader)
+    nesten blink, og stemmer med video fra Lofoten Surfsenter samme time
+    som viste bølger rett inn mot stranda. UKONVERTERT (116) er 179 grader
+    fra facing - stikk motsatt av virkeligheten.
+
+    Dette forklarer også et mønster oppdaget 27.09.2026: uten konvertering
+    ble retningen ved spoter der svellet treffer nesten rett på (Unstad,
+    Grøtfjord, Ersfjordstranda) snudd ca. 180 grader og fanget av
+    sikkerhetsgrensen i rating.spot_direction_factor() (se der). Ved
+    spoter der svellet treffer skrått (Russelv, Lenangsøyra, Steinkrøssa)
+    ble feilen bare 90-150 grader - fortsatt feil retning, men under
+    grensen som utløser sikringen, så den var vanskeligere å oppdage.
+
+    IKKE konverter dette om igjen andre steder, "dir" i returverdien
+    herfra er allerede "fra".
     """
     url = os.environ.get("BW_POINT_URL")
     token = barentswatch_token()
@@ -329,7 +342,7 @@ def barentswatch_point(lat, lon):
         if t is None or h is None:
             continue
         d = row.get("totalMeanWaveDirection")
-        d_from = float(d) if d is not None else None  # allerede "fra", se docstring
+        d_from = (float(d) + 180) % 360 if d is not None else None  # mot -> fra, se docstring
         p = row.get("totalPeakPeriod")
         hmax = row.get("expectedMaximumWaveHeight")
         out[hour_key(parse_iso(t))] = {

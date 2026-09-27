@@ -1,0 +1,10 @@
+{
+  "_kilde": "GitHub Actions-loggen for 'Diagnoser BarentsWatch-retning'-workflowen, kjørt 2026-09-26T12:59:49Z. Dette var FØR retningskonverteringen (+180, 'mot' til 'fra') noensinne ble lagt til i fetcher/sources.py (den ble først lagt til i commit 9785e1b, 2026-09-26T16:54:58Z) - tallene under er derfor et garantert rått, utolket API-svar fra BarentsWatch, ikke et resultat av noe kode i dette repoet har regnet om. Se CLAUDE.md og STATUS.md for hele beviskjeden dette underbygger: totalMeanWaveDirection er retningen bølgene GÅR MOT (samme som pilene på BarentsWatch sitt kart), ikke 'fra'.",
+  "spot": "unstad",
+  "point": {"lat": 68.270164, "lon": 13.575278},
+  "forecastTime": "2026-09-26T15:00Z",
+  "totalSignificantWaveHeight": 0.92,
+  "expectedMaximumWaveHeight": 1.748,
+  "totalMeanWaveDirection": 116,
+  "totalPeakPeriod": 10.496
+}

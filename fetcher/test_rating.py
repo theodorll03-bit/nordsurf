@@ -249,11 +249,16 @@ l4 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_
 show("7.4: samme, men BarentsWatch-retning 80 grader", l4)
 assert l4["height"] == 0.0 and l4["stars"] == 0
 
-# 7.5: retningskonvensjonen (korrigert 26.09.2026 mot en ekte, verifiserbar
-# hendelse: Unstad kl. 17:00 UTC hadde totalMeanWaveDirection = 296 grader,
-# Unstad sin facing er 294,8 - ukonvertert verdi stemte med video som viste
-# bølger rett inn mot stranda. totalMeanWaveDirection ER "fra", ingen
-# konvertering). Mokker bare HTTP-laget, tester den ekte funksjonen.
+# 7.5: retningskonvensjonen (rettet 27.09.2026, andre runde, mot en lagret,
+# garantert rå logg fra FØR noen konvertering fantes: en diagnose-kjøring
+# 26.09.2026 kl. 12:59 UTC viste totalMeanWaveDirection = 116 grader for
+# Unstad, tidsverdien 2026-09-26T15:00Z. Konvertert (+180) gir 296, som
+# treffer Unstad sin facing (294,8) nesten blink og stemmer med video som
+# viste bølger rett inn mot stranda. totalMeanWaveDirection ER "mot",
+# samme som pilene på BarentsWatch sitt kart - en mellomliggende runde
+# (26.09.2026) konkluderte feilaktig "fra" ut fra et allerede konvertert
+# tall, se CLAUDE.md og STATUS.md). Mokker bare HTTP-laget, tester den
+# ekte funksjonen.
 import os
 import sources as _sources
 
@@ -266,7 +271,7 @@ class _FakeBwResp:
     def raise_for_status(self): pass
     def json(self):
         return [{"forecastTime": "2026-01-01T00:00:00Z", "totalSignificantWaveHeight": 1.0,
-                  "totalMeanWaveDirection": 296, "totalPeakPeriod": 10.0, "expectedMaximumWaveHeight": 1.5}]
+                  "totalMeanWaveDirection": 116, "totalPeakPeriod": 10.0, "expectedMaximumWaveHeight": 1.5}]
 
 os.environ["BW_CLIENT_ID"], os.environ["BW_CLIENT_SECRET"] = "x", "y"
 os.environ["BW_POINT_URL"] = "https://example.test/{lat}/{lon}"
@@ -277,9 +282,38 @@ _sources._bw_token = None
 bw_result = _sources.barentswatch_point(69.0, 19.0)
 _sources.requests.post, _sources.requests.get, _sources._bw_token = _real_post, _real_get, _real_token
 bw_k0 = next(iter(bw_result))
-label_75 = "7.5: BarentsWatch 296 er allerede fra, uendret"
+label_75 = "7.5: BarentsWatch mot 116 -> intern fra 296"
 print(f"{label_75:<40} {bw_result[bw_k0]['dir']}")
 assert bw_result[bw_k0]["dir"] == 296
+
+# 7.5b: samme, men mot den FAKTISKE, sporbare fixturen (ikke bare et
+# hardkodet tall i testen) - beviset ligger nå i repoet, ikke bare i
+# Theodors Downloads-mappe. Se fetcher/fixtures/ sin egen forklaring.
+_fixture = json.loads((Path(__file__).parent / "fixtures" / "bw_raw_unstad_2026-09-26.json").read_text())
+assert _fixture["totalMeanWaveDirection"] == 116
+
+class _FixtureBwResp:
+    status_code = 200
+    def raise_for_status(self): pass
+    def json(self):
+        return [{"forecastTime": _fixture["forecastTime"],
+                  "totalSignificantWaveHeight": _fixture["totalSignificantWaveHeight"],
+                  "totalMeanWaveDirection": _fixture["totalMeanWaveDirection"],
+                  "totalPeakPeriod": _fixture["totalPeakPeriod"],
+                  "expectedMaximumWaveHeight": _fixture["expectedMaximumWaveHeight"]}]
+
+_sources.requests.post = lambda *a, **k: _FakeTokenResp()
+_sources.requests.get = lambda *a, **k: _FixtureBwResp()
+_sources._bw_token = None
+fixture_result = _sources.barentswatch_point(_fixture["point"]["lat"], _fixture["point"]["lon"])
+_sources.requests.post, _sources.requests.get, _sources._bw_token = _real_post, _real_get, _real_token
+fixture_k0 = next(iter(fixture_result))
+fixture_dir = fixture_result[fixture_k0]["dir"]
+from rating import angle_diff as _angle_diff
+diff_facing = _angle_diff(fixture_dir, spots["unstad"]["facing"])
+print(f"{'7.5c: fixture (Unstad 26.09) mot -> fra, avvik facing':<40} {fixture_dir} {diff_facing}")
+assert fixture_dir == 296
+assert diff_facing < 5
 
 # 7.6: swell_share avgrenses til 0,2 og 1,0.
 assert _swell_share({"swell_offshore": 3.0, "height_offshore": 1.0})[0] == 1.0
@@ -405,54 +439,105 @@ assert period_score(12, G) == 1.0  # lang periode: ingen ekstra straff eller bon
 # Grøtfjord 26.09.2026 (denne samtalen): tredje dag på rad med flatt,
 # svellet kommer fra vest/rett utenfor vinduet. Ekte rådata fra kjøringen
 # 2026-09-26T15:00Z (BarentsWatch ved spoten, IKKE reservemodellen - godt
-# innenfor bw_until).
-g26 = rate({"bw_height": 0.33, "bw_dir": 114.0, "bw_period": 6.5, "swell_offshore": 2.18,
+# innenfor bw_until). 27.09.2026, andre runde: den lagrede verdien (114) er
+# hentet fra commit 04b0a52 (15:36 UTC 26.09), FØR noen konvertering fantes
+# i koden - altså rå totalMeanWaveDirection ("mot"), ikke "fra". Riktig
+# intern verdi er (114+180)%360 = 294, nesten blink mot facing (295): en
+# nesten rett innhugg, IKKE et 179-graders avvik slik forrige runde antok.
+g26 = rate({"bw_height": 0.33, "bw_dir": 294.0, "bw_period": 6.5, "swell_offshore": 2.18,
             "height_offshore": 5.0, "dir_offshore": 272, "period": 15.6,
             "height_spot_model": 2.4, "turn": 27.0, "wind_speed": 3.4, "wind_dir": 217.0,
             "gust": 5.3, "tide": {"level": 0.0, "rising": False, "state": "lav"}}, G)
 show("Grøtfjord 26.09 (ekte data, BarentsWatch)", g26)
 assert g26["stars"] == 0 and g26["likely_flat"] and g26["height_source"] == "barentswatch"
-# 27.09.2026: bw_dir 114 her er 179 grader fra facing (295) - samme mønster
-# som Unstad-feilen under. Regnes nå som en mistenkt datafeil (nøytral
-# retningsfaktor, IKKE lenger tvunget til 0 av retningen alene), men
-# stjernene forblir 0 uansett - svellandelen/perioden alene holder det
-# under flat-sperren. Se STATUS.md for det fulle mønsteret.
-assert g26["spot_direction_error"] is True
+# Retningen er nå ekte og treffer nesten blink (spot_direction_offshore
+# False) - stjernene forblir 0 uansett, for svellandelen (44 %, mest
+# vindsjø) og signifikant høyde (0,1 m ute) holder det godt under
+# flat-sperren på egen hånd. Se STATUS.md.
+assert g26["spot_direction_offshore"] is False
 
-# ---------- 27.09.2026: BarentsWatch-retning >150 grader fra facing er en datafeil ----------
+# ---------- 27.09.2026: BarentsWatch-retning >150 grader fra facing ----------
 # Ekte hendelse: Unstad i morgen kl. 10 (2026-09-27T08:00Z) viste 0,0 m og
 # "Kildene er uenige", selv om svellet ute var 2,3 m fra 255 grader og
-# BarentsWatch sin egen nettside viste sammenlignbar høyde. bw_dir (115) var
-# 180 grader fra facing (294,8) - bølger går ikke rett ut fra en strand i
-# praksis, så dette regnes nå som en datafeil, ikke ekte retning.
-u_dir_error = rate({"bw_height": 0.61, "bw_dir": 115.0, "bw_period": 9.8, "swell_offshore": 2.3,
+# BarentsWatch sin egen nettside viste sammenlignbar høyde. Den lagrede
+# 115-verdien ble hentet mens sources.py IKKE konverterte (samme feil som
+# Grøtfjord 114 over) - altså rå totalMeanWaveDirection ("mot"), ikke "fra".
+# Riktig intern verdi er (115+180)%360 = 295, nesten blink mot facing
+# (294,8): et nesten rett innhugg, ikke et 180-graders avvik. Denne timen
+# viser at retningen var ekte hele tiden - den opprinnelige feilen (0,0 m)
+# kom av den manglende konverteringen andre steder i kjeden, ikke av selve
+# retningsverdien.
+u_dir_error = rate({"bw_height": 0.61, "bw_dir": 295.0, "bw_period": 9.8, "swell_offshore": 2.3,
                      "height_offshore": 3.3, "dir_offshore": 255, "period": 8.85,
                      "wind_speed": 7.8, "wind_dir": 203.0, "gust": 13.0, "bw_interpolated": True}, U)
-show("9.1: Unstad i morgen kl 10 (BW-retning 180° avvik, datafeil)", u_dir_error)
-assert u_dir_error["spot_direction_factor"] == 1.0
-assert u_dir_error["spot_direction_error"] is True
-assert u_dir_error["uncertain"] is True
-assert u_dir_error["sources_disagree"] is False  # retningen alene skal ikke utløse dette
-assert u_dir_error["surf_height"] > 0  # ikke lenger tvunget til 0 av den feilaktige retningen
+show("9.1: Unstad i morgen kl 10 (korrekt retning, 295)", u_dir_error)
+assert u_dir_error["spot_direction_offshore"] is False
+assert u_dir_error["uncertain"] is False
+assert u_dir_error["sources_disagree"] is False
+assert u_dir_error["surf_height"] > 0
 
-# 9.2: samme, men rå (ikke interpolert) time - safeguarden skal virke likt
-# uansett bw_interpolated, siden interpolering ikke er årsaken til feilen
-# (bekreftet: begge de RÅ BarentsWatch-punktene rundt denne timen hadde
-# allerede samme, feilaktige retning - ikke noe interpolasjonen skapte).
-u_dir_error_raw = rate({"bw_height": 0.61, "bw_dir": 115.0, "bw_period": 9.8, "swell_offshore": 2.3,
+# 9.2: samme, men rå (ikke interpolert) time - resultatet skal være likt
+# uansett bw_interpolated.
+u_dir_error_raw = rate({"bw_height": 0.61, "bw_dir": 295.0, "bw_period": 9.8, "swell_offshore": 2.3,
                          "height_offshore": 3.3, "dir_offshore": 255, "period": 8.85,
                          "wind_speed": 7.8, "wind_dir": 203.0, "gust": 13.0, "bw_interpolated": False}, U)
 show("9.2: samme, rå (ikke interpolert) BarentsWatch-time", u_dir_error_raw)
 assert u_dir_error_raw["spot_direction_factor"] == u_dir_error["spot_direction_factor"]
 assert u_dir_error_raw["surf_height"] == u_dir_error["surf_height"]
 
-# 9.3: grensen - rett under 150 grader er fortsatt ekte (retningsfaktor 0,
-# IKKE en datafeil), rett over er en datafeil (retningsfaktor 1,0, nøytral).
+# 9.3: 27.09.2026, andre runde: en genuint >150-graders time (syntetisk -
+# ingen ekte logg med akkurat dette mønsteret ennå) skal nå gi EKTE straff
+# (retningsfaktor 0), IKKE nøytral 1,0, siden dette er en KJENT retning
+# (bølgene går ut fra land), ikke en ukjent en. Skal heller ikke gjøre
+# timen usikker eller utløse "kildene uenige" alene - stjernene skal falle
+# fordi høyden faktisk blir lav (retningsfaktoren demper h), ikke fordi
+# timen kappes av en usikkerhetsregel.
+u_offshore = rate({"bw_height": 1.2, "bw_dir": (U["facing"] + 165) % 360, "bw_period": 12.0,
+                    "swell_offshore": 2.3, "height_offshore": 3.3, "dir_offshore": 255,
+                    "period": 14, "wind_speed": 2.0, "wind_dir": None}, U)
+show("9.3: BarentsWatch-retning 165 grader fra facing (ut fra land)", u_offshore)
+assert u_offshore["spot_direction_factor"] == 0.0
+assert u_offshore["spot_direction_offshore"] is True
+assert u_offshore["uncertain"] is False
+assert u_offshore["sources_disagree"] is False
+assert u_offshore["height"] == 0.0  # bw_height * ... * 0 = 0
+
+# 9.4: ingen retning fra BarentsWatch i det hele tatt - fortsatt nøytral
+# 1,0 og usikker, som før (uendret av denne runden - se rating.py sin
+# docstring, "mangler retning eller facing").
+u_no_dir = rate({"bw_height": 1.2, "bw_period": 12.0, "swell_offshore": 2.3,
+                  "height_offshore": 3.3, "dir_offshore": 255, "period": 14,
+                  "wind_speed": 2.0, "wind_dir": None}, U)
+show("9.4: BarentsWatch uten retning i det hele tatt", u_no_dir)
+assert u_no_dir["spot_direction_factor"] == 1.0
+assert u_no_dir["spot_direction_offshore"] is False
+assert u_no_dir["uncertain"] is True
+
+# 9.5: grensen for spot_direction_factor() sin tredje returverdi - rett
+# under 150 grader er IKKE "ut fra land" (bare en vanlig dårlig retning,
+# faktor 0 fra før av), rett over ER "ut fra land" (også faktor 0, men med
+# flagget satt, til forklaringsteksten og fetch.py sin spotnivå-sikring).
 from rating import spot_direction_factor as _sdf
 just_under = _sdf(U["facing"] + 149, U["facing"])
 just_over = _sdf(U["facing"] + 151, U["facing"])
-print(f"{'9.3: grense 149/151 grader fra facing':<40} {just_under} {just_over}")
+print(f"{'9.5: grense 149/151 grader fra facing':<40} {just_under} {just_over}")
 assert just_under == (0.0, True, False)
-assert just_over == (1.0, True, True)
+assert just_over == (0.0, True, True)
+
+# 9.6: fetch.py sin spotnivå-sikring (convention_warning) - varsler ved 60 %
+# slike timer blant dem med ekte svell ute mot vinduet, ikke ved 20 %.
+from fetch import convention_warning
+
+def _mk_hour(offshore):
+    return {"swell_offshore": 1.5, "dir_offshore": U["facing"], "bw_dir": 1.0,
+            "spot_direction_diff": 165 if offshore else 10}
+
+hours_60 = [_mk_hour(True)] * 6 + [_mk_hour(False)] * 4
+hours_20 = [_mk_hour(True)] * 2 + [_mk_hour(False)] * 8
+w60 = convention_warning(hours_60, U, "Unstad")
+w20 = convention_warning(hours_20, U, "Unstad")
+print(f"{'9.6: spotnivå-varsel ved 60% / 20% >150-timer':<40} {bool(w60)} {bool(w20)}")
+assert w60 is not None and "Unstad" in w60
+assert w20 is None
 
 print("Alle tester ok")

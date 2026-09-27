@@ -2,12 +2,18 @@
 
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
-- **Oppgave 1 (ROADMAP)** ferdig: `exposure_baseline.py` bruker nå bredde-på-tvers/skyggelengde-fysikk og 300 m kysttoleranse. Tre av fire "ferdig når"-kriterier oppfylt fullt ut; det fjerde (Grøtfjord 311-330° lav eksponering fra geometri alene) er bare DELVIS oppfylt - se eget avsnitt.
-- **HASTER-oppgave** (utenom kø, på direkte beskjed): Unstad i morgen kl. 10 viste feilaktig 0,0 m/"Kildene er uenige". Sikringen (150 graders grense) er bygget, testet og pushet. Fant at praktisk talt hele 48-timersvarselet for Grøtfjord, Ersfjordstranda og Unstad har samme 150-180 graders avvik.
-- **Motgående vindsjø-hypotesen (offshorevind) testet mot dagens data: HOLDER IKKE.** Se eget avsnitt - bare 26 % av de anomale timene har offshorevind, og Unstad er rammet i 49 av 49 timer uavhengig av vindretning.
-- **Ny hypotese (kilde/fileSource varierer): kan IKKE testes fullt ut herfra.** `diagnose_bw_direction.py` er utvidet til å hente source/fileSource, begge punkter og 48 timer, og til å sammenligne mot det som står i forecast.json - men jeg har verken `gh` CLI eller BarentsWatch-nøkler lokalt, så jeg kan ikke kjøre den selv. Fant derimot en LAGRET logg fra forrige diagnose-kjøring (26.09, i din Downloads-mappe) som gir et konkret, foreløpig funn - se eget avsnitt. Trenger deg til å trigge workflowen på nytt for de fulle tallene.
-- Ikke gjort noen kodeendring i rating.py/sources.py/fetch.py - bare i diagnoseverktøyet, som instruert.
-- Oppgave 2, 3, 4 i ROADMAP.md: ikke startet ennå.
+- **Retningskonvensjonen er nå endelig avklart, tredje og siste runde**: `totalMeanWaveDirection` er retningen bølgene går MOT (samme som pilene på BarentsWatch sitt kart), regnes om til "fra" med +180. Bevist av en garantert rå logg (Unstad, 26.09 kl. 15:00Z, rå verdi 116 - FØR noen konverteringskode noensinne fantes - gir konvertert 296, nesten blink mot facing 294,8 og stemmer med videoen). Den mellomliggende konklusjonen ("fra, ingen konvertering", satt tidligere i denne økten) var feil - bygget på et tall som senere viste seg å være allerede konvertert, ikke rått.
+- **Beviset er nå en fixture i repoet**: `fetcher/fixtures/bw_raw_unstad_2026-09-26.json`, hentet direkte fra GitHub Actions-loggen (credentials var allerede maskert med `***` i loggen selv - sjekket, ingen hemmeligheter i fixturen). Ny test 7.5c leser fixturen og bekrefter 116→296 og under 5 graders avvik fra facing (fikk 1,2 grader). Beviset er dermed sporbart for alle, ikke bare i Theodors Downloads-mappe.
+- **Retningsfaktoren over 150 grader er endret fra nøytral til ekte straff** (Theodors eksplisitte instruks, punkt 2): siden konvensjonen nå er riktig, betyr et avvik over 150 grader at bølgene FAKTISK går ut fra land - en kjent, ikke en ukjent/mistenkelig retning. Gir nå retningsfaktor 0 (ordinær straff), IKKE lenger nøytral 1,0. Gjør IKKE timen usikker og utløser IKKE "kildene uenige" alene. Ny forklaringstekst på detaljsiden: "Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn." Feltet `spot_direction_error` er fjernet og erstattet med `spot_direction_offshore` (samme mekanikk, riktig navn for den nye betydningen).
+- **Ny sikring på SPOTNIVÅ** (`fetch.py: convention_warning()`): hvis mer enn halvparten av timene med ekte svell ute mot vinduet (swell_offshore over 0,5 m og directness over 0,5) i en kjøring har BarentsWatch-retning over 150 grader for en spot, varsles det med fet skrift ØVERST i kilderapporten ("Mulig feil i BarentsWatch-retningskonvensjonen for [spot]"). Endrer aldri ratingen selv. Testet med syntetiske 60 %/20 %-scenarioer (9.6) - slår inn ved 60 %, ikke ved 20 %.
+- **2-stjerners stoppregelen i CLAUDE.md er sjekket på nytt for HELE endringen** (ikke bare de 35 timene fra forrige runde), ved å kjøre den faktisk deployede koden (`a19624c`) og den nye koden mot alle 348 timer (58 timer × 6 spots) i siste tilgjengelige lokale data: maks stjerneendring er 0 for alle spots - ingen timer endrer stjerner i det hele tatt. Se eget avsnitt for tabellen (rettet av fysikk-kontrollørens andre gjennomgang, som fant at min første versjon sammenlignet feil kodeversjoner). Stoppregelen er dermed IKKE utløst.
+- **Motgående vindsjø-hypotesen (offshorevind): fortsatt HOLDER IKKE** (uendret fra forrige runde - se eget avsnitt).
+- **Kilde/fileSource-hypotesen: forkastet.** Det "konkrete funnet" fra forrige runde (116 vs. et antatt "296") er nå forklart fullt ut av selve retningskonvensjonen (116 rått, 296 KORREKT KONVERTERT - ikke to ulike API-svar). Ingen grunn til å tro kilden/fileSource varierer konvensjon; du trenger ikke lenger trigge den workflowen for dette spørsmålet (den kan fortsatt være nyttig for oppgave 4, rutepunkt-spørsmålet, som er uavhengig).
+- Alle tester som brukte en hardkodet BarentsWatch-retning er sjekket mot git-historikken for å avgjøre om verdien var rå eller allerede konvertert, og rettet der det var rått (Grøtfjord 26.09: 114→294; Unstad 9.1/9.2: 115→295). Gamle og nye tall vist i eget avsnitt. Alle faste observasjoner i CLAUDE.md holder fortsatt.
+- 48-timers nyskanning (retningsfaktor/avvik): for de tre spotene som treffer nesten rett på (Grøtfjord, Ersfjordstranda, Unstad) faller antall timer over 150° til 0, som ventet. For Lenangsøyra og Steinkrøssa øker det derimot (0→4 og 0→31) - men siden BarentsWatch-høyden i akkurat disse timene er svært lav (0,01-0,21 m), gir ikke det noen stjerneendring i praksis (se stoppregel-tabellen).
+- Committet og pushet nå, på dette bevisgrunnlaget (Theodors eksplisitte "ja", punkt 3). Neste GitHub Actions-kjøring er selve kontrollen - skanningen kjøres på nytt mot ferske tall etterpå.
+- **Ikke pushet et nytt `docs/data/forecast.json` fra en lokal kjøring** - det committes bare av `nordsurf-bot` (GitHub Actions, ekte nøkler), aldri manuelt; en lokal kjøring uten BarentsWatch-nøkler ville bare gitt et degradert varsel til alle spots og overskrevet den ekte, ferske dataen på siden.
+- Oppgave 2, 3 i ROADMAP.md: ikke startet ennå. Oppgave 4: fortsatt bare delvis forsøkt (se tidligere avsnitt), uendret denne runden.
 
 ---
 
@@ -232,6 +238,132 @@ Delvis besvart: fant loggen og det rå tallet (116), men DENNE versjonen av diag
 
 ### Punkt 4 (rå API-verdi vs det som står i forecast.json)
 Kan ikke sjekkes uten en ny, fersk rå henting å sammenligne mot - lagt inn som en egen seksjon i diagnoseskriptet (sammenligner automatisk mot `docs/data/forecast.json` slik det ligger i repoet når workflowen kjører). Resultatet kommer med neste kjøring.
+
+---
+
+## Retningskonvensjonen endelig avklart, og gjenopprettet i kode
+
+### Beviset
+En garantert rå logg (i din Downloads-mappe, fra diagnose-kjøringen 26.09.2026 kl. 12:59 UTC - dette var FØR konverteringskoden noensinne eksisterte i sources.py, altså er tallet 100 % rått fra API-et) viser for Unstad, tidsverdien 2026-09-26T15:00Z: **`totalMeanWaveDirection = 116`**. Tolket som "mot" og konvertert (+180) gir **296**, som treffer Unstad sin facing (294,8°) nesten blink og stemmer med videobeviset (bølger rett inn mot stranda, over hodet, offshore). Den "296"-verdien en tidligere runde i denne økten trodde var et NYTT, uavhengig rått tall (og derfor konkluderte "fra, ingen konvertering" fra) var altså det samme tallet, bare allerede riktig konvertert - ikke et motsigende datapunkt. Kilde/fileSource-hypotesen er dermed overflødig: det var aldri to ulike API-svar, bare én verdi lest på to forskjellige stadier i regnestykket.
+
+### Endret i kode/dokumentasjon
+- `sources.py`: `d_from = (float(d) + 180) % 360` gjeninnført. Docstring skrevet om med hele beviskjeden.
+- `CLAUDE.md`: konvensjonslinja rettet til den nye, beviste teksten. 150-graders-linja omformulert fra "datafeil" til "bølger som går ut fra stranda, mistenkelig, ukjent retning".
+- `rating.py`: `spot_direction_factor()` sin begrunnelse omformulert samme vei. All "datafeil"/"mistenkt datafeil"-ordlyd i `barentswatch_height()`, `rate()` og `build_breakdown()` byttet til "mistenkelig" - ingen atferdsendring, bare ordlyd (nøytral faktor 1,0, `uncertain=True`, `sources_disagree` uberørt av retning alene - alt som før).
+- `fetch.py`: samme ordlydsendring i kilderapport-varselet.
+
+### Tester: gammel vs. ny verdi
+Alle tester med en hardkodet BarentsWatch-retning sjekket via git-arkeologi (hvilken commit genererte forecast.json-øyeblikksbildet testen siterer, og var konverteringskoden aktiv i sources.py på det tidspunktet).
+
+| Test | Gammel `bw_dir` | Proveniens | Ny `bw_dir` | Endring i resultat |
+|---|---|---|---|---|
+| 7.5 (enhetstest av konvertering) | mocket 296 | - | mocket **116** | Samme assert (`== 296`), men nå fra riktig retning (rå inn, konvertert ut) |
+| Grøtfjord 26.09 (ekte data) | 114,0 | commit `04b0a52`, 15:36 UTC 26.09 - FØR konverteringen (`9785e1b`, 16:54 UTC) - rått | **294,0** | `spot_direction_error`: True → **False**. `stars` uendret (0), `likely_flat` uendret (sann) - svellandel (44 %) og lav høyde (0,1 m ute) holder det flatt uansett retning |
+| 9.1 (Unstad i morgen kl. 10) | 115,0 | samme situasjon - fanget mens sources.py ikke konverterte, altså rått | **295,0** | `spot_direction_error`: True → **False**. `uncertain`: True → **False**. `surf_height` uendret (0,7 m, sett 0,9 m) - retningsfaktoren var 1,0 (nøytral) i begge tilfeller, bare av ulik grunn (feilflagg før, ekte nesten-blink-treff nå) |
+| 9.2 (samme, rå time) | 115,0 | samme | **295,0** | Samme som 9.1 |
+| 9.3 (grensetest 149/151°) | syntetisk (facing±149/151) | - | uendret | Ingen endring - testen bruker `spot_direction_factor()` direkte, uavhengig av noen fanget API-verdi |
+| 7.1-7.4, 7.7 (Lenangsøyra) | 290/5/5/80/(ingen) | syntetiske, illustrerer allerede-"fra"-scenarioer i kommentarene sine (f.eks. "70 grader skrått på stranda"), ikke hentet fra en ekte logg | uendret | Ingen endring - `rate()` forventer alltid intern "fra", disse testene var aldri knyttet til BarentsWatch sin rå API-konvensjon |
+
+Alle 5 faste observasjoner i CLAUDE.md er sjekket på nytt og holder. `fetcher/test_rating.py` og `fetcher/test_pipeline.py` kjører grønt.
+
+### 48-timers nyskanning: >150° avvik fra facing, gammel vs. rettet retning
+Siste lokalt tilgjengelige `docs/data/forecast.json` (generert 2026-09-26T21:00Z, FØR noen av denne øktens rettelser - bw_dir der er derfor rene rå "mot"-verdier gjennomgående) brukt til å simulere fiksen: hver rå verdi + 180, sammenlignet mot facing.
+
+| Spot | facing | Timer m/retning | >150° FØR | >150° ETTER | Maks avvik FØR | Maks avvik ETTER |
+|---|---|---|---|---|---|---|
+| Grøtfjord | 295 | 58 | 34 | **0** | 179,0 | 91,0 |
+| Ersfjordstranda | 315 | 58 | 48 | **0** | 155,0 | 121,0 |
+| Unstad | 294,8 | 58 | 58 | **0** | 179,9 | 2,8 |
+| Russelv | 315 | 58 | 0 | 0 | 125,0 | 139,0 |
+| Lenangsøyra | 0 | 58 | 0 | **4** | 75,0 | 172,3 |
+| Steinkrøssa | 45 | 58 | 0 | **31** | 74,0 | 177,0 |
+
+**Ikke helt som forventet.** For de tre "rett-på"-spotene (Grøtfjord, Ersfjordstranda, Unstad) forsvinner avviket helt, som ventet - den gamle, ukonverterte koden sammenlignet en "mot"-verdi direkte mot facing, og en god, rett-på treff har "mot" ≈ facing + 180, altså nesten nøyaktig den falske "180 grader ut fra stranda"-profilen sikringen fanget opp.
+
+For Lenangsøyra og Steinkrøssa er bildet motsatt: FØR fiksen var (den feilaktig utolkede) retningen tilfeldigvis nær facing der (74-75°), så sikringen slo aldri inn. ETTER fiksen viser den korrekt konverterte retningen derimot ofte 150-177° avvik - altså bølger som (ifølge BarentsWatch, riktig lest) beveger seg nesten rett bort fra disse to strendene i mange av timene. Dette kan være ekte (begge er fjord-spots der lokal vindsjø ofte ikke følger noe svellvindu - CLAUDE.md sin faste observasjon for Lenangsøyra 26.09 sier nettopp "bølgene i Ullsfjorden kom fra vest", ikke fra retningen som treffer stranda), men det er ikke bekreftet, og det motsier den opprinnelige antagelsen om "nær-null overalt". Tabellen er bygget på ett gammelt, lokalt øyeblikksbilde (fra FØR fiksen) med en simulert +180 lagt på etterpå - ikke ferske BarentsWatch-tall hentet med den rettede koden. Den ferske, ekte sjekken kommer først når GitHub Actions kjører på nytt med ekte nøkler.
+
+### Unstad i morgen kl. 10 (2026-09-27T08:00Z) - kjeden med korrekt retning
+Kan ikke hentes ferskt lokalt (ingen BarentsWatch-nøkler), men regnet med samme inndata som testene 9.1/9.2 over (den ekte hendelsens fangede rådata, nå riktig konvertert):
+
+| | Før fiksen (rå 115 brukt direkte) | Etter fiksen (rett konvertert) |
+|---|---|---|
+| BarentsWatch-retning, rått ("mot") | 115 | 115 |
+| BarentsWatch-retning, internt ("fra") | 115 (ukonvertert - feilen) | **295** |
+| `spot_direction_factor` | 1,0 (nøytral, tvunget av feilflagget) | 1,0 (ekte - nesten blink mot facing 294,8) |
+| `spot_direction_error` | True | **False** |
+| `uncertain` | True | **False** |
+| Surfehøyde | 0,7 m (sett ca. 0,9 m) | 0,7 m (sett ca. 0,9 m) - uendret tall, men nå av RIKTIG grunn |
+| Stjerner | 0 (1 uten vind) | 0 (1 uten vind) - sidevinden (8 m/s, kast 13) og den beskjedne høyden holder det lavt uansett |
+
+Den ferske, faktiske appen vil vise dette først etter neste "Hent varsel"-kjøring i GitHub Actions (hver 3. time, ekte BarentsWatch-nøkler) - lokal kjøring her ga bare tom BarentsWatch-data (samme kjente begrensning), så `docs/data/forecast.json` er IKKE endret/pushet fra denne økten.
+
+### Fysikk-kontrollør: **SPØR THEODOR**
+Kjørt før commit. Kontrolløren gravde selv videre i git-historikken (fant at `def7a59` sin begrunnelse - "Unstad kl. 17:00 UTC = 296" - med stor sannsynlighet var et allerede konvertert tall, siden `9785e1b` sin konvertering var aktiv i koden på det tidspunktet; dette styrker denne rundens konklusjon). Hovedinnvendingen: `spot_direction_factor()` gir en REELL straff (faktor 0) for 60-150 grader avvik, men 150-graders-sikringen tvinger faktoren til NØYTRAL (1,0) for alt over 150 grader - så når Lenangsøyra/Steinkrøssa sin korrekt konverterte retning nå ofte havner over 150 grader (kjent, fysisk usannsynlig retning, ikke "ukjent"), hopper faktoren fra 0 til 1,0, altså RIKTIG VEI TIL VERRE for en modell som skal reflektere fysikken. Pekte på at CLAUDE.md sin stopp-regel ("flytter stjernene med 2 eller mer ... vis tabell og stopp") ikke var sjekket for disse 35 timene - bare >150-grense-tellingen.
+
+**Sjekket direkte, med faktiske tall (etter kontrollørens spørsmål):** kjørte `rate()` på alle 35 berørte timer (rå vs. rettet retning), med ekte forecast-inndata for hver time.
+
+| Spot | Timer over 150° (rettet) | Stjerner FØR i noen av dem | Stjerner ETTER i noen av dem | bw_height i disse timene |
+|---|---|---|---|---|
+| Lenangsøyra | 4 | 0 (alle) | 0 (alle) | 0,18-0,21 m |
+| Steinkrøssa | 31 | 0 (alle) | 0 (alle) | 0,01-0,12 m |
+
+**Ingen av de 35 timene endrer stjerner i det hele tatt** (langt under CLAUDE.md sin 2-stjerners stopp-grense) - `bw_height` er så lav i akkurat disse timene (0,01-0,21 m, godt under flat-sperren på 0,35 m) at retningsfaktoren aldri får noe å virke på. Kontrollørens fysiske poeng (0→1,0-hoppet er prinsipielt feil vei for en KJENT dårlig retning) er fortsatt gyldig og bør løses senere - men det endrer ikke ratingen for noen reell time i det nåværende 48-timersvarselet.
+
+**Ubesvarte spørsmål fra kontrolløren, til Theodor:**
+1. Den rå loggen (Unstad, 2026-09-26T15:00Z, totalMeanWaveDirection=116) ligger i din Downloads-mappe, utenfor repoet - vil du at jeg legger den inn som en fixture i repoet (f.eks. `fetcher/testdata/`) slik at beviset er sporbart for alle, ikke bare deg?
+2. Retningsfaktor-logikken sitt 0→1,0-hopp ved >150 grader (nøytral for "vet ikke", men brukes nå også for "vet, og det er en dårlig retning" på noen spots) - vil du at dette skal skilles fra hverandre (f.eks. en egen, lavere faktor for "kjent, men peker ut fra stranda" i stedet for nøytral 1,0)? Ikke noe hastverk siden det ikke påvirker stjernene nå, men det er en reell, prinsipiell unøyaktighet.
+3. Gitt at dette er tredje reversering av samme konvensjon på under et døgn: commit nå på dette bevisgrunnlaget (rå logg + konsistent git-arkeologi + alle tester grønne + ingen stjerneendring), eller vente på en fersk BarentsWatch-henting fra neste GitHub Actions-kjøring før konvensjonen låses?
+
+---
+
+## Theodors svar, og implementasjonen
+
+Theodor svarte ja på alle tre spørsmålene, med presise instrukser for punkt 2 (se under). Committer og pusher nå, per svar på punkt 3.
+
+### 1. Fixture i repoet
+`fetcher/fixtures/bw_raw_unstad_2026-09-26.json` - de rå feltene fra GitHub Actions-loggen (punkt, tidspunkt, `totalMeanWaveDirection`, høyde, periode), ingen hemmeligheter (loggen hadde allerede maskert `BW_CLIENT_ID`/`BW_CLIENT_SECRET`/`BW_POINT_URL` med `***` - dobbeltsjekket, ingenting av det havnet i fixturen). Ny test 7.5c i `fetcher/test_rating.py` leser fixturen, kjører den gjennom den ekte `sources.barentswatch_point()` (mokker bare HTTP-laget), og bekrefter 116 → 296 og avvik fra Unstad sin facing under 5 grader (fikk 1,2 grader).
+
+### 2. Retningsfaktoren over 150 grader: fra nøytral til ekte straff
+Presis instruks fra Theodor: siden konvensjonen nå er riktig, betyr >150 grader avvik at bølgene FAKTISK går ut fra land (typisk vindsjø fra land) - en kjent retning, ikke en ukjent/mistenkelig en. Endret i `fetcher/rating.py`:
+
+- `spot_direction_factor()`: over 150 grader gir nå **0,0** (ikke 1,0). Tredje returverdi (omdøpt fra "mistenkelig" til "ut fra land", feltnavn `spot_direction_offshore` i stedet for `spot_direction_error`) er fortsatt sann i dette tilfellet, men brukes nå bare til forklaringsteksten og fetch.py sin spotnivå-sikring (se under) - ikke lenger til å nøytralisere faktoren eller tvinge usikkerhet.
+- `rate()` sin `uncertain`: fjernet leddet som tvang timen usikker ved >150 grader. Usikker nå bare når retning mangler HELT (som før).
+- `rate()` sin `sources_disagree`: uendret oppførsel - leddet som ekskluderer >150-tilfellet fra å utløse "kildene uenige" alene er beholdt (samme grunn som før: retningsfaktoren gjør allerede jobben via selve høyden).
+- `build_breakdown()`: ny forklaringstekst nøyaktig som Theodor spesifiserte: "Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn."
+- CLAUDE.md sin 150-graders-linje omskrevet tilsvarende.
+
+### 2c. Ny sikring på spotnivå (`fetch.py`)
+Ny, testbar funksjon `convention_warning(hours, spot, name)`: blant timene med ekte svell ute mot vinduet (swell_offshore > 0,5 m OG directness > 0,5 - "eksponering" i dagens kodebase, siden del B/C sin lærte eksponering ikke er koblet inn ennå, se oppgave 2/3), sjekkes andelen med BarentsWatch-retning over 150 grader. Over halvparten: varsel i fet skrift ØVERST i kilderapporten ("Mulig feil i BarentsWatch-retningskonvensjonen for [spot]. Ratingen er ikke endret automatisk."). Testet med syntetiske 60 %/20 %-scenarioer (test 9.6 i test_rating.py) - slår inn ved 60 %, ikke ved 20 %, akkurat som spesifisert.
+
+### Tester
+Lagt til/endret i `fetcher/test_rating.py`:
+- 7.5c: fixture-basert bevis (se punkt 1).
+- 9.3 (ny, syntetisk - ingen ekte logg finnes ennå med et genuint >150-graders mønster og reelt svell): >150 grader med ekte svell tilstede gir retningsfaktor 0, `spot_direction_offshore` True, `uncertain` False, `sources_disagree` False, høyde 0.
+- 9.4 (ny): ingen retning fra BarentsWatch i det hele tatt - uendret oppførsel (nøytral 1,0, usikker).
+- 9.5 (tidligere 9.3, grensetesten): oppdatert - 151 grader gir nå (0,0, True, True), ikke (1,0, True, True).
+- 9.6 (ny): `convention_warning()` testet direkte med syntetiske timer.
+- Omdøpt alle `spot_direction_error`-referanser til `spot_direction_offshore` i eksisterende tester (Grøtfjord 26.09, 9.1/9.2).
+
+`fetcher/test_rating.py` og `fetcher/test_pipeline.py` kjører begge grønt.
+
+### 2-stjerners stoppregelen: sjekket for HELE endringen
+**Rettet av fysikk-kontrolløren sin andre gjennomgang** (se under): min første versjon av denne tabellen sammenlignet feil ting - den NYE `rate()` kjørt to ganger (rå kontra +180-konvertert retning), ikke den FAKTISK deployede koden (`a19624c`, forrige commit) mot den nye. Riktig sammenligning: lastet `a19624c` sin `rating.py` og den nye (working tree) som to separate moduler, kjørte begge på ALLE 348 timer (58 timer × 6 spots) i siste lokalt tilgjengelige `docs/data/forecast.json`, med rå BarentsWatch-retning inn i den gamle koden (slik den faktisk oppførte seg) og korrekt konvertert retning inn i den nye:
+
+| Spot | Timer sjekket | Maks \|stjerner ny − stjerner gammel\| | Timer med endring ≥ 2 |
+|---|---|---|---|
+| Grøtfjord | 58 | 0 | 0 |
+| Ersfjordstranda | 58 | 0 | 0 |
+| Russelv | 58 | 0 | 0 |
+| Lenangsøyra | 58 | 0 | 0 |
+| Steinkrøssa | 58 | 0 | 0 |
+| Unstad | 58 | 0 | 0 |
+
+Ingen spot, ingen time, endrer stjerner i det hele tatt mot den faktisk deployede koden. CLAUDE.md sin stoppregel er dermed IKKE utløst - enda tryggere enn først antatt.
+
+### Fysikk-kontrollør, andre gjennomgang (av implementasjonen av Theodors svar): **MÅ RETTES**, kun i STATUS.md
+Kjørte selv `fetcher/test_rating.py` og `fetcher/test_pipeline.py` (begge grønne), og en uavhengig etterregning (a19624c sin rating.py mot den nye, på alle 348 ekte timer). Fant koden selv fysisk og logisk konsistent med Theodors instrukser: `spot_direction_error` er konsekvent omdøpt til `spot_direction_offshore` overalt (null gjenværende treff), forklaringsteksten er ordrett lik spesifikasjonen, `sources_disagree` sin logikk har ingen udekket hull (de tre disjunktene er uavhengige signaler, det ekskluderte leddet dekkes uansett av at h dempes til nesten 0 av selve faktoren), fixturen inneholder ingen hemmeligheter, og pekte i tillegg på at den gamle koden hadde et diskontinuitetsbrudd (0,0→1,0 rett ved 150/151 grader) som nå er borte (0,0 på begge sider). Fant to unøyaktigheter i STATUS.md (ikke i koden): tabellen over sammenlignet feil kodeversjoner (rettet over, riktig tall er nå 0 for alle spots), og "6 faste observasjoner" var feil telling (CLAUDE.md har 5, rettet over). Blokkerer ikke committen Theodor allerede har godkjent.
+
+Committer og pusher nå, per Theodors svar på punkt 3.
 
 ---
 

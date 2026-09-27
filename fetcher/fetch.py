@@ -14,7 +14,7 @@ import calibrate
 import notify
 import sun
 import tide as tidemod
-from rating import angle_diff, rate, SURF_FACTOR_DEFAULT
+from rating import angle_diff, directness, rate, SURF_FACTOR_DEFAULT
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
@@ -22,6 +22,10 @@ OUT = ROOT / "docs" / "data" / "forecast.json"
 BW_CALIB = ROOT / "data" / "bw_calibration.json"
 HOURS_AHEAD_MAX = 120  # 5 døgn, men stopper ved kortest tilgjengelige kilde
 REPORT = []  # kilderapport, vises i Actions
+# Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
+# igjen (se build_spot()) - vises ØVERST i kilderapporten, ikke i selve
+# tabellen, og endrer aldri ratingen automatisk.
+CONVENTION_WARNINGS = []
 
 
 def pick(*vals):
@@ -34,6 +38,31 @@ def _hours_available(source_dict, now):
         return 0
     last = sources.parse_iso(max(source_dict))
     return max(0, int((last - now).total_seconds() // 3600) + 1)
+
+
+def convention_warning(hours, spot, name):
+    """Sikring på SPOTNIVÅ mot at BarentsWatch-retningskonvensjonen
+    ("mot"->"fra", +180 i sources.py) skulle bli feil igjen: blant timene
+    med ekte svell ute mot vinduet (swell_offshore over 0,5 m OG directness
+    over 0,5 - "eksponering", se rating.directness), sjekk hvor mange som
+    har BarentsWatch-retning over 150 grader fra facing (går ut fra land,
+    se rating.spot_direction_factor). Mer enn halvparten: en fungerende
+    konvensjon skal ikke gi det mønsteret når det samtidig ER ekte svell på
+    vei inn - returner en varselstekst. Endrer ALDRI ratingen selv."""
+    relevant = [
+        h for h in hours
+        if h.get("swell_offshore") is not None and h["swell_offshore"] > 0.5
+        and directness(h.get("dir_offshore"), spot) > 0.5
+        and h.get("bw_dir") is not None
+    ]
+    offshore = [h for h in relevant if h.get("spot_direction_diff") is not None
+                and h["spot_direction_diff"] > 150]
+    if relevant and len(offshore) > len(relevant) / 2:
+        return (f"Mulig feil i BarentsWatch-retningskonvensjonen for {name}: "
+                f"{len(offshore)} av {len(relevant)} timer med ekte svell ute mot vinduet "
+                f"har BarentsWatch-retning over 150 grader fra facing ved spoten. "
+                f"Ratingen er ikke endret automatisk.")
+    return None
 
 
 def safe(spot, label, fn, *args, default=None):
@@ -170,16 +199,17 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
     REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
 
-    # 27.09.2026: BarentsWatch-retning ved spoten mer enn 150 grader fra
-    # facing er en datafeil, ikke fysikk (se rating.spot_direction_factor).
-    # Nøytraliseres allerede i ratingen (retningsfaktor 1,0, timen usikker) -
-    # denne linja er bare til synlighet, så mønsteret oppdages tidlig.
-    dir_error_hours = [h["t"] for h in hours if h.get("spot_direction_error")]
-    if dir_error_hours:
-        REPORT.append((name, "BarentsWatch-retning ved spoten", "feil",
-                       f"{len(dir_error_hours)} time(r) med over 150 grader avvik fra facing - "
-                       f"trolig datafeil, ikke brukt i ratingen: {', '.join(dir_error_hours[:5])}"
-                       + ("..." if len(dir_error_hours) > 5 else "")))
+    # 27.09.2026, andre runde: BarentsWatch-retning over 150 grader fra facing
+    # betyr nå bare at bølgene ved punktet faktisk går ut fra land (ordinær
+    # straff, retningsfaktor 0 - se rating.spot_direction_factor), IKKE et
+    # feiltegn i seg selv. MEN hvis konvensjonen ("mot"->"fra", +180) skulle
+    # bli feil igjen en gang i fremtiden, ville det vise seg nettopp som en
+    # bølge av slike >150-timer akkurat når det samtidig ER ekte svell ute
+    # mot vinduet - det skal en fungerende konvensjon aldri gi mye av.
+    # Sikring på SPOTNIVÅ (ikke per time), endrer ALDRI ratingen automatisk.
+    warning = convention_warning(hours, spot, name)
+    if warning:
+        CONVENTION_WARNINGS.append(warning)
 
     new_pairs = calibrate.bw_pairs_for_run(hours, run_id)
     merged_pairs = calibrate.merge_bw_pairs(bw_pairs_existing, new_pairs, now)
@@ -207,6 +237,8 @@ def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
     text = "\n".join(lines)
+    if CONVENTION_WARNINGS:
+        text = "\n".join(f"**{w}**" for w in CONVENTION_WARNINGS) + "\n\n" + text
     print("\nKilderapport\n" + text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:

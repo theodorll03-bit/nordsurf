@@ -19,13 +19,13 @@ Når en modell motsier en observasjon, er det modellen som er feil.
 
 ## Konvensjoner (ikke endre)
 - Alle retninger internt er "fra"-retninger, 0 = nord.
-- BarentsWatch totalMeanWaveDirection i API-et er allerede "fra". Pilene på BarentsWatch sitt kart viser "mot". (Bevist med Unstad 26.09: 296 grader mot facing 295.)
+- BarentsWatch totalMeanWaveDirection i API-et er retningen bølgene går MOT, samme som pilene på kartet. Regnes om til "fra" ved å legge til 180. Bevis: rå logg fra 26.09 kl. 15:00Z, Unstad, 116 grader, mens bølgene kom inn fra 296.
 - Svell ute: GFS Wave via Open-Meteo. ECMWF gir ikke svellfelt der. Høyde, retning og periode for svellet skal alltid komme fra samme modell.
 - Periode i surfehøyde-formelen: svellets periode ute (gjennomsnitt fra GFS Wave), ikke BarentsWatch sin periode ved kysten.
 - Surfehøyde: Komar og Gaughan (1972), Hb = 0,39 × g^(1/5) × (T × H²)^(2/5). Sett = 1,27 × Hb. Flat-sperre: Hs ved spoten under 0,35 m gir 0.
 - To kalibreringer som ikke skal blandes: transfer (Hs mot Hs, modell mot modell) og surf_factor (surfehøyde mot logger).
 - Maks bølgehøyde vises, men brukes aldri i ratingen.
-- BarentsWatch-retning ved spoten mer enn 150 grader fra facing er en datafeil, ikke fysikk.
+- Retning mer enn 150 grader fra facing betyr at bølgene ved BarentsWatch-punktet faktisk går ut fra land (typisk vindsjø fra land, ikke svell inn). Kjent retning, ikke ukjent: gir retningsfaktor 0 (ordinær straff), gjør IKKE timen usikker og utløser ikke "kildene uenige" alene. Hvis mer enn halvparten av timene med ekte svell ute mot vinduet i en kjøring havner over 150 grader for en spot, varsles det øverst i kilderapporten som en mulig feil i konvensjonen - ratingen endres aldri automatisk av det.
 
 ## Krever Theodors ja (stopp og spør)
 - Endringer i svellvinduer, havpunkter, barentswatch_point, facing, offshorevind, exposure_override, ideal_height, max_height, SHADOW_CURVE, DEFAULT_TRANSFER, vindtabellen eller stjernegrenser.

@@ -139,27 +139,30 @@ def spot_direction_factor(bw_dir_from, facing):
     1,0. 30-60: lineært ned til 0,3. Over 60: 0. Mangler retning eller
     facing: 1,0 (nøytralt, men "ukjent" i andre returverdi).
 
-    27.09.2026: bølger som går rett ut fra en strand (avvik nær 180 grader)
-    finnes ikke i praksis - se CLAUDE.md sin konvensjon om dette (funnet på
-    Unstad i morgendagens varsel: bw_dir 115 mot facing 294,8, avvik 180,
-    mens svellet ute og BarentsWatch sin egen nettside begge pekte mot at
-    bølgene faktisk traff rett på). Over SPOT_DIRECTION_ERROR_DEG (150)
-    regnes retningen som en DATAFEIL, ikke fysikk: nøytral faktor 1,0 (ikke
-    0, som den rene vinkelregelen ellers ville gitt), men merket som en
-    mistenkt feil - se tredje returverdi, brukt i rate() til å tvinge
-    timen usikker og til å hindre at sources_disagree utløses av akkurat
-    denne retningen alene (se der for hvorfor). Returnerer
-    (verdi, kjent, mistenkt_datafeil)."""
+    27.09.2026, andre runde: over SPOT_DIRECTION_ERROR_DEG (150) grader fra
+    facing betyr at bølgene ved punktet FAKTISK går ut fra land - typisk
+    vindsjø fra land, ikke svell inn. Dette er en KJENT retning, ikke en
+    ukjent eller mistenkelig en (den forrige runden trodde dette var et
+    symptom på en manglende "mot"->"fra"-konvertering i sources.py - det
+    var det, men konverteringen er nå rettet ved kilden, og et ekte >150-
+    graders avvik er en normal, forventet observasjon på noen spots, ikke
+    et feiltegn). Får derfor faktor 0 (ekte straff, som resten av kurven
+    over 60 grader), IKKE nøytral 1,0, og gjør IKKE timen usikker eller
+    utløser sources_disagree alene (se rate()). Tredje returverdi er sann
+    nettopp for dette tilfellet (>150 grader), til bruk i forklaringsteksten
+    ("bølgene går ut fra land") og i fetch.py sin spotnivå-sikring mot at
+    konvensjonen skulle bli feil igjen. Returnerer (verdi, kjent, ut fra
+    land)."""
     if bw_dir_from is None or facing is None:
         return 1.0, False, False
     diff = angle_diff(bw_dir_from, facing)
-    if diff > SPOT_DIRECTION_ERROR_DEG:
-        return 1.0, True, True
     if diff <= 30:
         return 1.0, True, False
     if diff <= 60:
         return 1.0 - 0.7 * (diff - 30) / 30, True, False
-    return 0.0, True, False
+    if diff <= SPOT_DIRECTION_ERROR_DEG:
+        return 0.0, True, False
+    return 0.0, True, True
 
 
 def barentswatch_height(hour, spot):
@@ -174,15 +177,16 @@ def barentswatch_height(hour, spot):
     pf = bw_period_factor(hour.get("bw_period"))
     bw_dir = hour.get("bw_dir")
     facing = spot.get("facing")
-    dirfac, dir_known, dir_error = spot_direction_factor(bw_dir, facing)
+    dirfac, dir_known, dir_offshore = spot_direction_factor(bw_dir, facing)
     h = bw * min(share, pf) * dirfac
     detail = {
         "swell_share": share, "swell_share_known": share_known,
         "bw_period_factor": pf,
         "spot_direction_factor": dirfac, "spot_direction_known": dir_known,
-        # Mistenkt datafeil (avvik over SPOT_DIRECTION_ERROR_DEG) - se
-        # spot_direction_factor() sin docstring og rate() sin bruk av dette.
-        "spot_direction_error": dir_error,
+        # Bølgene ved punktet går faktisk ut fra land (avvik over
+        # SPOT_DIRECTION_ERROR_DEG) - se spot_direction_factor() sin
+        # docstring og rate() sin bruk av dette.
+        "spot_direction_offshore": dir_offshore,
         # Selve gradavviket (0-180), til visning ("70 grader skrått på
         # stranda") - factoren alene sier ikke hvor mange grader det var.
         "spot_direction_diff": angle_diff(bw_dir, facing) if dir_known else None,
@@ -481,9 +485,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         items.append(f"Svellandel: {share_pct} % ({_share_word(bw_detail['swell_share'])})")
         if hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
-        if bw_detail["spot_direction_error"]:
-            diff = round(bw_detail["spot_direction_diff"]) if bw_detail["spot_direction_diff"] is not None else "?"
-            items.append(f"Retning ved spoten: {diff} grader avvik - trolig en datafeil, ikke brukt")
+        if bw_detail["spot_direction_offshore"]:
+            items.append("Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn.")
         else:
             items.append(f"Retning ved spoten: {_spot_dir_word(bw_detail['spot_direction_factor'])}")
     if h is not None:
@@ -583,28 +586,33 @@ def rate(hour, spot):
     deg_out = degrees_outside(hour.get("dir_offshore"), spot)
     # Ærlighet: uten BarentsWatch, med dreining eller utenfor vinduet vet vi
     # mindre. Maks 3 stjerner. Svell godt innenfor vinduet, nær kanten, gjør
-    # IKKE varselet usikkert i seg selv. For BarentsWatch: usikkert hvis vi
-    # ikke har retning ved punktet (spot_direction_factor er da et nøytralt
-    # anslag, 1,0, ikke et ekte "treffer rett inn"), ELLER hvis retningen er
-    # merket som en mistenkt datafeil (27.09.2026, se spot_direction_factor).
+    # IKKE varselet usikkert i seg selv. For BarentsWatch: usikkert bare hvis
+    # vi IKKE har retning ved punktet (spot_direction_factor er da et
+    # nøytralt anslag, 1,0, ikke et ekte "treffer rett inn"). 27.09.2026,
+    # andre runde: bølger som går ut fra land (>150 grader fra facing) er en
+    # KJENT retning, ikke ukjent - gir ekte straff (faktor 0) via h over, men
+    # gjør IKKE timen usikker i seg selv, på samme måte som en helt vanlig
+    # dårlig retning (60-150 grader) heller ikke gjør det.
     uncertain = (
         (source != "barentswatch" and ((hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0))
         or (source == "barentswatch" and bw_detail is not None
-            and (not bw_detail["spot_direction_known"] or bw_detail["spot_direction_error"]))
+            and not bw_detail["spot_direction_known"])
     )
     # Kildene uenige: BarentsWatch viser en reell totalhøyde (0,5 m+), men
     # svellet ute er utenfor vinduet, mest av totalhøyden er vindsjø, eller
     # bølgene ved BarentsWatch-punktet går ikke inn mot stranda. Strengere
     # enn den vanlige usikkerhets-kappingen (maks 1, ikke 3) - dette er ikke
     # bare mangel på data, men tegn på at det trolig ikke er surfbart.
-    # 27.09.2026: retningsleddet skal IKKE utløse dette når retningen selv er
-    # merket som en mistenkt datafeil (spot_direction_factor er da uansett
-    # 1,0, så leddet slår aldri inn i praksis - eksplisitt her for klarhet).
+    # 27.09.2026, andre runde: retningsleddet skal IKKE utløse dette alene når
+    # bølgene går helt ut fra land (>150 grader) - h er da uansett nesten 0
+    # (spot_direction_factor 0 demper høyden selv), og "kildene uenige" sin
+    # strenge 1-stjerne-kapping er ment for tvetydige, ikke entydig flate,
+    # timer.
     sources_disagree = (
         source == "barentswatch" and bw_detail is not None
         and (hour.get("bw_height") or 0) >= 0.5
         and (dir_hit < 0.667 or bw_detail["swell_share"] < 0.5
-             or (bw_detail["spot_direction_factor"] < 0.5 and not bw_detail["spot_direction_error"]))
+             or (bw_detail["spot_direction_factor"] < 0.5 and not bw_detail["spot_direction_offshore"]))
     )
     if sources_disagree:
         uncertain = True
@@ -665,10 +673,11 @@ def rate(hour, spot):
         # skrått på stranda"). None hvis retning eller facing er ukjent.
         "spot_direction_diff": (round(bw_detail["spot_direction_diff"])
                                  if bw_detail and bw_detail["spot_direction_diff"] is not None else None),
-        # Mistenkt datafeil i BarentsWatch-retningen (avvik over
-        # SPOT_DIRECTION_ERROR_DEG fra facing - bølger går ikke rett ut fra
-        # stranda i praksis). Brukes i fetch.py sin kilderapport.
-        "spot_direction_error": bool(bw_detail and bw_detail["spot_direction_error"]),
+        # Bølgene ved BarentsWatch-punktet går faktisk ut fra land (avvik over
+        # SPOT_DIRECTION_ERROR_DEG fra facing - trolig vindsjø fra land, ikke
+        # svell inn). Brukes i fetch.py sin spotnivå-sikring mot at
+        # retningskonvensjonen skulle bli feil igjen.
+        "spot_direction_offshore": bool(bw_detail and bw_detail["spot_direction_offshore"]),
         # Trolig flatt: enten er signifikant høyde reelt lav (surf_height er
         # da tvunget til 0, uansett hva formelen ellers ville gitt), eller
         # reserven (metno_korrigert) har stor dreining/retning langt utenfor
