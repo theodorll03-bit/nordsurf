@@ -678,4 +678,108 @@ override_big_swell = rate({"swell_offshore": 4.0, "dir_offshore": 320, "period":
 show("11.5: Grøtfjord 320 (override + rå eksponering 0, ikke dobbelt dempet)", override_big_swell)
 assert override_big_swell["stars"] >= 2  # taket alene demper nok - ikke en ekstra gang til
 
+# ---------- 27.09.2026: "blåst ut" (mye vindsjø/vind) skilt fra ekte flatt ----------
+# Ekte hendelse: Grøtfjord tirsdag kl. 14 - appen viste "Trolig flatt"/0,0 m,
+# men svellet ute var 0,9 av 5,9 m totalt (84 % vindsjø) og vinden 14 m/s
+# side-onshore, kast 21. Ikke flatt (lite energi) - blåst ut (mye energi,
+# bare ikke ekte svell). BarentsWatch sin egen totalhøyde (1,2 m her) skal
+# vises i stedet for den sterkt dempede "0,2 m".
+blown = rate({"bw_height": 1.2, "bw_period": 5.5, "bw_dir": G["facing"], "swell_offshore": 0.9,
+              "height_offshore": 5.9, "dir_offshore": G["facing"], "period": 7,
+              "wind_speed": 14, "wind_dir": 301, "gust": 21}, G)
+show("12.1: Grøtfjord tirsdag 14 - blåst ut, ikke flatt", blown)
+assert blown["stars"] == 0
+assert blown["likely_flat"] is True  # uendret - stjernene skal fortsatt kuttes av flat-sperren
+assert blown["blown_out"] is True
+assert any("blåst ut" in line for line in blown["breakdown"])
+
+# 12.2: Grøtfjord 24.09.2026 (linje 17 over) - ekte flatt, IKKE blåst ut,
+# selv om den også er "likely_flat". Ingen svell_offshore/vind oppgitt der,
+# men bw_height (0,3) er allerede under flat-sperren selv - ingen reell
+# energi totalt å forveksle med vindsjø.
+assert g2["blown_out"] is False
+
+# 12.3: samme vindsjø-situasjon, men bw_height under flat-sperren i seg selv
+# (reelt lite totalt, ikke bare lite ekte svell) - skal IKKE bli blåst ut.
+genuinely_flat = rate({"bw_height": 0.2, "bw_period": 5.5, "bw_dir": G["facing"], "swell_offshore": 0.05,
+                        "height_offshore": 0.3, "dir_offshore": G["facing"], "period": 7,
+                        "wind_speed": 14, "wind_dir": 301, "gust": 21}, G)
+show("12.3: samme vind, men lav BarentsWatch-totalhøyde - ekte flatt", genuinely_flat)
+assert genuinely_flat["blown_out"] is False
+assert genuinely_flat["likely_flat"] is True
+
+# ---------- 27.09.2026: source/fileSource lagres, og en plausibilitetssjekk
+# mot vindretningen - test av hypotesen om at BarentsWatch-konvensjonen kan
+# variere med kilden, denne gangen med data i stedet for bare resonnement ----------
+import fetch as _fetch
+
+# 13.1: sources.barentswatch_point() lagrer source, fileSource og rå retning.
+_sources.requests.post = lambda *a, **k: _FakeTokenResp()
+class _FakeBwRespSrc:
+    status_code = 200
+    def raise_for_status(self): pass
+    def json(self):
+        return [{"forecastTime": "2026-01-01T00:00:00Z", "totalSignificantWaveHeight": 1.0,
+                  "totalMeanWaveDirection": 90, "totalPeakPeriod": 8.0, "expectedMaximumWaveHeight": 1.5,
+                  "source": "modelA", "fileSource": "fileA.nc"}]
+_sources.requests.get = lambda *a, **k: _FakeBwRespSrc()
+_sources._bw_token = None
+src_result = _sources.barentswatch_point(69.0, 19.0)
+_sources.requests.post, _sources.requests.get, _sources._bw_token = _real_post, _real_get, _real_token
+src_k0 = next(iter(src_result))
+print("13.1: source/fileSource/rå retning lagret:", src_result[src_k0]["source"], src_result[src_k0]["file_source"], src_result[src_k0]["dir_raw"])
+assert src_result[src_k0]["source"] == "modelA"
+assert src_result[src_k0]["file_source"] == "fileA.nc"
+assert src_result[src_k0]["dir_raw"] == 90.0
+assert src_result[src_k0]["dir"] == 270.0  # 90 + 180, samme konvertering som før
+
+# 13.2: bw_direction_plausible() - gjelder bare ved sterk vind og lav
+# svellandel. Vindsjø ved punktet bør følge vindretningen (innenfor 60 grader).
+def _mk_hour_plaus(**over):
+    base = {"wind_speed": 12.0, "wind_dir": 270.0, "swell_offshore": 0.3, "height_offshore": 3.0,
+            "bw_dir": 270.0, "bw_dir_raw": 90.0}
+    return {**base, **over}
+
+applies, matches, matches_raw = _fetch.bw_direction_plausible(_mk_hour_plaus())
+print("13.2: sterk vind, lav svellandel - stemmer med/uten omregning:", applies, matches, matches_raw)
+assert applies is True
+assert matches is True    # bw_dir (270) = wind_dir (270), stemmer med omregning
+assert matches_raw is False  # bw_dir_raw (90) er motsatt av vinden, stemmer IKKE uten omregning
+
+# 13.3: gjelder ikke ved svak vind, høy svellandel, manglende vindretning,
+# eller ingen ekte BarentsWatch-retning i det hele tatt (reservemodell-timer,
+# f.eks. lokalt uten BarentsWatch-nøkler - matches=None ville ellers blitt
+# telt som "stemmer ikke" av feil grunn).
+assert _fetch.bw_direction_plausible(_mk_hour_plaus(wind_speed=5.0))[0] is False
+assert _fetch.bw_direction_plausible(_mk_hour_plaus(swell_offshore=2.0))[0] is False  # svellandel 2/3, over 30 %
+assert _fetch.bw_direction_plausible(_mk_hour_plaus(wind_dir=None))[0] is False
+assert _fetch.bw_direction_plausible(_mk_hour_plaus(bw_dir=None))[0] is False
+print("13.3: svak vind / høy svellandel / manglende vindretning eller bw_dir -> gjelder ikke")
+
+# 13.4: bw_plausibility_report() teller opp per source/fileSource og legger
+# en rad i kilderapporten (fetch.REPORT).
+before = len(_fetch.REPORT)
+hours_plaus = [
+    {**_mk_hour_plaus(), "bw_source": "modelA", "bw_file_source": "fileA.nc"},
+    {**_mk_hour_plaus(bw_dir=90.0, bw_dir_raw=270.0), "bw_source": "modelA", "bw_file_source": "fileA.nc"},
+    {**_mk_hour_plaus(wind_speed=3.0), "bw_source": "modelA", "bw_file_source": "fileA.nc"},  # gjelder ikke
+]
+_fetch.bw_plausibility_report(hours_plaus, "Test")
+assert len(_fetch.REPORT) == before + 1
+print("13.4: bw_plausibility_report() la til rad i kilderapporten:", _fetch.REPORT[-1])
+assert _fetch.REPORT[-1][0] == "Test"
+assert "modelA" in _fetch.REPORT[-1][3]
+assert "1/2 med omregning" in _fetch.REPORT[-1][3]  # bare den første av de to gjeldende timene stemmer med omregning
+assert "1/2" in _fetch.REPORT[-1][3].split(",")[1]  # og bare den andre stemmer uten (symmetrisk motsatt)
+
+# 13.5 (funnet av fysikk-kontrollør): en interpolert time har ekte bw_dir/
+# bw_dir_raw (satt av bw_interpolate()), men ALDRI bw_source/bw_file_source -
+# skal IKKE telles inn i rapporten (ville havnet i en uspesifisert "?/?"-rad
+# og utvannet per-kilde-statistikken).
+before5 = len(_fetch.REPORT)
+_fetch.bw_plausibility_report([{**_mk_hour_plaus(), "bw_interpolated": True,
+                                 "bw_source": None, "bw_file_source": None}], "Test")
+assert len(_fetch.REPORT) == before5  # ingen ny rad - ingen ekte, gjeldende timer
+print("13.5: interpolert time ekskludert fra plausibilitetsrapporten")
+
 print("Alle tester ok")

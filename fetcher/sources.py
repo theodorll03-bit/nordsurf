@@ -350,6 +350,15 @@ def barentswatch_point(lat, lon):
             "dir": d_from,
             "period": float(p) if p is not None else None,
             "max_height": float(hmax) if hmax is not None else None,
+            # 27.09.2026: hvilken BarentsWatch-kilde/fil dette punktet faktisk
+            # kom fra - permanent sjekk, se ROADMAP og STATUS.md ("test
+            # source/fileSource-hypotesen med data"). Bare til rapportering,
+            # brukes ALDRI til å velge eller endre selve verdiene.
+            "source": row.get("source"),
+            "file_source": row.get("fileSource"),
+            # Rå (ukonvertert) retning, bare til plausibilitetssjekken i
+            # fetch.py - "dir" over er det eneste som brukes i ratingen.
+            "dir_raw": float(d) if d is not None else None,
         }
     return out
 
@@ -394,6 +403,7 @@ def bw_interpolate(raw):
                 "dir": _lerp_circular(v0.get("dir"), v1.get("dir"), frac),
                 "period": _lerp(v0.get("period"), v1.get("period"), frac),
                 "max_height": _lerp(v0.get("max_height"), v1.get("max_height"), frac),
+                "dir_raw": _lerp_circular(v0.get("dir_raw"), v1.get("dir_raw"), frac),
                 "interpolated": True,
             }
     return out

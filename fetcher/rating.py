@@ -541,7 +541,7 @@ def disagree_reason(hour, dir_hit, bw_detail):
 
 
 def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
-                     surf_height_sets, low_hs, hb_damping, period, hs, ps, dir_hit,
+                     surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
                      potential, solid, lost_wind, lost_tide, uncertain,
                      sources_disagree, capped_from, disagree_cap):
@@ -564,7 +564,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             items.append("Periode (ute): ukjent")
         else:
             items.append(f"Periode {period:.0f} s (ute): {_period_word(ps)}")
-        if low_hs:
+        if blown_out:
+            items.append(f"Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart "
+                         f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
+        elif low_hs:
             items.append(f"Surfehøyde: flatt (signifikant høyde under {_fmt_m(FLAT_HS_THRESHOLD)})")
         elif hb is None:
             items.append("Surfehøyde: ingen data (mangler periode)")
@@ -602,6 +605,38 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     return items
 
 
+BLOWN_OUT_WIND_MS = 8.0  # samme grense som WIND_PENALTY_TABLE sin "kraftig"-sone
+BLOWN_OUT_SHARE_MAX = 0.5  # samme "mest vindsjø"-grense som _share_word()
+# 27.09.2026, fysikk-kontrollør sitt funn: samme grense som sources_disagree
+# (se rate(), "BarentsWatch viser en reell totalhøyde (0,5 m+)") - IKKE
+# FLAT_HS_THRESHOLD (0,35 m), som ville latt 0,36-0,49 m telle som "reell
+# energi" selv om det fortsatt reelt sett er lite.
+BLOWN_OUT_MIN_BW_HEIGHT = 0.5
+
+
+def is_blown_out(hour, spot, source, bw_detail, low_hs):
+    """27.09.2026: Grøtfjord tirsdag kl. 14 viste "Trolig flatt"/0,0 m mens
+    svellet ute var 0,9 av 5,9 m totalt (mest vindsjø) og vinden 14 m/s
+    side-onshore, kast 21 - ikke flatt (lite energi), men BLÅST UT (mye
+    energi, bare ikke ekte svell). Skiller de to: flatt er fortsatt
+    low_hs alene (lav BarentsWatch-høyde OGSÅ - lite energi totalt), blåst
+    ut er low_hs PÅ TROSS AV en reell, ikke-lav BarentsWatch-totalhøyde,
+    fordi svellandelen er lav eller vinden er sterk og onshore/side-onshore.
+    Bare for BarentsWatch (samme kilde som viste 0,0 m i det ekte tilfellet) -
+    reservemodellen (svell_ute/metno_korrigert) har ikke noe eget mål på
+    "totalhøyde ved spoten" uavhengig av selve svellberegningen."""
+    if not (low_hs and source == "barentswatch" and bw_detail is not None):
+        return False
+    bw = hour.get("bw_height")
+    if bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT:
+        return False
+    share_low = bw_detail["swell_share"] < BLOWN_OUT_SHARE_MAX
+    wt = wind_type(hour.get("wind_dir"), spot)
+    speed = hour.get("wind_speed")
+    strong_onshore = wt in ("onshore", "sideonshore") and speed is not None and speed >= BLOWN_OUT_WIND_MS
+    return share_low or strong_onshore
+
+
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     h, source, bw_detail = spot_height(hour, spot)
@@ -618,6 +653,7 @@ def rate(hour, spot):
     # - Grøtfjord 24.09.2026 var et ekte eksempel: 0,3 m fra BarentsWatch,
     # helt flatt observert.
     low_hs = h is not None and h < FLAT_HS_THRESHOLD
+    blown_out = is_blown_out(hour, spot, source, bw_detail, low_hs)
     hb_raw = None if (h is None or low_hs) else breaking_height(h, period)
     # 26.09.2026: svell i kanten av eller utenfor svellvinduet har bøyd seg
     # rundt en odde (diffraksjon) - bredere retningsspredning, mindre samlet
@@ -732,7 +768,7 @@ def rate(hour, spot):
 
     breakdown = build_breakdown(
         hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
-        surf_height_sets, low_hs, hb_damping, period, hs, ps, dir_hit,
+        surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
         wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
         potential, solid, lost_wind, lost_tide, uncertain,
         sources_disagree, capped_from, disagree_cap,
@@ -786,4 +822,10 @@ def rate(hour, spot):
                 or (deg_out is not None and deg_out > 20)
             )
         ),
+        # 27.09.2026: blåst ut - IKKE lite energi (BarentsWatch måler en reell
+        # totalhøyde), men lav svellandel og/eller sterk onshore/side-onshore
+        # vind, se is_blown_out(). Appen bør vise "Blåst ut" og
+        # BarentsWatch-totalhøyden i stedet for "Trolig flatt"/0,0 m for disse
+        # timene - stjernene er fortsatt 0 (low_hs gjelder uansett).
+        "blown_out": blown_out,
     }

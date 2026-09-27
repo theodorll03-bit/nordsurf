@@ -16,7 +16,7 @@ import notify
 import sun
 import tide as tidemod
 from exposure import spot_checksum
-from rating import angle_diff, directness, rate, SURF_FACTOR_DEFAULT
+from rating import angle_diff, directness, rate, swell_share, SURF_FACTOR_DEFAULT
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
@@ -86,6 +86,79 @@ def convention_warning(hours, spot, name):
                 f"har BarentsWatch-retning over 150 grader fra facing ved spoten. "
                 f"Ratingen er ikke endret automatisk.")
     return None
+
+
+BW_PLAUSIBILITY_WIND_MIN = 10.0  # m/s
+BW_PLAUSIBILITY_SHARE_MAX = 0.3  # svellandel
+BW_PLAUSIBILITY_DEG = 60  # grader fra vindretningen
+
+
+def bw_direction_plausible(hour):
+    """27.09.2026: permanent plausibilitetssjekk (se ROADMAP og STATUS.md,
+    "test source/fileSource-hypotesen med data" - hypotesen om at ulike
+    BarentsWatch-kilder/filer kan bruke ulik retningskonvensjon ble tidligere
+    avvist på resonnement alene, aldri testet mot ekte data).
+
+    I timer med sterk vind (10 m/s+) og lav svellandel (under 30 %) er sjøen
+    ved punktet stort sett vindsjø - da BØR BarentsWatch-retningen ("fra")
+    ligge innenfor ca 60 grader av vindretningen (vindsjø følger vinden).
+    Sjekker BÅDE med (bw_dir, dagens konverterte "fra") og uten (bw_dir_raw,
+    rått "mot" fra API-et) omregningen - stemmer én konsekvent og den andre
+    ikke, er det et konkret tegn på at konvensjonen varierer med kilden.
+
+    Krever en ekte BarentsWatch-retning for timen (bw_dir ikke None) - ellers
+    ville reservemodell-timer (ingen BarentsWatch i det hele tatt, f.eks.
+    lokalt uten nøkler) telt som "gjelder", med matches=None tolket som
+    "stemmer ikke" av en gal grunn (mangler data, ikke feil retning).
+
+    Endrer ALDRI ratingen - bare rapportert (kilderapport og, etter neste
+    Actions-kjøring, en tabell i STATUS.md). Returnerer
+    (gjelder_denne_timen, stemmer_med_omregning, stemmer_uten_omregning) -
+    de to siste er None når sjekken ikke gjelder eller rå-retningen mangler."""
+    wind_speed, wind_dir = hour.get("wind_speed"), hour.get("wind_dir")
+    bw_dir = hour.get("bw_dir")
+    share, share_known = swell_share(hour)
+    if wind_speed is None or wind_dir is None or bw_dir is None or not share_known:
+        return False, None, None
+    if wind_speed < BW_PLAUSIBILITY_WIND_MIN or share >= BW_PLAUSIBILITY_SHARE_MAX:
+        return False, None, None
+    bw_dir_raw = hour.get("bw_dir_raw")
+    matches = angle_diff(bw_dir, wind_dir) <= BW_PLAUSIBILITY_DEG
+    matches_raw = angle_diff(bw_dir_raw, wind_dir) <= BW_PLAUSIBILITY_DEG if bw_dir_raw is not None else None
+    return True, matches, matches_raw
+
+
+def bw_plausibility_report(hours, name):
+    """Teller opp bw_direction_plausible() sitt resultat per source/fileSource
+    for denne spoten sin kjøring, og legger en rad i kilderapporten hvis noen
+    timer var aktuelle. Selve tabellen (per spot OG per source/fileSource,
+    slik ROADMAP ber om) bygges i STATUS.md etter neste Actions-kjøring, når
+    det finnes ekte tall - denne rapporten er grunnlaget den bygges fra.
+
+    27.09.2026, fysikk-kontrollør sitt funn: interpolerte timer har ekte,
+    interpolerte bw_dir/bw_dir_raw-verdier (satt av sources.bw_interpolate()),
+    men ALDRI bw_source/bw_file_source (ingen ekte kilde for en syntetisk
+    mellomtime) - de ville endt i en uspesifisert "?/?"-bøtte og utvannet
+    nettopp per-kilde-statistikken denne rapporten skal bygge. Samme filter
+    som bw_sources-tellingen rett over i build_spot()."""
+    by_source = {}
+    for h in hours:
+        if h.get("bw_interpolated"):
+            continue
+        applies, matches, matches_raw = bw_direction_plausible(h)
+        if not applies:
+            continue
+        key = (h.get("bw_source"), h.get("bw_file_source"))
+        rec = by_source.setdefault(key, {"n": 0, "match": 0, "match_raw": 0})
+        rec["n"] += 1
+        rec["match"] += bool(matches)
+        rec["match_raw"] += bool(matches_raw)
+    if not by_source:
+        return
+    parts = [f"{src or '?'}/{file_src or '?'}: {rec['match']}/{rec['n']} med omregning, "
+             f"{rec['match_raw']}/{rec['n']} uten"
+             for (src, file_src), rec in sorted(by_source.items())]
+    REPORT.append((name, "BarentsWatch-retning vs. vind (plausibilitet)", "ok", "; ".join(parts)))
 
 
 def safe(spot, label, fn, *args, default=None):
@@ -247,6 +320,17 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             # Maks bølgehøyde fra BarentsWatch - bare til visning, se
             # sources.barentswatch_point sin docstring for hvorfor.
             "bw_height_max": bwk.get("max_height") if bwk else None,
+            # 27.09.2026: hvilken BarentsWatch-kilde/fil punktet kom fra -
+            # permanent sjekk (se ROADMAP og STATUS.md, "test source/
+            # fileSource-hypotesen med data"). None for interpolerte timer
+            # (ingen ekte kilde for en syntetisk mellomverdi). Brukes ALDRI
+            # til å velge eller endre verdier - bare rapportert.
+            "bw_source": bwk.get("source") if bwk else None,
+            "bw_file_source": bwk.get("file_source") if bwk else None,
+            # Rå (ukonvertert) BarentsWatch-retning - bare til
+            # plausibilitetssjekken under, ALDRI brukt i ratingen (bw_dir,
+            # over, er den konverterte "fra"-verdien som brukes der).
+            "bw_dir_raw": bwk.get("dir_raw") if bwk else None,
             # 150 m-punktet, bare til sammenligning (Logger-fanen). Brukes
             # ALDRI i ratingen eller kalibreringen - bw_height (over) er det.
             "bw_height_near": bwk_near.get("height") if bwk_near else None,
@@ -278,6 +362,24 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
     REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
+
+    # 27.09.2026: hvilke BarentsWatch source/fileSource-kombinasjoner som
+    # faktisk ble brukt denne kjøringen - permanent sjekk (se ROADMAP og
+    # STATUS.md, "test source/fileSource-hypotesen med data"). Bare
+    # RÅ (ikke-interpolerte) timer har en ekte kilde å telle.
+    bw_sources = {}
+    for h in hours:
+        if h.get("bw_interpolated"):
+            continue
+        if h.get("bw_source") is None and h.get("bw_file_source") is None:
+            continue
+        key = (h.get("bw_source"), h.get("bw_file_source"))
+        bw_sources[key] = bw_sources.get(key, 0) + 1
+    if bw_sources:
+        src_txt = ", ".join(f"{src or '?'} / {file_src or '?'}: {n}t" for (src, file_src), n in sorted(bw_sources.items()))
+        REPORT.append((name, "BarentsWatch source/fileSource", "ok", src_txt))
+
+    bw_plausibility_report(hours, name)
 
     # 27.09.2026, andre runde: BarentsWatch-retning over 150 grader fra facing
     # betyr nå bare at bølgene ved punktet faktisk går ut fra land (ordinær

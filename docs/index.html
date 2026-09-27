@@ -448,8 +448,8 @@ function dayChipsHtml(spot, spotIdx){
     const [h, idx] = best;
     const good = h.stars >= 3;
     const anslag = !!(bw && h.t > bw);
-    const heightTxt = h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" m" : "–");
-    const heightSpoken = h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" meter" : "ingen data");
+    const heightTxt = h.blown_out ? "Blåst ut" : (h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" m" : "–"));
+    const heightSpoken = h.blown_out ? "Blåst ut" : (h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" meter" : "ingen data"));
     const timeTxt = fmtHour.format(new Date(h.t));
     const cls = ["daychip", good?"good":"", anslag?"anslag":""].filter(Boolean).join(" ");
     const lbl = `${fullLbl}, beste time klokka ${timeTxt.replace(/^0/,"")}, ${h.stars} av 5 stjerner, ${heightSpoken}${anslag?", anslag":""}`;
@@ -502,7 +502,7 @@ function renderList(){
       <button class="row" data-spot="${i}">
         <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
         <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
-        <span class="facts">${facts}${h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":"")}</span>
+        <span class="facts">${facts}${h.blown_out?"<span>blåst ut</span>":(h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":""))}</span>
         <span class="best">${bestText(s)}</span>
       </button>
       ${favBtnHtml(s.id, true)}
@@ -525,6 +525,11 @@ function renderList(){
 // "height" (Hs, signifikant høyde ute) er bare forklaringen bak tallet, se
 // README "Surfehøyde".
 function surfHeadline(h){
+  // 27.09.2026: blåst ut (mye vindsjø/vind, men reell totalhøyde ved
+  // BarentsWatch-punktet) er ikke det samme som flatt (lite energi) - se
+  // rating.is_blown_out(). Viser BarentsWatch sin egen totalhøyde i stedet
+  // for den sterkt dempede, nær-null surfehøyden.
+  if(h.blown_out) return `Blåst ut${h.bw_height!=null ? ` (${nf1.format(h.bw_height)} m)` : ""}`;
   if(h.likely_flat) return "Trolig flatt";
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";
@@ -589,9 +594,10 @@ function renderSpot(){
   const t = new Date(h.t);
   const fw = h.faded_wind ?? h.faded, ft = h.faded_tide ?? 0;
   const losses = [fw?`${windNoun(h.wind_type)} tar ${fw}`:null, ft?`tidevannet tar ${ft}`:null].filter(Boolean);
+  const starWord = h.blown_out ? "Blåst ut" : STAR_WORDS[h.stars];
   const verdict = h.faded
-    ? `${STAR_WORDS[h.stars]}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
-    : `${STAR_WORDS[h.stars]}.`;
+    ? `${starWord}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
+    : `${starWord}.`;
 
   // Timestripe gruppert per dag
   const days = {};
@@ -614,7 +620,9 @@ function renderSpot(){
 
   // Advarsel om retning/dreining
   let warn = "";
-  if(h.sources_disagree){
+  if(h.blown_out){
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Blåst ut.</b> Mye vindsjø og sterk vind, ikke surfbart. BarentsWatch måler ${h.bw_height!=null?nf1.format(h.bw_height):"–"} m totalt ved punktet, men lite av det er ekte svell.</span></div>`;
+  } else if(h.sources_disagree){
     warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Kildene er uenige.</b> ${esc(h.sources_disagree_reason.replace(/^Kildene er uenige\.\s*/, ""))}</span></div>`;
   } else if(h.height_source==="barentswatch"){
     const interp = h.bw_interpolated ? " Denne timen er interpolert mellom to BarentsWatch-punkter." : "";
