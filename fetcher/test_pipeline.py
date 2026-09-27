@@ -41,6 +41,7 @@ sources.github_logs = lambda: [
 tmp = Path(tempfile.mkdtemp())
 fetch.OUT = tmp / "forecast.json"
 fetch.BW_CALIB = tmp / "bw_calibration.json"
+fetch.EXPOSURE_LEARNED = tmp / "exposure.json"
 notify.STATE = tmp / "notified.json"
 sent = []
 notify.requests.post = lambda url, json=None, timeout=None: sent.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
@@ -101,6 +102,7 @@ sources.barentswatch_point = bw_hourly_mock
 tmp2 = Path(tempfile.mkdtemp())
 fetch.OUT = tmp2 / "forecast.json"
 fetch.BW_CALIB = tmp2 / "bw_calibration.json"
+fetch.EXPOSURE_LEARNED = tmp2 / "exposure.json"
 notify.STATE = tmp2 / "notified.json"
 sent2 = []
 notify.requests.post = lambda url, json=None, timeout=None: sent2.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
@@ -199,6 +201,7 @@ sources.barentswatch_point = bw_two_points_mock
 tmp6i = Path(tempfile.mkdtemp())
 fetch.OUT = tmp6i / "forecast.json"
 fetch.BW_CALIB = tmp6i / "bw_calibration.json"
+fetch.EXPOSURE_LEARNED = tmp6i / "exposure.json"
 notify.STATE = tmp6i / "notified.json"
 fetch.main()
 f6i = json.loads(fetch.OUT.read_text())
@@ -219,6 +222,7 @@ sources.barentswatch_point = bw_250_empty_mock
 tmp6i2 = Path(tempfile.mkdtemp())
 fetch.OUT = tmp6i2 / "forecast.json"
 fetch.BW_CALIB = tmp6i2 / "bw_calibration.json"
+fetch.EXPOSURE_LEARNED = tmp6i2 / "exposure.json"
 notify.STATE = tmp6i2 / "notified.json"
 fetch.main()
 f6i2 = json.loads(fetch.OUT.read_text())
@@ -233,6 +237,7 @@ sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 2.0, "swel
 tmp3 = Path(tempfile.mkdtemp())
 fetch.OUT = tmp3 / "forecast.json"
 fetch.BW_CALIB = tmp3 / "bw_calibration.json"
+fetch.EXPOSURE_LEARNED = tmp3 / "exposure.json"
 notify.STATE = tmp3 / "notified.json"
 fetch.main()
 f3 = json.loads(fetch.OUT.read_text())
@@ -359,5 +364,39 @@ assert m, "fant ikke SIZE_M i docs/index.html"
 js_size_m = json.loads(m.group(1))  # nøklene er allerede doble anførselstegn i JS-koden, gyldig JSON som den er
 print("8.8 SIZE_M i app vs henter:", js_size_m, "|", _calibrate_size.SIZE_M)
 assert js_size_m == _calibrate_size.SIZE_M
+
+# ---------- 9: del B (eksponering lært fra BarentsWatch) faktisk koblet inn
+# i build_spot() - ikke bare exposure_learn.py sine egne, isolerte tester.
+# Bruker Unstad, som har 7 sammenhengende, helt åpne bøtter (26-32) i den
+# ekte data/exposure_baseline.json - nok til egen normalisering uten å
+# trenge å låne fra "kort". ----------
+spots_cfg = json.loads((Path(__file__).parent.parent / "spots.json").read_text())["spots"]
+unstad_spot = next(s for s in spots_cfg if s["id"] == "unstad")
+exposure_baseline_real = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())
+
+
+def _mk_pairs(bucket, ratio, n=6):
+    return [{"t": f"2026-09-{20+i%3:02d}T{(bucket+i) % 24:02d}:00Z", "bucket": bucket,
+              "period_group": "lang", "ratio": ratio} for i in range(n)]
+
+
+exposure_learned_fixture = {"unstad": (
+    _mk_pairs(26, 0.6) + _mk_pairs(27, 0.6) + _mk_pairs(28, 0.6)  # referansebøtter, transfer skal bli 0,6
+    + _mk_pairs(31, 0.3)  # geometrisk helt åpen (rå 1,0), men lært lavere - skal IKKE forbli 1,0
+)}
+now9 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+built9 = fetch.build_spot(unstad_spot, now9, {}, {}, "test-run-9", exposure_baseline_real, exposure_learned_fixture)
+cal9 = built9["calibration"]
+print("9: del B - transfer_source, bøtter lært (lang), transfer:", cal9["transfer_source"], cal9["exposure_buckets_learned_lang"], cal9.get("transfer_used"))
+assert cal9["transfer_source"] == "eksponering"
+assert cal9["transfer_used"] == 0.6
+assert cal9["exposure_buckets_learned_lang"] == 4  # 26, 27, 28 og 31
+
+# Bøtte 31 (310-319 grader) sin rad i figur-dataene skal vise lært 0,3/0,6 =
+# 0,5, ikke 1,0 som den rene geometrien alene ville gitt.
+row31 = next(r for r in cal9["exposure_curve"] if r["from"] == 310)
+print("9b: bøtte 31 (310-319) - geometrisk vs lært (lang):", row31["geometric"], row31["learned_lang"])
+assert row31["geometric"] >= 0.98  # nesten helt åpen geometrisk (glattet, ikke rå)
+assert abs(row31["learned_lang"] - 0.5) < 1e-6
 
 print("Pipeline ok")

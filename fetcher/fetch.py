@@ -11,6 +11,7 @@ from pathlib import Path
 
 import sources
 import calibrate
+import exposure_learn
 import notify
 import sun
 import tide as tidemod
@@ -22,6 +23,7 @@ SPOTS = ROOT / "spots.json"
 OUT = ROOT / "docs" / "data" / "forecast.json"
 BW_CALIB = ROOT / "data" / "bw_calibration.json"
 EXPOSURE_BASELINE = ROOT / "data" / "exposure_baseline.json"
+EXPOSURE_LEARNED = ROOT / "data" / "exposure.json"
 HOURS_AHEAD_MAX = 120  # 5 døgn, men stopper ved kortest tilgjengelige kilde
 REPORT = []  # kilderapport, vises i Actions
 # Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
@@ -98,9 +100,14 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
-def build_spot(spot, now, learned, bw_calib, run_id, exposure_data):
+def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data):
     name = spot["name"]
     print(name)
+    # Kopi FØR noe muteres under (exposure_smoothed/exposure_raw/transfer/
+    # surf_factor osv. settes rett på denne dicten) - ellers ville config
+    # sin egen spots.json-liste blitt endret i minnet, ikke bare den lokale
+    # kopien som brukes til å bygge dette svaret.
+    spot = dict(spot)
     s, o = spot["spot"], spot["offshore"]
     ocean_spot = safe(name, "met.no hav (spot)", sources.metno_ocean, s["lat"], s["lon"])
     ocean_off = safe(name, "met.no hav (ute)", sources.metno_ocean, o["lat"], o["lon"])
@@ -141,31 +148,70 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data):
     tides = safe(name, "Kartverket tidevann", sources.kartverket_tide, s["lat"], s["lon"],
                  now - dt.timedelta(hours=12), now + dt.timedelta(hours=HOURS_AHEAD_MAX + 12), default=[])
 
-    # Effektiv transfer for reserven brukes med kalibreringshistorikk FRA FØR
-    # denne kjøringen - nye par fra akkurat nå legges til historikken lenger
-    # ned og gjelder først fra neste kjøring (unngår sirkularitet: parene
-    # bygges av bw_height/svell/directness og trenger ikke selve transferen).
-    bw_pairs_existing = bw_calib.get(spot["id"], [])
-    transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
-    # surf_factor har bare én kilde (loggene/observasjonene dine) - ingen
-    # rekkefølge å velge mellom som for transfer, bare standard 1,0 til det
-    # finnes nok logger (se calibrate.learn()).
-    surf_factor_value = learned.get("surf_factor", SURF_FACTOR_DEFAULT)
-    surf_factor_source = "logs" if learned.get("surf_factor") is not None else "standard"
-    spot = {**spot, "transfer": transfer_value, "surf_factor": surf_factor_value}
-
     # 27.09.2026, ROADMAP oppgave 2: glattet eksponering (del C) erstatter
     # vindu+skyggekurve for reservemodellen (se rating.exposure()) - men bare
     # når sjekksummen stemmer med spots.json sitt NÅVÆRENDE innhold. Endres
     # facing/vindu/koordinater uten å bygge exposure_baseline.py på nytt,
     # faller spoten tilbake til directness() (varslet i kilderapporten) i
-    # stedet for å bruke utdaterte eksponeringstall stille.
+    # stedet for å bruke utdaterte eksponeringstall stille. Gjøres FØR
+    # transfer under, siden del B sin lærte transfer (om den finnes) trenger
+    # denne geometrien (referansebøttene) for å normalisere seg selv.
     exposure_smoothed, exposure_raw, exposure_warning = resolve_exposure(spot, exposure_data, name)
     if exposure_smoothed is not None:
         spot["exposure_smoothed"] = exposure_smoothed
         spot["exposure_raw"] = exposure_raw
     if exposure_warning:
         REPORT.append((name, "Eksponering (del C)", "feil", exposure_warning))
+
+    # 27.09.2026, ROADMAP oppgave 4 (del B): eksponering LÆRT fra BarentsWatch,
+    # per 10-graders bøtte og periodegruppe (kort/lang) - blandet med den
+    # geometriske kurven (se exposure_learn.py sin modul-docstring for hele
+    # metoden). Samme unngå-sirkularitet-mønster som transfer over: bruker
+    # PAR FRA FØR denne kjøringen (nye par fra timene som bygges under kan
+    # ikke brukes her - de trenger selv rate() sitt resultat, se lenger ned).
+    # Krever gyldig geometrisk rå-eksponering (referansebøttene, se
+    # exposure_learn.geometric_reference_buckets()) - ingen normalisering
+    # uten den.
+    exposure_pairs_existing = exposure_learned_data.get(spot["id"], [])
+    learned_lang = learned_kort = {}
+    counts_lang = counts_kort = {}
+    transfer_lang = transfer_kort = None
+    if exposure_raw is not None:
+        learned_lang, transfer_lang, ref_lang = exposure_learn.normalize_period_group(
+            exposure_pairs_existing, "lang", exposure_raw)
+        learned_kort, transfer_kort, ref_kort = exposure_learn.normalize_period_group(
+            exposure_pairs_existing, "kort", exposure_raw, borrow_from=(learned_lang, transfer_lang, ref_lang))
+        counts_lang = exposure_learn.bucket_pair_counts(exposure_pairs_existing, "lang")
+        counts_kort = exposure_learn.bucket_pair_counts(exposure_pairs_existing, "kort")
+        if learned_lang:
+            spot["exposure_smoothed_lang"] = exposure_learn.blend_curve(learned_lang, exposure_smoothed, counts_lang)
+        if learned_kort:
+            spot["exposure_smoothed_kort"] = exposure_learn.blend_curve(learned_kort, exposure_smoothed, counts_kort)
+
+    # Effektiv transfer for reserven brukes med kalibreringshistorikk FRA FØR
+    # denne kjøringen - nye par fra akkurat nå legges til historikken lenger
+    # ned og gjelder først fra neste kjøring (unngår sirkularitet: parene
+    # bygges av bw_height/svell/directness og trenger ikke selve transferen).
+    # 27.09.2026, ROADMAP oppgave 4: del B sin transfer (medianforholdet i
+    # referansebøttene den lærte kurven normaliseres mot, se
+    # exposure_learn.normalize_period_group()) er mer presis enn den gamle,
+    # retningsløse bw_transfer() - brukes derfor FØR den når den finnes.
+    # Bruker alltid "lang" periodegruppe her (samme antagelse som den
+    # geometriske modellen sin bølgelengde, ~12 s) - "kort" sin transfer er
+    # uansett lik "lang" sin med mindre "lang" ikke er lært ennå.
+    bw_pairs_existing = bw_calib.get(spot["id"], [])
+    if learned.get("transfer"):
+        transfer_value, transfer_source = learned["transfer"], "logs"
+    elif transfer_lang is not None:
+        transfer_value, transfer_source = round(min(1.2, max(0.05, transfer_lang)), 2), "eksponering"
+    else:
+        transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
+    # surf_factor har bare én kilde (loggene/observasjonene dine) - ingen
+    # rekkefølge å velge mellom som for transfer, bare standard 1,0 til det
+    # finnes nok logger (se calibrate.learn()).
+    surf_factor_value = learned.get("surf_factor", SURF_FACTOR_DEFAULT)
+    surf_factor_source = "logs" if learned.get("surf_factor") is not None else "standard"
+    spot["transfer"], spot["surf_factor"] = transfer_value, surf_factor_value
 
     hours = []
     for i in range(horizon):
@@ -250,10 +296,19 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data):
     bw_calib[spot["id"]] = merged_pairs
     bw_days = len({p["t"][:10] for p in merged_pairs})
 
-    # exposure_smoothed/exposure_raw er 360 interne tall hver (én per grad)
-    # bare til bruk i rate() over - ikke noe appen trenger å vise, ekskludert
-    # fra utdata.
-    _internal_keys = {"exposure_smoothed", "exposure_raw"}
+    # Del B: nye eksponeringspar bygges FRA hours (trenger swell_share,
+    # sources_disagree osv. - rate() sitt resultat), og lagres for BRUK NESTE
+    # KJØRING (se kommentaren over exposure_pairs_existing lenger opp).
+    new_exposure_pairs = exposure_learn.exposure_pairs_for_run(hours, run_id)
+    merged_exposure_pairs = exposure_learn.merge_pairs(exposure_pairs_existing, new_exposure_pairs, now)
+    exposure_learned_data[spot["id"]] = merged_exposure_pairs
+    exposure_override_suggestions = exposure_learn.override_removal_suggestions(
+        spot.get("exposure_override"), learned_kort, learned_lang)
+
+    # exposure_smoothed/exposure_raw/exposure_smoothed_lang/exposure_smoothed_kort
+    # er interne tall (én per grad) bare til bruk i rate() over - ikke noe
+    # appen trenger å vise, ekskludert fra utdata.
+    _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort"}
     public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
     light_days = sun.light_days(s["lat"], s["lon"], now)
     calibration = {
@@ -266,6 +321,27 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data):
         "transfer_source": transfer_source,
         "surf_factor_used": surf_factor_value,
         "surf_factor_source": surf_factor_source,
+        # Del B, ROADMAP oppgave 4 - hvor mye eksponering som er lært akkurat
+        # nå (par fra FØR denne kjøringen, se over), til Logger-fanen og
+        # STATUS.md.
+        "exposure_pairs": len(merged_exposure_pairs),
+        "exposure_buckets_learned_lang": len(learned_lang),
+        "exposure_buckets_learned_kort": len(learned_kort),
+        "exposure_override_suggestions": exposure_override_suggestions,
+        # Til figuren i Logger-fanen: én rad per 10-graders bøtte. "geometrisk"
+        # er del C sin glattede kurve midt i bøtta (uendret av del B) - til
+        # sammenligning med det som faktisk er lært.
+        "exposure_curve": ([
+            {
+                "from": b * 10, "to": b * 10 + 9,
+                "geometric": round(exposure_smoothed[b * 10 + 5], 3),
+                "learned_lang": round(learned_lang[b], 3) if b in learned_lang else None,
+                "learned_kort": round(learned_kort[b], 3) if b in learned_kort else None,
+                "pairs_lang": counts_lang.get(b, 0),
+                "pairs_kort": counts_kort.get(b, 0),
+            }
+            for b in range(36)
+        ] if exposure_smoothed is not None else None),
     }
     return {**public, "hours": hours, "tide_events": tides, "bw_until": bw_until,
             "calibration": calibration, "light_days": light_days}
@@ -290,10 +366,12 @@ def main():
     logs = safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[])
     bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
     exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
+    exposure_learned_data = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
     spots = []
     for s in config["spots"]:
         if s.get("enabled"):
-            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id, exposure_data))
+            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
+                                     exposure_data, exposure_learned_data))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -301,6 +379,8 @@ def main():
     print(f"Skrev {OUT}")
     BW_CALIB.parent.mkdir(parents=True, exist_ok=True)
     BW_CALIB.write_text(json.dumps(bw_calib, ensure_ascii=False, indent=1), encoding="utf-8")
+    EXPOSURE_LEARNED.parent.mkdir(parents=True, exist_ok=True)
+    EXPOSURE_LEARNED.write_text(json.dumps(exposure_learned_data, ensure_ascii=False, indent=1), encoding="utf-8")
     notify.run(forecast, now)
     write_report()
 

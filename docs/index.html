@@ -192,6 +192,11 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 .calib{background:var(--raised);border-radius:14px;padding:14px 16px;margin:0 0 10px}
 .calib .t{font-weight:600}
 .calib p{margin:4px 0 0;color:var(--muted);font-size:15px}
+.calib .sugg{margin:6px 0 0;padding:8px 10px;border-radius:10px;background:var(--surface);font-size:14px}
+.expo-chart{width:100%;height:auto;display:block;margin-top:8px}
+.expo-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--muted)}
+.expo-legend span{display:inline-flex;align-items:center;gap:5px}
+.expo-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .logrow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
 .logrow:first-child{border-top:0}
 .logrow .m{color:var(--muted);font-size:15px;grid-column:1/-1}
@@ -756,6 +761,50 @@ async function loadReportsUI(spotId){
 function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){ return []; } }
 function saveLogs(l){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(l)); return true; }catch(e){ return false; } }
 
+// Del B (ROADMAP oppgave 4): eksponering per retning, lært fra BarentsWatch
+// og blandet med den geometriske kurven fra del C - se fetcher/exposure_learn.py.
+// Fargeskala 0-5 stjerner, uavhengig av rav-fargen (--star) som ellers
+// betyr "stjerner" i appen - her trengs en skala, ikke en enkeltfarge.
+const STAR_SCALE = ["#c0392b","#e0672c","#e0a72c","#c9c22b","#7fbf3f","#2f9e44"];
+function exposureChartSVG(spotId, curve, logs){
+  if(!curve) return "";
+  const W = 380, H = 130, padL = 26, padR = 8, padT = 6, plotH = 84, axisY = padT + plotH;
+  const bx = i => padL + (i + 0.5) * (W - padL - padR) / 36;
+  const by = v => axisY - v * plotH;
+  const path = (key) => curve.map((c,i)=>c[key]!=null ? `${bx(i)},${by(c[key])}` : null).filter(Boolean);
+  const geoPts = curve.map((c,i)=>`${bx(i)},${by(c.geometric)}`).join(" ");
+  const langPts = path("learned_lang");
+  const kortPts = path("learned_kort");
+  const maxPairs = Math.max(1, ...curve.map(c=>Math.max(c.pairs_lang||0, c.pairs_kort||0)));
+  const bars = curve.map((c,i)=>{
+    const n = Math.max(c.pairs_lang||0, c.pairs_kort||0);
+    if(!n) return "";
+    const h = 14 * Math.min(1, n / maxPairs);
+    const w = (W - padL - padR) / 36 - 2;
+    return `<rect x="${bx(i)-w/2}" y="${H-14+ (14-h)}" width="${w}" height="${h}" fill="var(--muted)" opacity=".35"/>`;
+  }).join("");
+  const dots = (pts, color) => pts.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.6" fill="${color}"/>`).join("");
+  const marks = (logs||[]).filter(l=>l.spot===spotId && l.dirOffshore!=null && l.stars!=null).map(l=>{
+    const i = Math.floor((l.dirOffshore % 360) / 10);
+    return `<circle cx="${bx(i)}" cy="${axisY+6}" r="3" fill="${STAR_SCALE[Math.max(0,Math.min(5,l.stars))]}"><title>${l.stars} stjerner</title></circle>`;
+  }).join("");
+  const ticks = [0,90,180,270].map(d=>{
+    const i = d/10;
+    return `<text x="${bx(i)}" y="${H-1}" font-size="9" fill="var(--muted)" text-anchor="middle">${d}°</text>`;
+  }).join("");
+  const yTicks = [0,0.5,1].map(v=>`<text x="${padL-4}" y="${by(v)+3}" font-size="9" fill="var(--muted)" text-anchor="end">${v}</text>`).join("");
+  return `<svg class="expo-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Eksponering per retning">
+    <line x1="${padL}" y1="${axisY}" x2="${W-padR}" y2="${axisY}" stroke="var(--line)"/>
+    ${bars}
+    <polyline points="${geoPts}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 2"/>
+    ${langPts.length>1 ? `<polyline points="${langPts.join(" ")}" fill="none" stroke="#2f6fed" stroke-width="1.8"/>` : ""}
+    ${dots(langPts, "#2f6fed")}
+    ${dots(kortPts, "#e08b2f")}
+    ${marks}
+    ${ticks}${yTicks}
+  </svg>`;
+}
+
 function forecastAt(spotId, t){
   const s = DATA.spots.find(x=>x.id===spotId); if(!s) return null;
   const key = new Date(Math.floor(t.getTime()/36e5)*36e5).toISOString().slice(0,13)+":00Z";
@@ -779,7 +828,8 @@ function renderLogs(){
   const heightCal = DATA.spots.map(s=>{
     const cal = s.calibration || {};
     const transferPct = nf0.format((cal.transfer_used ?? (s.hours[0]||{}).transfer ?? 0.6) * 100);
-    const transferSrcTxt = cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
+    const transferSrcTxt = cal.transfer_source==="eksponering" ? `Lært fra eksponeringen per retning (del B, ${cal.exposure_buckets_learned_lang} bøtter)`
+      : cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
       : cal.transfer_source==="spots.json" ? "Satt i spots.json"
       : cal.transfer_source==="logs" ? "Lært fra loggene dine"
       : "Standardverdi";
@@ -791,6 +841,33 @@ function renderLogs(){
     return `<div class="calib"><div class="t">${esc(s.name)}</div>
       <p><b>Transfer ${transferPct} %</b>: hvor mye av svellet ute som når stranda ved direkte treff, modell mot modell (reservemodellen mot BarentsWatch). ${transferSrcTxt}.</p>
       <p><b>Surf-faktor ${nf1.format(surfFactor)}</b>: hvor godt Komar og Gaughan sin bruddhøyde-formel stemmer med det du faktisk ser her. ${surfSrcTxt}.</p></div>`;
+  }).join("");
+  // Del B (ROADMAP oppgave 4): eksponering lært fra BarentsWatch, per
+  // 10-graders bøtte, blandet med den geometriske kurven fra del C. Grå
+  // stiplet linje er geometrien alene (uendret), blå er lært for lang
+  // periode (10 s og over), oransje prikker lært for kort periode - se
+  // fetcher/exposure_learn.py sin modul-docstring for hele metoden.
+  const exposureCal = DATA.spots.map(s=>{
+    const cal = s.calibration || {};
+    const curve = cal.exposure_curve;
+    if(!curve){
+      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen geometrisk eksponeringsdata bygget ennå (fetcher/exposure_baseline.py må kjøres manuelt).</p></div>`;
+    }
+    const pairs = cal.exposure_pairs ?? 0;
+    const bucketsLang = cal.exposure_buckets_learned_lang ?? 0;
+    const bucketsKort = cal.exposure_buckets_learned_kort ?? 0;
+    const sugg = (cal.exposure_override_suggestions || []).map(o=>
+      `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren - fjernes aldri automatisk.</div>`
+    ).join("");
+    return `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
+      <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter stjerner.</p>
+      ${exposureChartSVG(s.id, curve, logs)}
+      <div class="expo-legend">
+        <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>
+        <span><i style="background:#2f6fed"></i>Lært, lang periode</span>
+        <span><i style="background:#e08b2f"></i>Lært, kort periode</span>
+      </div>
+      ${sugg}</div>`;
   }).join("");
   // Hvilket BarentsWatch-punkt (250 m, brukt i varselet, eller 150 m, det
   // opprinnelige) som faktisk ligger nærmest det du har logget. Bytter
@@ -837,6 +914,7 @@ function renderLogs(){
   $("#app").innerHTML = `<header class="top"><h1>Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
     <h2 class="sec">Treffsikkerhet</h2>${calib}
     <h2 class="sec">Bølgehøyde</h2>${heightCal}
+    <h2 class="sec">Eksponering per retning</h2>${exposureCal}
     <h2 class="sec">BarentsWatch-punkt</h2>${bwCompare}
     <h2 class="sec">Uenige kilder</h2>${disagreeStats}
     <h2 class="sec">Økter</h2>
@@ -1072,6 +1150,11 @@ $("#saveLog").onclick = ()=>{
     // forecastHeight for å regne ut Hb (surf_factor-læringen).
     forecastPeriod: f ? f.period : null,
     directness: f ? f.directness : null,
+    // Retningen svellet ute kom fra på loggtidspunktet - til eksponerings-
+    // figuren i Logger-fanen (del B, ROADMAP oppgave 4), som merker loggene
+    // dine på retningen de gjelder for. Eldre logger mangler dette feltet -
+    // figuren viser dem bare ikke.
+    dirOffshore: f ? f.dir_offshore : null,
     // BarentsWatch 250 m (brukt i varselet) og 150 m (bare sammenligning),
     // slik de sto på tidspunktet du logget - se "hvilket punkt treffer best"
     // i Logger-fanen.

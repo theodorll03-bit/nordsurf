@@ -109,7 +109,10 @@ def exposure_override_cap(d, spot):
     return None
 
 
-def exposure(d, spot):
+PERIOD_SHORT_MAX = 10  # sekunder ute - under dette er "kort" periodegruppe, se exposure_learn.py
+
+
+def exposure(d, spot, period=None):
     """0 til 1: hvor mye av svellet utenfor som når spoten fra retning d -
     del C sin glattede, geometriske eksponering (exposure_baseline.py),
     slått sammen i fetch.py til spot["exposure_smoothed"] (360 verdier,
@@ -119,11 +122,24 @@ def exposure(d, spot):
     nå bare som reserve HVIS eksponeringsdata mangler eller er ugyldige for
     spoten (ingen exposure_baseline.json bygget ennå, eller sjekksummen ikke
     stemmer - fetch.py varsler da i kilderapporten). exposure_override sitt
-    tak gjelder uansett hvilken av de to som brukes."""
-    if d is None or not spot.get("exposure_smoothed"):
+    tak gjelder uansett hvilken av de to som brukes.
+
+    27.09.2026, ROADMAP oppgave 4 (del B): diffraksjon avhenger av
+    bølgelengden (samme λ som i exposure_baseline.py sin skyggelengde-formel),
+    så en retning kan ha ulik lært eksponering for kort (under 10 s) og lang
+    (10 s og over) periode ute. fetch.py setter, når nok er lært,
+    spot["exposure_smoothed_kort"]/["_lang"] (blandet med geometrien, se
+    exposure_learn.blend_curve()) - denne funksjonen velger riktig kurve
+    etter `period` (svellets periode UTE, IKKE BarentsWatch sin periode ved
+    kysten). Mangler periode, eller ingen lært kurve for gruppen: faller
+    tilbake til spot["exposure_smoothed"] (ren geometri, eller del B sin
+    'lang'-kurve hvis den også er satt der - se fetch.py)."""
+    if d is None:
         value = directness(d, spot)
     else:
-        value = spot["exposure_smoothed"][int(round(d)) % 360]
+        pg = "kort" if period is not None and period < PERIOD_SHORT_MAX else "lang"
+        curve = spot.get(f"exposure_smoothed_{pg}") or spot.get("exposure_smoothed")
+        value = curve[int(round(d)) % 360] if curve else directness(d, spot)
     cap = exposure_override_cap(d, spot)
     return value if cap is None else min(value, cap)
 
@@ -269,7 +285,7 @@ def spot_height(hour, spot=None):
         return h, "barentswatch", detail
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
     if hour.get("swell_offshore") is not None:
-        h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot)
+        h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot, hour.get("period"))
         return h, "svell_ute", None
     h = hour.get("height_spot_model")
     if h is None:
@@ -594,7 +610,7 @@ def rate(hour, spot):
     # erstatter directness() (vindu + skyggekurve) her - se exposure() sin
     # docstring. Brukes til Hb-demping for reservemodellen (under) og til
     # sources_disagree (samme grense 0,667 som før).
-    dir_hit = exposure(hour.get("dir_offshore"), spot)
+    dir_hit = exposure(hour.get("dir_offshore"), spot, period)
 
     # Flat-sperre: under FLAT_HS_THRESHOLD signifikant høyde ved spoten er
     # det uansett flatt i praksis. Komar og Gaughan sin formel gjør små

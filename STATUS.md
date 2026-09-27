@@ -490,9 +490,43 @@ Alle 6 vinduene har fortsatt full fri linje til åpent hav med den strengere 300
 
 ---
 
+## Oppgave 4: Del B - eksponering lært fra BarentsWatch
+
+Gjort autonomt, uten å vente på Theodor (per instruks - "fortsett med ROADMAP.md uten å vente på meg" gjaldt fra det tidspunktet oppgave 2 sine tall stemte).
+
+### Metode (kort - full begrunnelse i fetcher/exposure_learn.py sin modul-docstring)
+- **Par**: én rad per spot og BarentsWatch-tidspunkt der høyden er RÅ (ikke interpolert av oss), svellet ute er minst 0,5 m, svellandelen minst 0,7, og kildene ikke er uenige. Forhold = `bw_height × swell_share / swell_offshore` - et empirisk mål på hvor mye av svellet ute som faktisk når punktet fra akkurat den retningen. Lagres i `data/exposure.json`, 120 døgn (samme mønster som `data/bw_calibration.json` - skrives bare av GitHub Actions, aldri lokalt).
+- **Bøtter**: 10 grader hver (36 per spot). En bøtte er "lært" med minst 6 par over minst 2 døgn (medianen).
+- **To periodegrupper** (kort under 10 s, lang 10 s og over ute) - diffraksjon avhenger av bølgelengden, samme fysikk som del C sin skyggelengde-formel (L = W²/λ). Læres og normaliseres hver for seg. Kort kan låne referansebøtter/transfer fra lang når den ikke har 3 egne - lang låner aldri fra kort.
+- **Normalisering**: et par-forhold er egentlig transfer × eksponering blandet sammen. Skiller dem ved å bruke bøtter der den GEOMETRISKE modellen (del C sin rå kurve) sier fri sikt i hele bøtta som referanse - krever minst 3 slike lærte referansebøtter. Transfer = medianen av par-forholdene i akkurat disse. Lært eksponering i en bøtte = bøttens median-forhold / transfer, avgrenset til [0,1].
+- **Blanding med geometrien**: vekt lært = par / (par + 10) - få par gir nesten ren geometri, mange par nærmer seg den lærte verdien. Ingen par i en bøtte: uendret geometri, automatisk (ingen spesialkode trengs).
+- **Transfer-prioritet oppdatert**: del B sin transfer (lang periodegruppe) brukes nå FØR den gamle, retningsløse `bw_transfer()`-mekanismen når den finnes - mer presis siden den er normalisert mot kjent åpen geometri i stedet for en enkelt, retningsblind median. Den gamle mekanismen (og spots.json/standardverdi) er uendret som reserve.
+- **exposure_override**: et nytt Logger-fanen-forslag ("vurder å fjerne") når en lært verdi i overridens sektor allerede ligger under taket - aldri fjernet automatisk.
+- **Figur i Logger-fanen** (ny seksjon "Eksponering per retning" for hver spot): SVG-linjediagram, geometrisk kurve (stiplet grå), lært lang periode (blå) og kort periode (oransje), søylene nederst er antall par per bøtte, prikkene langs bunnen er dine egne logger (nytt felt `dirOffshore` lagt til loggformatet - eldre logger mangler det og vises bare ikke i figuren) farget etter stjerner (rødt 0 til grønt 5).
+
+### En reell feil funnet og rettet FØR commit: test-forurensing av ekte data
+Under arbeidet oppdaget jeg at `fetcher/test_pipeline.py` sine eksisterende tester patcher `fetch.OUT` og `fetch.BW_CALIB` til midlertidige mapper før de kaller `fetch.main()` - men den nye `fetch.EXPOSURE_LEARNED` var IKKE patchet samme sted, så en testkjøring skrev falske par rett inn i den ekte `data/exposure.json` i repoet (fanget opp fordi filen dukket opp med dagens systemklokke i tidsstemplene, ikke en tydelig test-dato). Rettet ved å patche `fetch.EXPOSURE_LEARNED` samme sted som `fetch.BW_CALIB` i alle 5 test-scenarioene. Den forurensede fila ble slettet før commit - ingen ekte data noensinne berørt (repoet har uansett aldri hatt ekte eksponeringspar, siden BarentsWatch-nøkler ikke finnes lokalt).
+
+### Tester
+- `fetcher/test_exposure_learn.py` (ny fil, 12 tester): bøtte-indeksering, periodegruppe, par-filtrering (alle avslagsgrunnene), 120-dagers grense og dedup, lært-bøtte-terskel (par OG døgn), referansebøtter fra geometrien, normalisering (med og uten nok referansebøtter), "kort" sin låning fra "lang", blandingsformelen, og override-forslaget.
+- `fetcher/test_pipeline.py`, ny seksjon 9: kaller `fetch.build_spot()` direkte for Unstad med syntetiske par i EKTE geometrisk-åpne bøtter (26-32, fra `data/exposure_baseline.json`) - bekrefter at `transfer_source` faktisk blir "eksponering", at transferen blir riktig (0,6), og at en bøtte som er geometrisk nesten helt åpen (0,989 glattet) men lært lavere (0,3/0,6 = 0,5) faktisk får den lærte verdien i utdataene, ikke geometrien alene.
+- Alle 5 faste observasjoner i CLAUDE.md holder fortsatt (uendret av denne oppgaven - ingen ekte par finnes lokalt, se under).
+
+### Hvor mye er lært per spot (ROADMAP sitt "Ferdig når")
+**0 par, 0 lærte bøtter for alle 6 spots ennå** - samme kjente lokale begrensning som resten av prosjektet (ingen BarentsWatch-nøkler lokalt, og selv med nøkler tar det tid å samle nok BarentsWatch-historikk i produksjon). Mekanismen er bygget, testet og koblet inn - læringen begynner for alvor når GitHub Actions har kjørt en stund med ekte BarentsWatch-data. `calibration.exposure_pairs`/`exposure_buckets_learned_lang`/`exposure_buckets_learned_kort` er nå med i `docs/data/forecast.json` for hver spot, og Logger-fanen viser disse tallene løpende etter hvert som de vokser.
+
+### Fysikk-kontrollør: **GODKJENT**, tre notater (ingen kodeendring krevd)
+Kjørte selv alle tre testfilene og en uavhengig gjennomgang av normaliseringen, blandingsformelen, periodevalget i `exposure()` og transfer-prioriteten - fant ingen dobbelttelling, ingen brudd på "kort låner fra lang, ikke omvendt" (strukturelt umulig slik `fetch.py` kaller funksjonen i dag), og bekreftet at testene faktisk beviser separasjonen transfer×eksponering (ikke rigget mot en forhåndsbestemt fasit). Tre ting å følge med på, ingen av dem blokkerer commit:
+
+1. **Referansebøtte-risiko**: hvis GSHHS mangler et skjær presist i en av de minst 3 referansebøttene (0,999-kravet gjelder ALLE 10 gradene i bøtta), vil hele spotens transfer bli feil kalibrert fra ekte data via en feil "fri sikt"-antagelse. Samme kjente begrensning som CLAUDE.md sitt sannhetshierarki punkt 4 allerede sier ("Geometri fra kystlinjedata. Mangler små øyer og skjær") - dempet av at minst 3 bøtter kreves (median, ikke én enkelt) og at gammel `bw_transfer()`/spots.json fortsatt er reserve. **Sjekk `transfer_lang` mot spots.json sin manuelle transfer og gammel `bw_transfer()` første gang del B faktisk lærer noe reelt**, som en sanity-sjekk.
+2. **Ved akkurat 6 par** (minstekravet for en "lært" bøtte) er blandingsvekten allerede 0,375 - et reelt innslag av en median fra bare 6 målinger, ikke "nesten ren geometri". Bevisst avveining (halveringstall 10 i `BLEND_HALF_LIFE_PAIRS`), ikke en feil, men en tallstørrelse verdt å kjenne til.
+3. **`dir_hit` for BarentsWatch-timer** (brukt i `sources_disagree` og retningsteksten, uendret omfang fra oppgave 2) vil over tid bli svakt påvirket av del B sin læring i samme retning/periodegruppe, siden `exposure()` er delt mellom svell_ute og denne bruken. Bruker bare par FRA FØR inneværende time (ingen sirkularitet), og er en bevisst, ikke utilsiktet, kobling - men verdt å vite om.
+
+---
+
 ## Gjenstår (ROADMAP.md)
 - Oppgave 2 (koble del C inn i ratingen): implementert og testet, korrigert etter fysikk-kontrollør sitt dobbelttelling-funn, venter på FORNYET "ja" fra Theodor (se eget avsnitt).
 - Oppgave 3 (kysttoleranse i check_spot.py): ferdig, rapportert over. Ingen swell_window endret.
-- Oppgave 4 (del B, lært eksponering): ikke startet.
+- Oppgave 4 (del B, lært eksponering): ferdig, bygget og koblet inn. 0 par lært ennå (kjent lokal begrensning).
 - Oppgave 5 (Unstad sitt BarentsWatch-rutepunkt): delvis forsøkt (høyde sammenlignet mot nettsiden, matcher godt), men IKKE fullført - kunne ikke fastslå nøyaktig hvilket rutepunkt API-et velger eller avstand/retning fra punktet vi ba om, uten `gh`/API-tilgang.
 - Venter på Theodor-avsnittet: uendret, ingen av de tre punktene er rørt.
