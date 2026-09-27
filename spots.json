@@ -51,6 +51,46 @@
       "_exposure_override": "26.09.2026: tak på eksponeringen 311-330 grader, uavhengig av kilde (geometrisk utgangspunkt eller lært fra BarentsWatch). Grøtfjord var helt flatt tre dager på rad (24., 25. og 26.09.2026) med svell fra rundt 310-313 grader - det geometriske utgangspunktet (GSHHS, del C) mangler skjærene ved Vengsøya og gir derfor for høy eksponering her. 27.09.2026: rettet tallet i denne kommentaren - dagens glattede geometri gir opptil 0,71 i intervallet (ikke 0,9 som først skrevet her), mest av det i 311-316 grader der GSHHS ikke har noen hindring i det hele tatt (rå eksponering 1,0 - et reelt hull i kartdataene, ikke bare en glatting-effekt). 317-330 grader gir allerede lav eksponering (0,0 rå) fra geometrien alene. Se STATUS.md for tabellen. Fjernes ALDRI automatisk, bare foreslått i Logger-fanen når en bøtte i intervallet er lært fra BarentsWatch og ligger under taket."
     },
     {
+      "id": "tromvik",
+      "name": "Tromvik",
+      "area": "Kvaløya",
+      "enabled": true,
+      "spot": {
+        "lat": 69.77765713046004,
+        "lon": 18.434524954651884
+      },
+      "offshore": {
+        "lat": 69.9048,
+        "lon": 18.2361
+      },
+      "barentswatch_point": {
+        "lat": 69.779615,
+        "lon": 18.431276
+      },
+      "barentswatch_point_near": {
+        "lat": 69.778832,
+        "lon": 18.432576
+      },
+      "swell_window": [
+        314,
+        349
+      ],
+      "offshore_wind": [
+        105,
+        195
+      ],
+      "min_period": 8,
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "facing": 330,
+      "_offshore_vind": "Utledet fra facing (330), ikke fra satellittbilde ennå - skal bekreftes lokalt.",
+      "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning) med fetcher/check_spot.py: rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 16 km ut, retning 332 grader.",
+      "_vindu": "27.09.2026: lagt til, bekreftet med fetcher/check_spot.py mot GSHHS full oppløsning (300 m kysttoleranse) - fri linje til åpent hav nøyaktig 314-349 grader. Mot vest (245-310 grader) er det land 1,3-1,5 km unna. Mot nord (350 grader og videre) treffer linja land ca 5,5 km ute. Vinduet dekker en annen del av retningene fra nordvest enn Grøtfjord (286-310) - de to spotene utfyller hverandre. Små skjær kan mangle i kystlinjedataene, som ved Grøtfjord."
+    },
+    {
       "id": "ersfjordstranda",
       "name": "Ersfjordstranda",
       "area": "Senja",
