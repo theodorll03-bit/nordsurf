@@ -2,6 +2,8 @@
 
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
+- **ROADMAP oppgave 2 (koble del C inn i ratingen): IMPLEMENTERT OG TESTET, IKKE COMMITTET - Theodor sa ja til første versjon, men fysikk-kontrollør fant en ekte feil FØR jeg committet, så jeg spør på nytt med korrekte tall.** Fysikk-kontrollør fant at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling, ~eksponent 1,8 i stedet for 1,0) - en gammel feil (fantes også med `directness()`) som ble synlig først nå. Rettet: `hb_damping` er 1,0 for svell_ute og barentswatch (allerede dempet i `h`), fortsatt `dir_hit`-basert bare for metno_korrigert. Med rettelsen: 13 av 666 sjekkede timer flytter seg 2+ stjerner (var 2 av 636 i den opprinnelige, mangelfulle tabellen) - 12 av dem OPP (fjerner en tidligere feilaktig dobbel-straff av kant-svell), 1 ned (Steinkrøssa, samme som før). Se eget avsnitt for full tabell. **Stopper på nytt og ber om FORNYET "ja", siden den forrige tabellen var ufullstendig.**
+- **ROADMAP oppgave 3 (kysttoleranse i check_spot.py, oppfølging av Steinkrøssa): FERDIG, ingen swell_window endret.** Theodors hypotese (gammel 2 km-toleranse ga for bredt vindu) holder IKKE for Steinkrøssa - grensa mellom blokkert (295-314°) og åpent (315-16°) er identisk med både 2 km og den nye 300 m-toleransen. Steinkrøssa sitt eksponeringsfall ved 324° skyldes i stedet Gaussian-glatting som sprer en allerede kjent, korrekt blokkering (rett ved spoten, 295-314°) 10-15 grader inn i det åpne vinduet - en bevisst modelleringsvalg, ikke en geometrifeil. Ingen av de 6 spotenes vinduer mister fri linje med den strengere toleransen. Se eget avsnitt.
 - **Retningskonvensjonen er nå endelig avklart, tredje og siste runde**: `totalMeanWaveDirection` er retningen bølgene går MOT (samme som pilene på BarentsWatch sitt kart), regnes om til "fra" med +180. Bevist av en garantert rå logg (Unstad, 26.09 kl. 15:00Z, rå verdi 116 - FØR noen konverteringskode noensinne fantes - gir konvertert 296, nesten blink mot facing 294,8 og stemmer med videoen). Den mellomliggende konklusjonen ("fra, ingen konvertering", satt tidligere i denne økten) var feil - bygget på et tall som senere viste seg å være allerede konvertert, ikke rått.
 - **Beviset er nå en fixture i repoet**: `fetcher/fixtures/bw_raw_unstad_2026-09-26.json`, hentet direkte fra GitHub Actions-loggen (credentials var allerede maskert med `***` i loggen selv - sjekket, ingen hemmeligheter i fixturen). Ny test 7.5c leser fixturen og bekrefter 116→296 og under 5 graders avvik fra facing (fikk 1,2 grader). Beviset er dermed sporbart for alle, ikke bare i Theodors Downloads-mappe.
 - **Retningsfaktoren over 150 grader er endret fra nøytral til ekte straff** (Theodors eksplisitte instruks, punkt 2): siden konvensjonen nå er riktig, betyr et avvik over 150 grader at bølgene FAKTISK går ut fra land - en kjent, ikke en ukjent/mistenkelig retning. Gir nå retningsfaktor 0 (ordinær straff), IKKE lenger nøytral 1,0. Gjør IKKE timen usikker og utløser IKKE "kildene uenige" alene. Ny forklaringstekst på detaljsiden: "Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn." Feltet `spot_direction_error` er fjernet og erstattet med `spot_direction_offshore` (samme mekanikk, riktig navn for den nye betydningen).
@@ -367,8 +369,102 @@ Committer og pusher nå, per Theodors svar på punkt 3.
 
 ---
 
+## Oppgave 2: koble del C inn i ratingen - implementert, IKKE committet ennå (rettet, se under)
+
+### Hva som er gjort
+- **Ny fil `fetcher/exposure.py`**: avhengighetsfri (ingen basemap/shapely) kjerne med `spot_checksum()`, flyttet ut fra `exposure_baseline.py` slik at `fetch.py` kan sjekke sjekksummen uten å dra inn de tunge geometriavhengighetene i hver ordinære kjøring. `exposure_baseline.py` importerer nå funksjonen derfra i stedet for å ha sin egen kopi - ingen endring i selve hash-algoritmen, bekreftet ved at alle 6 spots sine sjekksummer fortsatt stemmer mot dagens `data/exposure_baseline.json`.
+- **`rating.py`**: ny `exposure_override_cap(d, spot)` (leser spots.json sin `exposure_override`-liste) og ny `exposure(d, spot)` - bruker `spot["exposure_smoothed"]` (360 tall, satt av fetch.py) når den finnes, ellers `directness()` (vindu+skyggekurve) som reserve. Override-taket gjelder uansett hvilken av de to som brukes. `directness()` selv er UENDRET - beholdt som fallback og av exposure_baseline.py sin egen dokumentasjon.
+  - `spot_height()` sin svell_ute-gren bruker nå `exposure()` i stedet for `directness()`.
+  - `rate()` sin `dir_hit` (brukt til `sources_disagree` sin 0,667-grense) bruker nå `exposure()`.
+  - BarentsWatch-timer uendret i selve høyden - `barentswatch_height()` bruker fortsatt bare BarentsWatch sin egen retning ved punktet, ikke eksponering.
+- **`fetch.py`**: ny `resolve_exposure(spot, exposure_data, name)` - slår opp `data/exposure_baseline.json`, sjekker sjekksummen mot spots.json sitt NÅVÆRENDE innhold, og returnerer enten de glattede tallene eller en advarsel (aldri begge). Advarsel skrives i kilderapporten. Mangler data eller feil sjekksum: spoten faller automatisk tilbake til `directness()` via `exposure()` sin egen fallback.
+
+### Fysikk-kontrollør fant en ekte, videre-rekkende feil FØR jeg rakk å committe - rettet
+Etter at jeg viste deg den første før/etter-tabellen (2 timer, ≥2 stjerner) og du sa ja, kjørte jeg fysikk-kontrolløren likevel (som vanlig, før commit). Den fant en reell dobbelttelling av retning, som gjorde den tabellen jeg viste deg FEIL - jeg committer derfor IKKE på det grunnlaget, og bygger en ny, korrekt tabell under.
+
+**Feilen**: `rate()` brukte `dir_hit` (nå `exposure()`, før `directness()`) til å dempe Hb (bruddhøyden) EN GANG TIL, etter at samme faktor allerede var brukt til å regne ut selve høyden `h` i `spot_height()` (for svell_ute: `h = swell_offshore * transfer * exposure(...)` - allerede dempet). Siden Hb ∝ H^0,8 (Komar og Gaughan), arver Hb automatisk dempingen fra h - å gange Hb med samme faktor en gang til ga effektiv eksponent ~1,8 i stedet for ~1,0. Samme feil fantes for BarentsWatch (`spot_direction_factor` dempet både `h` i `barentswatch_height()` OG `hb_damping` etterpå). Feilen har vært i koden siden lenge (med `directness()`), men var nesten usynlig fordi `directness()` stort sett er ≈1,0 midt i et vindu og `spot_direction_factor` stort sett er ≈1,0 for velfungerende, velrettede ekte hendelser - `exposure()` sin videre spennvidde MIDT i et vindu gjorde den synlig og betydelig for første gang.
+
+**Rettelsen**: `hb_damping` er nå 1,0 (ingen ny demping) for både `svell_ute` og `barentswatch`, siden begge sine `h` allerede har riktig faktor bakt inn. Bare `metno_korrigert` (reserven sin reserve, bruker verken eksponering eller spot_direction_factor i egen `h`) dempes fortsatt med `dir_hit`. Se `rating.py` sin oppdaterte kommentar ved `hb_damping`.
+
+### Tester
+10 nye tester i `fetcher/test_rating.py` (10.1-10.6) for eksponering/override/fallback/resolve_exposure. Alle eksisterende tester kjørt på nytt etter `hb_damping`-rettelsen - ingen assert måtte endres (de faste observasjonene og synteste testene traff alle enten faktor 0, faktor 1,0, eller (for 8.2b) nettopp det tilfellet rettelsen IKKE endrer noe for). `fetcher/test_rating.py` og `fetcher/test_pipeline.py` kjører begge grønt. Alle 5 faste observasjoner i CLAUDE.md holder fortsatt.
+
+### 2-stjerners stoppregelen: UTLØST - ny, fullstendig tabell
+
+Rettelsen endrer resultatet for ALLE reserve-modell-timer med delvis eksponering (ikke bare de to jeg viste deg først) - både opp (tidligere dobbelt-straffede kant-svell får nå riktig, høyere verdi) og ned (Steinkrøssa sitt tilfelle, se under). Sammenlignet faktisk committet kode (`HEAD`) mot ny kode (eksponering + rettelsen sammen), alle timer i `docs/data/forecast.json`:
+
+| Spot | Timer sjekket | Maks stjerneendring | Timer med endring ≥ 2 | Timer med endring ≥ 1 |
+|---|---|---|---|---|
+| Grøtfjord | 111 | 0 | 0 | 0 |
+| Ersfjordstranda | 111 | 3 | **7** | 8 |
+| Russelv | 111 | 1 | 0 | 2 |
+| Lenangsøyra | 111 | 1 | 0 | 2 |
+| Steinkrøssa | 111 | 2 | **1** | 4 |
+| Unstad | 111 | 2 | **5** | 10 |
+
+13 timer (av 666 sjekket) flytter seg 2 eller mer, alle unntatt én OPP (rettelsen fjerner en tidligere over-straff av kant-svell):
+
+| Spot | Tid | Retning ute | Svell ute | FØR (stjerner) | ETTER (stjerner) |
+|---|---|---|---|---|---|
+| Ersfjordstranda | 30.09 00-06Z (7 timer) | 324-326° (vinduets ytterkant, vindu 294-320) | 2,0-2,3 m | 0 | 2-3 |
+| Unstad | 30.09 00-04Z (5 timer) | 252-253° (vinduets ytterkant, vindu 253-335) | 1,7-2,0 m | 0 | 2 |
+| Steinkrøssa | 29.09 21:00Z | 324° (9° inn i vinduet 315-16) | 0,66 m | 2 | 0 |
+
+**Ersfjordstranda og Unstad sine 12 timer**: svell rett i kanten av vinduet ble tidligere dobbelt-straffet (retningsfaktor i kanten, typisk 0,2-0,4, i annen potens), og ga derfor urettmessig 0 stjerner for ellers reelt, målbart svell (2 m+ ute). Med rettelsen kommer disse opp til 2-3 stjerner, som stemmer bedre med at et log 2 m svell rett i kanten av et vindu faktisk gir noe surfbart, ikke ingenting. Ingen fast observasjon rammes av dette (ingen av de 5 faste observasjonene er i denne situasjonen).
+
+**Steinkrøssa sin ene time (324°, 2 stjerner → 0)**: uendret fra forrige tabell - se forklaringen i den tidligere versjonen av denne teksten (git-historikk), kort sagt at eksponeringsmodellen finner mindre eksponering midt i vinduet enn den rene vindu-regelen. **Dette er nå selve utgangspunktet for din oppfølgingsoppgave under** - se "Oppfølging: kysttoleranse i check_spot.py".
+
+**Vurdering**: 12 av 13 endringer er oppadgående korreksjoner av en reell, uheldig dobbeltstraff - ikke en svekkelse av modellen. Den ene nedadgående (Steinkrøssa) er den samme som før, og undersøkes videre i neste seksjon. Stopper likevel her, per regelen, og ber om et FORNYET "ja" siden tabellen jeg viste deg først var ufullstendig.
+
+---
+
+## Oppgave 3: kysttoleranse i check_spot.py - RAPPORT, ingen swell_window endret
+
+Theodor sa ja til oppgave 2 (begge stjernefallene "fysisk rimelige, gjelder små bølger") og ba om en oppfølging: Steinkrøssa sitt fall ved 324 grader kan skyldes at check_spot.py sin gamle 2 km-kysttoleranse ga et for bredt svellvindu (linja kan ha krysset tuppen av en odde - Bøvær - nær spoten). Lagt inn som ROADMAP oppgave 3, gjort nå. **Konklusjon på forhånd: hypotesen holder IKKE for Steinkrøssa sitt spesifikke tilfelle - se under for hvorfor. Ingen swell_window er endret.**
+
+### 1. check_spot.py oppdatert
+`fetcher/check_spot.py` sin `free_distance()` bruker nå samme kysttoleranse som `exposure_baseline.py`: 300 m (var 2 km), med samme sammenhengende-land-fra-spoten-logikk (finere 0,05 km oppløsning i kystsonen, deretter vanlig 0,1 km oppløsning). Verktøyet er ikke kjørt automatisk noe sted - det er fortsatt et manuelt CLI-verktøy (`python fetcher/check_spot.py <lat> <lon> <fra> <til>`), så denne endringen påvirker ingenting før noen kjører det på nytt for hånd.
+
+### 2. Fri sektor på nytt for alle spots (300 m toleranse)
+
+| Spot | Dagens swell_window | Ny fri sektor (300 m) | Blokkerte retninger i dagens vindu |
+|---|---|---|---|
+| Grøtfjord | [286, 310] | [286, 315] | Ingen - fri sektor er faktisk BREDERE enn dagens vindu |
+| Ersfjordstranda | [294, 320] | [288, 320] | Ingen - fri sektor er bredere enn dagens vindu |
+| Russelv | [[5,15],[349,356]] | [[5,15],[349,356]] | Ingen - identisk |
+| Lenangsøyra | [15, 23] | [15, 23] | Ingen - identisk |
+| Steinkrøssa | [315, 16] | [315, 16] | Ingen - identisk |
+| Unstad | [253, 335] | [253, 335] | Ingen - identisk |
+
+**Ingen spot har noen retning i dagens svellvindu som mister fri linje til åpent hav med den strengere 300 m-toleransen.** Farstadsanden er ikke lagt inn i spots.json ennå (bekreftet), så den er ikke med i denne sjekken.
+
+### 3. Steinkrøssa, detaljert: hvilke retninger 315-16 krysser land?
+
+**Ingen.** Skannet hver grad fra 295 til 330 med den nye 300 m-toleransen:
+
+| Grader | Land, avstand | Fri linje | Status |
+|---|---|---|---|
+| 295-311 | 0,50 km (spotens egen nærmeste kystlinje) | 0,3-0,5 km | BLOKKERT |
+| 312-314 | 0,50 km | 0,5 km | BLOKKERT |
+| **315-330** | ingen land innen 150 km | 150 km | **ÅPEN** |
+
+Overgangen fra blokkert til åpen skjer brått, akkurat ved 314/315 grader, og er UENDRET av kysttoleranse-rettelsen (samme overgang med både gammel 2 km- og ny 300 m-toleranse) - dette bekrefter samme funn som allerede stod i STATUS.md fra oppgave 1 ("Steinkrøssa rett under 315 grader (314°): blokkert. 315° og oppover: åpent"). Hypotesen om at en for slapp toleranse lot linja "hoppe over" en odde stemmer altså IKKE her: grensa er den samme uansett toleranse, ikke en gradvis overgang tolerance-innstillingen kunne flyttet.
+
+**Hva er det som faktisk blokkerer 295-314?** Land bare 0,5 km unna, funnet å være ca. 184 grader bredt på tvers sett fra spoten ved den avstanden - i praksis spotens egen, nære kystlinje (ikke en liten, fjern skjærodde). Dette er land RETT VED spoten selv i den retningen, ikke et smalt Bøvær-skjær lenger ute.
+
+**Hvorfor faller da eksponeringen ved 324 grader, midt i det åpne vinduet?** Ikke fordi 324 selv krysser land (den gjør ikke det, verken med gammel eller ny toleranse) - `exposure_baseline.py` sin RÅ verdi ved 324 er faktisk 1,0. Det er GLATTINGEN (normalfordeling, sigma 10 grader) i `exposure_baseline.py` som sprer den ekte, allerede kjente blokkeringen ved 295-314 innover i det åpne vinduet - 324 ligger bare 10 grader fra kanten (314), rett i smøreradiusen. Glattet verdi ved 324 blir da 0,83 (rå 1,0 dratt ned av de nære, blokkerte naboretningene), ikke fordi selve linja ved 324 treffer noe.
+
+### Om de "buede linjene" i tegningen din
+Verdt å presisere: geometrien i `check_spot.py`/`exposure_baseline.py` går i RETTE linjer fra spoten (ren siktlinje mot land) - den bøyer ikke rundt noe i selve målingen. Den bøyningen du så i tegningen din tilsvarer trolig glattingen over (som ETTERPÅ sprer en skarp kant utover, en grov tilnærming til at ekte svell diffrakterer/bøyer seg rundt en odde) - ikke noe kurvet i selve sikt-sjekken.
+
+### Konklusjon: ingen swell_window bør endres
+Alle 6 vinduene har fortsatt full fri linje til åpent hav med den strengere 300 m-toleransen - toleranse-hypotesen forklarer ikke Steinkrøssa sitt stjernefall. Den reelle årsaken (Gaussian-glatting av en allerede kjent, korrekt identifisert blokkering rett ved spoten, som brer seg 10-15 grader inn i et ellers åpent vindu) er en bevisst modelleringsvalg i del C (samme glatting som ga Lenangsøyra sine lave 0,55-0,59-verdier i oppgave 1), ikke en feil i selve kystlinjegeometrien eller i check_spot.py sin vindu-beregning. **Ingen endring foreslått i noen swell_window.** Kysttoleranse-oppdateringen i check_spot.py (punkt 1) er likevel verdt å beholde for konsistens med exposure_baseline.py, selv om den ikke endret noe resultat her.
+
+---
+
 ## Gjenstår (ROADMAP.md)
-- Oppgave 2 (koble del C inn i ratingen): ikke startet.
-- Oppgave 3 (del B, lært eksponering): ikke startet.
-- Oppgave 4 (Unstad sitt BarentsWatch-rutepunkt): delvis forsøkt (høyde sammenlignet mot nettsiden, matcher godt), men IKKE fullført - kunne ikke fastslå nøyaktig hvilket rutepunkt API-et velger eller avstand/retning fra punktet vi ba om, uten `gh`/API-tilgang.
+- Oppgave 2 (koble del C inn i ratingen): implementert og testet, korrigert etter fysikk-kontrollør sitt dobbelttelling-funn, venter på FORNYET "ja" fra Theodor (se eget avsnitt).
+- Oppgave 3 (kysttoleranse i check_spot.py): ferdig, rapportert over. Ingen swell_window endret.
+- Oppgave 4 (del B, lært eksponering): ikke startet.
+- Oppgave 5 (Unstad sitt BarentsWatch-rutepunkt): delvis forsøkt (høyde sammenlignet mot nettsiden, matcher godt), men IKKE fullført - kunne ikke fastslå nøyaktig hvilket rutepunkt API-et velger eller avstand/retning fra punktet vi ba om, uten `gh`/API-tilgang.
 - Venter på Theodor-avsnittet: uendret, ingen av de tre punktene er rørt.
