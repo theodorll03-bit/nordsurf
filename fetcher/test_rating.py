@@ -540,4 +540,142 @@ print(f"{'9.6: spotnivå-varsel ved 60% / 20% >150-timer':<40} {bool(w60)} {bool
 assert w60 is not None and "Unstad" in w60
 assert w20 is None
 
+# ---------- 27.09.2026, ROADMAP oppgave 2: eksponering (del C) i ratingen ----------
+from rating import exposure, exposure_override_cap, directness as _directness
+
+# 10.1: exposure_override_cap() - Grøtfjord har [{"from":311,"to":330,"max":0.2}].
+assert exposure_override_cap(320, G) == 0.2
+assert exposure_override_cap(311, G) == 0.2
+assert exposure_override_cap(330, G) == 0.2
+assert exposure_override_cap(200, G) is None  # utenfor override-sektoren
+assert exposure_override_cap(None, G) is None
+print(f"{'10.1: exposure_override_cap 320/200 grader (Grøtfjord)':<40} {exposure_override_cap(320, G)} {exposure_override_cap(200, G)}")
+
+# 10.2: exposure() uten exposure_smoothed på spoten faller tilbake til
+# directness() (vindu + skyggekurve) - IKKE brutt av denne oppgaven for
+# spots som ennå ikke har fått eksponeringsdata fra fetch.py.
+assert exposure(300, G) == _directness(300, G)
+assert exposure(None, G) == _directness(None, G)
+print(f"{'10.2: exposure() uten data faller tilbake til directness()':<40} {exposure(300, G)} {_directness(300, G)}")
+
+# 10.3: exposure() bruker spot["exposure_smoothed"] (360 tall, indeks =
+# gradtall) når den finnes, i stedet for directness().
+G_exp = dict(G)
+G_exp["exposure_smoothed"] = [0.0] * 360
+G_exp["exposure_smoothed"][300] = 0.87
+assert exposure(300, G_exp) == 0.87
+assert exposure(301, G_exp) == 0.0  # ingen smoothing i denne syntetiske testen, bare indeksering
+print(f"{'10.3: exposure() bruker exposure_smoothed når den finnes':<40} {exposure(300, G_exp)} {exposure(301, G_exp)}")
+
+# 10.4: exposure_override sitt tak gjelder UANSETT om verdien kommer fra
+# exposure_smoothed eller fra directness()-reserven - Grøtfjord 320 grader
+# er dekket av taket (0,2).
+G_exp320 = dict(G)
+G_exp320["exposure_smoothed"] = [0.0] * 360
+G_exp320["exposure_smoothed"][320] = 0.9  # høyere enn taket
+assert exposure(320, G_exp320) == 0.2
+G_exp100 = dict(G)
+G_exp100["exposure_smoothed"] = [0.0] * 360
+G_exp100["exposure_smoothed"][100] = 0.9  # utenfor override-sektoren, ikke dekket
+assert exposure(100, G_exp100) == 0.9
+print(f"{'10.4: exposure_override sitt tak (320 dekket, 100 ikke)':<40} {exposure(320, G_exp320)} {exposure(100, G_exp100)}")
+
+# 10.5: spot_height() sin svell_ute-gren bruker faktisk exposure() (ikke bare
+# en isolert funksjonstest, men den ekte kodeveien) - inkludert at
+# exposure_override sitt tak faktisk slår gjennom der, ikke bare i exposure()
+# alene. Samme exposure_smoothed (0,9), med og uten override-listen.
+from rating import spot_height as _spot_height
+G_exp320_no_override = dict(G_exp320)
+G_exp320_no_override["exposure_override"] = []
+h_capped, src_capped, _ = _spot_height({"swell_offshore": 2.0, "dir_offshore": 320}, G_exp320)
+h_uncapped, src_uncapped, _ = _spot_height({"swell_offshore": 2.0, "dir_offshore": 320}, G_exp320_no_override)
+print(f"{'10.5: spot_height() - eksponeringstak slår gjennom':<40} {round(h_capped,3)} {round(h_uncapped,3)}")
+assert src_capped == src_uncapped == "svell_ute"
+assert h_capped < h_uncapped  # 0,2 (taket) mot 0,9 (rå exposure_smoothed)
+
+# 10.6: fetch.py sin resolve_exposure() - manglende data, feil sjekksum, og
+# riktig sjekksum (bruker spot_checksum() fra exposure.py, samme som
+# exposure_baseline.py selv regner ut). Returnerer nå (smoothed, raw, advarsel).
+from fetch import resolve_exposure
+from exposure import spot_checksum as _spot_checksum
+
+smoothed_none, raw_none, warn_none = resolve_exposure(G, {}, "Grøtfjord")
+assert smoothed_none is None and raw_none is None and "Grøtfjord" in warn_none
+
+smoothed_bad, raw_bad, warn_bad = resolve_exposure(
+    G, {"grotfjord": {"checksum": "feil", "smoothed": [1.0] * 360, "raw": [1.0] * 360}}, "Grøtfjord")
+assert smoothed_bad is None and raw_bad is None and "sjekksum" in warn_bad
+
+good_checksum = _spot_checksum(G)
+smoothed_ok, raw_ok, warn_ok = resolve_exposure(
+    G, {"grotfjord": {"checksum": good_checksum, "smoothed": [0.5] * 360, "raw": [0.0] * 360}}, "Grøtfjord")
+assert smoothed_ok == [0.5] * 360 and raw_ok == [0.0] * 360 and warn_ok is None
+print(f"{'10.6: resolve_exposure() mangler/feil/riktig sjekksum':<40} {bool(warn_none)} {bool(warn_bad)} {warn_ok}")
+
+# ---------- 27.09.2026, tredje runde: ekstra Hb-demping bare ved rå eksponering 0 ----------
+from rating import raw_exposure_zero as _raw_zero
+
+# 11.1: uten exposure_raw (fallback) - "rå eksponering 0" tilsvarer utenfor
+# vinduet (degrees_outside > 0), akkurat som directness() sin egen modell.
+assert _raw_zero(300, G) is False   # midt i vinduet [286,310]
+assert _raw_zero(320, G) is True    # utenfor vinduet, og utenfor fri sektor
+assert _raw_zero(None, G) is False
+
+# 11.2: med exposure_raw - bruker tallet direkte, uavhengig av vinduet.
+E_raw = dict(E)
+E_raw["exposure_raw"] = [1.0] * 360
+E_raw["exposure_raw"][325] = 0.0   # Ersfjordstranda 30.09: bak odden, ekte hendelse
+assert _raw_zero(318, E_raw) is False
+assert _raw_zero(325, E_raw) is True
+print(f"{'11.1/11.2: raw_exposure_zero() fallback/ekte data':<40} {_raw_zero(320, G)} {_raw_zero(325, E_raw)}")
+
+# 11.3: Ersfjordstranda sin ekte hendelse, 30.09.2026 - 2,2 m svell fra 325
+# grader (rå eksponering 0, bak odden - fri sektor er [288,320], vinduet
+# [294,320]) skal gi klart lavere surfehøyde OG maks 1 stjerne, sammenlignet
+# med samme svell fra 318 grader (innenfor, rå eksponering over 0). Glattet
+# eksponering på 325 (0,3) er lav, akkurat som del C sin ekte glatting gir
+# nær kanten av en blokkert retning - poenget her er den EKSTRA dempingen av
+# Hb (rå=0), ikke selve glattingstallet.
+E_exp = dict(E)
+E_exp["exposure_smoothed"] = [1.0] * 360
+E_exp["exposure_smoothed"][325] = 0.3
+E_exp["exposure_raw"] = [1.0] * 360
+E_exp["exposure_raw"][325] = 0.0
+bak_odden = rate({"swell_offshore": 2.2, "dir_offshore": 325, "period": 12, "wind_speed": 1, "wind_dir": 120}, E_exp)
+innenfor = rate({"swell_offshore": 2.2, "dir_offshore": 318, "period": 12, "wind_speed": 1, "wind_dir": 120}, E_exp)
+show("11.3: Ersfjordstranda 325 (bak odden) vs 318 (innenfor)", bak_odden)
+show("11.3b: ... 318 grader", innenfor)
+assert bak_odden["surf_height"] < innenfor["surf_height"]
+assert bak_odden["stars"] <= 1
+
+# 11.4: Unstad sin ekte hendelse, 30.09.2026 - svell fra 252-253 grader har
+# FRI linje til havet (rå eksponering 1,0, innenfor vinduet [253,335] eller
+# rett i kanten) - skal IKKE få den ekstra dempingen (samme oppførsel som
+# rettelsen fra forrige runde, uendret av denne).
+U_exp = dict(U)
+U_exp["exposure_smoothed"] = [1.0] * 360
+U_exp["exposure_raw"] = [1.0] * 360
+fri_linje = rate({"swell_offshore": 1.9, "dir_offshore": 253, "period": 13, "wind_speed": 1, "wind_dir": 120}, U_exp)
+show("11.4: Unstad 253 grader (fri linje, ingen ekstra demping)", fri_linje)
+assert _raw_zero(253, U_exp) is False
+
+# 11.5 (funnet av fysikk-kontrollør ved gjennomgang av 11.1-11.4): Grøtfjord
+# sin exposure_override (311-330, tak 0,2) overlapper med 317-330, der RÅ
+# eksponering er 0,0 (bekreftet i data/exposure_baseline.json) - uten unntaket
+# i rate() ville den ekstra diffraksjons-dempingen dempet Hb en gang til OPPÅ
+# taket, dobbelt straff av samme retning. Bruker ekte tall fra
+# data/exposure_baseline.json (ikke syntetiske), samme som STATUS.md sin
+# før/etter-tabell.
+_grotfjord_exp = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())["grotfjord"]
+G_override_zone = dict(G)
+G_override_zone["exposure_smoothed"] = _grotfjord_exp["smoothed"]
+G_override_zone["exposure_raw"] = _grotfjord_exp["raw"]
+assert _raw_zero(320, G_override_zone) is True   # rå eksponering er 0,0 her
+from rating import exposure_override_cap as _cap
+assert _cap(320, G_override_zone) == 0.2         # og overriden dekker 320 grader
+override_big_swell = rate({"swell_offshore": 4.0, "dir_offshore": 320, "period": 14,
+                            "wind_speed": 1, "wind_dir": 120}, G_override_zone)
+show("11.5: Grøtfjord 320 (override + rå eksponering 0, ikke dobbelt dempet)", override_big_swell)
+assert override_big_swell["stars"] >= 2  # taket alene demper nok - ikke en ekstra gang til
+
 print("Alle tester ok")

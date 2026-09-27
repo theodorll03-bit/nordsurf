@@ -56,7 +56,7 @@ def degrees_inside(d, spot):
 def refraction_factor(turn):
     """Din dreiningsregel. Liten dreining: modellen treffer.
     Stor dreining: svellet må bøye seg inn, modellen overdriver.
-    Brukes bare for reserven (metno_korrigert) - svell_ute bruker directness()."""
+    Brukes bare for reserven (metno_korrigert) - svell_ute bruker exposure()."""
     if turn is None:
         return 1.0
     if turn < 10:
@@ -93,6 +93,59 @@ def directness(d, spot):
         if x0 <= deg_out <= x1:
             return y0 + (y1 - y0) * (deg_out - x0) / (x1 - x0)
     return SHADOW_CURVE[-1][1]
+
+
+def exposure_override_cap(d, spot):
+    """Tak på eksponeringen for retning d, fra spots.json sin
+    exposure_override (liste av {"from", "to", "max"}) - dekker kjente hull
+    i kystlinjedataene (se f.eks. Grøtfjord sin _exposure_override-kommentar).
+    None hvis ingen override dekker retningen. Fjernes ALDRI automatisk -
+    bare foreslått i Logger-fanen når del B har lært noe (se ROADMAP)."""
+    if d is None:
+        return None
+    for o in spot.get("exposure_override") or []:
+        if in_sector(d, [o["from"], o["to"]]):
+            return o["max"]
+    return None
+
+
+def exposure(d, spot):
+    """0 til 1: hvor mye av svellet utenfor som når spoten fra retning d -
+    del C sin glattede, geometriske eksponering (exposure_baseline.py),
+    slått sammen i fetch.py til spot["exposure_smoothed"] (360 verdier,
+    indeks = gradtall) etter en gyldig sjekksum mot spots.json. Erstatter
+    directness() (vindu + skyggekurve) for reservemodellen og for
+    sources_disagree (27.09.2026, ROADMAP oppgave 2) - directness() brukes
+    nå bare som reserve HVIS eksponeringsdata mangler eller er ugyldige for
+    spoten (ingen exposure_baseline.json bygget ennå, eller sjekksummen ikke
+    stemmer - fetch.py varsler da i kilderapporten). exposure_override sitt
+    tak gjelder uansett hvilken av de to som brukes."""
+    if d is None or not spot.get("exposure_smoothed"):
+        value = directness(d, spot)
+    else:
+        value = spot["exposure_smoothed"][int(round(d)) % 360]
+    cap = exposure_override_cap(d, spot)
+    return value if cap is None else min(value, cap)
+
+
+def raw_exposure_zero(d, spot):
+    """Sann når retning d bare kan nå spoten ved å bøye seg (diffraktere)
+    rundt land - RÅ geometrisk eksponering (før glatting) er 0 i
+    exposure_baseline.py sine tall, altså en reell, ublokkert siktlinje
+    finnes IKKE i det hele tatt for denne retningen (se
+    exposure_baseline.shadow_exposure()). Mangler rådata for spoten (ingen
+    exposure_baseline.json bygget, eller sjekksummen ikke stemmer): faller
+    tilbake til vindu-grensa (degrees_outside > 0) som samme konsept - i
+    directness() sin egen modell er vindu-kanten der en fri siktlinje slutter.
+    27.09.2026, tredje runde (ROADMAP oppgave 2, Theodors rettelse): brukt i
+    rate() til å avgjøre NÅR Hb skal dempes en ekstra gang med eksponeringen,
+    se der."""
+    if d is None:
+        return False
+    raw = spot.get("exposure_raw")
+    if raw is not None:
+        return raw[int(round(d)) % 360] <= 0.0
+    return degrees_outside(d, spot) > 0
 
 
 def swell_share(hour):
@@ -205,9 +258,10 @@ def spot_height(hour, spot=None):
     1. BarentsWatch, når den finnes (finmasket kystmodell som allerede tar
        hensyn til skjerming bak odder og øyer) - se barentswatch_height().
     2. Bare svellet ute (Open-Meteo), uten vindsjø, ganget med spotens
-       faktor og directness() - hvor direkte svellet treffer vinduet.
-       Faktoren læres fra loggene dine. Bruker IKKE dreiningsregelen her,
-       ellers straffes skrått svell to ganger.
+       faktor og exposure() - hvor mye av svellet som når spoten fra denne
+       retningen (glattet geometri, del C - se exposure() sin docstring).
+       Faktoren læres fra loggene dine (transfer). Bruker IKKE
+       dreiningsregelen her, ellers straffes skrått svell to ganger.
     3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
     """
     if hour.get("bw_height") is not None:
@@ -215,7 +269,7 @@ def spot_height(hour, spot=None):
         return h, "barentswatch", detail
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
     if hour.get("swell_offshore") is not None:
-        h = hour["swell_offshore"] * transfer * directness(hour.get("dir_offshore"), spot)
+        h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot)
         return h, "svell_ute", None
     h = hour.get("height_spot_model")
     if h is None:
@@ -289,7 +343,7 @@ def period_score(p, spot):
 
 def direction_score(d, spot, source=None):
     """Retningsstraff for stjernene. Når høyden allerede kommer fra en kilde
-    som tar hensyn til retningen (svell_ute sin directness(), eller
+    som tar hensyn til retningen (svell_ute sin exposure(), eller
     BarentsWatch sin egen kystmodell), skal denne ikke straffe en gang til -
     da ville samme rabatt telt dobbelt. Bare reserven (metno_korrigert, og
     ukjent kilde) bruker den egentlige retningsstraffen."""
@@ -460,7 +514,7 @@ def disagree_reason(hour, dir_hit, bw_detail):
     skal bare vise det henteren faktisk regnet ut."""
     reasons = []
     if dir_hit is not None and dir_hit < 0.667:
-        reasons.append("svellet ute er utenfor vinduet")
+        reasons.append("svellet ute er dårlig eksponert mot spoten")
     if bw_detail["swell_share"] < 0.5:
         reasons.append("det er mest vindsjø")
     if bw_detail["spot_direction_factor"] < 0.5:
@@ -536,7 +590,11 @@ def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     h, source, bw_detail = spot_height(hour, spot)
     period = hour.get("period")  # Open-Meteo, svellet UTE - uendret av grunning
-    dir_hit = directness(hour.get("dir_offshore"), spot)
+    # 27.09.2026, ROADMAP oppgave 2: eksponering (del C, glattet geometri)
+    # erstatter directness() (vindu + skyggekurve) her - se exposure() sin
+    # docstring. Brukes til Hb-demping for reservemodellen (under) og til
+    # sources_disagree (samme grense 0,667 som før).
+    dir_hit = exposure(hour.get("dir_offshore"), spot)
 
     # Flat-sperre: under FLAT_HS_THRESHOLD signifikant høyde ved spoten er
     # det uansett flatt i praksis. Komar og Gaughan sin formel gjør små
@@ -551,25 +609,48 @@ def rate(hour, spot):
     # rent, uforstyrret svell. Komar og Gaughan sin formel vet ikke det (laget
     # for åpen kyst), og ga derfor for høy Hb for Grøtfjord 25.09.2026 (svell
     # 3 grader utenfor vinduet, observert helt flatt, men formelen alene ga
-    # 3 stjerner). Dempes derfor - men med HVILKEN retning avhenger av kilden,
-    # for å ikke straffe retning to ganger:
-    # - svell_ute (og reserven, metno_korrigert): directness (dir_hit)
-    #   beskriver svellet UTE mot det tegnede vinduet - ingen annen kilde vet
-    #   noe om retningen ved selve spoten her.
-    # - barentswatch: dir_hit beskriver fortsatt bare svellet UTE, men
-    #   BarentsWatch sin egen kystmodell har ALLEREDE regnet ut hvordan
-    #   bølgene bøyer seg inn mot spoten (spot_direction_factor, fra
-    #   BarentsWatch-retningen ved punktet mot spotens facing) - det er et
-    #   bedre, mer direkte mål på bølgene AKKURAT DER enn det tegnede
-    #   vinduet. 26.09.2026: Unstad kl. 17 hadde dir_hit 0,667 (svellet ute
-    #   er akkurat i kanten av vinduet), men spot_direction_factor 1,0
-    #   (BarentsWatch-retningen traff facing på 1 grad) - riktig demping er
-    #   ingen demping her, BarentsWatch sier bølgene treffer rett på. Mangler
-    #   retning fra BarentsWatch: spot_direction_factor er da et nøytralt
-    #   anslag (1,0, ingen demping) - timen er allerede merket usikker for
-    #   det andre steder (uncertain, se under).
-    if source == "barentswatch" and bw_detail is not None:
-        hb_damping = bw_detail["spot_direction_factor"]
+    # 3 stjerner). Dempes derfor - men bare når h IKKE allerede har samme
+    # retningsfaktor bakt inn, ellers straffes retningen to ganger (funnet av
+    # fysikk-kontrollør 27.09.2026, ROADMAP oppgave 2: h for svell_ute er
+    # `swell_offshore * transfer * exposure(...)`, og h for barentswatch er
+    # `bw * ... * spot_direction_factor` - begge har ALLEREDE dempet h selv.
+    # Komar og Gaughan sin Hb ∝ H^0,8 arver da automatisk den samme
+    # dempingen; å gange Hb med faktoren en gang til ga effektivt eksponent
+    # ~1,8, ikke ~1,0, og var usynlig tidligere fordi både directness() (i et
+    # vindu) og spot_direction_factor (nær-direkte treff) stort sett var
+    # ≈1,0 i de faste observasjonene - exposure() sin videre spennvidde midt
+    # i et vindu gjorde feilen synlig, se STATUS.md).
+    #
+    # 27.09.2026, tredje runde (Theodors rettelse - Ersfjordstranda 30.09 vs.
+    # Unstad 30.09 viste at "ingen ny demping" var for enkelt): svell som
+    # treffer med fri eller delvis fri siktlinje (rå geometrisk eksponering
+    # over 0) skal IKKE dempes en ekstra gang - det var selve dobbelttellingen
+    # over. Men svell som bare når spoten ved DIFFRAKSJON rundt land (rå
+    # eksponering nøyaktig 0, se raw_exposure_zero()) bygger seg empirisk
+    # dårligere opp enn Komar og Gaughan sin formel (laget for åpen kyst)
+    # tror - samme fysikk som Grøtfjord 25.09.2026 sin observasjon (3 grader
+    # utenfor vinduet, helt flatt) allerede viste. Der dempes Hb fortsatt med
+    # eksponeringen, i tillegg til at eksponeringen alt er i h. Gjelder bare
+    # reservemodellen (svell_ute) - BarentsWatch sin egen kystmodell har
+    # allerede regnet ut den ekte bøyingen inn mot punktet, og dempes aldri
+    # en gang til her. metno_korrigert (reserven sin reserve) har ingen
+    # retningsfaktor i h i det hele tatt, og dempes derfor alltid med dir_hit.
+    #
+    # 27.09.2026, funnet av fysikk-kontrollør ved gjennomgang av tredje runde:
+    # exposure_override (manuelt, kalibrert tak - se exposure_override_cap())
+    # er allerede den endelige, menneskelig satte "sannheten" om hvor mye som
+    # når spoten fra en retning - typisk satt NETTOPP for grader der rå
+    # eksponering er 0 og geometrien ikke kan stoles på (Grøtfjord 317-330,
+    # se spots.json). Den ekstra diffraksjons-dempingen over ville da dempet
+    # samme retning to ganger (capet i h, OG en gang til her) - dropper derfor
+    # den ekstra dempingen når en override dekker retningen.
+    if source == "svell_ute":
+        dir_off = hour.get("dir_offshore")
+        needs_extra_damping = (raw_exposure_zero(dir_off, spot)
+                                and exposure_override_cap(dir_off, spot) is None)
+        hb_damping = dir_hit if needs_extra_damping else 1.0
+    elif source == "barentswatch":
+        hb_damping = 1.0
     else:
         hb_damping = dir_hit
     hb = None if hb_raw is None else hb_raw * hb_damping
@@ -599,7 +680,8 @@ def rate(hour, spot):
             and not bw_detail["spot_direction_known"])
     )
     # Kildene uenige: BarentsWatch viser en reell totalhøyde (0,5 m+), men
-    # svellet ute er utenfor vinduet, mest av totalhøyden er vindsjø, eller
+    # svellet ute er dårlig eksponert mot spoten, mest av totalhøyden er
+    # vindsjø, eller
     # bølgene ved BarentsWatch-punktet går ikke inn mot stranda. Strengere
     # enn den vanlige usikkerhets-kappingen (maks 1, ikke 3) - dette er ikke
     # bare mangel på data, men tegn på at det trolig ikke er surfbart.

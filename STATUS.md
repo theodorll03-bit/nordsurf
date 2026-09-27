@@ -2,7 +2,7 @@
 
 ## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
 
-- **ROADMAP oppgave 2 (koble del C inn i ratingen): IMPLEMENTERT OG TESTET, IKKE COMMITTET - Theodor sa ja til første versjon, men fysikk-kontrollør fant en ekte feil FØR jeg committet, så jeg spør på nytt med korrekte tall.** Fysikk-kontrollør fant at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling, ~eksponent 1,8 i stedet for 1,0) - en gammel feil (fantes også med `directness()`) som ble synlig først nå. Rettet: `hb_damping` er 1,0 for svell_ute og barentswatch (allerede dempet i `h`), fortsatt `dir_hit`-basert bare for metno_korrigert. Med rettelsen: 13 av 666 sjekkede timer flytter seg 2+ stjerner (var 2 av 636 i den opprinnelige, mangelfulle tabellen) - 12 av dem OPP (fjerner en tidligere feilaktig dobbel-straff av kant-svell), 1 ned (Steinkrøssa, samme som før). Se eget avsnitt for full tabell. **Stopper på nytt og ber om FORNYET "ja", siden den forrige tabellen var ufullstendig.**
+- **ROADMAP oppgave 2 (koble del C inn i ratingen): FERDIG, Theodor sa ja etter tre rettelser - committet.** Fysikk-kontrollør fant først at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling) - rettet ved å fjerne den ekstra dempingen for svell_ute/barentswatch. Theodor pekte deretter på at Ersfjordstranda sitt tilfelle (svell 4-6 grader UTENFOR vinduet OG den frie sektoren, bare når spoten via diffraksjon) er en ANNEN, ekte situasjon enn Unstad sin (fri linje) - samme fysikk som Grøtfjord 25.09.2026 (utenfor vinduet, helt flatt). Rettelse: ny `raw_exposure_zero()` - ekstra Hb-demping bare når RÅ (ikke glattet) geometrisk eksponering er nøyaktig 0. Fysikk-kontrollør fant deretter at dette ville dobbeltdempe Grøtfjord sin `exposure_override`-sone (317-330, rå eksponering også 0 der) - rettet ved å droppe den ekstra dempingen når en override dekker retningen (overriden ER allerede den kalibrerte sannheten). Endelig tabell: 13 timer med 2+ endring (Unstad opp 5, Steinkrøssa ned 1 - begge uendret fra Theodors "ja"), Ersfjordstranda og Grøtfjord helt tilbake til 0 endring. Se eget avsnitt.
 - **ROADMAP oppgave 3 (kysttoleranse i check_spot.py, oppfølging av Steinkrøssa): FERDIG, ingen swell_window endret.** Theodors hypotese (gammel 2 km-toleranse ga for bredt vindu) holder IKKE for Steinkrøssa - grensa mellom blokkert (295-314°) og åpent (315-16°) er identisk med både 2 km og den nye 300 m-toleransen. Steinkrøssa sitt eksponeringsfall ved 324° skyldes i stedet Gaussian-glatting som sprer en allerede kjent, korrekt blokkering (rett ved spoten, 295-314°) 10-15 grader inn i det åpne vinduet - en bevisst modelleringsvalg, ikke en geometrifeil. Ingen av de 6 spotenes vinduer mister fri linje med den strengere toleransen. Se eget avsnitt.
 - **Retningskonvensjonen er nå endelig avklart, tredje og siste runde**: `totalMeanWaveDirection` er retningen bølgene går MOT (samme som pilene på BarentsWatch sitt kart), regnes om til "fra" med +180. Bevist av en garantert rå logg (Unstad, 26.09 kl. 15:00Z, rå verdi 116 - FØR noen konverteringskode noensinne fantes - gir konvertert 296, nesten blink mot facing 294,8 og stemmer med videoen). Den mellomliggende konklusjonen ("fra, ingen konvertering", satt tidligere i denne økten) var feil - bygget på et tall som senere viste seg å være allerede konvertert, ikke rått.
 - **Beviset er nå en fixture i repoet**: `fetcher/fixtures/bw_raw_unstad_2026-09-26.json`, hentet direkte fra GitHub Actions-loggen (credentials var allerede maskert med `***` i loggen selv - sjekket, ingen hemmeligheter i fixturen). Ny test 7.5c leser fixturen og bekrefter 116→296 og under 5 graders avvik fra facing (fikk 1,2 grader). Beviset er dermed sporbart for alle, ikke bare i Theodors Downloads-mappe.
@@ -369,7 +369,7 @@ Committer og pusher nå, per Theodors svar på punkt 3.
 
 ---
 
-## Oppgave 2: koble del C inn i ratingen - implementert, IKKE committet ennå (rettet, se under)
+## Oppgave 2: koble del C inn i ratingen - FERDIG, Theodor sa ja (etter to rettelser)
 
 ### Hva som er gjort
 - **Ny fil `fetcher/exposure.py`**: avhengighetsfri (ingen basemap/shapely) kjerne med `spot_checksum()`, flyttet ut fra `exposure_baseline.py` slik at `fetch.py` kan sjekke sjekksummen uten å dra inn de tunge geometriavhengighetene i hver ordinære kjøring. `exposure_baseline.py` importerer nå funksjonen derfra i stedet for å ha sin egen kopi - ingen endring i selve hash-algoritmen, bekreftet ved at alle 6 spots sine sjekksummer fortsatt stemmer mot dagens `data/exposure_baseline.json`.
@@ -410,11 +410,37 @@ Rettelsen endrer resultatet for ALLE reserve-modell-timer med delvis eksponering
 | Unstad | 30.09 00-04Z (5 timer) | 252-253° (vinduets ytterkant, vindu 253-335) | 1,7-2,0 m | 0 | 2 |
 | Steinkrøssa | 29.09 21:00Z | 324° (9° inn i vinduet 315-16) | 0,66 m | 2 | 0 |
 
-**Ersfjordstranda og Unstad sine 12 timer**: svell rett i kanten av vinduet ble tidligere dobbelt-straffet (retningsfaktor i kanten, typisk 0,2-0,4, i annen potens), og ga derfor urettmessig 0 stjerner for ellers reelt, målbart svell (2 m+ ute). Med rettelsen kommer disse opp til 2-3 stjerner, som stemmer bedre med at et log 2 m svell rett i kanten av et vindu faktisk gir noe surfbart, ikke ingenting. Ingen fast observasjon rammes av dette (ingen av de 5 faste observasjonene er i denne situasjonen).
+### Theodors ja med én endring, og en tredje runde på hb_damping
 
-**Steinkrøssa sin ene time (324°, 2 stjerner → 0)**: uendret fra forrige tabell - se forklaringen i den tidligere versjonen av denne teksten (git-historikk), kort sagt at eksponeringsmodellen finner mindre eksponering midt i vinduet enn den rene vindu-regelen. **Dette er nå selve utgangspunktet for din oppfølgingsoppgave under** - se "Oppfølging: kysttoleranse i check_spot.py".
+Theodor sa ja til at Unstad sin dobbeltstraff fjernes (fri linje, rå eksponering 1,0 - riktig at ingen ekstra demping trengs), men pekte på at Ersfjordstranda sitt tilfelle (324-326°) er en ANNEN situasjon enn Unstad sin, selv om begge lå "i kanten": Ersfjordstranda sine retninger er 4-6 grader UTENFOR både vinduet og den frie sektoren - svellet når spoten bare ved å bøye seg rundt land (diffraksjon), akkurat som Grøtfjord 25.09.2026 (3 grader utenfor, observert helt flatt). Den ekstra Hb-dempingen fanget noe EKTE der, ikke bare dobbelttelling - diffraktert svell bygger seg empirisk dårligere opp enn Komar og Gaughan sin formel (laget for åpen kyst) tror. Grøtfjord slipper unna fordi `exposure_override` (taket 0,2) uansett holder den timen flat - Ersfjordstranda har ikke noe tilsvarende tak.
 
-**Vurdering**: 12 av 13 endringer er oppadgående korreksjoner av en reell, uheldig dobbeltstraff - ikke en svekkelse av modellen. Den ene nedadgående (Steinkrøssa) er den samme som før, og undersøkes videre i neste seksjon. Stopper likevel her, per regelen, og ber om et FORNYET "ja" siden tabellen jeg viste deg først var ufullstendig.
+**Rettelse (tredje runde)**: ny `raw_exposure_zero(d, spot)` i `rating.py` - sann når RÅ geometrisk eksponering (før glatting, fra `exposure_baseline.py` sin `raw`-liste, nå også lastet av `fetch.py` som `spot["exposure_raw"]`) er nøyaktig 0 for retningen, altså INGEN fri siktlinje finnes i det hele tatt. Mangler rådata (fallback): tilsvarer `degrees_outside(d, spot) > 0`, samme konsept i `directness()` sin egen vindu-modell. `rate()` sin `hb_damping` for `svell_ute`:
+- Rå eksponering over 0 (fri eller delvis fri linje): ingen ekstra demping (1,0) - dette var selve dobbelttelling-rettelsen fra forrige runde, uendret.
+- Rå eksponering nøyaktig 0 (bare diffraksjon rundt land): dempes MED eksponeringen (samme som tidligere, "gammel" oppførsel) - empirisk begrunnet av Grøtfjord 25.09.2026, nå skrevet inn i CLAUDE.md.
+
+BarentsWatch uendret (alltid 1,0, som i forrige runde) - gjelder bare reservemodellen.
+
+**Nye tester (11.1-11.4)**: `raw_exposure_zero()` sin fallback- og ekte-data-oppførsel, Ersfjordstranda 325° (bak odden) mot 318° (innenfor) - klart lavere surfehøyde og maks 1 stjerne, Unstad 253° (fri linje) - ingen ekstra demping.
+
+### Endelig før/etter-tabell (etter alle tre rundene)
+
+| Spot | Timer sjekket | Maks stjerneendring | Timer med endring ≥ 2 | Timer med endring ≥ 1 |
+|---|---|---|---|---|
+| Grøtfjord | 111 | 0 | 0 | 0 |
+| Ersfjordstranda | 111 | **0** | 0 | 0 |
+| Russelv | 111 | 1 | 0 | 2 |
+| Lenangsøyra | 111 | 1 | 0 | 2 |
+| Steinkrøssa | 111 | 2 | **1** | 4 |
+| Unstad | 111 | 2 | **5** | 10 |
+
+Ersfjordstranda er nå helt tilbake til 0 endring i det hele tatt (nøyaktig samme resultat som før noen av de tre rettelsene - rå eksponering 0 der gir akkurat samme demping som den gamle koden alltid ga). Unstad sine 5 timer (252-253°, opp 0→2) og Steinkrøssa sin ene time (324°, ned 2→0) er UENDRET fra forrige tabell, akkurat som Theodor forventet. Alle 5 faste observasjoner i CLAUDE.md bekreftet å holde (full testkjøring grønn). CLAUDE.md sin 2-stjerners regel treffer nå bare Steinkrøssa og Unstad, begge allerede godkjent.
+
+### Fysikk-kontrollør fant én til - rettet før commit
+Kjørt en tredje gang på denne rettelsen. Fant at Grøtfjord sin `exposure_override` (311-330, tak 0,2) overlapper med 317-330, der RÅ eksponering allerede er 0,0 (bekreftet i `data/exposure_baseline.json`) - uten et unntak ville `raw_exposure_zero()` sin ekstra Hb-demping lagt seg OPPÅ taket, samme type dobbeltstraff som runde 2 sin feil, bare i en smalere sone. Egen sjekk: Grøtfjord, 320 grader, 4 m svell/14 s - med begge dempingene stablet ga det 0 stjerner (0,16-0,24 m), med bare taket 3 stjerner (0,98 m).
+
+**Rettelse**: `rate()` sin `svell_ute`-gren dropper nå den ekstra diffraksjons-dempingen når `exposure_override_cap()` dekker retningen - overriden ER allerede den manuelle, kalibrerte sannheten for akkurat den retningen (satt av Theodor, nettopp for grader der geometrien ikke kan stoles på), og skal ikke dempes en gang til. Ny test 11.5 (ekte tall fra `data/exposure_baseline.json`, ikke syntetisk) dekker nå kombinasjonen override + rå eksponering 0. Bekreftet at dette IKKE endrer noen av tallene i tabellen over (Grøtfjord viser fortsatt 0 endring i dagens 111-timers varsel - funnet var en LATENT feil, ikke noe som traff en reell time ennå).
+
+**Committer og pusher nå, per Theodors instruks (punkt 6) - tallene ble som forventet.**
 
 ---
 
@@ -435,6 +461,8 @@ Theodor sa ja til oppgave 2 (begge stjernefallene "fysisk rimelige, gjelder små
 | Lenangsøyra | [15, 23] | [15, 23] | Ingen - identisk |
 | Steinkrøssa | [315, 16] | [315, 16] | Ingen - identisk |
 | Unstad | [253, 335] | [253, 335] | Ingen - identisk |
+
+**Merk: Ersfjordstranda sin frie sektor er [288, 320], men swell_window er satt til [294, 320]** - 6 grader smalere i underkant enn det som faktisk har fri linje til åpent hav (samme mønster som Grøtfjord, der fri sektor [286,315] også er bredere enn vinduet [286,310]). Ikke endret her - lagt til i ROADMAP.md sin "Venter på Theodor"-liste som et mulig forslag, krever eget ja.
 
 **Ingen spot har noen retning i dagens svellvindu som mister fri linje til åpent hav med den strengere 300 m-toleransen.** Farstadsanden er ikke lagt inn i spots.json ennå (bekreftet), så den er ikke med i denne sjekken.
 

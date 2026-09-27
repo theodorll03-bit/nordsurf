@@ -14,12 +14,14 @@ import calibrate
 import notify
 import sun
 import tide as tidemod
+from exposure import spot_checksum
 from rating import angle_diff, directness, rate, SURF_FACTOR_DEFAULT
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
 OUT = ROOT / "docs" / "data" / "forecast.json"
 BW_CALIB = ROOT / "data" / "bw_calibration.json"
+EXPOSURE_BASELINE = ROOT / "data" / "exposure_baseline.json"
 HOURS_AHEAD_MAX = 120  # 5 døgn, men stopper ved kortest tilgjengelige kilde
 REPORT = []  # kilderapport, vises i Actions
 # Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
@@ -38,6 +40,25 @@ def _hours_available(source_dict, now):
         return 0
     last = sources.parse_iso(max(source_dict))
     return max(0, int((last - now).total_seconds() // 3600) + 1)
+
+
+def resolve_exposure(spot, exposure_data, name):
+    """Glattet OG rå eksponering (del C) for spoten, hvis den finnes og
+    sjekksummen stemmer med spots.json sitt NÅVÆRENDE innhold - ellers
+    (None, None) (rating.py sine exposure()/raw_exposure_zero() faller da
+    tilbake til directness()/vindu-grensa). Rådataene brukes til å avgjøre
+    NÅR reservemodellen skal dempe Hb en ekstra gang (se rating.py sin
+    raw_exposure_zero(), Theodors rettelse 27.09.2026 tredje runde).
+    Returnerer (smoothed_eller_None, raw_eller_None, advarsel_eller_None)."""
+    entry = exposure_data.get(spot["id"])
+    if entry is None:
+        return None, None, (f"{name}: ingen eksponeringsdata bygget ennå (kjør fetcher/exposure_baseline.py "
+                             f"manuelt) - bruker vindu og skyggekurve som reserve")
+    if entry.get("checksum") != spot_checksum(spot):
+        return None, None, (f"{name}: eksponeringens sjekksum stemmer ikke med spots.json - facing, "
+                             f"svellvindu eller koordinater er endret siden siste kjøring av "
+                             f"fetcher/exposure_baseline.py. Bruker vindu og skyggekurve som reserve")
+    return entry["smoothed"], entry["raw"], None
 
 
 def convention_warning(hours, spot, name):
@@ -77,7 +98,7 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
-def build_spot(spot, now, learned, bw_calib, run_id):
+def build_spot(spot, now, learned, bw_calib, run_id, exposure_data):
     name = spot["name"]
     print(name)
     s, o = spot["spot"], spot["offshore"]
@@ -132,6 +153,19 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     surf_factor_value = learned.get("surf_factor", SURF_FACTOR_DEFAULT)
     surf_factor_source = "logs" if learned.get("surf_factor") is not None else "standard"
     spot = {**spot, "transfer": transfer_value, "surf_factor": surf_factor_value}
+
+    # 27.09.2026, ROADMAP oppgave 2: glattet eksponering (del C) erstatter
+    # vindu+skyggekurve for reservemodellen (se rating.exposure()) - men bare
+    # når sjekksummen stemmer med spots.json sitt NÅVÆRENDE innhold. Endres
+    # facing/vindu/koordinater uten å bygge exposure_baseline.py på nytt,
+    # faller spoten tilbake til directness() (varslet i kilderapporten) i
+    # stedet for å bruke utdaterte eksponeringstall stille.
+    exposure_smoothed, exposure_raw, exposure_warning = resolve_exposure(spot, exposure_data, name)
+    if exposure_smoothed is not None:
+        spot["exposure_smoothed"] = exposure_smoothed
+        spot["exposure_raw"] = exposure_raw
+    if exposure_warning:
+        REPORT.append((name, "Eksponering (del C)", "feil", exposure_warning))
 
     hours = []
     for i in range(horizon):
@@ -216,7 +250,11 @@ def build_spot(spot, now, learned, bw_calib, run_id):
     bw_calib[spot["id"]] = merged_pairs
     bw_days = len({p["t"][:10] for p in merged_pairs})
 
-    public = {k: v for k, v in spot.items() if not k.startswith("_")}
+    # exposure_smoothed/exposure_raw er 360 interne tall hver (én per grad)
+    # bare til bruk i rate() over - ikke noe appen trenger å vise, ekskludert
+    # fra utdata.
+    _internal_keys = {"exposure_smoothed", "exposure_raw"}
+    public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
     light_days = sun.light_days(s["lat"], s["lon"], now)
     calibration = {
         **learned,
@@ -251,10 +289,11 @@ def main():
     run_id = now.isoformat()
     logs = safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[])
     bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
+    exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
     spots = []
     for s in config["spots"]:
         if s.get("enabled"):
-            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id))
+            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id, exposure_data))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -15,7 +15,14 @@ Ferdig når: Grøtfjord 311 til 330 grader gir lav eksponering av geometrien ale
 - BarentsWatch-timer uendret.
 Ferdig når: alle faste observasjoner holder, og tabell før og etter for dagens varsel ligger i STATUS.md. Stoppregelen på 2 stjerner i CLAUDE.md gjelder.
 
-## 3. Del B: eksponering lært fra BarentsWatch
+## 3. Kysttoleranse i check_spot.py (oppfølging av Steinkrøssa-funnet i oppgave 2)
+Steinkrøssa sitt stjernefall (324 grader, oppgave 2) reiste spørsmålet om check_spot.py sin gamle 2 km-kysttoleranse ga for brede svellvinduer noen steder (linja kan ha krysset tuppen av en odde nær spoten, som en strengere toleranse ville fanget opp).
+1. Oppdater check_spot.py til samme kysttoleranse som exposure_baseline.py (300 m, sammenhengende land fra spoten).
+2. Regn fri sektor på nytt for alle spots (Grøtfjord, Ersfjordstranda, Steinkrøssa, Russelv, Lenangsøyra, Unstad og Farstadsanden hvis den er lagt inn). Vis en tabell: dagens swell_window, ny fri sektor, og for blokkerte retninger hvor langt unna og hvor bred hindringen er.
+3. For Steinkrøssa spesielt: vis hvilke retninger mellom 315 og 16 grader som faktisk krysser land, og hvor.
+4. Ikke endre noen swell_window. Det krever Theodors ja. Skriv forslagene i STATUS.md og stopp.
+
+## 4. Del B: eksponering lært fra BarentsWatch
 - 10-graders bøtter, glatting mellom nabobøtter.
 - Par: ren BarentsWatch-verdi, svell ute minst 0,5 m, swell_share minst 0,7, sources_disagree usann. Lagres i data/exposure.json, 120 døgn, ett par per spot og tidspunkt.
 - Lært bøtte: minst 6 par over minst 2 døgn. Normalisering krever minst 3 lærte bøtter i samme periodegruppe (kort under 10 s, lang 10 s og over). Kort kan låne fra lang, ikke omvendt.
@@ -25,10 +32,11 @@ Ferdig når: alle faste observasjoner holder, og tabell før og etter for dagens
 - Figur per spot i Logger-fanen: eksponering per retning, antall par per bøtte, og loggene mine som merker på retningen svellet ute kom fra, farget etter stjerner.
 Ferdig når: testene dekker alle reglene over, og STATUS.md viser hvor mye som er lært per spot.
 
-## 4. Unstad: hvor ligger BarentsWatch sitt rutepunkt?
+## 5. Unstad: hvor ligger BarentsWatch sitt rutepunkt?
 Trigg diagnose-workflowen (gh workflow run) hvis mulig, les ut punktet BarentsWatch valgte for Unstad, og regn avstand og retning fra punktet vi ba om. Bare rapporter, ikke flytt.
 
 ## Venter på Theodor
 - Farstadsanden: vindu og pinne fra lokal surfer.
 - Unstad: offshorevinden. Videoen 26.09 viste offshore, appen sa sidevind. Trenger flere observasjoner før noe endres.
 - Grøtfjord: om exposure_override kan fjernes, når del B har lært noe.
+- Ersfjordstranda: fri sektor (300 m kysttoleranse) er [288, 320], men swell_window er satt til [294, 320] - 6 grader smalere i underkant enn det som faktisk har fri linje til åpent hav. Mulig forslag: utvid vinduet til 288. Ikke gjort - krever Theodors ja (se oppgave 3 i STATUS.md).

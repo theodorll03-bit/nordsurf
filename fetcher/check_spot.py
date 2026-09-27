@@ -23,16 +23,23 @@ def pt(b, d, la=lat, lo=lon):
 def is_land(la, lo):
     return land.contains(Point(lo, la))
 
+# 27.09.2026, ROADMAP (oppfølging av Steinkrøssa-funnet i oppgave 2): samme
+# kysttoleranse som exposure_baseline.py, i stedet for den gamle 2 km-
+# toleransen som tillot linja å hoppe over en odde nær spoten (Bøvær ved
+# Steinkrøssa) og dermed gjøre svellvinduet for bredt. Krever sammenhengende
+# land helt fra spoten før en retning regnes som blokkert fra start.
+COAST_FUZZ = 0.3   # km
+COAST_STEP = 0.05  # km - finere oppløsning enn 0,1 km, bare i kystsonen
+
 def free_distance(b, maxd=150):
-    d, start = 0.0, None
+    d0 = 0.0
+    while d0 < COAST_FUZZ and is_land(*pt(b, d0)):
+        d0 += COAST_STEP
+    if is_land(*pt(b, d0)):
+        return 0  # land sammenhengende gjennom hele kysttoleransen
+    d, start = d0, d0
     while d < maxd:
-        onl = is_land(*pt(b, d))
-        if start is None:
-            if not onl:
-                start = d
-            elif d > 2:
-                return 0
-        elif onl:
+        if is_land(*pt(b, d)):
             return d - start
         d += 0.1
     return maxd

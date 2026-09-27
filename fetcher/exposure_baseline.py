@@ -39,13 +39,14 @@ ikke-bøyde eksponeringen per grad)."""
 import sys
 import json
 import math
-import hashlib
 from pathlib import Path
 
 from mpl_toolkits.basemap import Basemap
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
 from shapely.prepared import prep
+
+from exposure import spot_checksum
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
@@ -55,13 +56,6 @@ MAXD = 150        # km, regnes som åpent hav
 STEP = 0.5        # km, oppløsning langs strålen (utenfor kystsonen)
 WAVELENGTH = 0.225  # km - svell ca 12 s bølgeperiode på dypt vann (g*T^2/2pi)
 WIDTH_TOL = 2.0   # km - hvor nær hverandre treffavstander må være for å regnes som samme hindring
-
-
-def spot_checksum(spot):
-    """Hash av det som faktisk brukes til baseline - endres et av feltene i
-    spots.json, blir denne ugyldig (se fetch.py sin advarsel i kilderapporten)."""
-    key = {"spot": spot["spot"], "swell_window": spot["swell_window"], "facing": spot.get("facing")}
-    return hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()[:16]
 
 
 def build_land(lat, lon):
