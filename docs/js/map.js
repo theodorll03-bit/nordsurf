@@ -372,13 +372,28 @@ function discSvgMarkup(spot, h){
     const anchor = east ? "start" : "end";
     const below = south;
     const label = `${nf0.format(h.wind_speed)} m/s ${windLabel(h)}`.trim();
-    windArrowMarkup = `<g class="disc-windarrow" data-bearing="${fromBearing}">
-      <path class="disc-wind-head" d="${arrowHead(headBasePt.x, headBasePt.y, toBearing, rHeadBase-rTip)}"/>
+    // Pilhodet og etiketten roterer IKKE sammen: pilhodet er en ren
+    // funksjon av den kontinuerlige vindretningen (fint å svinge inn ved
+    // tidsendring, se updateDiscForTime() sin spin()), men etiketten er nå
+    // et fast hjørnepunkt (kvadrant, ikke gradvis) - å rotere den sammen
+    // med pilhodet fikk den til å synlig vippe rundt sentrum i 400ms ved
+    // hver tidsendring, selv når hjørnet ikke endret seg (funnet av
+    // fysikk-kontrollør, runde 2). Egen indre gruppe for spin() å treffe.
+    windArrowMarkup = `<g class="disc-windarrow">
+      <g class="disc-windarrow-head" data-bearing="${fromBearing}"><path class="disc-wind-head" d="${arrowHead(headBasePt.x, headBasePt.y, toBearing, rHeadBase-rTip)}"/></g>
       <text class="disc-wind-label" x="${cornerX}" y="${cornerY+(below?4:-4)}" text-anchor="${anchor}">${esc(label)}</text>
     </g>`;
   } else if(h){
-    const p = polar(cx,cy,100,0);
-    windArrowMarkup = `<text class="disc-wind-missing" x="${p.x.toFixed(2)}" y="${(p.y-4).toFixed(2)}" text-anchor="middle">vind mangler</text>`;
+    // "vind mangler" står fast øverst (bearing 0) - MEN svellets egen
+    // retningsetikett (dirLabel over, samme posisjon-formel) kan havne på
+    // nøyaktig samme sted når dir_offshore også er nær nord, og de to er
+    // uavhengige datafelt som fint kan inntreffe samtidig (funnet av
+    // fysikk-kontrollør, runde 2). Flytt til bunnen (180) i det tilfellet -
+    // dir_offshore kan ikke være nær BÅDE 0 og 180 på én gang.
+    const missBearing = (h.dir_offshore!=null && Math.abs(shortestDelta(h.dir_offshore,0)) < 25) ? 180 : 0;
+    const mBelow = missBearing>90 && missBearing<270;
+    const p = polar(cx,cy,100,missBearing);
+    windArrowMarkup = `<text class="disc-wind-missing" x="${p.x.toFixed(2)}" y="${(p.y+(mBelow?4:-4)).toFixed(2)}" text-anchor="middle">vind mangler</text>`;
   }
 
   const ring = ringSegments(cx,cy,94, h?h.stars:0, h?h.faded:0, "disc-ring-seg");
@@ -459,7 +474,7 @@ function updateDiscForTime(){
   const wrap = el.querySelector(".disc-wrap");
   const oldSwell = wrap.querySelector(".disc-swellgroup");
   const oldWind = wrap.querySelector(".disc-windgroup");
-  const oldWindArrow = wrap.querySelector(".disc-windarrow");
+  const oldWindArrow = wrap.querySelector(".disc-windarrow-head");
   const oldSwellBearing = oldSwell ? parseFloat(oldSwell.dataset.bearing) : null;
   const oldWindBearing = oldWind ? parseFloat(oldWind.dataset.bearing) : null;
   const oldWindArrowBearing = oldWindArrow ? parseFloat(oldWindArrow.dataset.bearing) : null;
@@ -476,7 +491,7 @@ function updateDiscForTime(){
     };
     spin(".disc-swellgroup", oldSwellBearing);
     spin(".disc-windgroup", oldWindBearing);
-    spin(".disc-windarrow", oldWindArrowBearing);
+    spin(".disc-windarrow-head", oldWindArrowBearing);
   }
   el.querySelector(".disc-plate").innerHTML = discPlateMarkup(spot, h);
   if(mapState.sheetOpen) fillMapSheet(spot, h);
