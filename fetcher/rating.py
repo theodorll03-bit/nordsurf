@@ -234,31 +234,70 @@ def spot_direction_factor(bw_dir_from, facing):
     return 0.0, True, True
 
 
+SPOT_DIRECTION_OVERRIDE_EXPOSURE = 0.667  # se barentswatch_height() sin docstring
+
+
 def barentswatch_height(hour, spot):
     """BarentsWatch gir totalhøyde (svell + vindsjø), ikke bare svell -
     skalert her til et anslag på ekte svell ved spoten:
     bw_height × min(swell_share, bw_period_factor) × spot_direction_factor.
     min(), ikke produkt, av swell_share og periodefaktoren: de er to
     uavhengige mål på samme spørsmål (er dette vindsjø?), og skal ikke
-    straffe dobbelt for det samme."""
+    straffe dobbelt for det samme.
+
+    27.09.2026, Theodors rettelse (Unstad for lav - se STATUS.md): retnings-
+    faktoren over ble laget for tilfeller der svellet UTE kommer utenfor
+    vinduet (Lenangsøyra 26.09.2026) - da vet vi ikke om det treffer, og
+    BarentsWatch-retningen VED KYSTEN er det beste vi har. Men når svellet
+    ute allerede har god eksponering mot spoten (exposure() >= 0,667 - samme
+    grense som sources_disagree sin "dårlig eksponert"), vet vi ALLEREDE at
+    det treffer - og BarentsWatch sin egen retning ved kystpunktet har vist
+    seg upålitelig i akkurat den situasjonen (Unstad 26.09 og 27.09.2026,
+    se CLAUDE.md sine faste observasjoner: retningen ved punktet varierte
+    med flere grader time for time mens det ekte svellet utvilsomt traff).
+    Retningsfaktoren brukes derfor BARE når eksponeringen for svellretningen
+    ute er under grensen - ellers er den 1,0, uansett hva BarentsWatch-
+    retningen ved punktet sier. Skru IKKE av dette ved å sette grensen til 0
+    eller 1 - da mister man enten hele sikringen (Lenangsøyra ville gått opp)
+    eller hele rettelsen (Unstad ville fortsatt vært for lav)."""
     bw = hour["bw_height"]
     share, share_known = swell_share(hour)
     pf = bw_period_factor(hour.get("bw_period"))
     bw_dir = hour.get("bw_dir")
     facing = spot.get("facing")
-    dirfac, dir_known, dir_offshore = spot_direction_factor(bw_dir, facing)
+    raw_dirfac, dir_known, dir_offshore = spot_direction_factor(bw_dir, facing)
+    # Krever at dir_offshore FAKTISK er kjent - exposure()/directness() sin
+    # egen "ukjent retning"-nøytralverdi (0,7, se directness() sin docstring)
+    # ligger OVER 0,667-grensa, og ville ellers overstyrt retningsfaktoren
+    # uten noen bekreftelse i det hele tatt på at svellet ute treffer -
+    # stikk i strid med selve premisset for regelen. Funnet av
+    # fysikk-kontrollør 30.09.2026 (Theodors rettelse, Unstad for lav).
+    dir_off = hour.get("dir_offshore")
+    offshore_exposure = exposure(dir_off, spot, hour.get("period")) if dir_off is not None else None
+    overridden = offshore_exposure is not None and offshore_exposure >= SPOT_DIRECTION_OVERRIDE_EXPOSURE
+    dirfac = 1.0 if overridden else raw_dirfac
     h = bw * min(share, pf) * dirfac
     detail = {
         "swell_share": share, "swell_share_known": share_known,
         "bw_period_factor": pf,
-        "spot_direction_factor": dirfac, "spot_direction_known": dir_known,
+        "spot_direction_factor": dirfac,
+        # "Kjent" rører IKKE overstyringen - den sier bare om vi FAKTISK har
+        # en BarentsWatch-retning og facing å sammenligne (uendret av om vi
+        # velger å stole på den eller ikke), og skal fortsatt gjøre timen
+        # usikker når retningen ved punktet rett og slett mangler (se 7.7 i
+        # test_rating.py - overstyringen erstatter IKKE ekte data vi ikke
+        # har). "Ut fra land" derimot er en PÅSTAND om selve retningen -
+        # den skal ikke vises når vi nettopp har valgt å ikke stole på den.
+        "spot_direction_known": dir_known,
         # Bølgene ved punktet går faktisk ut fra land (avvik over
         # SPOT_DIRECTION_ERROR_DEG) - se spot_direction_factor() sin
         # docstring og rate() sin bruk av dette.
-        "spot_direction_offshore": dir_offshore,
+        "spot_direction_offshore": False if overridden else dir_offshore,
         # Selve gradavviket (0-180), til visning ("70 grader skrått på
         # stranda") - factoren alene sier ikke hvor mange grader det var.
+        # Vises uansett overstyring, til feilsøking/kilderapport.
         "spot_direction_diff": angle_diff(bw_dir, facing) if dir_known else None,
+        "spot_direction_overridden": overridden,
     }
     return h, detail
 
@@ -529,7 +568,7 @@ def disagree_reason(hour, dir_hit, bw_detail):
     varselbanneret på detaljsiden (5c). Bygget her, ikke i appen - appen
     skal bare vise det henteren faktisk regnet ut."""
     reasons = []
-    if dir_hit is not None and dir_hit < 0.667:
+    if dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE:
         reasons.append("svellet ute er dårlig eksponert mot spoten")
     if bw_detail["swell_share"] < 0.5:
         reasons.append("det er mest vindsjø")
@@ -546,8 +585,18 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      potential, solid, lost_wind, lost_tide, uncertain,
                      sources_disagree, capped_from, disagree_cap):
     items = []
+    # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
+    # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
+    # periode, retning ved punktet) - skal aldri kalles "signifikant" alene,
+    # det begrepet gjelder BarentsWatch sin EGEN totalhøyde (bw_height).
+    # Egen "Etter justering"-linje under viser selve justeringen, med bare
+    # leddene som faktisk trekker ned (samme visning som docs/index.html
+    # sin surfAdjustmentLine()).
+    bw_h = hour.get("bw_height") if source == "barentswatch" else None
     if h is None:
         items.append("Signifikant høyde: ingen data")
+    elif bw_h is not None:
+        items.append(f"BarentsWatch {_fmt_m(bw_h)} signifikant")
     else:
         items.append(f"Signifikant høyde {_fmt_m(h)} ute ved spoten")
     if source == "barentswatch" and bw_detail is not None:
@@ -557,8 +606,22 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         if bw_detail["spot_direction_offshore"]:
             items.append("Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn.")
+        elif bw_detail.get("spot_direction_overridden"):
+            items.append("Retning ved spoten: ikke brukt - svellet ute treffer godt")
         else:
             items.append(f"Retning ved spoten: {_spot_dir_word(bw_detail['spot_direction_factor'])}")
+        if h is not None and bw_h is not None:
+            share, pf, dirfac = bw_detail["swell_share"], bw_detail["bw_period_factor"], bw_detail["spot_direction_factor"]
+            share_ok, pf_ok, dir_ok = share >= 0.999, pf >= 0.999, dirfac >= 0.999
+            if not (share_ok and pf_ok and dir_ok):
+                reasons = []
+                if not share_ok and (pf_ok or share <= pf):
+                    reasons.append(f"svellandel {round(share * 100)} %")
+                elif not pf_ok:
+                    reasons.append("kort BarentsWatch-periode")
+                if not dir_ok:
+                    reasons.append("retning ved punktet")
+                items.append(f"Etter justering {_fmt_m(h)} ({', '.join(reasons)})")
     if h is not None:
         if period is None:
             items.append("Periode (ute): ukjent")
@@ -578,7 +641,15 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             else:
                 damp = ""
             items.append(f"Bruddhøyde (Hb, Komar og Gaughan 1972) {_fmt_m(hb)}{damp}")
-            items.append(f"Surf-faktor {surf_factor:.2f}".replace(".", ","))
+            sf_line = f"Surf-faktor {surf_factor:.2f}".replace(".", ",")
+            # 30.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md):
+            # en surf_factor_prior fra spots.json (startverdi fra ekte,
+            # navngitte observasjoner, FØR det finnes nok logger til å lære
+            # selv) skal vises som nettopp det - ikke se ut som en lært verdi.
+            if spot.get("surf_factor_source") == "prior":
+                n = spot.get("surf_factor_prior_n")
+                sf_line += f" (startverdi fra {n} observasjoner)" if n else " (startverdi, ikke lært fra logger)"
+            items.append(sf_line)
             items.append(f"Surfehøyde {_fmt_m(surf_height)}, sett ca. {_fmt_m(surf_height_sets)}: {_height_word(hs)}")
     items.append(f"Retning: {_direction_word(dir_hit)}")
     if wind_speed is None:
@@ -745,7 +816,7 @@ def rate(hour, spot):
     sources_disagree = (
         source == "barentswatch" and bw_detail is not None
         and (hour.get("bw_height") or 0) >= 0.5
-        and (dir_hit < 0.667 or bw_detail["swell_share"] < 0.5
+        and (dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE or bw_detail["swell_share"] < 0.5
              or (bw_detail["spot_direction_factor"] < 0.5 and not bw_detail["spot_direction_offshore"]))
     )
     if sources_disagree:
@@ -812,6 +883,10 @@ def rate(hour, spot):
         # svell inn). Brukes i fetch.py sin spotnivå-sikring mot at
         # retningskonvensjonen skulle bli feil igjen.
         "spot_direction_offshore": bool(bw_detail and bw_detail["spot_direction_offshore"]),
+        # 27.09.2026, Theodors rettelse: sann når retningsfaktoren ved
+        # BarentsWatch-punktet ble overstyrt til 1,0 fordi svellet ute
+        # allerede har god eksponering (se barentswatch_height()).
+        "spot_direction_overridden": bool(bw_detail and bw_detail.get("spot_direction_overridden")),
         # Trolig flatt: enten er signifikant høyde reelt lav (surf_height er
         # da tvunget til 0, uansett hva formelen ellers ville gitt), eller
         # reserven (metno_korrigert) har stor dreining/retning langt utenfor

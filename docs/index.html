@@ -540,9 +540,40 @@ function surfSubtext(h){
   const period = h.period!=null ? `${nf0.format(h.period)} s` : "ukjent periode";
   if(h.height_source==="barentswatch"){
     const interp = h.bw_interpolated ? " (interpolert)" : "";
-    return `${nf1.format(h.height)} m signifikant, ${period}, BarentsWatch${interp}`;
+    // 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
+    // vi viser i "v" over (surfHeadline) er justert (svellandel, periode,
+    // retning ved punktet) - skal ALDRI kalles "signifikant" alene, det
+    // begrepet gjelder BarentsWatch sin EGNE totalhøyde (bw_height). Selve
+    // justeringen vises i en egen linje, se surfAdjustmentLine().
+    return h.bw_height!=null
+      ? `BarentsWatch ${nf1.format(h.bw_height)} m signifikant, ${period}${interp}`
+      : `${nf1.format(h.height)} m, ${period}, BarentsWatch${interp}`;
   }
   return `${nf1.format(h.height)} m signifikant, ${period}, anslag`;
+}
+function bwPeriodFactor(period){
+  // Speiler rating.bw_period_factor() - bare til å avgjøre HVILKET ledd
+  // (svellandel eller periode) som faktisk er det begrensende i min()
+  // under, til visning. Endrer aldri noe tall selv.
+  if(period==null) return 1.0;
+  if(period<6) return 0.3;
+  if(period<8) return 0.3+0.3*(period-6)/2;
+  return 1.0;
+}
+function surfAdjustmentLine(h){
+  // 27.09.2026 (Theodors rettelse): egen linje for selve justeringen fra
+  // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som
+  // FAKTISK trekker ned (min(svellandel, periodefaktor) - bare den minste
+  // av de to er den reelle årsaken, og retningen bare hvis den ikke er 1,0).
+  if(h.height_source!=="barentswatch" || h.bw_height==null || h.height==null) return "";
+  const share = h.swell_share, pf = bwPeriodFactor(h.bw_period), dirfac = h.spot_direction_factor;
+  const shareOk = share==null || share>=0.999, pfOk = pf>=0.999, dirOk = dirfac==null || dirfac>=0.999;
+  if(shareOk && pfOk && dirOk) return "";
+  const reasons = [];
+  if(!shareOk && (pfOk || share<=pf)) reasons.push(`svellandel ${Math.round(share*100)} %`);
+  else if(!pfOk) reasons.push("kort BarentsWatch-periode");
+  if(!dirOk) reasons.push(h.spot_direction_diff!=null ? `retning ${Math.round(h.spot_direction_diff)}° skrått ved punktet` : "retning ved punktet");
+  return `Etter justering ${nf1.format(h.height)} m (${reasons.join(", ")})`;
 }
 const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet - langt svell reiser seg mer når det treffer grunnen.";
 function windowText(spot){
@@ -662,7 +693,7 @@ function renderSpot(){
       <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
     </div>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde på spoten <button type="button" class="infoBtn" id="heightInfo" aria-label="Hva er surfehøyde?">ⓘ</button></div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div></div>
+      <div class="cell"><div class="k">Høyde på spoten <button type="button" class="infoBtn" id="heightInfo" aria-label="Hva er surfehøyde?">ⓘ</button></div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>${surfAdjustmentLine(h)?`<div class="n">${esc(surfAdjustmentLine(h))}</div>`:""}</div>
       <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
       <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
@@ -845,6 +876,8 @@ function renderLogs(){
     const surfLogs = cal.surf_factor_logs ?? 0;
     const surfSrcTxt = cal.surf_factor_source==="logs"
       ? `Lært fra ${surfLogs} logger/observasjoner du har lagt inn`
+      : cal.surf_factor_source==="prior"
+      ? `Startverdi${cal.surf_factor_prior_n!=null?` fra ${cal.surf_factor_prior_n} observasjoner`:""} (ikke lært fra logger ennå - ${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn så overstyrer det)`
       : `Standardverdi (${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn før den læres automatisk)`;
     return `<div class="calib"><div class="t">${esc(s.name)}</div>
       <p><b>Transfer ${transferPct} %</b>: hvor mye av svellet ute som når stranda ved direkte treff, modell mot modell (reservemodellen mot BarentsWatch). ${transferSrcTxt}.</p>

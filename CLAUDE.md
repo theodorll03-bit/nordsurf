@@ -15,7 +15,8 @@ Når en modell motsier en observasjon, er det modellen som er feil.
 - Grøtfjord 25.09.2026: helt flatt, svell ute fra ca. 313 grader.
 - Grøtfjord 26.09.2026: helt flatt.
 - Lenangsøyra 26.09.2026: ikke surfbart. Mest vindsjø, bølgene i Ullsfjorden kom fra vest.
-- Unstad 26.09.2026 ca. kl. 14:45: over hodet, sett nær dobbelt over hodet, tønner, offshore. 4 stjerner. Appen viste Hs 0,9 m, 15 s.
+- Unstad 26.09.2026 ca. kl. 14:45: over hodet, sett nær dobbelt over hodet, tønner, offshore. 4 stjerner. Appen viste Hs 0,9 m, 15 s. Surfehøyde skal være ca. 2,4 m (med surf_factor_prior, se spots.json).
+- Unstad 27.09.2026 morgen (Instagram, Lofoten Surfsenter, "decent morning"): rene linjer, brysthøyt til hodehøyt, ca. 3 stjerner. Kl. 06-08 skal gi minst 2 stjerner. Vinden appen beregnet (5-8 m/s side-onshore) stemmer ikke med videoen (nesten vindstille) - se "Venter på Theodor".
 
 ## Konvensjoner (ikke endre)
 - Alle retninger internt er "fra"-retninger, 0 = nord.

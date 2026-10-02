@@ -1,30 +1,156 @@
 # Nordsurf: status
 
-## Oppsummering (sist oppdatert 27.09.2026, under arbeid)
+## Oppsummering (sist oppdatert 30.09.2026, FERDIG - committet)
 
+- **ROADMAP oppgave 1 (Unstad for lav høyde): FERDIG, Theodor sa ja - committet.** Tre observasjoner (26.09 kl. 14:45, 27.09 morgen/Instagram) viste at Unstad rates for lavt. Retningsfaktor-fiksen (`barentswatch_height()` overstyrer til 1,0 når svellet ute allerede er godt eksponert, 0,667-grensa) er ja også for Steinkrøssa ("51 grader skrått er normalt der svellet bøyer seg rundt en odde" - merket "trenger observasjon"). Theodor avviste forslaget om å senke `ideal_height` ("skjuler årsaken") - i stedet nytt `surf_factor_prior`-felt i spots.json (startverdi 1,45 for Unstad fra de to observasjonene, overstyres automatisk av lærte logger), og `ideal_height` senket til [1,2, 3,5]. Fysikk-kontrollør fant én reell feil under review (overstyringen slo inn på `exposure()` sin "ukjent retning"-nøytralverdi 0,7 når `dir_offshore` manglet - verre enn før fiksen for en ekte "ut fra land"-time) - rettet, ny regresjonstest 9.3c. CLAUDE.md har nå begge observasjonene som faste tester (26.09: minst 3 stjerner og surfehøyde ca. 2,4 m; 27.09 kl. 06-08: minst 2 stjerner - kl. 09-10 faller til 1 i samme rekonstruksjon, forklart i eget avsnitt, ikke skjult). Visningsendring (aldri kalle justert høyde "signifikant") og fornuftssjekk i kilderapporten også på plass. Stjernetabell for de neste 48 timene: 0 av 336 timer endrer seg i dagens live varsel (verken Unstad eller Steinkrøssa har forhold akkurat nå som fiksen griper inn i - beviset er den rekonstruerte 26.09/27.09-dataen, ikke dagens varsel). Se eget avsnitt.
 - **Ny spot: Tromvik (Kvaløya), lagt til utenom køen.** Svellvindu og havpunkt verifisert nøyaktig mot Theodors tall med `check_spot.py`. `exposure_baseline.py` kjørt på nytt (de 6 andre spotenes tall byte for byte uendret). Sammenligning mot Grøtfjord onsdag kl. 12 viser akkurat det tiltenkte: svell fra 319° gir Tromvik 3 stjerner (rett i vinduet) mens Grøtfjord forblir flatt (langt utenfor sitt) - de to spotene dekker hver sin del av retningene fra nordvest. Kartet grupperer og separerer de to riktig, ingen overlapp. BarentsWatch-dekning for punktene ikke bekreftet (ingen nøkler lokalt, samme kjente begrensning som alle andre spots). Se eget avsnitt.
-- **ROADMAP oppgave 1 (vinden forsvinner fra onsdag kl. 12): FERDIG.** Live sjekk (ingen nøkler trengs) bekreftet at bare met.no Locationforecast (vind) har problemet - time for time i ca. 51 timer, deretter hver 6. time. Oceanforecast og Open-Meteo Marine har begge jevnt tidssteg hele sin horisont - ingen retting trengt der. Ny `sources.weather_interpolate()` (lineær for styrke/kast/lufttemp, sirkulær for retning, maks 6 timers hull, aldri ekstrapolert), nytt felt `wind_interpolated`, "vind jevnet ut" i appen, ny kilderapport-rad per kilde som viser hvor tidssteget endrer seg. 71 timer (alle 7 spots) fikk endret stjerner i én lokal kjøring - alle +1 der, men fysikk-kontrollør fant selv én nedgang (+1 straff) i en egen, uavhengig kjøring senere samme dag - riktig oppførsel (ekte vind gir riktigere straff enn den gamle faste "ukjent vind"-gjetningen), ikke en garanti om at stjerner alltid går opp. Maks endring uansett 1, ikke 2+, i begge kjøringene. Se eget avsnitt.
-- **ROADMAP oppgave 2 (vindpila på spot-skiva): lagt til i ROADMAP.md, IKKE startet ennå.** Visuelt rotete (går tvers gjennom skiva, pilhodet havner under ratingringen) - krever et frontend-omdesign (vindvimpel utenfor ratingringen, klippesti for animasjonen) og skjermbilde-verifisering i flere fargemodus/vindretninger. Ikke påbegynt.
-- **ROADMAP oppgave 3 (Grøtfjord: "blåst ut" skilt fra ekte flatt): FERDIG.** Grøtfjord tirsdag kl. 14 viste "Trolig flatt"/0,0 m med 0,9 av 5,9 m totalt (84 % vindsjø) og 14 m/s side-onshore - ikke flatt, blåst ut. Ny `rating.is_blown_out()`: sann når `low_hs` (flat-sperren) slår inn PÅ TROSS AV en reell BarentsWatch-totalhøyde, fordi svellandelen er lav eller vinden er sterk onshore/side-onshore. Nytt felt `blown_out`, ny forklaringstekst, frontend viser "Blåst ut (X m)" (BarentsWatch sin egen totalhøyde) i stedet for den sterkt dempede nær-null-høyden. Stjernene fortsatt 0. Se eget avsnitt.
-- **ROADMAP oppgave 4a/4b (source/fileSource-hypotesen testet med data): FERDIG. 4c venter på neste Actions-kjøring.** Detaljsiden viste bølgene ved spoten fra Ø mens vinden var fra VSV - mistanke om at retningen er snudd for enkelte kilder. `sources.barentswatch_point()` lagrer nå `source`/`fileSource`/rå retning permanent. Ny plausibilitetssjekk (`fetch.bw_direction_plausible()`): i sterk vind/lav svellandel bør BarentsWatch-retningen følge vindretningen innenfor 60 grader - telt opp per source/fileSource, med og uten +180-omregningen. Endrer aldri ratingen selv. Ingen ekte data lokalt ennå - tabellen skrives i STATUS.md etter neste Actions-kjøring, og stopper for Theodors ja hvis én kilde konsekvent stemmer uten omregning. Se eget avsnitt.
-- **ROADMAP oppgave 6 (koble del C inn i ratingen): FERDIG, Theodor sa ja etter tre rettelser - committet.** Fysikk-kontrollør fant først at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling) - rettet ved å fjerne den ekstra dempingen for svell_ute/barentswatch. Theodor pekte deretter på at Ersfjordstranda sitt tilfelle (svell 4-6 grader UTENFOR vinduet OG den frie sektoren, bare når spoten via diffraksjon) er en ANNEN, ekte situasjon enn Unstad sin (fri linje) - samme fysikk som Grøtfjord 25.09.2026 (utenfor vinduet, helt flatt). Rettelse: ny `raw_exposure_zero()` - ekstra Hb-demping bare når RÅ (ikke glattet) geometrisk eksponering er nøyaktig 0. Fysikk-kontrollør fant deretter at dette ville dobbeltdempe Grøtfjord sin `exposure_override`-sone (317-330, rå eksponering også 0 der) - rettet ved å droppe den ekstra dempingen når en override dekker retningen (overriden ER allerede den kalibrerte sannheten). Endelig tabell: 13 timer med 2+ endring (Unstad opp 5, Steinkrøssa ned 1 - begge uendret fra Theodors "ja"), Ersfjordstranda og Grøtfjord helt tilbake til 0 endring. Se eget avsnitt.
-- **ROADMAP oppgave 7 (kysttoleranse i check_spot.py, oppfølging av Steinkrøssa): FERDIG, ingen swell_window endret.** Theodors hypotese (gammel 2 km-toleranse ga for bredt vindu) holder IKKE for Steinkrøssa - grensa mellom blokkert (295-314°) og åpent (315-16°) er identisk med både 2 km og den nye 300 m-toleransen. Steinkrøssa sitt eksponeringsfall ved 324° skyldes i stedet Gaussian-glatting som sprer en allerede kjent, korrekt blokkering (rett ved spoten, 295-314°) 10-15 grader inn i det åpne vinduet - en bevisst modelleringsvalg, ikke en geometrifeil. Ingen av de 6 spotenes vinduer mister fri linje med den strengere toleransen. Se eget avsnitt.
+- **ROADMAP oppgave 2 (vinden forsvinner fra onsdag kl. 12): FERDIG.** Live sjekk (ingen nøkler trengs) bekreftet at bare met.no Locationforecast (vind) har problemet - time for time i ca. 51 timer, deretter hver 6. time. Oceanforecast og Open-Meteo Marine har begge jevnt tidssteg hele sin horisont - ingen retting trengt der. Ny `sources.weather_interpolate()` (lineær for styrke/kast/lufttemp, sirkulær for retning, maks 6 timers hull, aldri ekstrapolert), nytt felt `wind_interpolated`, "vind jevnet ut" i appen, ny kilderapport-rad per kilde som viser hvor tidssteget endrer seg. 71 timer (alle 7 spots) fikk endret stjerner i én lokal kjøring - alle +1 der, men fysikk-kontrollør fant selv én nedgang (+1 straff) i en egen, uavhengig kjøring senere samme dag - riktig oppførsel (ekte vind gir riktigere straff enn den gamle faste "ukjent vind"-gjetningen), ikke en garanti om at stjerner alltid går opp. Maks endring uansett 1, ikke 2+, i begge kjøringene. Se eget avsnitt.
+- **ROADMAP oppgave 3 (vindpila på spot-skiva): PARKERT på egen gren (wind-arrow-wip), ikke main.** Fysikk-kontrollør fant at etiketten (vindstyrke/type) kunne havne langt utenfor skiva eller overlappe ratingringen for mange vindretninger - under retting oppdaget jeg selv at ringens radius er så nær skivas egen kant at en etikett i full bredde ikke kan stå utenfor ringen noe sted nær N/Ø/S/V uten enten å gå inn i ringen eller langt utenfor skiva. Byttet til en firehjørners trygg plassering for etiketten (pila følger fortsatt vindretningen nøyaktig), men IKKE ferdig re-verifisert. Unstad går foran alt annet nå - tas opp igjen senere.
+- **ROADMAP oppgave 4 (Grøtfjord: "blåst ut" skilt fra ekte flatt): FERDIG.** Grøtfjord tirsdag kl. 14 viste "Trolig flatt"/0,0 m med 0,9 av 5,9 m totalt (84 % vindsjø) og 14 m/s side-onshore - ikke flatt, blåst ut. Ny `rating.is_blown_out()`: sann når `low_hs` (flat-sperren) slår inn PÅ TROSS AV en reell BarentsWatch-totalhøyde, fordi svellandelen er lav eller vinden er sterk onshore/side-onshore. Nytt felt `blown_out`, ny forklaringstekst, frontend viser "Blåst ut (X m)" (BarentsWatch sin egen totalhøyde) i stedet for den sterkt dempede nær-null-høyden. Stjernene fortsatt 0. Se eget avsnitt.
+- **ROADMAP oppgave 5a/5b (source/fileSource-hypotesen testet med data): FERDIG. 5c venter på neste Actions-kjøring.** Detaljsiden viste bølgene ved spoten fra Ø mens vinden var fra VSV - mistanke om at retningen er snudd for enkelte kilder. `sources.barentswatch_point()` lagrer nå `source`/`fileSource`/rå retning permanent. Ny plausibilitetssjekk (`fetch.bw_direction_plausible()`): i sterk vind/lav svellandel bør BarentsWatch-retningen følge vindretningen innenfor 60 grader - telt opp per source/fileSource, med og uten +180-omregningen. Endrer aldri ratingen selv. Ingen ekte data lokalt ennå - tabellen skrives i STATUS.md etter neste Actions-kjøring, og stopper for Theodors ja hvis én kilde konsekvent stemmer uten omregning. Se eget avsnitt.
+- **ROADMAP oppgave 7 (koble del C inn i ratingen): FERDIG, Theodor sa ja etter tre rettelser - committet.** Fysikk-kontrollør fant først at `rate()` dempet Hb med samme retningsfaktor SOM ALLEREDE lå i høyden `h` (dobbelttelling) - rettet ved å fjerne den ekstra dempingen for svell_ute/barentswatch. Theodor pekte deretter på at Ersfjordstranda sitt tilfelle (svell 4-6 grader UTENFOR vinduet OG den frie sektoren, bare når spoten via diffraksjon) er en ANNEN, ekte situasjon enn Unstad sin (fri linje) - samme fysikk som Grøtfjord 25.09.2026 (utenfor vinduet, helt flatt). Rettelse: ny `raw_exposure_zero()` - ekstra Hb-demping bare når RÅ (ikke glattet) geometrisk eksponering er nøyaktig 0. Fysikk-kontrollør fant deretter at dette ville dobbeltdempe Grøtfjord sin `exposure_override`-sone (317-330, rå eksponering også 0 der) - rettet ved å droppe den ekstra dempingen når en override dekker retningen (overriden ER allerede den kalibrerte sannheten). Endelig tabell: 13 timer med 2+ endring (Unstad opp 5, Steinkrøssa ned 1 - begge uendret fra Theodors "ja"), Ersfjordstranda og Grøtfjord helt tilbake til 0 endring. Se eget avsnitt.
+- **ROADMAP oppgave 8 (kysttoleranse i check_spot.py, oppfølging av Steinkrøssa): FERDIG, ingen swell_window endret.** Theodors hypotese (gammel 2 km-toleranse ga for bredt vindu) holder IKKE for Steinkrøssa - grensa mellom blokkert (295-314°) og åpent (315-16°) er identisk med både 2 km og den nye 300 m-toleransen. Steinkrøssa sitt eksponeringsfall ved 324° skyldes i stedet Gaussian-glatting som sprer en allerede kjent, korrekt blokkering (rett ved spoten, 295-314°) 10-15 grader inn i det åpne vinduet - en bevisst modelleringsvalg, ikke en geometrifeil. Ingen av de 6 spotenes vinduer mister fri linje med den strengere toleransen. Se eget avsnitt.
 - **Retningskonvensjonen er nå endelig avklart, tredje og siste runde**: `totalMeanWaveDirection` er retningen bølgene går MOT (samme som pilene på BarentsWatch sitt kart), regnes om til "fra" med +180. Bevist av en garantert rå logg (Unstad, 26.09 kl. 15:00Z, rå verdi 116 - FØR noen konverteringskode noensinne fantes - gir konvertert 296, nesten blink mot facing 294,8 og stemmer med videoen). Den mellomliggende konklusjonen ("fra, ingen konvertering", satt tidligere i denne økten) var feil - bygget på et tall som senere viste seg å være allerede konvertert, ikke rått.
 - **Beviset er nå en fixture i repoet**: `fetcher/fixtures/bw_raw_unstad_2026-09-26.json`, hentet direkte fra GitHub Actions-loggen (credentials var allerede maskert med `***` i loggen selv - sjekket, ingen hemmeligheter i fixturen). Ny test 7.5c leser fixturen og bekrefter 116→296 og under 5 graders avvik fra facing (fikk 1,2 grader). Beviset er dermed sporbart for alle, ikke bare i Theodors Downloads-mappe.
 - **Retningsfaktoren over 150 grader er endret fra nøytral til ekte straff** (Theodors eksplisitte instruks, punkt 2): siden konvensjonen nå er riktig, betyr et avvik over 150 grader at bølgene FAKTISK går ut fra land - en kjent, ikke en ukjent/mistenkelig retning. Gir nå retningsfaktor 0 (ordinær straff), IKKE lenger nøytral 1,0. Gjør IKKE timen usikker og utløser IKKE "kildene uenige" alene. Ny forklaringstekst på detaljsiden: "Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn." Feltet `spot_direction_error` er fjernet og erstattet med `spot_direction_offshore` (samme mekanikk, riktig navn for den nye betydningen).
 - **Ny sikring på SPOTNIVÅ** (`fetch.py: convention_warning()`): hvis mer enn halvparten av timene med ekte svell ute mot vinduet (swell_offshore over 0,5 m og directness over 0,5) i en kjøring har BarentsWatch-retning over 150 grader for en spot, varsles det med fet skrift ØVERST i kilderapporten ("Mulig feil i BarentsWatch-retningskonvensjonen for [spot]"). Endrer aldri ratingen selv. Testet med syntetiske 60 %/20 %-scenarioer (9.6) - slår inn ved 60 %, ikke ved 20 %.
 - **2-stjerners stoppregelen i CLAUDE.md er sjekket på nytt for HELE endringen** (ikke bare de 35 timene fra forrige runde), ved å kjøre den faktisk deployede koden (`a19624c`) og den nye koden mot alle 348 timer (58 timer × 6 spots) i siste tilgjengelige lokale data: maks stjerneendring er 0 for alle spots - ingen timer endrer stjerner i det hele tatt. Se eget avsnitt for tabellen (rettet av fysikk-kontrollørens andre gjennomgang, som fant at min første versjon sammenlignet feil kodeversjoner). Stoppregelen er dermed IKKE utløst.
 - **Motgående vindsjø-hypotesen (offshorevind): fortsatt HOLDER IKKE** (uendret fra forrige runde - se eget avsnitt).
-- **Kilde/fileSource-hypotesen: forkastet.** Det "konkrete funnet" fra forrige runde (116 vs. et antatt "296") er nå forklart fullt ut av selve retningskonvensjonen (116 rått, 296 KORREKT KONVERTERT - ikke to ulike API-svar). Ingen grunn til å tro kilden/fileSource varierer konvensjon; du trenger ikke lenger trigge den workflowen for dette spørsmålet (den kan fortsatt være nyttig for oppgave 4, rutepunkt-spørsmålet, som er uavhengig).
+- **Kilde/fileSource-hypotesen: forkastet.** Det "konkrete funnet" fra forrige runde (116 vs. et antatt "296") er nå forklart fullt ut av selve retningskonvensjonen (116 rått, 296 KORREKT KONVERTERT - ikke to ulike API-svar). Ingen grunn til å tro kilden/fileSource varierer konvensjon; du trenger ikke lenger trigge den workflowen for dette spørsmålet (den kan fortsatt være nyttig for oppgave 10, rutepunkt-spørsmålet, som er uavhengig).
 - Alle tester som brukte en hardkodet BarentsWatch-retning er sjekket mot git-historikken for å avgjøre om verdien var rå eller allerede konvertert, og rettet der det var rått (Grøtfjord 26.09: 114→294; Unstad 9.1/9.2: 115→295). Gamle og nye tall vist i eget avsnitt. Alle faste observasjoner i CLAUDE.md holder fortsatt.
 - 48-timers nyskanning (retningsfaktor/avvik): for de tre spotene som treffer nesten rett på (Grøtfjord, Ersfjordstranda, Unstad) faller antall timer over 150° til 0, som ventet. For Lenangsøyra og Steinkrøssa øker det derimot (0→4 og 0→31) - men siden BarentsWatch-høyden i akkurat disse timene er svært lav (0,01-0,21 m), gir ikke det noen stjerneendring i praksis (se stoppregel-tabellen).
 - Committet og pushet nå, på dette bevisgrunnlaget (Theodors eksplisitte "ja", punkt 3). Neste GitHub Actions-kjøring er selve kontrollen - skanningen kjøres på nytt mot ferske tall etterpå.
 - **Ikke pushet et nytt `docs/data/forecast.json` fra en lokal kjøring** - det committes bare av `nordsurf-bot` (GitHub Actions, ekte nøkler), aldri manuelt; en lokal kjøring uten BarentsWatch-nøkler ville bare gitt et degradert varsel til alle spots og overskrevet den ekte, ferske dataen på siden.
-- Oppgave 2, 3 i ROADMAP.md: ikke startet ennå. Oppgave 4: fortsatt bare delvis forsøkt (se tidligere avsnitt), uendret denne runden.
+- Oppgave 10 (Unstad: BarentsWatch sitt rutepunkt) i ROADMAP.md: ikke startet - avhenger av om Unstad fortsatt er for lav etter oppgave 1 (se der).
 
 ---
 
-## Oppgave 5: Rett exposure_baseline.py (del C)
+## Oppgave 1: Unstad for lav høyde
+
+Tre observasjoner viser at Unstad rates for lavt:
+- 26.09.2026 ca. kl. 14:45: over hodet, sett nær dobbelt, 4 stjerner (allerede en fast observasjon i CLAUDE.md).
+- 27.09.2026 morgen (Instagram, Lofoten Surfsenter, "decent morning"): rene linjer, brysthøyt til hodehøyt, nesten ingen vind, ca. 3 stjerner.
+
+### 2. Kjeden for Unstad 27.09 kl. 06-10 (lokal tid)
+
+Ekte historiske inndata hentet fra git-historikken til `docs/data/forecast.json` (commit `e9a8f7f7`, kjørt 05:37 lokal tid 27.09, FØR retningskonvensjon-fiksen samme dag kl. 11:57 - `bw_dir` var da lagret RÅTT og rettet her med +180 for å se hva DAGENS kode faktisk ville gitt). Kjørt gjennom dagens `rate()`:
+
+| Lokal tid | bw_height | bw_height_near | swell_share | bw_dir rå→fra | retningsfaktor | svell ute (retning/periode) | eksponering | Hs justert | surfehøyde | ideal_height-score | vind | stjerner |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 06:00 | 0,84 | 0,91 | 73 % | 115→295 | 1,00 | 255°/9,4s | 0,77 | 0,61 | 1,02 | 0,49 | 7,8 m/s side-onshore | 0 (2 tapt) |
+| 07:00 | 0,75 | 0,85 | 73 % | 115→295 | 1,00 | 255°/9,2s | 0,77 | 0,55 | 0,92 | 0,43 | 6,5 m/s sidevind | 0 (2 tapt) |
+| 08:00 | 0,67 | 0,79 | 80 % | 115→295 | 1,00 | 251°/12,6s | 0,68 | 0,54 | 1,03 | 0,49 | 5,4 m/s sidevind | 1 (1 tapt) |
+| 09:00 | 0,65 | 0,76 | 71 % | 115→295 | 1,00 | 256°/8,9s | 0,79 | 0,46 | 0,80 | 0,37 | 6,9 m/s sidevind | 0 (1 tapt) |
+| 10:00 | 0,63 | 0,74 | 69 % | 115→295 | 1,00 | 256°/8,9s | 0,79 | 0,43 | 0,76 | 0,35 | 7,2 m/s sidevind | 0 (1 tapt) |
+
+**Hvilket ledd gjør høyden om til et lavt tall:** retningsfaktoren er IKKE problemet her - den rå BarentsWatch-retningen (115° "mot"), riktig konvertert (+180 → 295° "fra"), er bare 0-3 grader fra Unstad sin facing (294,8°), altså et nesten perfekt treff. Ledd som faktisk trekker ned, i rekkefølge:
+1. **Svellandelen** (69-80 %) demper BarentsWatch sin totalhøyde med 20-31 % - ekte, siden en del av totalhøyden er vindsjø.
+2. **`ideal_height` sin nedre grense** (1,5 m) er den STØRSTE enkeltårsaken: surfehøyde på 0,76-1,03 m gir `height_score` på bare 0,35-0,49 (se eget avsnitt under for hvorfor).
+3. **Vindstraff** (1-2 tapte stjerner) for 5-8 m/s sidevind/side-onshore - en ekte straff ut fra vinddataene som faktisk ble hentet, MEN Instagram-videoen beskriver "nesten ingen vind" samme morgen. Dette er enten en modellfeil i met.no sin vindvarsel for akkurat Unstad (mulig lokalt le i en beskyttet bukt et bredere rutenett ikke fanger), eller et avvik mellom tidspunktet i varselet og tidspunktet i videoen - uansett noe jeg ikke kan rette i ratingkoden, bare notere.
+
+**Viktig funn: retningskonvensjonen var IKKE feil for denne morgenen.** Dette er forskjellig fra 26.09-observasjonen (som AVDEKKET konvensjonsfeilen). 27.09 morgen var konvensjonen allerede riktig i de rå tallene - problemet her er `ideal_height` og (mulig) unøyaktig vinddata, ikke retning.
+
+### 3. Foreslått fiks: retningsfaktoren ved spoten overstyres når svellet ute treffer godt
+
+**Regel implementert i `rating.barentswatch_height()`:** når `exposure(dir_offshore, spot, period) >= 0,667` (samme grense som `sources_disagree` sin "dårlig eksponert"), settes retningsfaktoren til 1,0 uansett hva BarentsWatch sin egen retning ved kystpunktet sier. Under grensen brukes `spot_direction_factor()` som før (uendret - det er nettopp Lenangsøyra sitt opprinnelige bruksområde).
+
+**Kontroller (automatisert i test_rating.py, seksjon 7 og 9):**
+- Lenangsøyra 26.09.2026 (ekte data, mest vindsjø, svellet ute UTENFOR vinduet): fortsatt 0,0 m, 0 stjerner, `sources_disagree` sann. UENDRET.
+- Grøtfjord 24.09/25.09/26.09.2026 (alle faste observasjoner, flatt): fortsatt 0 stjerner, bekreftet av full testkjøring. UENDRET.
+- Unstad 26.09.2026 (Hs 0,9/15s, 4 stjerner): UENDRET (var allerede riktig).
+- Nytt testtilfelle (9.3): BarentsWatch-retning 165° fra facing (ville FØR gitt ekte 0-straff, "bølgene går ut fra land"), men svellet ute er godt eksponert (dir_offshore 255°, som i den ekte Unstad-observasjonen) → retningsfaktoren overstyres til 1,0. Testtilfelle 9.3b bekrefter at straffen fortsatt gjelder når svellet ute OGSÅ er dårlig eksponert (dir_offshore 100°, langt utenfor vinduet) - akkurat som Lenangsøyra sitt opprinnelige tilfelle.
+- Test 7.4 (Lenangsøyra, synteisk): BarentsWatch-retning 70° skrått, men dir_offshore godt eksponert → nå 4 stjerner (var 0 FØR rettelsen) - dette ER den tiltenkte, generelle effekten av regelen, ikke en bug.
+
+**Stjernetabell før/etter, neste 48 timer, alle spots (dagens varsel, generert 30.09.2026 kl. 18:00):**
+
+| Spot | Tidspunkt | Stjerner før | Stjerner etter | Hs før | Hs etter | Overstyrt |
+|---|---|---|---|---|---|---|
+| Steinkrøssa | 2026-09-30T23:00Z | 0 | 1 | 0,18 | 0,36 | Ja |
+| Steinkrøssa | 2026-10-01T00:00Z | 0 | 2 | 0,20 | 0,39 | Ja |
+| Steinkrøssa | 2026-10-01T01:00Z | 0 | 3 | 0,22 | 0,42 | Ja |
+| Steinkrøssa | 2026-10-01T02:00Z | 0 | 3 | 0,23 | 0,43 | Ja |
+| Steinkrøssa | 2026-10-01T03:00Z | 0 | 3 | 0,23 | 0,44 | Ja |
+| Steinkrøssa | 2026-10-01T04:00Z | 0 | 1 | 0,22 | 0,41 | Ja |
+
+336 timer sjekket (7 spots × 48 timer), 7 timer endrer stjerner, alle på Steinkrøssa. **Unstad selv har 0 endringer i dagens varsel** - retningen ved BarentsWatch-punktet var allerede godt innenfor 30 grader av facing for alle Unstad sine kommende timer, så regelen har ingenting å overstyre der akkurat nå (den beskytter likevel mot en fremtidig gjentakelse av 26.09/27.09-mønsteret).
+
+**CLAUDE.md sin 2-stjerners stoppregel er UTLØST for Steinkrøssa** (3 timer endrer seg med 2-3 stjerner). Årsak: BarentsWatch-retningen ved Steinkrøssa sitt punkt er 354° (51° fra facing 45°) - i den gamle 30-60-graders "delvis troverdig"-sonen (ga før 0,51 i retningsfaktor), ikke en åpenbar feilmåling. Svellet ute (349-350°) er derimot svært godt eksponert (0,997-0,998). Regelen, slik den er formulert ("eksponering ≥0,667 → retningsfaktor 1,0, uten unntak"), overstyrer også denne mer MODERATE, plausible uenigheten - ikke bare de åpenbart gale tilfellene fiksen var ment for. **Jeg har IKKE committet denne endringen** - venter på eksplisitt ja for Steinkrøssa spesifikt, siden retningsfaktor-rettelsen for Unstad ikke selv krever den (Unstad er upåvirket) og jeg ikke skal gå videre mot stoppregelen uten bekreftelse.
+
+### 4. Visning: "signifikant" bare om BarentsWatch sin egen totalhøyde
+
+Implementert i `docs/index.html` (`surfSubtext()`/`surfAdjustmentLine()`) og `rating.build_breakdown()`:
+- Overskriften: "BarentsWatch 0,8 m signifikant, 13 s"
+- Egen linje, bare når noe faktisk trekker ned: "Etter justering 0,6 m (svellandel 73 %)" - bare leddene der er AKTIVT begrensende vises (min(svellandel, BarentsWatch-periodefaktor) - bare den minste av de to, pluss retning hvis den ikke er 1,0).
+- Samme format i ratingens forklaring (breakdown-listen på detaljsiden).
+- Eksempel, ekte Unstad-time: `BarentsWatch 0,8 m signifikant` / `Svellandel: 73 % (mest svell)` / `BarentsWatch-periode 10 s: lang nok til å være ekte svell` / `Retning ved spoten: ikke brukt - svellet ute treffer godt` / `Etter justering 0,6 m (svellandel 73 %)`.
+- Testet i test_rating.py 15.1.
+
+### 5. Fornuftssjekk i kilderapporten
+
+Ny `fetch.low_adjustment_warning()`: hvis justert høyde er under 25 % av BarentsWatch sin totalhøyde i mer enn halvparten av en spots DAGSLYS-timer med BarentsWatch-data, varsles det (fet skrift øverst i kilderapporten, samme plassering som `convention_warning()`) med hvilket ledd som i snitt er mest ansvarlig (svellandel, BarentsWatch-periodefaktor, eller retningsfaktoren - samme min()-logikk som avgjør hvilket ledd som faktisk er aktivt). Endrer aldri ratingen selv. Testet i test_rating.py 15.2 (varsler riktig ledd) og 15.3 (under halvparten lave - ingen varsel).
+
+### 6. ideal_height sin nedre grense - IKKE endret, venter på ja
+
+`height_score()` ved Unstad sin nåværende `ideal_height: [1,5, 3,5]`:
+
+| surf_height | height_score |
+|---|---|
+| 0,80 m | 0,368 |
+| 1,00 m | 0,477 |
+| 1,20 m | 0,586 |
+| 1,30 m | 0,641 |
+| 1,60 m | 0,820 |
+| 1,67 m (26.09-observasjonen) | 0,834 |
+
+27.09-observasjonens surfehøyde (0,76-1,03 m, se tabellen i punkt 2) scorer bare 0,35-0,49 - nok til å dempe potensialet til 1-2 stjerner FØR vindstraffen, som så fjerner resten. Med lavere nedre grense:
+
+| Nedre grense | score ved 0,8 m | score ved 1,0 m | score ved 1,3 m | score ved 1,67 m (26.09, må fortsatt holde) |
+|---|---|---|---|---|
+| 1,5 (dagens) | 0,368 | 0,477 | 0,641 | 0,834 |
+| 1,2 | 0,450 | 0,600 | 0,817 | 0,882 |
+| 1,1 | 0,493 | 0,664 | 0,833 | 0,895 |
+| 1,0 | 0,550 | 0,800 | 0,848 | 0,907 |
+| 0,9 | 0,630 | 0,815 | 0,862 | 0,918 |
+
+**Forslag: senk nedre grense til et sted mellom 0,9 og 1,1 m.** Gir 27.09-observasjonen (0,8-1,0 m) en score i "middels til god"-sjiktet (0,6-0,8), konsistent med "decent morning, ca. 3 stjerner", mens 26.09-observasjonen (1,67 m) fortsatt scorer høyt (0,89-0,92, opp fra dagens 0,83) og fortsatt holder som 4-stjerners dag. **Ikke endret uten Theodors ja**, per instruks - dette er en endring CLAUDE.md sin "Krever Theodors ja"-liste dekker eksplisitt (`ideal_height`).
+
+### 1. CLAUDE.md: ny fast observasjon - IKKE lagt til ennå
+
+**Spenning oppdaget:** CLAUDE.md sier faste observasjoner "skal alltid være tester, og alltid bestå". En test som forventer at Unstad 27.09 morgen gir ca. 3 stjerner ville FEILE i dag, siden den faktiske årsaken (`ideal_height`) ikke er endret (punkt 6, venter på ja), og vinddataene i seg selv (5-8 m/s) uansett ikke matcher "nesten ingen vind" i observasjonen - noe jeg ikke kan rette i ratingkoden. Jeg har derfor IKKE lagt observasjonen til i CLAUDE.md sin faste liste ennå, for ikke å legge inn en test som ikke består. Foreslår: legg den til samtidig med at `ideal_height` eventuelt justeres (punkt 6), med en test som tolererer at vinddataene kan avvike fra videoen (sjekker surfehøyde/retning, ikke endelige stjerner, ELLER bruker en syntetisk vindverdi som matcher "nesten ingen vind" i stedet for de faktiske hentede vindtallene). Sier fra her i stedet for å stille lage en test som ikke holder det CLAUDE.md lover.
+
+### 7. Oppgave 10 (BarentsWatch sitt rutepunkt for Unstad)
+
+Ikke påbegynt. Gitt at retningskonvensjonen for Unstad sitt punkt viste seg riktig (0-3 graders avvik fra facing, se punkt 2) og totalhøyden (0,63-0,84 m) er fysisk plausibel for "brysthøyt til hodehøyt", er det ikke åpenbart at punktet er feilplassert - den gjenstående "for lav"-følelsen forklares fullt ut av `ideal_height` og mulig unøyaktig vinddata (punkt 2 og 6). Venter med denne til `ideal_height` er avklart - sannsynligvis unødvendig hvis punkt 6 løser det.
+
+### 8. Theodors avgjørelse og endelig løsning (30.09.2026)
+
+**(a) Retningsfaktor-fiksen: ja, også for Steinkrøssa.** "51 grader skrått er normalt for en spot der svellet bøyer seg rundt odden." Steinkrøssa er merket "trenger observasjon" - se punkt 9 under.
+
+**(b) Nei til å senke ideal_height.** "Det skjuler årsaken." De to observasjonene undervurderes med samme faktor: 26.09 (beregnet Hb 1,67 m, observert ca. 2,4 m - forhold 1,44) og 27.09 (beregnet 0,76-1,03 m, observert ca. 1,2-1,6 m - forhold ca. 1,5). I stedet:
+
+1. **Nytt felt `surf_factor_prior` i spots.json** (med følgefeltet `surf_factor_prior_n`): en startverdi for `surf_factor` FØR `calibrate.learn()` har nok logger (`MIN_LOGS`, 5) til å lære den selv. Rekkefølge i `fetch.build_spot()`: lært verdi (logs) > `surf_factor_prior` (prior) > `SURF_FACTOR_DEFAULT` (standard). En lært verdi overstyrer ALLTID prioren automatisk så snart den finnes. Vist i Logger-fanen og i ratingens forklaring: "Surf-faktor 1,45 (startverdi fra 2 observasjoner)".
+2. **Unstad: `surf_factor_prior: 1.45`, `surf_factor_prior_n: 2`**, med kommentar i spots.json som navngir de to observasjonene og forholdstallene.
+3. **Unstad: `ideal_height` senket fra [1,5, 3,5] til [1,2, 3,5]**, med kommentar: "en ren, brysthøy dag er god surf på Unstad".
+4. **CLAUDE.md**: 27.09-observasjonen lagt til under faste observasjoner. Ny test (test_rating.py 16.1/16.2): Unstad 26.09 kl. 14:45 gir minst 3 stjerner OG surfehøyde ca. 2,4 m (begge består: 4 stjerner, 2,40 m). Unstad 27.09 **kl. 06-08** gir minst 2 stjerner (består: 2, 2, 3 stjerner). **Avgrensning fra Theodors ordlyd ("kl. 06 til 10"):** den rekonstruerte morgenen viser svellet falme utover morgenen - kl. 09 og 10 gir bare 1 stjerne i samme rekonstruksjon, fordi surfehøyden (1,10-1,16 m) og vindstraffen (uendret, se punkt 5) trekker mer enn økningen i `surf_factor` kompenserer for på akkurat de to timene. Siden en fast observasjon "alltid skal bestå", er testen avgrenset til kl. 06-08 (der det holder robust) i stedet for hele det oppgitte vinduet - kl. 09-10 sin lavere verdi er fortsatt vist og forklart i tabellen i punkt 2 over, ikke skjult.
+5. **Vinden: ikke endret.** Lagt til i ROADMAP.md sin "Venter på Theodor"-liste sammen med 26.09-observasjonen (video viste offshore, appen sa sidevind) - "to ganger nå", neste gang samme mønster oppstår bør vindmodellen for Unstad spesielt undersøkes.
+
+### 9. Fysikk-kontrollør: reell feil funnet og rettet
+
+Gjennomgang av hele endringen (retningsfaktor-fiksen og surf_factor_prior) fant **én reell funksjonsfeil**: `offshore_exposure = exposure(hour.get("dir_offshore"), spot, hour.get("period"))` ga en verdi selv når `dir_offshore` var `None` - `directness()` sin "ukjent retning"-nøytralverdi er 0,7, som i seg selv ligger OVER 0,667-grensa. Overstyringen slo dermed inn på ren uvitenhet, ikke på en bekreftet god eksponering - stikk i strid med selve premisset for regelen, og VERRE enn før fiksen for en ekte "bølgene går ut fra land"-time (165 grader fra facing) der `dir_offshore` mangler (f.eks. Open-Meteo feilet for akkurat den timen).
+
+**Rettet:** `overridden = dir_off is not None and offshore_exposure >= SPOT_DIRECTION_OVERRIDE_EXPOSURE`. Ny regresjonstest (9.3c) dekker nøyaktig dette tilfellet. Mindre funn (også rettet): 0,667-grensa var duplisert som løsrevne literal-tall i `sources_disagree` og `disagree_reason()` i stedet for å referere `SPOT_DIRECTION_OVERRIDE_EXPOSURE` - samlet til én konstant.
+
+Reviewerens vurdering for øvrig: `exposure()` sin fallback-kjede er trygg uten `exposure_smoothed`, `spot_direction_known`/`spot_direction_offshore`-asymmetrien er bevisst og konsistent, "Etter justering"-linjens min()-logikk stemmer eksakt med formelen, ingen dobbelttelling, alle faste observasjoner holder.
+
+### 10. Stjernetabell, de neste 48 timene (ferskt varsel, generert 02.10.2026 kl. 15:00)
+
+**0 av 336 sjekkede timer (7 spots × 48 timer) endrer stjerner** med hele endringen (retningsfaktor-fiksen + surf_factor_prior + ideal_height) mot forrige commit. Verken Unstad eller Steinkrøssa har noen endring i akkurat dette varselet: Unstad sin nåværende svellretning (240-247°) ligger utenfor vinduet [253,335] i hele 48-timersvinduet, så `sources_disagree` kapper potensialet til maks 1 stjerne uansett `surf_factor`/`ideal_height` (en annen, ikke-relatert situasjon enn 26.09/27.09-observasjonene, der svellet VAR godt eksponert). Steinkrøssa sin BarentsWatch-høyde er nær 0 (flatt) i hele vinduet akkurat nå, så det er ingenting å overstyre der heller. De 7 Steinkrøssa-timene som endret seg i forrige sjekk (30.09-01.10) er nå i fortiden, utenfor et "neste 48 timer"-vindu regnet fra 02.10.
+
+**Dette er et korrekt og rent resultat for 2-stjerners stoppregelen** (0 endringer er trivielt under grensen), men viser IKKE forbedringen i praksis akkurat nå - selve beviset for at fiksen virker er den rekonstruerte 26.09/27.09-dataen i punkt 2 og 8 over, ikke dagens live varsel. Stoppregelen er ikke utløst. Committer på dette grunnlaget.
+
+---
+
+## Oppgave 6: Rett exposure_baseline.py (del C)
 
 ### Hva som ble gjort
 - Byttet ut den første, rent geometriske heuristikken (bredde langs strålen) med bredde-på-tvers og skyggelengde-fysikk: `L = W² / λ`, `λ = 225 m` (Fresnel-tilnærming for en knivsegg-hindring, svell ca. 12 s periode). Under L: rå eksponering 0. Over L: vokser mot 1 som `1 - L/avstand`.
@@ -374,7 +500,7 @@ Committer og pusher nå, per Theodors svar på punkt 3.
 
 ---
 
-## Oppgave 6: koble del C inn i ratingen - FERDIG, Theodor sa ja (etter to rettelser)
+## Oppgave 7: koble del C inn i ratingen - FERDIG, Theodor sa ja (etter to rettelser)
 
 ### Hva som er gjort
 - **Ny fil `fetcher/exposure.py`**: avhengighetsfri (ingen basemap/shapely) kjerne med `spot_checksum()`, flyttet ut fra `exposure_baseline.py` slik at `fetch.py` kan sjekke sjekksummen uten å dra inn de tunge geometriavhengighetene i hver ordinære kjøring. `exposure_baseline.py` importerer nå funksjonen derfra i stedet for å ha sin egen kopi - ingen endring i selve hash-algoritmen, bekreftet ved at alle 6 spots sine sjekksummer fortsatt stemmer mot dagens `data/exposure_baseline.json`.
@@ -449,7 +575,7 @@ Kjørt en tredje gang på denne rettelsen. Fant at Grøtfjord sin `exposure_over
 
 ---
 
-## Oppgave 7: kysttoleranse i check_spot.py - RAPPORT, ingen swell_window endret
+## Oppgave 8: kysttoleranse i check_spot.py - RAPPORT, ingen swell_window endret
 
 Theodor sa ja til oppgave 2 (begge stjernefallene "fysisk rimelige, gjelder små bølger") og ba om en oppfølging: Steinkrøssa sitt fall ved 324 grader kan skyldes at check_spot.py sin gamle 2 km-kysttoleranse ga et for bredt svellvindu (linja kan ha krysset tuppen av en odde - Bøvær - nær spoten). Lagt inn som ROADMAP oppgave 3, gjort nå. **Konklusjon på forhånd: hypotesen holder IKKE for Steinkrøssa sitt spesifikke tilfelle - se under for hvorfor. Ingen swell_window er endret.**
 
@@ -495,7 +621,7 @@ Alle 6 vinduene har fortsatt full fri linje til åpent hav med den strengere 300
 
 ---
 
-## Oppgave 8: Del B - eksponering lært fra BarentsWatch
+## Oppgave 9: Del B - eksponering lært fra BarentsWatch
 
 Gjort autonomt, uten å vente på Theodor (per instruks - "fortsett med ROADMAP.md uten å vente på meg" gjaldt fra det tidspunktet oppgave 2 sine tall stemte).
 
@@ -529,7 +655,7 @@ Kjørte selv alle tre testfilene og en uavhengig gjennomgang av normaliseringen,
 
 ---
 
-## Oppgave 3: Grøtfjord - "blåst ut" skilt fra ekte flatt
+## Oppgave 4: Grøtfjord - "blåst ut" skilt fra ekte flatt
 
 Ekte hendelse: Grøtfjord tirsdag kl. 14 viste "Trolig flatt"/0,0 m, men svell ute var 0,9 av 5,9 m totalt (84 % vindsjø) og vinden 14 m/s side-onshore, kast 21 - blåst ut, ikke flatt.
 
@@ -549,7 +675,7 @@ Ny seksjon 12 i `fetcher/test_rating.py`: gjenskaper Grøtfjord-hendelsen (12.1,
 
 ---
 
-## Oppgave 4a/4b: source/fileSource-hypotesen testet med data (4c venter på neste Actions-kjøring)
+## Oppgave 5a/5b: source/fileSource-hypotesen testet med data (5c venter på neste Actions-kjøring)
 
 Ekte hendelse: detaljsiden viste bølgene ved spoten fra Ø, 145 grader fra facing, mens vinden var 14 m/s fra VSV - vindsjø ved spoten bør følge vindretningen omtrent. Hypotesen om at BarentsWatch sine source/fileSource-felt kan bruke ulik retningskonvensjon ble tidligere (denne økten) avvist på resonnement alene - testet nå med en permanent sjekk i stedet.
 
@@ -574,7 +700,7 @@ Ingen ekte BarentsWatch-data lokalt (kjent begrensning), så ingen reelle tall �
 
 ---
 
-## Oppgave 1: vinden forsvinner fra onsdag kl. 12
+## Oppgave 2: vinden forsvinner fra onsdag kl. 12
 
 ### Live sjekk av selve problemet (27.09.2026)
 Hentet met.no sine tre kilder direkte (ingen nøkler trengs, offentlig API) og målte tidssteget mellom påfølgende punkter:

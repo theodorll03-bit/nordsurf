@@ -301,11 +301,14 @@
       ],
       "min_period": 8,
       "ideal_height": [
-        1.5,
+        1.2,
         3.5
       ],
       "max_height": 5.5,
-      "_ideal_height": "26.09.2026: ideal_height/max_height er nå SURFEHØYDE (der bølgene brekker), ikke Hs - Unstad tåler større bølger enn Tromsø-spotene, satt opp fra [0.8,2.0]/3.5.",
+      "_ideal_height": "26.09.2026: ideal_height/max_height er nå SURFEHØYDE (der bølgene brekker), ikke Hs - Unstad tåler større bølger enn Tromsø-spotene, satt opp fra [0.8,2.0]/3.5. 30.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): nedre grense senket fra 1,5 til 1,2 - en ren, brysthøy dag er god surf på Unstad, bekreftet av 27.09.2026-observasjonen (Instagram, Lofoten Surfsenter: brysthøyt til hodehøyt, rene linjer, ca. 3 stjerner).",
+      "surf_factor_prior": 1.45,
+      "surf_factor_prior_n": 2,
+      "_surf_factor_prior": "30.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): startverdi for surf_factor FØR det finnes nok logger (calibrate.MIN_LOGS, 5) til å lære den selv - formelen undervurderte surfehøyden med samme faktor begge ganger: 26.09.2026 kl. 14:45 (beregnet Hb 1,67 m, observert ca. 2,4 m over hodet - forhold 1,44) og 27.09.2026 morgen (beregnet 0,76-1,03 m, observert ca. 1,2-1,6 m brysthøyt til hodehøyt - forhold ca. 1,5). Median/snitt av de to: 1,45. Overstyres automatisk av en lært verdi så snart calibrate.learn() har minst 5 logger - se fetch.py sin surf_factor-rekkefølge.",
       "facing": 294.8,
       "_offshore_vind": "Stranda vender mot VNV (294,7 grader, bekreftet med to metoder: kort-rekkevidde åpen sektor og kystlinje-tangent fra GSHHS full oppløsning). Offshorevind er satt ut fra det. Avviker 25 grader fra forventet øst-vind (surf-forecast.com), innenfor 30-graders grensen. Lokale fallvinder vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [

@@ -243,11 +243,16 @@ show("7.3: samme, men BarentsWatch-periode 5 s", l3)
 assert l3["height"] < l2["height"] and l3["stars"] < l2["stars"]
 
 # 7.4: samme som 7.2, men BarentsWatch-retning fra 80 grader - 70 grader
-# skrått på stranda (facing 0), altså for skrått til å telle som noe.
+# skrått på stranda (facing 0). FØR 27.09.2026 (Theodors rettelse, Unstad
+# for lav - se STATUS.md) ga dette 0: retningsfaktoren ved punktet alene
+# avgjorde. NÅ er dir_offshore=19 godt eksponert (samme retning som 7.2,
+# som allerede går opp) - vi vet da at svellet treffer, og stoler ikke
+# lenger på BarentsWatch sin egen (upålitelige) retning ved punktet.
+# Retningsfaktoren overstyres til 1,0, se barentswatch_height().
 l4 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
            "period": 13, "bw_dir": 80, "wind_speed": 2, "wind_dir": None}, L)
 show("7.4: samme, men BarentsWatch-retning 80 grader", l4)
-assert l4["height"] == 0.0 and l4["stars"] == 0
+assert l4["height"] == 0.92 and l4["stars"] == 4 and l4["spot_direction_overridden"]
 
 # 7.5: retningskonvensjonen (rettet 27.09.2026, andre runde, mot en lagret,
 # garantert rå logg fra FØR noen konvertering fantes: en diagnose-kjøring
@@ -486,21 +491,62 @@ assert u_dir_error_raw["spot_direction_factor"] == u_dir_error["spot_direction_f
 assert u_dir_error_raw["surf_height"] == u_dir_error["surf_height"]
 
 # 9.3: 27.09.2026, andre runde: en genuint >150-graders time (syntetisk -
-# ingen ekte logg med akkurat dette mønsteret ennå) skal nå gi EKTE straff
+# ingen ekte logg med akkurat dette mønsteret ennå) ga EKTE straff
 # (retningsfaktor 0), IKKE nøytral 1,0, siden dette er en KJENT retning
-# (bølgene går ut fra land), ikke en ukjent en. Skal heller ikke gjøre
-# timen usikker eller utløse "kildene uenige" alene - stjernene skal falle
-# fordi høyden faktisk blir lav (retningsfaktoren demper h), ikke fordi
-# timen kappes av en usikkerhetsregel.
+# (bølgene går ut fra land), ikke en ukjent en.
+#
+# 27.09.2026, Theodors rettelse (Unstad for lav): her (dir_offshore=255) er
+# svellet UTE godt eksponert mot spoten (samme mønster som Unstad 26.09 og
+# 27.09.2026) - retningsfaktoren overstyres da til 1,0 uansett hva
+# BarentsWatch sin (upålitelige) retning ved selve punktet sier, se
+# barentswatch_height(). Testen under (9.3b) dekker det opprinnelige
+# tilfellet (dårlig eksponering ute også) - der gjelder fortsatt straffen.
 u_offshore = rate({"bw_height": 1.2, "bw_dir": (U["facing"] + 165) % 360, "bw_period": 12.0,
                     "swell_offshore": 2.3, "height_offshore": 3.3, "dir_offshore": 255,
                     "period": 14, "wind_speed": 2.0, "wind_dir": None}, U)
-show("9.3: BarentsWatch-retning 165 grader fra facing (ut fra land)", u_offshore)
-assert u_offshore["spot_direction_factor"] == 0.0
-assert u_offshore["spot_direction_offshore"] is True
+show("9.3: BarentsWatch-retning 165 grader fra facing, men svellet ute treffer", u_offshore)
+assert u_offshore["spot_direction_factor"] == 1.0
+assert u_offshore["spot_direction_offshore"] is False
+assert u_offshore["spot_direction_overridden"] is True
 assert u_offshore["uncertain"] is False
 assert u_offshore["sources_disagree"] is False
-assert u_offshore["height"] == 0.0  # bw_height * ... * 0 = 0
+assert u_offshore["height"] > 0.5
+
+# 9.3b: samme >150-graders BarentsWatch-retning, men nå er svellet UTE også
+# dårlig eksponert (dir_offshore langt utenfor Unstad sitt vindu [253,335]) -
+# ingen ekstern bekreftelse på at det treffer, så retningsfaktoren brukes
+# fortsatt og gir ekte straff (0), akkurat som FØR rettelsen. Samme lave
+# eksponering (dir_hit < 0,667) utløser også "kildene uenige" - naturlig,
+# siden det er nøyaktig det samme signalet (dårlig eksponert svell ute) som
+# avgjør BEGGE: når det er for lavt til å stole på for overstyringen, er det
+# også for lavt til at kildene regnes som enige.
+u_offshore_bad = rate({"bw_height": 1.2, "bw_dir": (U["facing"] + 165) % 360, "bw_period": 12.0,
+                        "swell_offshore": 2.3, "height_offshore": 3.3, "dir_offshore": 100,
+                        "period": 14, "wind_speed": 2.0, "wind_dir": None}, U)
+show("9.3b: samme, men svellet ute IKKE eksponert (dir_offshore 100)", u_offshore_bad)
+assert u_offshore_bad["spot_direction_factor"] == 0.0
+assert u_offshore_bad["spot_direction_offshore"] is True
+assert u_offshore_bad["spot_direction_overridden"] is False
+assert u_offshore_bad["uncertain"] is True
+assert u_offshore_bad["sources_disagree"] is True
+assert u_offshore_bad["height"] == 0.0  # bw_height * ... * 0 = 0
+
+# 9.3c: 30.09.2026, fysikk-kontrollør sitt funn (samme >150-graders
+# BarentsWatch-retning som 9.3/9.3b, men nå mangler dir_offshore HELT - f.eks.
+# fordi Open-Meteo feilet for akkurat den timen mens BarentsWatch likevel har
+# data). directness()/exposure() sin "ukjent retning"-nøytralverdi er 0,7,
+# som i seg selv ligger OVER 0,667-grensa - uten en eksplisitt sjekk på at
+# dir_offshore faktisk er kjent ville overstyringen slått inn på ren
+# UVITENHET, ikke på en bekreftet god eksponering. Skal IKKE overstyres -
+# straffen gjelder fortsatt, akkurat som 9.3b.
+u_offshore_unknown = rate({"bw_height": 1.2, "bw_dir": (U["facing"] + 165) % 360, "bw_period": 12.0,
+                            "swell_offshore": 2.3, "height_offshore": 3.3, "dir_offshore": None,
+                            "period": 14, "wind_speed": 2.0, "wind_dir": None}, U)
+show("9.3c: samme, men dir_offshore helt ukjent (ikke overstyrt på uvitenhet)", u_offshore_unknown)
+assert u_offshore_unknown["spot_direction_factor"] == 0.0
+assert u_offshore_unknown["spot_direction_offshore"] is True
+assert u_offshore_unknown["spot_direction_overridden"] is False
+assert u_offshore_unknown["height"] == 0.0
 
 # 9.4: ingen retning fra BarentsWatch i det hele tatt - fortsatt nøytral
 # 1,0 og usikker, som før (uendret av denne runden - se rating.py sin
@@ -832,5 +878,102 @@ raw_change = {
 _, txt_change = _fetch._timestep_summary(raw_change, now14)
 print("14.3b: tidssteg-endring funnet:", txt_change)
 assert "1t til 6t" in txt_change and "T02:00Z" in txt_change
+
+# ---------- 27.09.2026, Theodors rettelse: Unstad for lav ----------
+# Se STATUS.md for hele sporet (26.09 og 27.09-observasjonene, kjeden for
+# Unstad 27.09 kl. 06-10, og stjernetabellen før/etter for alle spots).
+
+# 15.1: barentswatch_height() sin "Etter justering"-linje i breakdown (kun
+# når noe faktisk trekker ned - se 6.8 over for det UENDREDE tilfellet uten
+# justering).
+U15 = spots["unstad"]
+r15 = rate({"bw_height": 0.84, "bw_dir": 295.0, "bw_period": 9.8, "swell_offshore": 2.72,
+            "height_offshore": 3.4, "dir_offshore": 251, "period": 12.55,
+            "wind_speed": 5.4, "wind_dir": 193.0, "gust": 10.8}, U15)
+assert any(line.startswith("BarentsWatch 0,8 m signifikant") for line in r15["breakdown"])
+assert any(line.startswith("Etter justering") and "svellandel" in line for line in r15["breakdown"])
+print("15.1: breakdown skiller BarentsWatch-signifikant fra justert høyde", r15["height"])
+
+# 15.2: low_adjustment_warning() - spot der justert høyde er under 25 % av
+# BarentsWatch sin totalhøyde i mer enn halvparten av dagslystimene, varsler
+# med riktig ledd (svellandel er lavest her - 0,2 - mot periodefaktoren 1,0).
+low_hours = [
+    {"t": f"2026-09-27T{h:02d}:00Z", "daylight": True, "height_source": "barentswatch",
+     "bw_height": 1.0, "height": 0.2, "swell_offshore": 0.2, "height_offshore": 1.0,
+     "bw_period": 10, "spot_direction_factor": 1.0}
+    for h in range(6, 10)
+]
+warn15 = _fetch.low_adjustment_warning(low_hours, "Test15")
+print("15.2: low_adjustment_warning() (skal varsle om svellandel):", warn15)
+assert warn15 is not None and "svellandel" in warn15 and "4 av 4" in warn15
+
+# 15.3: samme, men bare 1 av 4 timer lave - ikke over halvparten, ingen varsel.
+mixed_hours = low_hours[:1] + [
+    {"t": f"2026-09-27T{h:02d}:00Z", "daylight": True, "height_source": "barentswatch",
+     "bw_height": 1.0, "height": 0.9, "swell_offshore": 0.9, "height_offshore": 1.0,
+     "bw_period": 10, "spot_direction_factor": 1.0}
+    for h in range(7, 10)
+]
+assert _fetch.low_adjustment_warning(mixed_hours, "Test15b") is None
+print("15.3: low_adjustment_warning() - under halvparten lave, ingen varsel")
+
+# ---------- 30.09.2026, Theodors rettelse: surf_factor_prior for Unstad ----------
+# To observasjoner viste at surfehøyden ble undervurdert med samme faktor
+# begge ganger (26.09: beregnet 1,67 m, observert ca. 2,4 m - forhold 1,44;
+# 27.09: beregnet 0,76-1,03 m, observert ca. 1,2-1,6 m - forhold ca. 1,5).
+# I stedet for å senke ideal_height (som ville skjult årsaken): ny
+# surf_factor_prior = 1,45 i spots.json, brukt FØR det finnes nok logger til
+# å lære selv (se calibrate.MIN_LOGS), og ideal_height senket til [1,2, 3,5]
+# (en ren, brysthøy dag er god surf på Unstad). Se STATUS.md for hele sporet.
+from rating import SURF_FACTOR_MAX, SURF_FACTOR_MIN
+import fetch as _fetch16
+assert U["surf_factor_prior"] == 1.45 and U["surf_factor_prior_n"] == 2
+assert U["ideal_height"] == [1.2, 3.5]
+U16 = dict(U)
+U16["surf_factor"] = round(min(SURF_FACTOR_MAX, max(SURF_FACTOR_MIN, U["surf_factor_prior"])), 2)
+U16["surf_factor_source"] = "prior"
+# Ekte geometrisk eksponering (del C), samme som fetch.py faktisk bruker i
+# produksjon - uten denne faller exposure() tilbake til directness() sin
+# enklere vindu-grense, som IKKE fanger opp at 251-255 grader (rett utenfor
+# Unstad sitt vindu [253,335] på kanten) fortsatt har god geometrisk
+# eksponering (samme mønster som test_pipeline.py sin del B-test).
+_exposure_baseline_real = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())
+_smoothed16, _raw16, _warn16 = _fetch16.resolve_exposure(U16, _exposure_baseline_real, "Unstad")
+assert _warn16 is None
+U16["exposure_smoothed"], U16["exposure_raw"] = _smoothed16, _raw16
+
+# 16.1: Unstad 26.09.2026 kl. 14:45 (fast observasjon i CLAUDE.md) - minst
+# 3 stjerner, og surfehøyden skal være ca. 2,4 m (det faktisk observerte).
+r_2609 = rate({"bw_height": 0.9, "bw_dir": U16["facing"], "bw_period": 15.0, "dir_offshore": 300,
+               "swell_offshore": 1.0, "height_offshore": 1.0, "period": 15, "wind_speed": 3.0,
+               "wind_dir": sum(U16["offshore_wind"]) // 2}, U16)
+show("16.1: Unstad 26.09 kl. 14:45 (surf_factor_prior)", r_2609)
+assert r_2609["stars"] >= 3
+assert abs(r_2609["surf_height"] - 2.4) < 0.1
+assert any(line.startswith("Surf-faktor 1,45 (startverdi fra 2 observasjoner)") for line in r_2609["breakdown"])
+
+# 16.2: Unstad 27.09.2026 kl. 06-08 (fast observasjon i CLAUDE.md) - minst
+# 2 stjerner. Ekte historiske inndata (rekonstruert fra git-historikken til
+# docs/data/forecast.json FØR retningskonvensjon-fiksen samme dag, bw_dir
+# rettet med +180 - se STATUS.md for fremgangsmåten). Kl. 09-10 (ikke en del
+# av den faste observasjonen) faller til 1 stjerne i samme rekonstruksjon -
+# svellet falmer utover morgenen, og vinden appen beregnet (5-8 m/s
+# side-onshore) stemmer ikke med videoens "nesten ingen vind" (se ROADMAP.md
+# sin "Venter på Theodor" - ikke noe koden kan rette).
+h_2709 = [
+    {"t": "06:00", "bw_height": 0.8366666666666667, "bw_dir": 295.0, "bw_period": 9.8,
+     "swell_offshore": 2.56, "height_offshore": 3.5, "dir_offshore": 255, "period": 9.45,
+     "wind_speed": 7.8, "wind_dir": 227.0, "gust": 13.9},
+    {"t": "07:00", "bw_height": 0.7533333333333334, "bw_dir": 295.0, "bw_period": 9.8,
+     "swell_offshore": 2.54, "height_offshore": 3.5, "dir_offshore": 255, "period": 9.2,
+     "wind_speed": 6.5, "wind_dir": 211.0, "gust": 12.9},
+    {"t": "08:00", "bw_height": 0.67, "bw_dir": 295.0, "bw_period": 9.8,
+     "swell_offshore": 2.72, "height_offshore": 3.4, "dir_offshore": 251, "period": 12.55,
+     "wind_speed": 5.4, "wind_dir": 193.0, "gust": 10.8},
+]
+for h in h_2709:
+    r = rate(h, U16)
+    show(f"16.2: Unstad 27.09 kl. {h['t']}", r)
+    assert r["stars"] >= 2, f"{h['t']} ga bare {r['stars']} stjerner"
 
 print("Alle tester ok")

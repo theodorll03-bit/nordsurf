@@ -16,7 +16,8 @@ import notify
 import sun
 import tide as tidemod
 from exposure import spot_checksum
-from rating import angle_diff, directness, rate, swell_share, SURF_FACTOR_DEFAULT
+from rating import (angle_diff, directness, rate, swell_share, bw_period_factor,
+                     SURF_FACTOR_DEFAULT, SURF_FACTOR_MIN, SURF_FACTOR_MAX)
 
 ROOT = Path(__file__).resolve().parent.parent
 SPOTS = ROOT / "spots.json"
@@ -30,6 +31,11 @@ REPORT = []  # kilderapport, vises i Actions
 # igjen (se build_spot()) - vises ØVERST i kilderapporten, ikke i selve
 # tabellen, og endrer aldri ratingen automatisk.
 CONVENTION_WARNINGS = []
+# 27.09.2026, Theodors rettelse (Unstad for lav - se STATUS.md): fornufts-
+# sjekk mot at BarentsWatch-justeringen (svellandel/periode/retning) trekker
+# for hardt ned - se low_adjustment_warning(). Samme plassering/prinsipp som
+# CONVENTION_WARNINGS over.
+LOW_ADJUSTMENT_WARNINGS = []
 
 
 def pick(*vals):
@@ -184,6 +190,51 @@ def bw_plausibility_report(hours, name):
     REPORT.append((name, "BarentsWatch-retning vs. vind (plausibilitet)", "ok", "; ".join(parts)))
 
 
+LOW_ADJUSTMENT_RATIO = 0.25  # se low_adjustment_warning()
+
+
+def low_adjustment_warning(hours, name):
+    """27.09.2026, Theodors rettelse (Unstad for lav - se STATUS.md, punkt 5):
+    fornuftssjekk mot at BarentsWatch-justeringen (min(svellandel, periode-
+    faktor) × retningsfaktor, se rating.barentswatch_height()) trekker for
+    hardt ned. Hvis den justerte høyden (hour["height"]) er under
+    LOW_ADJUSTMENT_RATIO (25 %) av BarentsWatch sin egen totalhøyde
+    (bw_height) i MER ENN HALVPARTEN av spotens DAGSLYS-timer med
+    BarentsWatch-data, er det et tegn på at ett av leddene systematisk
+    trekker for hardt ned for akkurat denne spoten - varsler med hvilket
+    ledd (gjennomsnittet blant de lave timene, samme min()-logikk som
+    avgjør hvilket ledd som faktisk er det begrensende). Endrer ALDRI
+    ratingen selv - bare rapportert, som convention_warning()."""
+    day_bw = [h for h in hours if h.get("daylight") and h.get("height_source") == "barentswatch"
+              and h.get("bw_height") and h.get("height") is not None]
+    if not day_bw:
+        return None
+    low = [h for h in day_bw if h["height"] < LOW_ADJUSTMENT_RATIO * h["bw_height"]]
+    if len(low) <= len(day_bw) / 2:
+        return None
+    shares, pfs, dirfacs = [], [], []
+    for h in low:
+        share, share_known = swell_share(h)
+        pf = bw_period_factor(h.get("bw_period"))
+        if share <= pf:
+            shares.append(share)
+        else:
+            pfs.append(pf)
+        if h.get("spot_direction_factor") is not None and h["spot_direction_factor"] < 0.999:
+            dirfacs.append(h["spot_direction_factor"])
+    terms = []
+    if shares:
+        terms.append(f"svellandel (snitt {round(100 * sum(shares) / len(shares))} %)")
+    if pfs:
+        terms.append(f"BarentsWatch-periodefaktoren (snitt {sum(pfs) / len(pfs):.2f})")
+    if dirfacs:
+        terms.append(f"retningsfaktoren ved punktet (snitt {sum(dirfacs) / len(dirfacs):.2f})")
+    worst = ", ".join(terms) if terms else "et ukjent ledd"
+    return (f"{name}: justert høyde er under {int(LOW_ADJUSTMENT_RATIO * 100)} % av BarentsWatch sin "
+            f"totalhøyde i {len(low)} av {len(day_bw)} dagslystimer med BarentsWatch-data. "
+            f"Mest sannsynlig årsak: {worst}.")
+
+
 def safe(spot, label, fn, *args, default=None):
     try:
         res = fn(*args)
@@ -313,12 +364,25 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         transfer_value, transfer_source = round(min(1.2, max(0.05, transfer_lang)), 2), "eksponering"
     else:
         transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
-    # surf_factor har bare én kilde (loggene/observasjonene dine) - ingen
-    # rekkefølge å velge mellom som for transfer, bare standard 1,0 til det
-    # finnes nok logger (se calibrate.learn()).
-    surf_factor_value = learned.get("surf_factor", SURF_FACTOR_DEFAULT)
-    surf_factor_source = "logs" if learned.get("surf_factor") is not None else "standard"
+    # surf_factor: rekkefølge 1) lært fra loggene (calibrate.learn(), minst
+    # MIN_LOGS logger), 2) surf_factor_prior i spots.json (en startverdi satt
+    # fra ekte, navngitte observasjoner FØR det finnes nok logger til å lære
+    # selv - se Unstad sin _surf_factor_prior-kommentar, 30.09.2026), 3)
+    # SURF_FACTOR_DEFAULT (1,0). En lært verdi overstyrer ALLTID prioren så
+    # snart det finnes nok logger - prioren er bare et bedre startpunkt enn
+    # 1,0 for en spot der formelen er kjent å bomme systematisk.
+    if learned.get("surf_factor") is not None:
+        surf_factor_value, surf_factor_source = learned["surf_factor"], "logs"
+    elif spot.get("surf_factor_prior") is not None:
+        surf_factor_value = round(min(SURF_FACTOR_MAX, max(SURF_FACTOR_MIN, spot["surf_factor_prior"])), 2)
+        surf_factor_source = "prior"
+    else:
+        surf_factor_value, surf_factor_source = SURF_FACTOR_DEFAULT, "standard"
     spot["transfer"], spot["surf_factor"] = transfer_value, surf_factor_value
+    # Bare til bruk i rate()/build_breakdown() under (samme mønster som
+    # exposure_smoothed) - ekskludert fra offentlig utdata lenger ned,
+    # siden calibration.surf_factor_source allerede dekker det samme.
+    spot["surf_factor_source"] = surf_factor_source
 
     hours = []
     for i in range(horizon):
@@ -415,6 +479,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
 
     bw_plausibility_report(hours, name)
 
+    low_adj = low_adjustment_warning(hours, name)
+    if low_adj:
+        LOW_ADJUSTMENT_WARNINGS.append(low_adj)
+
     # 27.09.2026, andre runde: BarentsWatch-retning over 150 grader fra facing
     # betyr nå bare at bølgene ved punktet faktisk går ut fra land (ordinær
     # straff, retningsfaktor 0 - se rating.spot_direction_factor), IKKE et
@@ -444,7 +512,8 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # exposure_smoothed/exposure_raw/exposure_smoothed_lang/exposure_smoothed_kort
     # er interne tall (én per grad) bare til bruk i rate() over - ikke noe
     # appen trenger å vise, ekskludert fra utdata.
-    _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort"}
+    _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort",
+                       "surf_factor_source"}
     public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
     light_days = sun.light_days(s["lat"], s["lon"], now)
     calibration = {
@@ -457,6 +526,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         "transfer_source": transfer_source,
         "surf_factor_used": surf_factor_value,
         "surf_factor_source": surf_factor_source,
+        "surf_factor_prior_n": spot.get("surf_factor_prior_n"),
         # Del B, ROADMAP oppgave 4 - hvor mye eksponering som er lært akkurat
         # nå (par fra FØR denne kjøringen, se over), til Logger-fanen og
         # STATUS.md.
@@ -487,8 +557,9 @@ def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
     text = "\n".join(lines)
-    if CONVENTION_WARNINGS:
-        text = "\n".join(f"**{w}**" for w in CONVENTION_WARNINGS) + "\n\n" + text
+    all_warnings = CONVENTION_WARNINGS + LOW_ADJUSTMENT_WARNINGS
+    if all_warnings:
+        text = "\n".join(f"**{w}**" for w in all_warnings) + "\n\n" + text
     print("\nKilderapport\n" + text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
