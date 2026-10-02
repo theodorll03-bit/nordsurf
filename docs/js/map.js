@@ -390,7 +390,15 @@ function discSvgMarkup(spot, h){
     // uavhengige datafelt som fint kan inntreffe samtidig (funnet av
     // fysikk-kontrollør, runde 2). Flytt til bunnen (180) i det tilfellet -
     // dir_offshore kan ikke være nær BÅDE 0 og 180 på én gang.
-    const missBearing = (h.dir_offshore!=null && Math.abs(shortestDelta(h.dir_offshore,0)) < 25) ? 180 : 0;
+    // 35 grader, ikke 25: målt empirisk (ekte getBoundingClientRect, samme
+    // metode som fant feilen) at kollisjonen varer helt til ca. 31 grader
+    // fra nord, UANSETT hvor lang kompass-strengen i dirLabel er (testet
+    // med lengste mulige, "NNØ" + tresifret gradtall - samme 31-graders
+    // grense som korteste tekst, siden det er selve den radielle
+    // sideforskyvningen av dirLabel sitt ankerpunkt - ikke tekstbredden -
+    // som avgjør når boksene slutter å overlappe). 35 gir fire graders
+    // margin, ikke en ny grense kalibrert på bare to testpunkter.
+    const missBearing = (h.dir_offshore!=null && Math.abs(shortestDelta(h.dir_offshore,0)) < 35) ? 180 : 0;
     const mBelow = missBearing>90 && missBearing<270;
     const p = polar(cx,cy,100,missBearing);
     windArrowMarkup = `<text class="disc-wind-missing" x="${p.x.toFixed(2)}" y="${(p.y+(mBelow?4:-4)).toFixed(2)}" text-anchor="middle">vind mangler</text>`;
