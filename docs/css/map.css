@@ -85,9 +85,11 @@
    treffer stranda (retningsfaktor 0). */
 .disc-spot-swell{stroke:var(--swell);stroke-width:1.5;stroke-linecap:round;opacity:.75}
 .disc-spot-swell.miss{stroke:var(--muted);stroke-dasharray:3 3;opacity:.8}
-.disc-wind-base{stroke:var(--wind);fill:none}
 .disc-wind-tick{stroke:var(--wind)}
+.disc-wind-ticks{opacity:.35}
 .disc-wind-head{fill:var(--wind)}
+.disc-wind-label{font-size:10px;fill:var(--ink);font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.disc-wind-missing{font-size:10px;fill:var(--muted);font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
 /* Rulling: flytter et gjentagende mønster ett avstandssteg med transform (GPU-
    billig), ikke stroke-dashoffset (tvinger repaint hver frame og var årsaken
    til at animasjonen - og zoom samtidig med den - ble hakkete). */
@@ -107,11 +109,11 @@
   .disc-ring-seg{transition:opacity .18s ease}
 }
 .disc-enter .disc-window{animation:discwindow .3s ease both}
-.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup{animation:discfade .25s ease .25s both}
+.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup,.disc-enter .disc-windarrow{animation:discfade .25s ease .25s both}
 @keyframes discwindow{from{transform:scale(0)}to{transform:scale(1)}}
 @keyframes discfade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){
-  .disc-enter .disc-window,.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup{animation:none}
+  .disc-enter .disc-window,.disc-enter .disc-swellgroup,.disc-enter .disc-windgroup,.disc-enter .disc-windarrow{animation:none}
   .disc-crests,.disc-wind-ticks{animation:none}
 }
 

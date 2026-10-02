@@ -321,12 +321,16 @@ function discSvgMarkup(spot, h){
     spotSwellMarkup = `<line class="disc-spot-swell${noHit?" miss":""}" x1="${q0.x.toFixed(2)}" y1="${q0.y.toFixed(2)}" x2="${q1.x.toFixed(2)}" y2="${q1.y.toFixed(2)}"/>`;
   }
 
-  let windMarkup = "";
+  // Vindanimasjon: diskrete strømmende streker som antyder retningen,
+  // holdt innenfor en klippesti (disc-wind-clip) så den aldri tegnes over
+  // ratingringen. Selve retningen/styrken vises av pila utenfor ringen
+  // (windArrowMarkup) - denne er bare et bakgrunnsdrag, lav opasitet.
+  let windAnimMarkup = "";
   if(h && h.wind_speed!=null){
     const toBearing = norm360((h.wind_dir||0)+180);
-    const fromPt = polar(cx,cy,92,norm360(toBearing+180));
-    const toPt = polar(cx,cy,72,toBearing);
-    const w = Math.max(2, Math.min(6, 2+h.wind_speed*0.35));
+    const fromPt = polar(cx,cy,82,norm360(toBearing+180));
+    const toPt = polar(cx,cy,26,toBearing);
+    const w = Math.max(1.5, Math.min(4, 1.5+h.wind_speed*0.2));
     const dur = Math.max(0.4, Math.min(2.2, 3/(h.wind_speed||1)));
     const tickSpacing = 14, tickLen = 6;
     const totalLen = Math.hypot(toPt.x-fromPt.x, toPt.y-fromPt.y);
@@ -338,21 +342,81 @@ function discSvgMarkup(spot, h){
       const tx = px+unitDown.x*tickLen, ty = py+unitDown.y*tickLen;
       ticks += `<line class="disc-wind-tick" x1="${px.toFixed(2)}" y1="${py.toFixed(2)}" x2="${tx.toFixed(2)}" y2="${ty.toFixed(2)}" stroke-width="${w}"/>`;
     }
-    windMarkup = `<g class="disc-windgroup" data-bearing="${toBearing}">
-      <line class="disc-wind-base" x1="${fromPt.x.toFixed(2)}" y1="${fromPt.y.toFixed(2)}" x2="${toPt.x.toFixed(2)}" y2="${toPt.y.toFixed(2)}" stroke-width="1.5" opacity=".35"/>
+    windAnimMarkup = `<g class="disc-windgroup" data-bearing="${toBearing}" clip-path="url(#disc-wind-clip)">
       <g class="disc-wind-ticks" style="--dx:${(unitDown.x*tickSpacing).toFixed(2)}px;--dy:${(unitDown.y*tickSpacing).toFixed(2)}px;animation-duration:${dur}s">${ticks}</g>
-      <path class="disc-wind-head" d="${arrowHead(toPt.x, toPt.y, toBearing, 10)}"/>
     </g>`;
+  }
+
+  // Vindpil: liten vimpel UTENFOR ratingringen (ring ytterkant ~98,5), på
+  // siden vinden kommer FRA, pekende inn mot sentrum. Vindstyrke og -type
+  // som liten tekst lenger ute. Tegnes sist, over ringen og etikettene den
+  // selv setter. Mangler vinddata: bare "vind mangler" i liten tekst.
+  let windArrowMarkup = "";
+  if(h && h.wind_speed!=null){
+    const fromBearing = norm360(h.wind_dir||0);
+    const toBearing = norm360(fromBearing+180);
+    // Pila selv følger vindretningen nøyaktig (uendret under). Etiketten
+    // (tekst) er derimot for bred til å følge samme stråle - ringens
+    // ytterkant (r≈98,5) er nesten like stor som boksens egen halvbredde
+    // (r=100), så det finnes ingen radius der en ~20 tegn lang etikett kan
+    // stå midt i strålen uten enten å gå inn i ringen eller stikke langt
+    // utenfor boksen (målt empirisk med ekte tekst-bbox, ikke håndregning -
+    // se STATUS.md). Etiketten låses derfor til nærmeste av fire trygge
+    // hjørnesoner (NØ/SØ/SV/NV), der den vokser UTOVER (bort fra sentrum)
+    // fra et anker som alt har god klaring til ringen i begge retninger.
+    // Fortsatt tydelig hvilket hjørne som hører til pila.
+    const rTip = 100, rHeadBase = 109;
+    const headBasePt = polar(cx,cy,rHeadBase,fromBearing);
+    const east = fromBearing>=0 && fromBearing<180, south = fromBearing>=90 && fromBearing<270;
+    const cornerX = east ? 135 : 65, cornerY = south ? 208 : -2;
+    const anchor = east ? "start" : "end";
+    const below = south;
+    const label = `${nf0.format(h.wind_speed)} m/s ${windLabel(h)}`.trim();
+    // Pilhodet og etiketten roterer IKKE sammen: pilhodet er en ren
+    // funksjon av den kontinuerlige vindretningen (fint å svinge inn ved
+    // tidsendring, se updateDiscForTime() sin spin()), men etiketten er nå
+    // et fast hjørnepunkt (kvadrant, ikke gradvis) - å rotere den sammen
+    // med pilhodet fikk den til å synlig vippe rundt sentrum i 400ms ved
+    // hver tidsendring, selv når hjørnet ikke endret seg (funnet av
+    // fysikk-kontrollør, runde 2). Egen indre gruppe for spin() å treffe.
+    windArrowMarkup = `<g class="disc-windarrow">
+      <g class="disc-windarrow-head" data-bearing="${fromBearing}"><path class="disc-wind-head" d="${arrowHead(headBasePt.x, headBasePt.y, toBearing, rHeadBase-rTip)}"/></g>
+      <text class="disc-wind-label" x="${cornerX}" y="${cornerY+(below?4:-4)}" text-anchor="${anchor}">${esc(label)}</text>
+    </g>`;
+  } else if(h){
+    // "vind mangler" står fast øverst (bearing 0) - MEN svellets egen
+    // retningsetikett (dirLabel over, samme posisjon-formel) kan havne på
+    // nøyaktig samme sted når dir_offshore også er nær nord, og de to er
+    // uavhengige datafelt som fint kan inntreffe samtidig (funnet av
+    // fysikk-kontrollør, runde 2). Flytt til bunnen (180) i det tilfellet -
+    // dir_offshore kan ikke være nær BÅDE 0 og 180 på én gang.
+    // 35 grader, ikke 25: målt empirisk (ekte getBoundingClientRect, samme
+    // metode som fant feilen) at kollisjonen varer helt til ca. 31 grader
+    // fra nord, UANSETT hvor lang kompass-strengen i dirLabel er (testet
+    // med lengste mulige, "NNØ" + tresifret gradtall - samme 31-graders
+    // grense som korteste tekst, siden det er selve den radielle
+    // sideforskyvningen av dirLabel sitt ankerpunkt - ikke tekstbredden -
+    // som avgjør når boksene slutter å overlappe). 35 gir fire graders
+    // margin, ikke en ny grense kalibrert på bare to testpunkter.
+    const missBearing = (h.dir_offshore!=null && Math.abs(shortestDelta(h.dir_offshore,0)) < 35) ? 180 : 0;
+    const mBelow = missBearing>90 && missBearing<270;
+    const p = polar(cx,cy,100,missBearing);
+    windArrowMarkup = `<text class="disc-wind-missing" x="${p.x.toFixed(2)}" y="${(p.y+(mBelow?4:-4)).toFixed(2)}" text-anchor="middle">vind mangler</text>`;
   }
 
   const ring = ringSegments(cx,cy,94, h?h.stars:0, h?h.faded:0, "disc-ring-seg");
 
+  // Rekkefølge bunn til topp: kart (utenfor SVG-en) - eksponeringskile
+  // (vindusgruppa) - vindanimasjon - svelllinjer - ratingring - vindpil og
+  // etiketter øverst.
   return `<svg viewBox="0 0 200 200">
+    <defs><clipPath id="disc-wind-clip"><circle cx="100" cy="100" r="86"/></clipPath></defs>
     <g class="disc-windowgroup">${windowPaths}</g>
+    ${windAnimMarkup}
     ${swellMarkup}
     ${spotSwellMarkup}
-    ${windMarkup}
     <g>${ring}</g>
+    ${windArrowMarkup}
   </svg>`;
 }
 
@@ -384,7 +448,7 @@ function selectSpot(spotId){
 
   const html = `<div style="position:relative;pointer-events:none">
       <div class="disc-wrap hit disc-enter" tabindex="0" role="button" aria-label="${esc(discAriaLabel(spot,h,t))}">${discSvgMarkup(spot,h)}</div>
-      <div class="disc-plate" style="top:110px">${discPlateMarkup(spot,h)}</div>
+      <div class="disc-plate" style="top:126px">${discPlateMarkup(spot,h)}</div>
     </div>`;
 
   if(discMarker) discLayer.removeLayer(discMarker);
@@ -418,25 +482,24 @@ function updateDiscForTime(){
   const wrap = el.querySelector(".disc-wrap");
   const oldSwell = wrap.querySelector(".disc-swellgroup");
   const oldWind = wrap.querySelector(".disc-windgroup");
+  const oldWindArrow = wrap.querySelector(".disc-windarrow-head");
   const oldSwellBearing = oldSwell ? parseFloat(oldSwell.dataset.bearing) : null;
   const oldWindBearing = oldWind ? parseFloat(oldWind.dataset.bearing) : null;
+  const oldWindArrowBearing = oldWindArrow ? parseFloat(oldWindArrow.dataset.bearing) : null;
   wrap.innerHTML = discSvgMarkup(spot, h);
   wrap.setAttribute("aria-label", discAriaLabel(spot,h,t));
   if(!reduceMotion()){
-    const ns = wrap.querySelector(".disc-swellgroup");
-    if(ns && oldSwellBearing!=null){
-      const newB = parseFloat(ns.dataset.bearing);
-      const delta = shortestDelta(oldSwellBearing, newB);
-      ns.style.transformOrigin = "100px 100px";
-      ns.animate([{transform:`rotate(${(-delta).toFixed(2)}deg)`},{transform:"rotate(0deg)"}], {duration:400, easing:"ease"});
-    }
-    const nw = wrap.querySelector(".disc-windgroup");
-    if(nw && oldWindBearing!=null){
-      const newB = parseFloat(nw.dataset.bearing);
-      const delta = shortestDelta(oldWindBearing, newB);
-      nw.style.transformOrigin = "100px 100px";
-      nw.animate([{transform:`rotate(${(-delta).toFixed(2)}deg)`},{transform:"rotate(0deg)"}], {duration:400, easing:"ease"});
-    }
+    const spin = (sel, oldBearing) => {
+      const el = wrap.querySelector(sel);
+      if(!el || oldBearing==null) return;
+      const newB = parseFloat(el.dataset.bearing);
+      const delta = shortestDelta(oldBearing, newB);
+      el.style.transformOrigin = "100px 100px";
+      el.animate([{transform:`rotate(${(-delta).toFixed(2)}deg)`},{transform:"rotate(0deg)"}], {duration:400, easing:"ease"});
+    };
+    spin(".disc-swellgroup", oldSwellBearing);
+    spin(".disc-windgroup", oldWindBearing);
+    spin(".disc-windarrow-head", oldWindArrowBearing);
   }
   el.querySelector(".disc-plate").innerHTML = discPlateMarkup(spot, h);
   if(mapState.sheetOpen) fillMapSheet(spot, h);
