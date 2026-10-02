@@ -8,14 +8,8 @@ Tre observasjoner (26.09 kl. 14:45, 27.09 morgen/Instagram) viste at Unstad rate
 ## 2. Vinden forsvinner fra onsdag kl. 12 - FERDIG
 met.no Locationforecast gir timesdata bare de første ca. 60 timene, deretter hver 6. time. Rettet med interpolering (`sources.weather_interpolate()`). Se STATUS.md.
 
-## 3. Vindpila på spot-skiva ser rotete ut - PARKERT (gren wind-arrow-wip)
-Den gikk tvers gjennom hele skiva, stakk ut på én side, og pilhodet havnet under ratingringen. Delvis rettet (vindpil utenfor ringen, klippesti for animasjonen, firehjørners plassering for etiketten), men ikke ferdig re-verifisert. Unstad (oppgave 1) går foran - tas opp igjen når den er avklart.
-a. Flytt vinden ut på kanten: en liten pil (vindvimpel) UTENFOR ratingringen, plassert på siden vinden kommer FRA, pekende inn mot sentrum i vindens retning. Vindstyrke og type (f.eks. "7 m/s offshore") som liten tekst ved pila.
-b. Vindanimasjonen (strømmende streker) skal holdes innenfor skiva med en klippesti (clipPath), og aldri tegnes over ratingringen eller etikettene. Diskret, lav opasitet, så den ikke konkurrerer med svellet.
-c. Rekkefølge fra bunn til topp: kart, eksponeringskile, vindanimasjon, svelllinjer, ratingring, vindpil og etiketter.
-d. Når vinden mangler: ingen pil, og "vind mangler" i liten tekst.
-e. prefers-reduced-motion: ingen vindanimasjon, bare pila.
-f. Ta skjermbilder i mobilvisning, lys og mørk modus, med vind fra fire ulike retninger (N, Ø, S, V), og sjekk at ingenting stikker ut eller havner under ringen.
+## 3. Vindpila på spot-skiva ser rotete ut - FERDIG
+Den gikk tvers gjennom hele skiva, stakk ut på én side, og pilhodet havnet under ratingringen. Rettet: vindpil (vindvimpel) utenfor ratingringen, vindanimasjon klippet til skiva og lagt lavt i z-rekkefølgen, etikett (vindstyrke+type) låst til fire trygge hjørnesoner (ringens radius er for nær skivas egen kant til at en etikett kan følge vindretningen kontinuerlig uten enten å overlappe ringen eller stikke langt utenfor - målt empirisk). Tre runder fysikk-kontrollør: struktur/geometri, pilrotasjon som lekket inn i etiketten + "vind mangler" kunne kollidere med svellets retningsetikett, og et gjenstående smalt kollisjonsvindu i den fiksen. Alle rettet og empirisk re-verifisert. Merget til main. Se STATUS.md.
 
 ## 4. Grøtfjord: skill "blåst ut" fra ekte flatt - FERDIG
 Se STATUS.md.
