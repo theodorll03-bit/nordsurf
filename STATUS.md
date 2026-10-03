@@ -148,6 +148,40 @@ Reviewerens vurdering for øvrig: `exposure()` sin fallback-kjede er trygg uten 
 
 **Dette er et korrekt og rent resultat for 2-stjerners stoppregelen** (0 endringer er trivielt under grensen), men viser IKKE forbedringen i praksis akkurat nå - selve beviset for at fiksen virker er den rekonstruerte 26.09/27.09-dataen i punkt 2 og 8 over, ikke dagens live varsel. Stoppregelen er ikke utløst. Committer på dette grunnlaget.
 
+### 11. Oppfølging 03.10.2026: Unstad 28.09 ("Safe to say it's firing") - IKKE COMMITTET, venter på ja
+
+Ny observasjon: Unstad 28.09.2026 ca. kl. 13 (Instagram, Lofoten Surfsenter): lange, rene linjer, offshore-sprøyt, 4-5 stjerner. Appen viste 1 stjerne kl. 11-16 ("Trolig ikke surfbart"). Kjeden appen viste var riktig (surfehøyde 1,2 m, periode 12 s, vind offshore) bortsett fra selve stjernene: svellet ute var 3-5 grader UTENFOR vinduet [253,335] (eksponering 62-66 %, rett under 0,667-grensen), men BarentsWatch ved SPOTEN selv sa bølgene kom inn nesten rett på (1 grad fra facing). `sources_disagree` sitt eksponeringsledd (`dir_hit < 0,667`) kappet likevel til maks 1 stjerne, uten å vite at punktet bekreftet treff.
+
+**Ny, uavhengig bekreftelse: `bw_confirms`** (`rating.barentswatch_height()`) - sann når retningen ved BarentsWatch-punktet er innenfor 30 grader av facing OG høyden UTEN retningsfaktor (`bw × min(svellandel, periodefaktor)`, beregnet før dirfac for å unngå sirkularitet) er minst 0,35 m (samme grense som "flatt"). Begrunnelse (Theodors): svellretningen ute (GFS/Open-Meteo) kan bomme 10-20 grader; BarentsWatch sin kystmodell ved punktet er mer presis der den har data - når de er uenige om retning, vinner BarentsWatch.
+
+Brukt to steder:
+1. **Retningsfaktoren** (`barentswatch_height()`): overstyres til 1,0 når ENTEN eksponeringen ute er god (≥0,667, uendret fra før) ELLER `bw_confirms` - uavhengige veier til samme konklusjon. I praksis et no-op for selve dirfac-tallet når diff≤30 (spot_direction_factor() gir allerede 1,0 der uansett) - men gjør overstyringen eksplisitt og tilgjengelig for punkt 2.
+2. **`sources_disagree`**: eksponeringsleddet (`dir_hit < 0,667`) utløser nå IKKE "kildene uenige" alene når `bw_confirms` er sann.
+
+**Kontroller (test_rating.py seksjon 17, pluss full regresjon):**
+- Lenangsøyra 26.09.2026 (test 7.1, ekte data): BarentsWatch-retningen ved punktet var 70 grader fra facing - langt over 30-graders grensen, `bw_confirms` forblir usann. Fortsatt 0,0 m, 0 stjerner, `sources_disagree` sann. UENDRET.
+- Grøtfjord 24.-26.09.2026 (alle faste observasjoner): fortsatt 0 stjerner. UENDRET.
+- Unstad 26.09/27.09.2026 (seksjon 16): uendret (begge var allerede dekket av eksponerings-overstyringen eller ren direkte retning).
+- Ny test (17): fire konstruerte timer (kl. 12-15) med ekte Unstad-geometri, verdier matchet mot Theodors rapporterte tall (bw_dir 294° mot facing 294,8°, dir_offshore 248-250°, eksponering beregnet til 0,62-0,70 med ekte exposure_baseline.json): surfehøyde 1,21 m (Theodor rapporterte 1,2 m) - treffer nesten blink. `bw_confirms` sann, `sources_disagree` usann, 3-4 stjerner alle fire timer (krav: minst 3). Alle tester kjører grønt.
+
+**Stjernetabell, de neste 48 timene (ferskt varsel, generert 03.10.2026):** 9 av 336 timer endrer seg, ALLE på Unstad - og de matcher samme mønster som 28.09-observasjonen nesten eksakt (bw_dir 294° mot facing 294,8°, dir_offshore 245-250°, surfehøyde 1,2-1,3 m):
+
+| Tidspunkt | Stjerner før | Stjerner etter | sources_disagree før | sources_disagree etter |
+|---|---|---|---|---|
+| 2026-10-03T09:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T10:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T11:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T12:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T13:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T14:00Z | 1 | 4 | sann | usann |
+| 2026-10-03T15:00Z | 0 | 2 | sann | usann |
+| 2026-10-04T02:00Z | 0 | 1 | sann | usann |
+| 2026-10-04T04:00Z | 0 | 1 | sann | usann |
+
+**CLAUDE.md sin 2-stjerners stoppregel er UTLØST** (6 timer endrer seg med 3 stjerner, 1 time med 2). Dette er nøyaktig den tiltenkte effekten av dagens rettelse, og mønsteret i dataene (bw_dir 1 grad fra facing, dir_offshore 3-8 grader utenfor vinduet) er praktisk talt identisk med 28.09-observasjonen som utløste oppgaven - men stoppregelen gjelder uansett, og er ikke automatisk dekket av at dette var en forventet/tiltenkt endring. **IKKE committet** - venter på Theodors eksplisitte ja.
+
+**I tillegg (punkt 5 i Theodors melding): fant en reell, uavhengig feil.** `docs/sw.js` sin cache-versjon (`CACHE`) er ikke bumpet siden 26.09.2026, til tross for 9 commits som har endret `docs/index.html`/`docs/js/map.js`/`docs/css/map.css` siden da (inkludert HELE vindpil-omdesignet og visningsendringen fra forrige runde, "aldri kall justert høyde signifikant") - PWA-ens service worker oppdager derfor ikke at shell-filene har endret seg, og serverer en gammel, cachet kopi av appen til alle som allerede har den installert/besøkt (forecast.json hentes alltid ferskt, men IKKE selve koden). Dette forklarer skjermbildet som fortsatt viste "0,4 m signifikant" - endringen VAR på nettsiden, men nådde ikke den installerte PWA-en. Rettet: `CACHE` bumpet til `"nordsurf-v9"`. Denne delen er uavhengig av stoppregelen over og trygg å pushe uansett.
+
 ---
 
 ## Oppgave 3: Vindpila på spot-skiva
