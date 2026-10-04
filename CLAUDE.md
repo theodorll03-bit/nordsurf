@@ -17,6 +17,7 @@ Når en modell motsier en observasjon, er det modellen som er feil.
 - Lenangsøyra 26.09.2026: ikke surfbart. Mest vindsjø, bølgene i Ullsfjorden kom fra vest.
 - Unstad 26.09.2026 ca. kl. 14:45: over hodet, sett nær dobbelt over hodet, tønner, offshore. 4 stjerner. Appen viste Hs 0,9 m, 15 s. Surfehøyde skal være ca. 2,4 m (med surf_factor_prior, se spots.json).
 - Unstad 27.09.2026 morgen (Instagram, Lofoten Surfsenter, "decent morning"): rene linjer, brysthøyt til hodehøyt, ca. 3 stjerner. Kl. 06-08 skal gi minst 2 stjerner. Vinden appen beregnet (5-8 m/s side-onshore) stemmer ikke med videoen (nesten vindstille) - se "Venter på Theodor".
+- Unstad 28.09.2026 ca. kl. 13 (Instagram, Lofoten Surfsenter, "Safe to say it's firing"): lange, rene linjer, offshore-sprøyt, 4 til 5 stjerner. Svellet ute var 3-5 grader utenfor vinduet (eksponering 62-66 %), men BarentsWatch ved spoten selv bekreftet treff (1 grad fra facing). Kl. 12-15 skal gi minst 3 stjerner.
 
 ## Konvensjoner (ikke endre)
 - Alle retninger internt er "fra"-retninger, 0 = nord.

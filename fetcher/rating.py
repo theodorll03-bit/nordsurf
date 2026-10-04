@@ -235,6 +235,11 @@ def spot_direction_factor(bw_dir_from, facing):
 
 
 SPOT_DIRECTION_OVERRIDE_EXPOSURE = 0.667  # se barentswatch_height() sin docstring
+BW_CONFIRM_DIFF_DEG = 30  # se barentswatch_height() sin docstring (bw_confirms)
+# BW_CONFIRM_MIN_HEIGHT settes IKKE til en egen konstant her - FLAT_HS_THRESHOLD
+# (0,35 m, "samme grense som flatt") er definert lenger ned i fila og brukes
+# direkte inni barentswatch_height() i stedet, siden modulnivå-kode kjører i
+# filrekkefølge (en alias-konstant her ville feilet ved import).
 
 
 def barentswatch_height(hour, spot):
@@ -255,17 +260,42 @@ def barentswatch_height(hour, spot):
     seg upålitelig i akkurat den situasjonen (Unstad 26.09 og 27.09.2026,
     se CLAUDE.md sine faste observasjoner: retningen ved punktet varierte
     med flere grader time for time mens det ekte svellet utvilsomt traff).
-    Retningsfaktoren brukes derfor BARE når eksponeringen for svellretningen
-    ute er under grensen - ellers er den 1,0, uansett hva BarentsWatch-
-    retningen ved punktet sier. Skru IKKE av dette ved å sette grensen til 0
-    eller 1 - da mister man enten hele sikringen (Lenangsøyra ville gått opp)
-    eller hele rettelsen (Unstad ville fortsatt vært for lav)."""
+
+    30.09.2026 (Unstad 28.09.2026, "Safe to say it's firing" - se STATUS.md):
+    motsatt tilfelle. Svellet ute var 3-5 grader UTENFOR vinduet (eksponering
+    62-66 %, rett under 0,667-grensen over), MEN BarentsWatch ved SPOTEN selv
+    sa bølgene kom inn nesten rett på (1 grad fra facing) med god høyde -
+    altså en ekte bekreftelse fra kystmodellen, ikke en upålitelig
+    enkeltmåling. Svellretningen ute (GFS, Open-Meteo) kan bomme 10-20
+    grader; BarentsWatch sin egen kystmodell ved punktet er mer presis der
+    den faktisk har data. Ny, uavhengig bekreftelse: `bw_confirms` - sann
+    når retningen ved punktet er innenfor BW_CONFIRM_DIFF_DEG (30) grader av
+    facing OG høyden UTEN retningsfaktoren (bw × min(svellandel,
+    periodefaktor) - beregnet FØR dirfac, for å unngå sirkularitet: om
+    punktet bekrefter skal ikke avhenge av selve retningsfaktoren den
+    avgjør) er minst FLAT_HS_THRESHOLD (0,35 m, samme grense som "flatt"). Når BarentsWatch bekrefter på denne måten, brukes heller ikke
+    lav eksponering ute til å trekke ned retningsfaktoren - samme idé som
+    eksponerings-overstyringen over, bare fra motsatt kant (punktet i stedet
+    for det ytre svellet). De to overstyringene er uavhengige av hverandre
+    (ett er nok), og begge brukes også i rate() sin sources_disagree (se
+    der) - når BarentsWatch bekrefter, skal lav eksponering ute ikke alene
+    utløse "kildene uenige" heller.
+
+    Retningsfaktoren brukes derfor BARE når INGEN av de to overstyringene
+    slår til - ellers er den 1,0, uansett hva BarentsWatch-retningen ved
+    punktet isolert sett ville gitt. Skru IKKE av dette ved å sette grensene
+    til 0 eller 1 - da mister man sikringen (Lenangsøyra ville gått opp)."""
     bw = hour["bw_height"]
     share, share_known = swell_share(hour)
     pf = bw_period_factor(hour.get("bw_period"))
     bw_dir = hour.get("bw_dir")
     facing = spot.get("facing")
     raw_dirfac, dir_known, dir_offshore = spot_direction_factor(bw_dir, facing)
+    diff = angle_diff(bw_dir, facing) if dir_known else None
+    # Høyden UTEN retningsfaktoren - bw_confirms sin egen bekreftelse skal
+    # ikke avhenge av overstyringen den selv er med på å avgjøre.
+    h_sans_dir = bw * min(share, pf)
+    bw_confirms = dir_known and diff <= BW_CONFIRM_DIFF_DEG and h_sans_dir >= FLAT_HS_THRESHOLD
     # Krever at dir_offshore FAKTISK er kjent - exposure()/directness() sin
     # egen "ukjent retning"-nøytralverdi (0,7, se directness() sin docstring)
     # ligger OVER 0,667-grensa, og ville ellers overstyrt retningsfaktoren
@@ -274,7 +304,8 @@ def barentswatch_height(hour, spot):
     # fysikk-kontrollør 30.09.2026 (Theodors rettelse, Unstad for lav).
     dir_off = hour.get("dir_offshore")
     offshore_exposure = exposure(dir_off, spot, hour.get("period")) if dir_off is not None else None
-    overridden = offshore_exposure is not None and offshore_exposure >= SPOT_DIRECTION_OVERRIDE_EXPOSURE
+    exposure_overridden = offshore_exposure is not None and offshore_exposure >= SPOT_DIRECTION_OVERRIDE_EXPOSURE
+    overridden = exposure_overridden or bw_confirms
     dirfac = 1.0 if overridden else raw_dirfac
     h = bw * min(share, pf) * dirfac
     detail = {
@@ -291,13 +322,20 @@ def barentswatch_height(hour, spot):
         "spot_direction_known": dir_known,
         # Bølgene ved punktet går faktisk ut fra land (avvik over
         # SPOT_DIRECTION_ERROR_DEG) - se spot_direction_factor() sin
-        # docstring og rate() sin bruk av dette.
-        "spot_direction_offshore": False if overridden else dir_offshore,
+        # docstring og rate() sin bruk av dette. bw_confirms krever diff<=30,
+        # uforenlig med >150 - trenger ikke slås av for den overstyringen.
+        "spot_direction_offshore": False if exposure_overridden else dir_offshore,
         # Selve gradavviket (0-180), til visning ("70 grader skrått på
         # stranda") - factoren alene sier ikke hvor mange grader det var.
         # Vises uansett overstyring, til feilsøking/kilderapport.
-        "spot_direction_diff": angle_diff(bw_dir, facing) if dir_known else None,
-        "spot_direction_overridden": overridden,
+        "spot_direction_diff": diff,
+        # Bare EKSPONERINGS-overstyringen - styrer "ikke brukt, svellet ute
+        # treffer godt"-teksten i breakdown (se build_breakdown()). Når
+        # bw_confirms alene er sann, er raw_dirfac allerede 1,0 (diff<=30
+        # gir alltid 1,0 i spot_direction_factor()), så normal tekst
+        # ("rett inn mot stranda") er allerede riktig uten særtilfelle.
+        "spot_direction_overridden": exposure_overridden,
+        "bw_confirms": bw_confirms,
     }
     return h, detail
 
@@ -813,10 +851,16 @@ def rate(hour, spot):
     # (spot_direction_factor 0 demper høyden selv), og "kildene uenige" sin
     # strenge 1-stjerne-kapping er ment for tvetydige, ikke entydig flate,
     # timer.
+    # 30.09.2026, Unstad 28.09.2026 ("Safe to say it's firing" - se STATUS.md):
+    # dårlig eksponering ute (dir_hit) skal heller ikke ALENE utløse "kildene
+    # uenige" når BarentsWatch ved SPOTEN selv bekrefter treff (bw_confirms,
+    # se barentswatch_height()) - svellretningen ute (GFS) kan bomme 10-20
+    # grader, BarentsWatch sin kystmodell ved punktet vinner når de er uenige.
     sources_disagree = (
         source == "barentswatch" and bw_detail is not None
         and (hour.get("bw_height") or 0) >= 0.5
-        and (dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE or bw_detail["swell_share"] < 0.5
+        and ((dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE and not bw_detail.get("bw_confirms"))
+             or bw_detail["swell_share"] < 0.5
              or (bw_detail["spot_direction_factor"] < 0.5 and not bw_detail["spot_direction_offshore"]))
     )
     if sources_disagree:
@@ -887,6 +931,12 @@ def rate(hour, spot):
         # BarentsWatch-punktet ble overstyrt til 1,0 fordi svellet ute
         # allerede har god eksponering (se barentswatch_height()).
         "spot_direction_overridden": bool(bw_detail and bw_detail.get("spot_direction_overridden")),
+        # 30.09.2026, Theodors rettelse (Unstad 28.09.2026): sann når
+        # BarentsWatch ved SPOTEN selv bekrefter treff (retning innenfor
+        # BW_CONFIRM_DIFF_DEG av facing OG høyde uten retningsfaktor over
+        # FLAT_HS_THRESHOLD) - se barentswatch_height(). Overstyrer både
+        # retningsfaktoren og sources_disagree sitt eksponeringsledd.
+        "bw_confirms": bool(bw_detail and bw_detail.get("bw_confirms")),
         # Trolig flatt: enten er signifikant høyde reelt lav (surf_height er
         # da tvunget til 0, uansett hva formelen ellers ville gitt), eller
         # reserven (metno_korrigert) har stor dreining/retning langt utenfor

@@ -976,4 +976,33 @@ for h in h_2709:
     show(f"16.2: Unstad 27.09 kl. {h['t']}", r)
     assert r["stars"] >= 2, f"{h['t']} ga bare {r['stars']} stjerner"
 
+# ---------- 30.09.2026, Theodors rettelse: bw_confirms (Unstad 28.09) ----------
+# "Safe to say it's firing" - lange, rene linjer, offshore-sprøyt, 4-5
+# stjerner. Svellet ute var 3-5 grader UTENFOR vinduet (eksponering 62-66 %,
+# rett under 0,667), men BarentsWatch ved SPOTEN selv bekreftet treff (1
+# grad fra facing, god høyde) - appen viste likevel bare 1 stjerne
+# ("Trolig ikke surfbart"), fordi sources_disagree sitt eksponeringsledd
+# ikke visste om bekreftelsen fra punktet. Se barentswatch_height() og
+# rate() sin bruk av bw_confirms.
+h_2809 = [
+    {"t": "12:00", "bw_height": 0.60, "bw_dir": 294.0, "bw_period": 11.5,
+     "swell_offshore": 1.40, "height_offshore": 2.00, "dir_offshore": 249, "period": 12.0,
+     "wind_speed": 7.5, "wind_dir": 145.0, "gust": 10.5},
+    {"t": "13:00", "bw_height": 0.58, "bw_dir": 293.5, "bw_period": 11.8,
+     "swell_offshore": 1.35, "height_offshore": 1.95, "dir_offshore": 248, "period": 12.1,
+     "wind_speed": 7.8, "wind_dir": 148.0, "gust": 11.0},
+    {"t": "14:00", "bw_height": 0.57, "bw_dir": 295.0, "bw_period": 12.0,
+     "swell_offshore": 1.32, "height_offshore": 1.90, "dir_offshore": 250, "period": 12.0,
+     "wind_speed": 8.0, "wind_dir": 150.0, "gust": 11.5},
+    {"t": "15:00", "bw_height": 0.55, "bw_dir": 294.0, "bw_period": 11.6,
+     "swell_offshore": 1.28, "height_offshore": 1.85, "dir_offshore": 249, "period": 11.8,
+     "wind_speed": 7.6, "wind_dir": 147.0, "gust": 10.8},
+]
+for h in h_2809:
+    r = rate(h, U16)
+    show(f"17: Unstad 28.09 kl. {h['t']}", r)
+    assert r["stars"] >= 3, f"{h['t']} ga bare {r['stars']} stjerner"
+    assert r["bw_confirms"] is True
+    assert r["sources_disagree"] is False
+
 print("Alle tester ok")
