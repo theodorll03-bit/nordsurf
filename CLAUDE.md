@@ -33,14 +33,15 @@ Når en modell motsier en observasjon, er det modellen som er feil.
 ## Krever Theodors ja (stopp og spør)
 - Endringer i svellvinduer, havpunkter, barentswatch_point, facing, offshorevind, exposure_override, ideal_height, max_height, SHADOW_CURVE, DEFAULT_TRANSFER, vindtabellen eller stjernegrenser.
 - Alt som gjør at en av de faste observasjonene over ikke lenger stemmer.
-- Hvis en endring flytter stjernene med 2 eller mer for noen spot i noen time de neste 48 timene i dagens varsel: vis tabell før og etter, og stopp.
+- Hvis en endring flytter stjernene med 2 eller mer for noen spot i noen time de neste 48 timene i dagens varsel: vis tabell før og etter, og stopp. Unntak (lagt til 04.10.2026, etter Unstad 28.09): hvis ALLE slike timer for spoten går i SAMME RETNING som en fast observasjon for den spoten (f.eks. opp, etter observasjoner som viser at spoten rates for lavt), og alle faste observasjoner fortsatt holder - ikke stopp. Commit, push, og skriv tabellen i STATUS.md i stedet. Stopp fortsatt hvis noen time går MOTSATT vei av observasjonene, eller hvis spoten ikke har noen faste observasjoner å sammenligne retningen mot.
 - Nye eksterne tjenester, kontoer, kostnader eller hemmeligheter.
 - Sletting av data (logger, kalibreringsfiler).
 - Når en oppgave i ROADMAP.md er merket "Venter på Theodor".
 
 ## Arbeidsmåte
 - Én oppgave av gangen fra ROADMAP.md, i rekkefølge.
-- Små steg. Alle tester (fetcher/test_rating.py og fetcher/test_pipeline.py) skal passere før commit.
+- Små steg. Alle tester (fetcher/test_rating.py, fetcher/test_pipeline.py, fetcher/test_exposure_learn.py, fetcher/test_docs_cache.py) skal passere før commit.
+- Endrer du noe i docs/ (utenom docs/data/): kjør `python fetcher/update_sw_cache.py` før commit, og ta docs/sw.js med i samme commit. Cache-versjonen der er en hash av docs/ sitt innhold, ikke en manuelt telt streng (lagt til 04.10.2026, etter at ni commits 26.09-03.10.2026 endret PWA-shellet uten at installerte PWA-er oppdaget det - se STATUS.md) - test_docs_cache.py feiler hvis den er utdatert, så dette fanges av "alle tester skal passere" over uansett om du glemmer scriptet.
 - Før hver commit: la subagenten fysikk-kontrollor gå gjennom endringen. Rett det den finner, eller skriv i STATUS.md hvorfor du er uenig.
 - Commit per ferdig delsteg, med tydelig norsk melding. Push når en oppgave er ferdig.
 - Oppdater STATUS.md etter hver oppgave: hva som ble gjort, tall før og etter, hva kontrolløren fant, og hva som gjenstår.

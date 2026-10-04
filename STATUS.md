@@ -148,7 +148,7 @@ Reviewerens vurdering for øvrig: `exposure()` sin fallback-kjede er trygg uten 
 
 **Dette er et korrekt og rent resultat for 2-stjerners stoppregelen** (0 endringer er trivielt under grensen), men viser IKKE forbedringen i praksis akkurat nå - selve beviset for at fiksen virker er den rekonstruerte 26.09/27.09-dataen i punkt 2 og 8 over, ikke dagens live varsel. Stoppregelen er ikke utløst. Committer på dette grunnlaget.
 
-### 11. Oppfølging 03.10.2026: Unstad 28.09 ("Safe to say it's firing") - IKKE COMMITTET, venter på ja
+### 11. Oppfølging 03.10.2026: Unstad 28.09 ("Safe to say it's firing") - FERDIG, Theodor sa ja, committet og pushet
 
 Ny observasjon: Unstad 28.09.2026 ca. kl. 13 (Instagram, Lofoten Surfsenter): lange, rene linjer, offshore-sprøyt, 4-5 stjerner. Appen viste 1 stjerne kl. 11-16 ("Trolig ikke surfbart"). Kjeden appen viste var riktig (surfehøyde 1,2 m, periode 12 s, vind offshore) bortsett fra selve stjernene: svellet ute var 3-5 grader UTENFOR vinduet [253,335] (eksponering 62-66 %, rett under 0,667-grensen), men BarentsWatch ved SPOTEN selv sa bølgene kom inn nesten rett på (1 grad fra facing). `sources_disagree` sitt eksponeringsledd (`dir_hit < 0,667`) kappet likevel til maks 1 stjerne, uten å vite at punktet bekreftet treff.
 
@@ -178,9 +178,19 @@ Brukt to steder:
 | 2026-10-04T02:00Z | 0 | 1 | sann | usann |
 | 2026-10-04T04:00Z | 0 | 1 | sann | usann |
 
-**CLAUDE.md sin 2-stjerners stoppregel er UTLØST** (6 timer endrer seg med 3 stjerner, 1 time med 2). Dette er nøyaktig den tiltenkte effekten av dagens rettelse, og mønsteret i dataene (bw_dir 1 grad fra facing, dir_offshore 3-8 grader utenfor vinduet) er praktisk talt identisk med 28.09-observasjonen som utløste oppgaven - men stoppregelen gjelder uansett, og er ikke automatisk dekket av at dette var en forventet/tiltenkt endring. **IKKE committet** - venter på Theodors eksplisitte ja.
+**CLAUDE.md sin 2-stjerners stoppregel er UTLØST** (6 timer endrer seg med 3 stjerner, 1 time med 2). Dette er nøyaktig den tiltenkte effekten av dagens rettelse, og mønsteret i dataene (bw_dir 1 grad fra facing, dir_offshore 3-8 grader utenfor vinduet) er praktisk talt identisk med 28.09-observasjonen som utløste oppgaven - men stoppregelen gjelder uansett, og er ikke automatisk dekket av at dette var en forventet/tiltenkt endring. **Theodor sa ja** (eksplisitt, 04.10.2026) - committet (`60b2a51`) og pushet. Theodor la samtidig til et unntak i stoppregelen for nøyaktig denne typen tilfelle i fremtiden - se CLAUDE.md og punkt 12 under.
 
 **I tillegg (punkt 5 i Theodors melding): fant en reell, uavhengig feil.** `docs/sw.js` sin cache-versjon (`CACHE`) er ikke bumpet siden 26.09.2026, til tross for 9 commits som har endret `docs/index.html`/`docs/js/map.js`/`docs/css/map.css` siden da (inkludert HELE vindpil-omdesignet og visningsendringen fra forrige runde, "aldri kall justert høyde signifikant") - PWA-ens service worker oppdager derfor ikke at shell-filene har endret seg, og serverer en gammel, cachet kopi av appen til alle som allerede har den installert/besøkt (forecast.json hentes alltid ferskt, men IKKE selve koden). Dette forklarer skjermbildet som fortsatt viste "0,4 m signifikant" - endringen VAR på nettsiden, men nådde ikke den installerte PWA-en. Rettet: `CACHE` bumpet til `"nordsurf-v9"`. Denne delen er uavhengig av stoppregelen over og trygg å pushe uansett.
+
+### 12. Theodors to prosessrettelser (04.10.2026), så dette ikke gjentar seg
+
+**(a) Unntak i 2-stjerners stoppregelen (CLAUDE.md).** Lagt til: hvis ALLE timer som endres med 2 eller mer for en spot går i SAMME RETNING som en fast observasjon for den spoten (f.eks. opp, slik Unstad-observasjonene over viser), og alle faste observasjoner fortsatt holder - ikke stopp. Commit, push, og skriv tabellen i STATUS.md i stedet (som gjort for punkt 11 over, nå i ettertid markert ferdig siden Theodor sa ja der). Stopp fortsatt hvis en time går MOTSATT vei av observasjonene, eller spoten ikke har noen faste observasjoner å sammenligne mot.
+
+**(b) Automatisk cache-versjon for docs/sw.js**, så punkt 11 sin service worker-feil (9 commits uten bump, 26.09-03.10.2026) ikke kan gjenta seg:
+- Ny `fetcher/update_sw_cache.py`: regner ut en sha256-hash (12 tegn) av navn og innhold for ALLE filer i `docs/`, utenom `docs/data/` (ferske varseldata, uendret av PWA-shell-cachen) og `sw.js` selv (sirkulært). Skriver hashen inn i `docs/sw.js` sin `CACHE`-konstant hvis den er utdatert. `--check` sjekker bare, endrer ingenting, exit 1 hvis utdatert.
+- Ny `fetcher/test_docs_cache.py`: kjører sjekken, feiler (med tydelig feilmelding) hvis `docs/sw.js` ikke stemmer med `docs/` sitt innhold. Lagt til i CLAUDE.md sin liste over tester som skal passere før commit, OG i `.github/workflows/forecast.yml` (samme steg-mønster som `test_rating.py`/`test_pipeline.py`) - stopper selv den planlagte, automatiske henterkjøringen hver 3. time hvis `sw.js` og `docs/` noensinne skulle drifte fra hverandre igjen.
+- Testet begge veier: la til en linje i `docs/css/map.css` uten å kjøre oppdateringsscriptet - `test_docs_cache.py` feilet som forventet, med riktig feilmelding. Reverterte, kjørte scriptet på ekte - `CACHE` endret fra `"nordsurf-v9"` til `"nordsurf-92763322269e"`, testen går grønt igjen.
+- `CACHE`-verdien er nå en hash, ikke en manuelt telt streng (`v8`, `v9`, ...) - den kan ikke lenger glemmes, bare oppdages som utdatert av testen over.
 
 ---
 
