@@ -212,6 +212,34 @@ Ny observasjon (Instagram, Lofoten Surfsenter/emilhus_01, "Lofoten leverte bølg
 
 **Ikke lagt til i CLAUDE.md sine faste observasjoner, og ingen test skrevet.** Faste observasjoner skal ALLTID bestå (se CLAUDE.md sitt sannhetshierarki) - en test med "minst 3 stjerner" ville feilet med dagens kode, og jeg vil ikke gjette meg til en fiks (justere `surf_factor_prior` en tredje gang, eller endre vindhåndteringen for Unstad spesielt) uten at Theodor har sett begge funnene og bestemt retning - "vindtabellen" og "ideal_height" er begge eksplisitt i CLAUDE.md sin "Krever Theodors ja"-liste. Lagt til i ROADMAP.md sin "Venter på Theodor"-seksjon i stedet, med begge funnene.
 
+### 14. Oppfølging 05.10.2026: offshore_wind for Unstad - Theodors forslag [70,215] dekker IKKE alle fem, stoppet per hans egen betingelse
+
+Theodors hypotese: vind fra S/SSV blåser ned dalen bak Unstad og ut mot havet - fem observasjoner skal da alle vise offshore eller vindstille når modellen sier ca. 200-206 grader. Foreslo `offshore_wind` [70,215] (opp fra [70,160]), med betingelsen "hvis alle fem passer: sett den... passer ikke alle, vis meg tallene og stopp."
+
+**Modellvind for alle fem (ekte historiske data, git-historikken til `docs/data/forecast.json`):**
+
+| Observasjon | Modellvind | Styrke | `wind_type()` med dagens [70,160] |
+|---|---|---|---|
+| 26.09 kl. 12-15Z (~kl. 14:45 lokal) | 213-220° | 5,2-5,6 m/s | sidevind/side-onshore |
+| 27.09 kl. 06-08 lokal (morgen) | 193-227° | 5,4-7,8 m/s | sidevind/side-onshore |
+| 27.09 kl. 14-20 lokal (ettermiddag) | 188-191° | 10,6-11,5 m/s | sidevind |
+| 28.09 kl. 12-15 lokal (allerede riktig) | ca. 145-150° (SSØ) | 7,5-8,0 m/s | **offshore** (riktig) |
+| 05.10 kl. 09-12 lokal | 199-206° | 9-10 m/s | sidevind |
+
+**`wind_type()` avgjøres av avstand til SENTERET i `offshore_wind` (±45 grader = offshore), ikke av selve sektorens bredde.** Gammelt senter: (70+160)/2 = 115. Theodors forslag [70,215] gir senter (70+215)/2 = **142,5** - bare 27,5 grader lenger enn før. Det er ikke nok: avstanden fra 142,5 til de fire problemobservasjonene er 46,5-84,5 grader, fortsatt over 45-gradersgrensen for "offshore" i alle fire. Bare 28.09 (som allerede var riktig) havner innenfor.
+
+| Observasjon | Avvik fra nytt senter (142,5) | Type med [70,215] |
+|---|---|---|
+| 26.09 | 70,5-77,5° | sidevind (uendret) |
+| 27.09 morgen | 50,5-84,5° | sidevind (bedre enn før, men ikke offshore) |
+| 27.09 ettermiddag | 46,5-48,5° | sidevind (rett over grensen) |
+| 28.09 | 4,5° | offshore (fortsatt riktig) |
+| 05.10 | 56,5-63,5° | sidevind (uendret) |
+
+**Ingen endring gjort** - [70,215] dekker ikke alle fem, per Theodors egen betingelse.
+
+**Til orientering, ikke satt:** et senter rundt **187 grader** (ikke 142,5) ville satt alle ti enkelttimer i tabellen over innenfor 45-graders offshore-grensen (største avvik 40 grader, for 27.09 morgen sin 227-graders time). Et symmetrisk `offshore_wind` rundt det senteret, f.eks. **[142, 232]** (samme 90-graders bredde som dagens [70,160]), er et eksempel - ikke et forslag jeg har satt. Det stemmer dårligere med en ren geometrisk "rett ut fra stranda" (motsatt `facing` 294,8 er 114,8, nesten identisk med dagens senter 115) - samsvarer med Theodors resonnement om at det er dalen bak Unstad, ikke selve strandas retning, som styrer hvor vinden faktisk kommer fra.
+
 ---
 
 ## Oppgave 3: Vindpila på spot-skiva
