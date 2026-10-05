@@ -36,6 +36,9 @@ CONVENTION_WARNINGS = []
 # for hardt ned - se low_adjustment_warning(). Samme plassering/prinsipp som
 # CONVENTION_WARNINGS over.
 LOW_ADJUSTMENT_WARNINGS = []
+# 05.10.2026, Theodors rettelse (Farstadsanden - se STATUS.md): sikring mot
+# at et BarentsWatch-punkt ligger i le - se bw_point_in_lee_warning().
+BW_LEE_WARNINGS = []
 
 
 def pick(*vals):
@@ -188,6 +191,49 @@ def bw_plausibility_report(hours, name):
              f"{rec['match_raw']}/{rec['n']} uten"
              for (src, file_src), rec in sorted(by_source.items())]
     REPORT.append((name, "BarentsWatch-retning vs. vind (plausibilitet)", "ok", "; ".join(parts)))
+
+
+BW_LEE_RATIO = 0.10  # se bw_point_in_lee_warning()
+BW_LEE_MIN_OFFSHORE = 2.0  # m, se bw_point_in_lee_warning()
+
+
+def bw_point_in_lee_warning(hours, spot, name):
+    """05.10.2026, Theodors rettelse (Farstadsanden - se STATUS.md): generell
+    sikring mot at et BarentsWatch-punkt ligger i le (f.eks. bak en odde,
+    eller i en skjermet lomme/grunt vann nær land som BarentsWatch sin egen,
+    finmaskede modell demper kraftig, men som vår grovere kystlinjesjekk
+    ikke nødvendigvis fanger opp). Et slikt punkt gir en kunstig lav
+    totalhøyde UANSETT hvor mye energi det faktisk er ute - verken
+    is_blown_out() eller classify_low_rating() kan se forskjell på et ekte
+    flatt punkt og et punkt som bare måler feil, siden begge bare ser
+    BarentsWatch sin egen bw_height.
+
+    Fysikk-kontrollør fant (05.10.2026) at en første versjon av denne
+    manglet retningsfiltreringen convention_warning() over allerede har, og
+    derfor ga falsk alarm for Grøtfjord 25.09.2026 (en FAST observasjon i
+    CLAUDE.md: helt flatt fordi svellet var 3 grader UTENFOR vinduet, ikke
+    fordi noe punkt ligger i le) - lav bw_height når svellet ute ikke engang
+    treffer vinduet er forventet og sier INGENTING om punktets plassering.
+    Bare timer der svellet ute faktisk ER mot vinduet (directness over 0,5,
+    samme grense og funksjon som convention_warning()) telles derfor med.
+
+    Hvis bw_height er under BW_LEE_RATIO (10 %) av totalhøyden ute
+    (height_offshore) i MER ENN HALVPARTEN av disse timene der totalhøyden
+    ute i tillegg er over BW_LEE_MIN_OFFSHORE (2 m - så stille dager med
+    lite energi totalt ikke trigger dette ved en tilfeldighet), er det et
+    tegn på at punktet systematisk ligger i le. Endrer ALDRI ratingen selv -
+    bare rapportert."""
+    stormy = [h for h in hours if h.get("height_offshore") is not None
+              and h["height_offshore"] > BW_LEE_MIN_OFFSHORE and h.get("bw_height") is not None
+              and directness(h.get("dir_offshore"), spot) > 0.5]
+    if not stormy:
+        return None
+    low = [h for h in stormy if h["bw_height"] < BW_LEE_RATIO * h["height_offshore"]]
+    if len(low) <= len(stormy) / 2:
+        return None
+    return (f"BarentsWatch-punktet for {name} ligger trolig i le. BarentsWatch-høyden er under "
+            f"{int(BW_LEE_RATIO * 100)} % av totalhøyden ute i {len(low)} av {len(stormy)} timer "
+            f"med svell mot vinduet og over {BW_LEE_MIN_OFFSHORE:.0f} m totalt ute.")
 
 
 LOW_ADJUSTMENT_RATIO = 0.25  # se low_adjustment_warning()
@@ -483,6 +529,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if low_adj:
         LOW_ADJUSTMENT_WARNINGS.append(low_adj)
 
+    bw_lee = bw_point_in_lee_warning(hours, spot, name)
+    if bw_lee:
+        BW_LEE_WARNINGS.append(bw_lee)
+
     # 27.09.2026, andre runde: BarentsWatch-retning over 150 grader fra facing
     # betyr nå bare at bølgene ved punktet faktisk går ut fra land (ordinær
     # straff, retningsfaktor 0 - se rating.spot_direction_factor), IKKE et
@@ -557,7 +607,7 @@ def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
     text = "\n".join(lines)
-    all_warnings = CONVENTION_WARNINGS + LOW_ADJUSTMENT_WARNINGS
+    all_warnings = CONVENTION_WARNINGS + LOW_ADJUSTMENT_WARNINGS + BW_LEE_WARNINGS
     if all_warnings:
         text = "\n".join(f"**{w}**" for w in all_warnings) + "\n\n" + text
     print("\nKilderapport\n" + text)

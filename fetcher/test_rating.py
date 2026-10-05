@@ -921,6 +921,53 @@ mixed_hours = low_hours[:1] + [
 assert _fetch.low_adjustment_warning(mixed_hours, "Test15b") is None
 print("15.3: low_adjustment_warning() - under halvparten lave, ingen varsel")
 
+# 15.4: bw_point_in_lee_warning() - ekte hendelse, Farstadsanden 05.10.2026
+# (se STATUS.md): BarentsWatch 0,08-0,1 m mens totalhøyden ute var 6+ m i
+# storm, time etter time, MED svellet ute midt i vinduet (315, samme som
+# facing - ikke bare tilfeldig lav svellandel pga. off-window, se 15.9).
+# Under 10 % av totalhøyden ute i mer enn halvparten av timene med over 2 m
+# totalt ute.
+F15 = spots["farstadsanden"]
+lee_hours = [
+    {"t": f"2026-10-05T{h:02d}:00Z", "height_offshore": 6.1, "bw_height": 0.08, "dir_offshore": 315}
+    for h in range(10, 15)
+]
+warn_lee = _fetch.bw_point_in_lee_warning(lee_hours, F15, "Farstadsanden")
+print("15.4: bw_point_in_lee_warning() (skal varsle):", warn_lee)
+assert warn_lee is not None and "i le" in warn_lee and "5 av 5" in warn_lee
+
+# 15.5: samme spot, men BarentsWatch-høyden følger totalhøyden ute normalt -
+# ingen varsel.
+ok_hours = [
+    {"t": f"2026-10-05T{h:02d}:00Z", "height_offshore": 6.1, "bw_height": 3.5, "dir_offshore": 315}
+    for h in range(10, 15)
+]
+assert _fetch.bw_point_in_lee_warning(ok_hours, F15, "Farstadsanden") is None
+print("15.6: bw_point_in_lee_warning() - normal høyde, ingen varsel")
+
+# 15.7: stille dager (under 2 m totalt ute) skal ikke trigge varselet selv om
+# BarentsWatch-andelen tilfeldigvis er lav - det er for lite energi til at
+# forholdstallet betyr noe.
+calm_hours = [
+    {"t": f"2026-10-05T{h:02d}:00Z", "height_offshore": 1.0, "bw_height": 0.05, "dir_offshore": 315}
+    for h in range(10, 15)
+]
+assert _fetch.bw_point_in_lee_warning(calm_hours, F15, "Farstadsanden") is None
+print("15.8: bw_point_in_lee_warning() - stille dager, ingen varsel")
+
+# 15.9, fysikk-kontrollør sitt funn (05.10.2026): lav bw_height når svellet
+# ute er UTENFOR vinduet er forventet og skal IKKE varsles - det er det
+# samme mønsteret som den faste observasjonen Grøtfjord 25.09.2026 (helt
+# flatt, svell fra 313 grader, 3 grader utenfor vinduet 286-310). Uten
+# retningsfilteret ga en tidligere versjon falsk alarm akkurat her, mot et
+# punkt som alt er bekreftet riktig av en fast observasjon i CLAUDE.md.
+offwindow_hours = [
+    {"t": f"2026-09-25T{h:02d}:00Z", "height_offshore": 3.0, "bw_height": 0.2, "dir_offshore": 313}
+    for h in range(10, 15)
+]
+assert _fetch.bw_point_in_lee_warning(offwindow_hours, G, "Grøtfjord") is None
+print("15.9: bw_point_in_lee_warning() - svell utenfor vinduet (Grøtfjord 25.09), ingen varsel")
+
 # ---------- 30.09.2026, Theodors rettelse: surf_factor_prior for Unstad ----------
 # To observasjoner viste at surfehøyden ble undervurdert med samme faktor
 # begge ganger (26.09: beregnet 1,67 m, observert ca. 2,4 m - forhold 1,44;
@@ -1033,5 +1080,19 @@ assert grotfjord_blown_by_wind["wind_type"] == "onshore"
 # dag. Allerede sjekket over (g["low_reason"] == "flat"), gjentatt her for å
 # gjøre selve kravet eksplisitt ved siden av 18.1.
 assert g["low_reason"] == "flat"
+
+# 18.3: med en realistisk BarentsWatch-totalhøyde (ikke et punkt som måler
+# kunstig lavt) gir samme lave svellandel "Stormsjø", med BarentsWatch sin
+# egen totalhøyde vist - ikke "0,0 m"/"Flatt". Ekte hendelse: Farstadsanden
+# kl. 12, 05.10.2026 viste BarentsWatch 0,08 m (0,1 m) mens svellet ute var
+# 6,1 m totalt og storm (19 m/s) - se STATUS.md, punktet ligger trolig i le
+# (eget avsnitt, ikke en feil i klassifiseringen under).
+F18 = spots["farstadsanden"]
+stormsjo18 = rate({"bw_height": 3.5, "bw_dir": F18["facing"], "bw_period": 9.0,
+                    "swell_offshore": 0.74, "height_offshore": 6.1, "dir_offshore": 298,
+                    "period": 11.0, "wind_speed": 19.0, "wind_dir": 227.0, "gust": 30.0}, F18)
+show("18.3: Farstadsanden - stormsjø med realistisk BarentsWatch-høyde", stormsjo18)
+assert stormsjo18["low_reason"] == "stormsjo"
+assert stormsjo18["swell_share"] < 0.4
 
 print("Alle tester ok")
