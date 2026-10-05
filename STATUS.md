@@ -193,6 +193,25 @@ Brukt to steder:
 - Testet begge veier: la til en linje i `docs/css/map.css` uten å kjøre oppdateringsscriptet - `test_docs_cache.py` feilet som forventet, med riktig feilmelding. Reverterte, kjørte scriptet på ekte - `CACHE` endret fra `"nordsurf-v9"` til `"nordsurf-92763322269e"`, testen går grønt igjen.
 - `CACHE`-verdien er nå en hash, ikke en manuelt telt streng (`v8`, `v9`, ...) - den kan ikke lenger glemmes, bare oppdages som utdatert av testen over.
 
+### 13. Oppfølging 05.10.2026: Unstad kl. 09-12 - IKKE lagt til som fast observasjon, venter på Theodor
+
+Ny observasjon (Instagram, Lofoten Surfsenter/emilhus_01, "Lofoten leverte bølga", ca. kl. 10:45): over hodet, hule bølger, offshore-sprøyt, 4 til 5 stjerner. Hentet kjeden for kl. 09-12 lokal tid (07-10Z) fra den faktiske forecast.json-commiten generert kl. 06:53Z samme morgen (nærmeste tilgjengelige, siden dagens live varsel ikke lenger dekker timer som har passert):
+
+| Kl. (lokal) | BarentsWatch | Svellandel | Justert | Surfehøyde | Sett | Vind | Vindtype | Stjerner |
+|---|---|---|---|---|---|---|---|---|
+| 09:00 | 0,9 m | 46 % | 0,4 m | 1,0 m | 1,3 m | 9 m/s, 204° | sidevind (−3) | 0 (kildene uenige) |
+| 10:00 | 0,8 m | 53 % | 0,4 m | 1,0 m | 1,3 m | 10 m/s, 206° | sidevind (−3) | 0 |
+| 11:00 | 0,6 m | 60 % | 0,4 m | 1,0 m | 1,3 m | 9 m/s, 205° | sidevind (−3) | 0 |
+| 12:00 | 0,7 m | 63 % | 0,4 m | 1,1 m | 1,4 m | 9 m/s, 199° | sidevind (−3) | 0 |
+
+**Stemmer surfehøyden med "over hodet"?** Nei. Beregnet surfehøyde er 1,0-1,1 m ("middels" i `_height_word()`), SIZE_M sier "Over hodet" er 2,4 m - under halvparten av det observerte. Potensialet FØR vind er uansett lavt (1-3 stjerner, se breakdown), og vinden (9-10 m/s "sidevind", −3) kutter det siste til 0 hver time.
+
+**To separate funn, ikke én feil:**
+1. **Vindmodellen - triggeren Theodor satte 27.09.2026 er nå nådd.** `offshore_wind` for Unstad er [70,160] (senter 115 grader). Appen beregnet vind fra 199-206 grader (SSV) - ca. 84-91 grader fra senter, altså "sidevind" i `wind_type()`. Observasjonen sier eksplisitt "offshore-sprøyt" (sprøyt som blåser bakover fra bølgetoppene - bare mulig med offshore vind). Dette er TREDJE gang met.no sin vindretning for Unstad ikke stemmer med det som faktisk observeres der (26.09: video viste offshore, appen sa sidevind; 27.09: video viste nesten vindstille, appen beregnet 5-8 m/s side-onshore - "Én gang til, så ser vi på vindmodellen ved Unstad spesielt", skrevet i ROADMAP.md sin "Venter på Theodor"). Lofoten sine bratte fjell rett bak stranda er en kjent kilde til lokale vindeffekter (fallvind, kanalisering) som en regional modell i met.no sin oppløsning ikke nødvendigvis fanger - men det er et resonnement, ikke en bekreftet årsak.
+2. **Surfehøyden kan være nok en runde av samme mønster som `surf_factor_prior`** (satt fra 26-27.09-observasjonene, nå 1,45) - ELLER et eget problem. BarentsWatch sin egen totalhøyde (0,6-0,9 m) er i seg selv lav for en dag der svellet skal ha gitt hule, over hodet-bølger - om DET tallet er riktig, er det ikke en formelfeil her, men et spørsmål om BarentsWatch-punktet eller selve svellmodellen for Unstad denne morgenen. Ikke undersøkt videre - for likt den uavklarte vindsaken til å avgjøre uavhengig av den.
+
+**Ikke lagt til i CLAUDE.md sine faste observasjoner, og ingen test skrevet.** Faste observasjoner skal ALLTID bestå (se CLAUDE.md sitt sannhetshierarki) - en test med "minst 3 stjerner" ville feilet med dagens kode, og jeg vil ikke gjette meg til en fiks (justere `surf_factor_prior` en tredje gang, eller endre vindhåndteringen for Unstad spesielt) uten at Theodor har sett begge funnene og bestemt retning - "vindtabellen" og "ideal_height" er begge eksplisitt i CLAUDE.md sin "Krever Theodors ja"-liste. Lagt til i ROADMAP.md sin "Venter på Theodor"-seksjon i stedet, med begge funnene.
+
 ---
 
 ## Oppgave 3: Vindpila på spot-skiva
