@@ -1,8 +1,9 @@
 /* ---------- Kart ----------
    Bruker DATA, $, esc, nf1, nf0, fmtHour, fmtTime, relDay, dayKey, compass,
-   WIND_WORD, windLabel, lightClass, starsSVG, STAR_PATH, TZ, openBreakdown
-   fra hovedskriptet (samme dokument, lastet før dette). Ikke en modul -
-   vanlig <script> med tilgang til de samme globalene. */
+   WIND_WORD, windLabel, lightClass, starsSVG, STAR_PATH, TZ, openBreakdown,
+   LOW_REASON_WORD, heightMForDisplay fra hovedskriptet (samme dokument,
+   lastet før dette). Ikke en modul - vanlig <script> med tilgang til de
+   samme globalene. */
 (function(){
 "use strict";
 
@@ -162,7 +163,10 @@ function computeGroups(){
 
 function heightText(h){
   if(!h) return "–";
-  if(h.likely_flat) return "Flatt";
+  if(h.low_reason){
+    const m = heightMForDisplay(h);
+    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+  }
   if(h.surf_height==null) return "–";
   return nf1.format(h.surf_height)+" m";
 }
@@ -268,7 +272,7 @@ function discAriaLabel(spot, h, t){
   const miss = h.directness!=null && h.directness < 0.667;
   const swellTxt = dir==null ? "Retning ukjent." : `Svell ${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" meter":""} fra ${compass(dir)}, ${Math.round(dir)} grader, ${miss?"treffer ikke":"treffer"} vinduet ${windowText(spot)} grader.`;
   const windTxt = h.wind_speed!=null ? `Vind ${nf0.format(h.wind_speed)} meter per sekund fra ${compass(h.wind_dir)}, ${windLabel(h)}.` : "";
-  const flatTxt = h.likely_flat ? " Trolig flatt." : "";
+  const flatTxt = h.low_reason ? ` ${LOW_REASON_WORD[h.low_reason]}.` : "";
   return `${spot.name} kl. ${fmtHour.format(t)}. ${swellTxt} ${windTxt} ${h.stars} av 5 stjerner.${flatTxt}`;
 }
 
@@ -421,9 +425,15 @@ function discSvgMarkup(spot, h){
 }
 
 function discPlateMarkup(spot, h){
-  const flat = h && h.likely_flat;
-  const big = h ? (flat ? "Trolig flatt" : (h.surf_height!=null?nf1.format(h.surf_height)+" m":"–")) : "–";
-  const sets = h && !flat && h.surf_height_sets!=null ? `sett ${nf1.format(h.surf_height_sets)} m` : "";
+  // 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md):
+  // sjekket bare likely_flat før, ikke blown_out - kartets høydeplate kunne
+  // derfor vise "Trolig flatt" for en time appens detaljside alt viste som
+  // "Blåst ut". Bruker nå low_reason (samlende felt), som dekker begge og
+  // viser høyden i stedet for å gjemme den (punkt c).
+  const reason = h && h.low_reason;
+  const m = h ? heightMForDisplay(h) : null;
+  const big = h ? (reason ? (m!=null ? `${LOW_REASON_WORD[reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[reason]) : (h.surf_height!=null?nf1.format(h.surf_height)+" m":"–")) : "–";
+  const sets = h && h.surf_height>0 && h.surf_height_sets!=null ? `sett ${nf1.format(h.surf_height_sets)} m` : "";
   const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
   const night = h && (h.light==="mørkt" || h.daylight===false);
   const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : "anslag") : "";
@@ -551,7 +561,7 @@ function fillMapSheet(spot, h){
     <button type="button" class="now" id="mSheetStars" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h?h.stars:0, h?h.faded:0, true)}</button>
     <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}</p>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&!h.likely_flat&&h.surf_height_sets!=null?`<div class="n">Sett ${nf1.format(h.surf_height_sets)} m${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>`:""}</div>
+      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&h.surf_height>0&&h.surf_height_sets!=null?`<div class="n">Sett ${nf1.format(h.surf_height_sets)} m${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>`:""}</div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h&&h.period!=null?nf0.format(h.period)+" s":"–"}</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h&&h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${h?windLabel(h):""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div></div>

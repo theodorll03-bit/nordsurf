@@ -325,6 +325,36 @@ function windLabel(h){
   if(h.wind_speed<3) return "nesten blankt";
   return WIND_WORD[h.wind_type]||"";
 }
+
+// 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md): samme
+// fire ord for 0 og 1 stjerne overalt - detaljside, liste, dagbrikker og
+// kartets høydeplate (js/map.js, vanlig <script> i samme vindu, ikke en
+// modul - bruker disse to globalt, se kommentaren øverst der). Speiler
+// fetcher/rating.classify_low_rating().
+const LOW_REASON_WORD = {flat:"Flatt", blown_out:"Blåst ut", stormsjo:"Stormsjø", treffer_ikke:"Treffer ikke"};
+function heightMForDisplay(h){
+  // Tallet å vise ved siden av low_reason sitt ord. Flatt/Treffer ikke har
+  // ikke noe pålitelig tall å vise fram. Blåst ut/Stormsjø skal vise den
+  // ekte høyden i stedet for å gjemme den bak ordet alene (Theodors
+  // rettelse 05.10.2026, punkt c) - men de to betyr ulike tall:
+  // - blåst ut: surfehøyden hvis den er reell (nær BarentsWatch sin egen
+  //   totalhøyde uansett - det er VINDEN som tok stjernene, ikke lav
+  //   svellandel), ellers BarentsWatch sin totalhøyde (surfehøyden er
+  //   tvunget til 0 av flat-sperren i den gamle, lav-høyde-drevne
+  //   "blåst ut"-saken, se is_blown_out()).
+  // - stormsjø: ALLTID BarentsWatch sin totalhøyde, aldri surfehøyden -
+  //   lav svellandel betyr nettopp at surfehøyden (justert for akkurat
+  //   den andelen) er et lite, misvisende tall ved siden av "Stormsjø".
+  //   "mye totalhøyde" (Theodors egen begrunnelse, punkt a) er bw_height,
+  //   ikke surfehøyden. Funnet av fysikk-kontrollør 05.10.2026 (en ekte
+  //   stormsjø-time har ALLTID surf_height>0 - low_hs ville ellers gjort
+  //   den til "flat" først, se classify_low_rating()).
+  if(!h) return null;
+  if(!h.low_reason) return h.surf_height;
+  if(h.low_reason==="blown_out") return (h.surf_height!=null && h.surf_height>0) ? h.surf_height : h.bw_height;
+  if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
+  return null;
+}
 const $ = s => document.querySelector(s);
 const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
 const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
@@ -448,8 +478,13 @@ function dayChipsHtml(spot, spotIdx){
     const [h, idx] = best;
     const good = h.stars >= 3;
     const anslag = !!(bw && h.t > bw);
-    const heightTxt = h.blown_out ? "Blåst ut" : (h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" m" : "–"));
-    const heightSpoken = h.blown_out ? "Blåst ut" : (h.likely_flat ? "Flatt" : (h.surf_height!=null ? nf1.format(h.surf_height)+" meter" : "ingen data"));
+    const dcM = heightMForDisplay(h);
+    const heightTxt = h.low_reason
+      ? LOW_REASON_WORD[h.low_reason] + (dcM!=null ? ` (${nf1.format(dcM)} m)` : "")
+      : (h.surf_height!=null ? nf1.format(h.surf_height)+" m" : "–");
+    const heightSpoken = h.low_reason
+      ? LOW_REASON_WORD[h.low_reason] + (dcM!=null ? ` (${nf1.format(dcM)} meter)` : "")
+      : (h.surf_height!=null ? nf1.format(h.surf_height)+" meter" : "ingen data");
     const timeTxt = fmtHour.format(new Date(h.t));
     const cls = ["daychip", good?"good":"", anslag?"anslag":""].filter(Boolean).join(" ");
     const lbl = `${fullLbl}, beste time klokka ${timeTxt.replace(/^0/,"")}, ${h.stars} av 5 stjerner, ${heightSpoken}${anslag?", anslag":""}`;
@@ -493,8 +528,9 @@ function renderList(){
     const s = DATA.spots[i];
     const h = s.hours[currentHour(s)];
     if(!h) return "";
+    const listM = heightMForDisplay(h);
     const facts = [
-      !h.likely_flat && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : null,
+      listM!=null ? `${nf1.format(listM)} m` : null,
       h.period!=null ? `${nf0.format(h.period)} s` : null,
       h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
     ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
@@ -502,7 +538,7 @@ function renderList(){
       <button class="row" data-spot="${i}">
         <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
         <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
-        <span class="facts">${facts}${h.blown_out?"<span>blåst ut</span>":(h.likely_flat?"<span>trolig flatt</span>":(h.uncertain?"<span>usikkert</span>":""))}</span>
+        <span class="facts">${facts}${h.low_reason?`<span>${esc(LOW_REASON_WORD[h.low_reason].toLowerCase())}</span>`:(h.uncertain?"<span>usikkert</span>":"")}</span>
         <span class="best">${bestText(s)}</span>
       </button>
       ${favBtnHtml(s.id, true)}
@@ -525,12 +561,15 @@ function renderList(){
 // "height" (Hs, signifikant høyde ute) er bare forklaringen bak tallet, se
 // README "Surfehøyde".
 function surfHeadline(h){
-  // 27.09.2026: blåst ut (mye vindsjø/vind, men reell totalhøyde ved
-  // BarentsWatch-punktet) er ikke det samme som flatt (lite energi) - se
-  // rating.is_blown_out(). Viser BarentsWatch sin egen totalhøyde i stedet
-  // for den sterkt dempede, nær-null surfehøyden.
-  if(h.blown_out) return `Blåst ut${h.bw_height!=null ? ` (${nf1.format(h.bw_height)} m)` : ""}`;
-  if(h.likely_flat) return "Trolig flatt";
+  // 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md): ett
+  // samlende felt (low_reason) i stedet for å sjekke blown_out/likely_flat
+  // hver for seg - se fetcher/rating.classify_low_rating(). Viser den ekte
+  // høyden ved siden av ordet for blåst ut/stormsjø (punkt c), ikke bare
+  // "Trolig flatt" som før.
+  if(h.low_reason){
+    const m = heightMForDisplay(h);
+    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+  }
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";
   return `${nf1.format(h.surf_height)} m${sets}`;
@@ -625,7 +664,7 @@ function renderSpot(){
   const t = new Date(h.t);
   const fw = h.faded_wind ?? h.faded, ft = h.faded_tide ?? 0;
   const losses = [fw?`${windNoun(h.wind_type)} tar ${fw}`:null, ft?`tidevannet tar ${ft}`:null].filter(Boolean);
-  const starWord = h.blown_out ? "Blåst ut" : STAR_WORDS[h.stars];
+  const starWord = h.low_reason ? LOW_REASON_WORD[h.low_reason] : STAR_WORDS[h.stars];
   const verdict = h.faded
     ? `${starWord}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
     : `${starWord}.`;
@@ -651,8 +690,20 @@ function renderSpot(){
 
   // Advarsel om retning/dreining
   let warn = "";
-  if(h.blown_out){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Blåst ut.</b> Mye vindsjø og sterk vind, ikke surfbart. BarentsWatch måler ${h.bw_height!=null?nf1.format(h.bw_height):"–"} m totalt ved punktet, men lite av det er ekte svell.</span></div>`;
+  if(h.low_reason==="blown_out"){
+    // 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md):
+    // dekker nå BÅDE den gamle saken (flat-sperren tvang høyden til 0 PÅ
+    // TROSS AV en reell BarentsWatch-totalhøyde) OG den nye (reell
+    // surfehøyde, men vindstraffen alene tar stjernene) - se
+    // fetcher/rating.classify_low_rating(). Teksten tilpasses hvilken av de
+    // to det er, og viser høyden i stedet for å gjemme den.
+    const share = h.swell_share!=null ? Math.round(h.swell_share*100) : null;
+    const cause = share!=null && share < 50 ? "mye vindsjø og sterk vind" : "sterk vind";
+    const heightTxt = h.surf_height!=null && h.surf_height>0 ? ` Surfehøyde ${nf1.format(h.surf_height)} m, men` : "";
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Blåst ut.</b>${heightTxt} ${cause} tar stjernene, ikke surfbart.${h.bw_height!=null?` BarentsWatch måler ${nf1.format(h.bw_height)} m totalt ved punktet.`:""}</span></div>`;
+  } else if(h.low_reason==="stormsjo"){
+    const share = h.swell_share!=null ? Math.round(h.swell_share*100) : null;
+    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Stormsjø.</b> Mye av totalhøyden er vindsjø, ikke ekte svell${share!=null?` (bare ${share} % svell)`:""}.${h.bw_height!=null?` BarentsWatch måler ${nf1.format(h.bw_height)} m totalt ved punktet.`:""}</span></div>`;
   } else if(h.sources_disagree){
     warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Kildene er uenige.</b> ${esc(h.sources_disagree_reason.replace(/^Kildene er uenige\.\s*/, ""))}</span></div>`;
   } else if(h.height_source==="barentswatch"){

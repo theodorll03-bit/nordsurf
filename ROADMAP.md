@@ -12,7 +12,7 @@ met.no Locationforecast gir timesdata bare de første ca. 60 timene, deretter hv
 Den gikk tvers gjennom hele skiva, stakk ut på én side, og pilhodet havnet under ratingringen. Rettet: vindpil (vindvimpel) utenfor ratingringen, vindanimasjon klippet til skiva og lagt lavt i z-rekkefølgen, etikett (vindstyrke+type) låst til fire trygge hjørnesoner (ringens radius er for nær skivas egen kant til at en etikett kan følge vindretningen kontinuerlig uten enten å overlappe ringen eller stikke langt utenfor - målt empirisk). Tre runder fysikk-kontrollør: struktur/geometri, pilrotasjon som lekket inn i etiketten + "vind mangler" kunne kollidere med svellets retningsetikett, og et gjenstående smalt kollisjonsvindu i den fiksen. Alle rettet og empirisk re-verifisert. Merget til main. Se STATUS.md.
 
 ## 4. Grøtfjord: skill "blåst ut" fra ekte flatt - FERDIG
-Se STATUS.md.
+Oppfølging 05.10.2026: fire-delt grunn for 0/1 stjerne (Flatt/Blåst ut/Stormsjø/Treffer ikke), samme ord overalt i appen, vind-dominans fanges nå uavhengig av flat-sperren. Se STATUS.md.
 
 ## 5. Test source/fileSource-hypotesen med data
 a/b: FERDIG - se STATUS.md. c (vente på konsekvent avvik i en ekte Actions-kjøring og stoppe for ja hvis funnet): venter fortsatt på nok ekte data.

@@ -746,6 +746,59 @@ def is_blown_out(hour, spot, source, bw_detail, low_hs):
     return share_low or strong_onshore
 
 
+STORMSJO_SHARE_MAX = 0.4  # "lav svellandel", se classify_low_rating()
+LOW_RATING_FLAT_SURF_HEIGHT_MAX = 0.4  # "surfehøyde under ca. 0,4 m", se classify_low_rating()
+
+
+def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
+                         potential, lost_wind, lost_tide, solid, blown_out):
+    """05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17, 05.10.2026 - se
+    STATUS.md): ordet for 0 og 1 stjerne skal si HVORFOR, ikke bare "Flatt"
+    for alt (den gamle STAR_WORDS[0] i appen var bokstavelig talt "Flatt",
+    uansett årsak - is_blown_out() over krevde low_hs, så en time med reell
+    høyde som ble null-stjerners av ren vindstraff falt tvers igjennom til
+    "Flatt"). Fire grunner, sjekket i denne rekkefølgen (den første som
+    stemmer vinner):
+
+    1. flat: reelt lite totalenergi - flat-sperren (low_hs) eller lav
+       surfehøyde (under LOW_RATING_FLAT_SURF_HEIGHT_MAX), OG BarentsWatch
+       sin egen totalhøyde (der den finnes) er også lav. Dette er den
+       opprinnelige "likely_flat"-saken - ingen energi å hente uansett
+       hvorfor. Når low_hs er sann er potensialet (under) uansett 0, så
+       denne kan aldri kollidere med "blown_out" sin vind-dominans-sjekk.
+    2. blown_out: IKKE flatt (reell høyde, eller den gamle
+       is_blown_out()-saken: reell BarentsWatch-totalhøyde PÅ TROSS AV
+       low_hs), men vindstraffen er det som faktisk tok (de fleste av)
+       stjernene. "Vind-dominant" krever et potensial på minst 2 FØR vind
+       og tidevann - ellers var det ingenting vinden kunne ta.
+    3. stormsjo: lav svellandel (det meste av BarentsWatch sin totalhøyde
+       er vindsjø, ikke ekte svell) OG en reell totalhøyde (ikke lite
+       energi totalt - det er heller 1, flat).
+    4. treffer_ikke: svellet ute bommer på vinduet (dir_hit under samme
+       0,667-grense som sources_disagree), og BarentsWatch ved SPOTEN
+       bekrefter ikke treff (bw_confirms, se barentswatch_height()) -
+       svellet når rett og slett ikke denne spoten nå.
+
+    None hvis stjernene er 2 eller mer (ingen grunn å forklare), eller hvis
+    ingen av de fire slår til (f.eks. bare tidevannet som tok stjernene)."""
+    if solid > 1:
+        return None
+    bw = hour.get("bw_height") if source == "barentswatch" else None
+    little_total = bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT
+    flat = little_total and (low_hs or (surf_height is not None and surf_height < LOW_RATING_FLAT_SURF_HEIGHT_MAX))
+    if flat:
+        return "flat"
+    wind_dominant = potential >= 2 and lost_wind > 0 and lost_wind >= lost_tide
+    if blown_out or wind_dominant:
+        return "blown_out"
+    if bw_detail is not None and not little_total and bw_detail["swell_share"] < STORMSJO_SHARE_MAX:
+        return "stormsjo"
+    if (dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
+            and not (bw_detail and bw_detail.get("bw_confirms"))):
+        return "treffer_ikke"
+    return None
+
+
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     h, source, bw_detail = spot_height(hour, spot)
@@ -881,6 +934,9 @@ def rate(hour, spot):
     lost_tide = min(potential - lost_wind, tide_pen)
     solid = potential - lost_wind - lost_tide
 
+    low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
+                                      potential, lost_wind, lost_tide, solid, blown_out)
+
     breakdown = build_breakdown(
         hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
         surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
@@ -953,4 +1009,12 @@ def rate(hour, spot):
         # BarentsWatch-totalhøyden i stedet for "Trolig flatt"/0,0 m for disse
         # timene - stjernene er fortsatt 0 (low_hs gjelder uansett).
         "blown_out": blown_out,
+        # 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md):
+        # EN av "flat", "blown_out", "stormsjo", "treffer_ikke", eller None -
+        # se classify_low_rating(). Bare satt for 0 og 1 stjerne. Appen skal
+        # bruke DETTE feltet overalt (detaljside, liste, dagbrikker, kartets
+        # høydeplate) i stedet for å gjette fra stjernetallet alene -
+        # likely_flat/blown_out over beholdes uendret (egen, mer snever
+        # betydning de alt var i bruk for), ikke erstattet av dette.
+        "low_reason": low_reason,
     }

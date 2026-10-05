@@ -12,6 +12,7 @@ def show(label, r): print(f"{label:<40} {r['stars']} hele, {r['faded']} tapt  ({
 # Observert 24.09.2026: met.no sa 1,9 m i Grøtfjord, det var helt flatt.
 g = rate({"height_spot_model": 1.9, "dir_offshore": 311, "turn": 32, "period": 11, "wind_speed": 3, "wind_dir": 180}, G)
 show("Grøtfjord 24.09 (met.no)", g); assert g["stars"] == 0 and g["likely_flat"]
+assert g["low_reason"] == "flat"
 
 # Samme dag, BarentsWatch sa 0,3 m. Observert flatt.
 g2 = rate({"bw_height": 0.3, "dir_offshore": 311, "turn": 32, "period": 11, "wind_speed": 3, "wind_dir": 180}, G)
@@ -738,12 +739,14 @@ assert blown["stars"] == 0
 assert blown["likely_flat"] is True  # uendret - stjernene skal fortsatt kuttes av flat-sperren
 assert blown["blown_out"] is True
 assert any("blåst ut" in line for line in blown["breakdown"])
+assert blown["low_reason"] == "blown_out"  # 05.10.2026: samme sak via det nye, samlende feltet
 
 # 12.2: Grøtfjord 24.09.2026 (linje 17 over) - ekte flatt, IKKE blåst ut,
 # selv om den også er "likely_flat". Ingen svell_offshore/vind oppgitt der,
 # men bw_height (0,3) er allerede under flat-sperren selv - ingen reell
 # energi totalt å forveksle med vindsjø.
 assert g2["blown_out"] is False
+assert g2["low_reason"] == "flat"
 
 # 12.3: samme vindsjø-situasjon, men bw_height under flat-sperren i seg selv
 # (reelt lite totalt, ikke bare lite ekte svell) - skal IKKE bli blåst ut.
@@ -753,6 +756,7 @@ genuinely_flat = rate({"bw_height": 0.2, "bw_period": 5.5, "bw_dir": G["facing"]
 show("12.3: samme vind, men lav BarentsWatch-totalhøyde - ekte flatt", genuinely_flat)
 assert genuinely_flat["blown_out"] is False
 assert genuinely_flat["likely_flat"] is True
+assert genuinely_flat["low_reason"] == "flat"
 
 # ---------- 27.09.2026: source/fileSource lagres, og en plausibilitetssjekk
 # mot vindretningen - test av hypotesen om at BarentsWatch-konvensjonen kan
@@ -1004,5 +1008,30 @@ for h in h_2809:
     assert r["stars"] >= 3, f"{h['t']} ga bare {r['stars']} stjerner"
     assert r["bw_confirms"] is True
     assert r["sources_disagree"] is False
+
+# ---------- 05.10.2026, Theodors rettelse: fire-delt grunn for 0/1 stjerne
+# (classify_low_rating) ----------
+# Ekte hendelse: Grøtfjord kl. 11-17, 05.10.2026 - appen viste 0 stjerner og
+# "Flatt", men BarentsWatch målte 1,5 m rett ved spoten (3 grader skrått),
+# reell surfehøyde, og vinden var 13 m/s onshore fra vest (fra V, kast 19) -
+# is_blown_out() krevde den gamle flat-sperren (low_hs) for å slå inn, så en
+# time der vinden alene tar stjernene falt tvers igjennom til STAR_WORDS[0]
+# ("Flatt") i appen. classify_low_rating() sin vind-dominans-sjekk (potensial
+# minst 2 FØR vind, og vinden tar minst like mye som tidevannet) fanger nå
+# dette uavhengig av low_hs. Se STATUS.md.
+grotfjord_blown_by_wind = rate({"bw_height": 1.5, "bw_dir": 298.0, "bw_period": 10.0,
+                                 "swell_offshore": 1.4, "height_offshore": 1.6, "dir_offshore": 297,
+                                 "period": 11.0, "wind_speed": 13.0, "wind_dir": 270.0, "gust": 19.0}, G)
+show("18.1: Grøtfjord 05.10 kl. 11-17 - blåst ut (reell høyde, sterk vind)", grotfjord_blown_by_wind)
+assert grotfjord_blown_by_wind["stars"] == 0
+assert grotfjord_blown_by_wind["low_reason"] == "blown_out"
+assert grotfjord_blown_by_wind["surf_height"] is not None and grotfjord_blown_by_wind["surf_height"] > 0.4
+assert grotfjord_blown_by_wind["wind_type"] == "onshore"
+
+# 18.2: Grøtfjord 24.09.2026 (linje 14 over) skal fortsatt gi "Flatt", ikke
+# "Blåst ut" - helt reelt lav totalenergi, ikke vind som tar en ellers god
+# dag. Allerede sjekket over (g["low_reason"] == "flat"), gjentatt her for å
+# gjøre selve kravet eksplisitt ved siden av 18.1.
+assert g["low_reason"] == "flat"
 
 print("Alle tester ok")
