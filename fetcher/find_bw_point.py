@@ -1,9 +1,9 @@
-"""Engangsverktøy (Theodors oppgave 05.10.2026 - se STATUS.md): bygger et
-rutenett av kandidatpunkter rundt Unstad og Farstadsanden (mistanke om at
-dagens BarentsWatch-punkter ligger i le/for nær land eller svellmodellen
-der er upålitelig - Unstad sin surfehøyde og Farstadsanden sin BarentsWatch-
-totalhøyde har begge vist seg for lave mot observasjoner/andre kilder) og
-henter BarentsWatch for hvert punkt, 48 timer frem. Lagrer resultatet i
+"""Engangsverktøy (Theodors oppgave 05.10.2026, utvidet til alle spots
+06.10.2026 - ROADMAP oppgave E, se STATUS.md): bygger et rutenett av
+kandidatpunkter rundt hver aktiv spot (startet med Unstad og Farstadsanden -
+mistanke om at dagens BarentsWatch-punkter ligger i le/for nær land eller at
+svellmodellen der er upålitelig; begge viste seg for lave mot observasjoner/
+andre kilder) og henter BarentsWatch for hvert punkt, 48 timer frem. Lagrer resultatet i
 data/bw_point_search/result.json, committet FRA workflowen (se
 .github/workflows/find_bw_point.yml) - slik kan punktene sammenlignes og nye
 foreslås i en senere økt uten nøkler eller `gh` CLI lokalt.
@@ -28,9 +28,12 @@ from diagnose_bw_direction import raw_barentswatch, openmeteo_with_total_dir
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "bw_point_search"
 HOURS_AHEAD = 48
-DISTANCES_KM = [0.15, 0.25, 0.5, 1.0, 2.0]
+# 06.10.2026, ROADMAP oppgave E: utvidet fra bare Unstad/Farstadsanden til
+# ALLE aktive spots, og 2000 m-ringen tatt ut (oppgaven sier 150/250/500/
+# 1000 m). 8 spots x (3 retninger x 4 avstander + dagens 2 punkter) = 112
+# BarentsWatch-oppslag per kjøring - greit for et manuelt engangsverktøy.
+DISTANCES_KM = [0.15, 0.25, 0.5, 1.0]
 OFFSETS_DEG = [-20, 0, 20]
-SPOT_IDS = ["unstad", "farstadsanden"]
 
 
 def pt(lat, lon, bearing, d):
@@ -113,7 +116,7 @@ def main():
     cutoff = now + dt.timedelta(hours=HOURS_AHEAD)
 
     result = {"generated": now.isoformat(), "hours_ahead": HOURS_AHEAD,
-              "spots": {sid: search_spot(spots[sid], now, cutoff) for sid in SPOT_IDS}}
+              "spots": {sid: search_spot(s, now, cutoff) for sid, s in spots.items() if s.get("enabled")}}
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out_path = OUT_DIR / "result.json"
