@@ -1,5 +1,15 @@
 # Nordsurf: status
 
+## Theodors rettelse 07.10.2026 (natt): Grøtfjord "Flatt" med 2 166 kJ ute - PUNKT 1 FERDIG, committet til main
+
+Timen finnes i dagens `forecast.json`: Grøtfjord 16.10 kl. 06 UTC, svell ute 2,3 m/15 s fra 271°, 2 166 kJ, reservemodellen gir 0,12 m på spoten (eksponering 0,087 - 15° utenfor vinduet [286,310], bak Tromvik-halvøya), flat-sperren slår inn (under 0,35 m), 0 stjerner. Ordet var "Flatt".
+
+**Punkt 1 (ordet):** `rating.classify_low_rating()` får svellenergien ute som nytt argument. Når høyden er lav FORDI retningen bommer (reservemodellen, retningstreff under 0,667) OG svellenergien ute er over spotens "zero"-grense i energifaktoren (500 kJ standard, 200 for Unstad - under den er energien reelt lav uansett), er ordet nå "Treffer ikke". "Flatt" bare når energien ute også er lav eller ukjent (met.no-reserven har ingen svellfelt). BarentsWatch-timer rører ikke regelen: der har kystmodellen selv målt lite ved punktet (Grøtfjord 26.09: 2,2 m/15,6 s ute, 0,33 m målt, observert flatt - ordet forblir "Flatt"). Test 23: denne timen gir "Treffer ikke" (2 336 kJ med 2,3 m - Theodors 2 166 er fra forecast.json sin eksakte svellhøyde), samme retning med 0,8 m/7 s (61 kJ) gir "Flatt", Grøtfjord 24.-26.09 fortsatt 0 stjerner. **Grøtfjord 25.09 (fast observasjon, 3° utenfor vinduet, 1,76 m/9,2 s = 514 kJ) bytter ord fra "Flatt" til "Treffer ikke"** - retningen VAR årsaken den dagen, så det er riktig etter den nye regelen, og stjernene er fortsatt 0.
+
+**Effekt i dagens varsel (frakoblet re-rating av alle 1 608 timer):** 144 timer bytter ord Flatt → Treffer ikke (Ersfjordstranda 36, Tromvik 32, Grøtfjord 19, Lenangsøyra 17, Unstad 15, Steinkrøssa 14, Russelv 9, Farstadsanden 2), **0 timer endrer stjerner** - regelen rører bare ordet. Stoppregelen gjelder ikke.
+
+**Punkt 2 (periodeavhengig diffraksjonsdemping):** på gren `natt/diffraksjon`, se eget avsnitt der/under.
+
 ## Skyøkt 07.10.2026 - timelogg (norsk tid)
 
 - 00:42: oppstart, miljø satt opp (Playwright pinnet til 1.56, Leaflet servert lokalt pga. nettverkspolicy), alle 6 tester grønne på main.

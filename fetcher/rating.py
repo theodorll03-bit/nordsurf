@@ -897,7 +897,7 @@ LOW_RATING_FLAT_SURF_HEIGHT_MAX = 0.4  # "surfehøyde under ca. 0,4 m", se class
 
 
 def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
-                         potential, lost_wind, lost_tide, solid, blown_out):
+                         potential, lost_wind, lost_tide, solid, blown_out, energy_swell=None):
     """05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17, 05.10.2026 - se
     STATUS.md): ordet for 0 og 1 stjerne skal si HVORFOR, ikke bare "Flatt"
     for alt (den gamle STAR_WORDS[0] i appen var bokstavelig talt "Flatt",
@@ -936,13 +936,28 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
        svellet når rett og slett ikke denne spoten nå.
 
     None hvis stjernene er 2 eller mer (ingen grunn å forklare), eller hvis
-    ingen av de fire slår til (f.eks. bare tidevannet som tok stjernene)."""
+    ingen av de fire slår til (f.eks. bare tidevannet som tok stjernene).
+
+    07.10.2026, Theodors rettelse (Grøtfjord om ca. 10 dager: svell ute 2,3
+    m/15 s, ca. 2 200 kJ, fra 271° - 15° utenfor vinduet, bak Tromvik-
+    halvøya - appen sa "Flatt, 0,1 m"): med så mye energi ute er det ikke
+    flatt, det er svellet som ikke treffer. Når høyden er lav FORDI
+    retningen bommer (reservemodellen, dir_hit under 0,667) OG svellenergien
+    ute er høy (over spotens "zero"-grense i energifaktoren - under den er
+    energien reelt lav uansett), er ordet "treffer_ikke", ikke "flat".
+    "Flat" bare når energien ute også er lav (eller ukjent). Gjelder ikke
+    BarentsWatch-timer: der har kystmodellen selv målt lite ved punktet
+    (Grøtfjord 26.09.2026: 2,2 m/15,6 s ute fra 272°, BarentsWatch 0,33 m -
+    observert helt flatt, og ordet forblir "Flatt")."""
     if solid > 1:
         return None
     bw = hour.get("bw_height") if source == "barentswatch" else None
     little_total = bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT
     flat = little_total and (low_hs or (surf_height is not None and surf_height < LOW_RATING_FLAT_SURF_HEIGHT_MAX))
     if flat:
+        if (source != "barentswatch" and dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
+                and energy_swell is not None and energy_swell >= energy_thresholds_used(spot)[1]):
+            return "treffer_ikke"
         return "flat"
     wind_dominant = potential >= 1 and lost_wind > 0 and lost_wind >= lost_tide
     if blown_out or wind_dominant:
@@ -1256,7 +1271,7 @@ def rate(hour, spot):
         local_rules_source = src.split(",")[0].strip() if src else None
 
     low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
-                                      potential, lost_wind, lost_tide, solid, blown_out)
+                                      potential, lost_wind, lost_tide, solid, blown_out, energy_swell)
 
     breakdown = build_breakdown(
         hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,

@@ -2,6 +2,12 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
+## 0. Grøtfjord "Flatt" med 2 166 kJ ute (Theodor, 07.10.2026) - PUNKT 1 FERDIG på main, PUNKT 2 på gren `natt/diffraksjon`
+Grøtfjord om ca. 10 dager: svell ute 2,3 m, 15 s, 2166 kJ, fra 271 grader (15 grader utenfor vinduet, bak Tromvik-halvøya), offshore 5 m/s. Appen viser "Flatt", 0,1 m.
+1. Ordet er feil: med 2166 kJ og 2,3 m svell ute er det ikke flatt. Når årsaken til lav høyde er retningen (svell ute utenfor vinduet med lav eksponering), og energien ute er høy, skal ordet være "Treffer ikke", ikke "Flatt". "Flatt" bare når energien ute også er lav. Rett i klassifiseringen og test. **FERDIG (main): `rating.classify_low_rating()`, test 23, 144 av 1608 timer i dagens varsel bytter ord (0 stjerner endret).**
+2. Diffraksjonsdempingen (ekstra demping av Hb når rå eksponering er 0) skal avhenge av perioden: langt svell bøyer seg bedre rundt land. Bruk samme p(T)-kurve som skjermingen i oppgave I (full demping ved 8 s eller kortere, 60 prosent av dempingen ved 14 s eller lengre). Kontroller at Grøtfjord 24. og 25.09 (kortere periode) fortsatt gir 0 stjerner, og vis hva denne timen blir. **Se gren `natt/diffraksjon` og STATUS.md.**
+3. Stoppregelen gjelder: Grøtfjord har faste observasjoner med kortere periode, så dette er ikke samme tilfelle. Legg endringen i punkt 2 på egen gren med tabell og anbefaling hvis den slår inn. Punkt 1 kan gå på main.
+
 ## A. Energi (kJ) på alle spots, og myke lokale regler for Farstadsanden
 Energi = ρ g² H² T² / (16π), ρ = 1025, g = 9,81, altså ca. 1,96 × H² × T² kJ. Samme mål som surf-forecast. Kontroll for Farstad: 2,4 m 11 s = 1427, 3 m 11 s = 1981, 3 m 14 s = 3500, 4 m 15 s = 7400, 5,5 m 16 s = 14396, innenfor 5 prosent. Regn fra svell ute og svellperiode. Vis også energien med totalhøyde ute. Vis kJ for alle spots, i lista, på detaljsiden og i timestripa. Farstadsanden: myke lokale regler fra Magnus med "klype salt" (weight 0,7): energi full fra 3000 kJ, gradvis ned til 1500 kJ; høyvann koster 1 stjerne; offshore_strict. Loggene kan foreslå å myke opp reglene, aldri automatisk. Ferdig når: testene for formel og regler passerer, og kJ vises overalt.
 

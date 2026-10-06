@@ -1408,4 +1408,36 @@ assert wind_type(335, U21) == "onshore"
 print("21.3: Unstad - 100 grader offshore; 294,8 (facing/verstefall), 300 og 335 grader alle onshore "
       "(rettet tilbake fra forrige versjons regresjon), OK")
 
+# ---------- 23: 07.10.2026, Theodors rettelse: "Treffer ikke", ikke "Flatt",
+# når retningen er årsaken og energien ute er høy ----------
+# Grøtfjord om ca. 10 dager: svell ute 2,3 m/15 s (ca. 2 300 kJ) fra 271°, 15°
+# utenfor vinduet [286,310], offshore 5 m/s. Appen viste "Flatt, 0,1 m".
+import fetch as _fetch23
+_expo23 = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())
+G23 = dict(G)
+_sm23, _raw23, _ = _fetch23.resolve_exposure(G23, _expo23, "Grøtfjord")
+if _sm23 is not None:
+    G23["exposure_smoothed"], G23["exposure_raw"] = _sm23, _raw23
+h_271 = {"swell_offshore": 2.3, "height_offshore": 2.5, "dir_offshore": 271, "period": 15,
+         "wind_speed": 5, "wind_dir": 120, "gust": 7}
+r_271 = rate(h_271, G23)
+show("23.1: Grøtfjord 2,3 m/15 s fra 271° (15° utenfor)", r_271)
+assert r_271["stars"] == 0 and r_271["height"] < 0.35
+assert r_271["energy_swell_kj"] > 2000
+assert r_271["low_reason"] == "treffer_ikke", r_271["low_reason"]
+# Samme retning, men LITE energi ute (0,8 m/7 s = ca. 61 kJ): da ER det flatt.
+r_271_low = rate({**h_271, "swell_offshore": 0.8, "height_offshore": 1.0, "period": 7}, G23)
+assert r_271_low["stars"] == 0 and r_271_low["low_reason"] == "flat", r_271_low["low_reason"]
+# Energi ukjent (ingen svellfelt - met.no-reserven): fortsatt "flat" (w, toppen av fila).
+assert w["low_reason"] == "flat"
+# BarentsWatch-timer rører ikke denne regelen: Grøtfjord 26.09 (2,2 m/15,6 s
+# ute fra 272°, BarentsWatch 0,33 m, observert helt flatt) er fortsatt "Flatt".
+assert g26["low_reason"] == "flat" and g26["stars"] == 0
+# Grøtfjord 25.09 (fast observasjon: 3° utenfor vinduet, helt flatt, 1,76
+# m/9,2 s = ca. 510 kJ, over zero-grensa 500): fortsatt 0 stjerner - ordet
+# blir "Treffer ikke" (retningen VAR årsaken den dagen), ikke "Flatt".
+assert just_outside["stars"] == 0 and just_outside["low_reason"] == "treffer_ikke", just_outside["low_reason"]
+print(f"23: retning + høy energi ute = 'Treffer ikke' ({r_271['energy_swell_kj']} kJ), lav energi = 'Flatt', "
+      f"BarentsWatch-timer uendret, Grøtfjord 24-26.09 fortsatt 0 stjerner, OK")
+
 print("Alle tester ok")
