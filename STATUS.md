@@ -21,6 +21,10 @@ Ingen spot får "Mørkt hele dagen" noen gang - selv 21.12 ved 70 N er det 4 tim
 
 Ikke endret (vurdert OK): rating-stjernene settes uavhengig av lys (en 4-stjerners time kl. 07 i mørket vises som 4 stjerner i stripa, men telles aldri som beste vindu, dagbrikke eller varsel) - samme regel som før, ingen grunn til å kappe.
 
+## Oppgave J: WAM800 (skyøkt 07.10.2026) - PLAN OG FØRSTE HENTER, PÅ GREN `natt/wam800` (workflowen ligger også på main fordi GitHub bare kan starte workflows som finnes på standardgrenen)
+
+Skyøkten har ikke nett mot thredds.met.no (eller api.met.no/Open-Meteo - nettverkspolicyen slipper bare gjennom GitHub/PyPI/npm), så utforskingen (J.1-J.3) er bygget som et skript som kjører i GitHub Actions: `fetcher/wam800_explore.py` + `.github/workflows/wam800.yml` (manuell). Skriptet leser katalogen (`fou-hi/mywavewam800/catalog.xml`, med alternativer), åpner hvert datasett via OPeNDAP (bare metadata og ett punkt per spot - aldri hele filer), gjenkjenner total/svell/vindsjø-variablene på standard_name/long_name (aldri hardkodet - rapporten viser hva som faktisk ble funnet, med enheter og retningsattributter), velger nærmeste VÅTE rutepunkt innen 3 km fra punktet 1,5 km ut i retning facing (J.2), henter 48 timer og skriver `data/wam800/report.md` med tabell per spot mot BarentsWatch ved spoten og GFS svell ute fra forecast.json (J.3). Ingenting kobles inn i ratingen (J.6). Workflowen ble startet fra skyøkten på grenen `natt/wam800` - resultatet committes dit av workflowen selv. Se nederst i dette avsnittet for utfallet.
+
 ## Oppgave G: overvåking av henteren (skyøkt 07.10.2026) - FERDIG, committet til main
 
 Tre deler, alle testet:
