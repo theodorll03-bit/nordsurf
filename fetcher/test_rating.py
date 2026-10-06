@@ -1440,4 +1440,31 @@ assert just_outside["stars"] == 0 and just_outside["low_reason"] == "treffer_ikk
 print(f"23: retning + høy energi ute = 'Treffer ikke' ({r_271['energy_swell_kj']} kJ), lav energi = 'Flatt', "
       f"BarentsWatch-timer uendret, Grøtfjord 24-26.09 fortsatt 0 stjerner, OK")
 
+# ---------- 24: 07.10.2026, Theodors rettelse punkt 2: periodeavhengig
+# diffraksjonsdemping ----------
+from rating import diffraction_period_weight, diffraction_damping
+assert diffraction_period_weight(None) == 1.0 and diffraction_period_weight(8) == 1.0 and diffraction_period_weight(6) == 1.0
+assert diffraction_period_weight(14) == 0.6 and diffraction_period_weight(18) == 0.6
+assert round(diffraction_period_weight(11), 4) == 0.8
+assert diffraction_damping(None, 12) == 1.0
+assert diffraction_damping(0.3, 8) == 0.3                      # som før ved kort periode
+assert round(diffraction_damping(0.3, 14), 4) == round(1 - 0.7 * 0.6, 4)  # 0,58 ved langt svell
+assert diffraction_damping(0.3, 11) > diffraction_damping(0.3, 8)
+# Grøtfjord 24.09 (met.no/Windy, kortere periode) og 25.09 (9,2 s): fortsatt 0 stjerner (g, w, just_outside over).
+assert g["stars"] == 0 and w["stars"] == 0 and just_outside["stars"] == 0 and g26["stars"] == 0
+# Theodors time (23.1, 2,3 m/15 s fra 271°): uendret - flat-sperren (0,12 m på
+# spoten, under 0,35 m) slår inn FØR dempingen får betydning. 0 stjerner,
+# "Treffer ikke".
+r_271b = rate(h_271, G23)
+assert r_271b["stars"] == 0 and r_271b["height"] == r_271["height"] and r_271b["low_reason"] == "treffer_ikke"
+# Der det slår inn: samme svell fra 280° (6° utenfor, eksponering 0,33, h
+# 0,45 m over flat-grensa): demping 1-(1-0,33)×0,6 = 0,60 i stedet for 0,33
+# ved 15 s - surfehøyde 0,31 -> 0,57 m, 0 -> 2 stjerner. Ved 8 s er den som før.
+r_280_15 = rate({**h_271, "dir_offshore": 280}, G23)
+r_280_8 = rate({**h_271, "dir_offshore": 280, "period": 8}, G23)
+assert r_280_15["surf_height"] > 0.5 and r_280_15["stars"] >= 2, (r_280_15["surf_height"], r_280_15["stars"])
+assert r_280_8["surf_height"] < r_280_15["surf_height"]
+print(f"24: diffraksjonsdemping p(T) - Grøtfjord 24-26.09 fortsatt 0, Theodors time uendret (0 stjerner, {r_271b['height']} m, "
+      f"treffer ikke), 280°/15 s: surf {r_280_15['surf_height']} m, {r_280_15['stars']} stjerner (8 s: {r_280_8['surf_height']} m), OK")
+
 print("Alle tester ok")

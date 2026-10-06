@@ -145,6 +145,38 @@ def exposure(d, spot, period=None):
     return value if cap is None else min(value, cap)
 
 
+# 07.10.2026, Theodors rettelse: periodeavhengig diffraksjonsdemping. Samme
+# kurve som skjermingen i ROADMAP oppgave I (rating.shelter_period_weight()
+# på grenen lokal/uferdig) - holdes som egne konstanter her til den grenen
+# eventuelt merges, da skal de to deles. Står på CLAUDE.md sin "krever ja"-
+# liste sammen med skjermingskonstantene.
+DIFFRACTION_PERIOD_SHORT = 8     # s - full demping her og kortere
+DIFFRACTION_PERIOD_LONG = 14     # s - DIFFRACTION_PERIOD_LONG_WEIGHT av dempingen her og lengre
+DIFFRACTION_PERIOD_LONG_WEIGHT = 0.6
+
+
+def diffraction_period_weight(period):
+    """p(T): 1,0 ved 8 s eller kortere, lineært ned til 0,6 ved 14 s eller
+    lengre. Ukjent periode: 1,0 (full demping - samme forsiktige antagelse
+    som resten av ratingen)."""
+    if period is None or period <= DIFFRACTION_PERIOD_SHORT:
+        return 1.0
+    if period >= DIFFRACTION_PERIOD_LONG:
+        return DIFFRACTION_PERIOD_LONG_WEIGHT
+    span = DIFFRACTION_PERIOD_LONG - DIFFRACTION_PERIOD_SHORT
+    return 1.0 - (1.0 - DIFFRACTION_PERIOD_LONG_WEIGHT) * (period - DIFFRACTION_PERIOD_SHORT) / span
+
+
+def diffraction_damping(dir_hit, period):
+    """Ekstra Hb-demping for svell som bare når spoten ved diffraksjon (rå
+    eksponering 0, se raw_exposure_zero()): 1 - (1 - dir_hit) × p(T). Ved
+    8 s eller kortere er det nøyaktig dir_hit (som før 07.10.2026), ved 14 s
+    eller lengre bare 60 % av tapet."""
+    if dir_hit is None:
+        return 1.0
+    return 1.0 - (1.0 - dir_hit) * diffraction_period_weight(period)
+
+
 def raw_exposure_zero(d, spot):
     """Sann når retning d bare kan nå spoten ved å bøye seg (diffraktere)
     rundt land - RÅ geometrisk eksponering (før glatting) er 0 i
@@ -1149,11 +1181,18 @@ def rate(hour, spot):
     # se spots.json). Den ekstra diffraksjons-dempingen over ville da dempet
     # samme retning to ganger (capet i h, OG en gang til her) - dropper derfor
     # den ekstra dempingen når en override dekker retningen.
+    #
+    # 07.10.2026, Theodors rettelse (Grøtfjord om ca. 10 dager, 2,3 m/15 s
+    # fra 271°): dempingen skal avhenge av perioden - langt svell bøyer seg
+    # bedre rundt land. Samme p(T)-kurve som skjermingen i oppgave I: full
+    # demping ved 8 s eller kortere, 60 % av dempingen ved 14 s eller lengre,
+    # lineært imellom (diffraction_period_weight()). Dempingsfaktoren blir
+    # 1 - (1 - dir_hit) × p(T): ved 8 s som før (dir_hit), ved 14 s mildere.
     if source == "svell_ute":
         dir_off = hour.get("dir_offshore")
         needs_extra_damping = (raw_exposure_zero(dir_off, spot)
                                 and exposure_override_cap(dir_off, spot) is None)
-        hb_damping = dir_hit if needs_extra_damping else 1.0
+        hb_damping = diffraction_damping(dir_hit, period) if needs_extra_damping else 1.0
     elif source == "barentswatch":
         hb_damping = 1.0
     else:
