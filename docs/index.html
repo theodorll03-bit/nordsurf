@@ -261,7 +261,11 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
   </button>
 </nav>
 
-<div class="toolbar" id="toolbar" hidden><button class="primary" id="logBtn">Logg økt</button></div>
+<div class="toolbar" id="toolbar" hidden style="gap:8px">
+  <button class="primary" id="logBtn">Logg økt</button>
+  <button class="ghost" id="logFromPhotoBtn" style="pointer-events:auto">Fra bilde</button>
+  <input type="file" accept="image/*" id="logPhotoInput" hidden>
+</div>
 
 <div class="scrim" id="scrim"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
@@ -289,6 +293,17 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
     <button class="link" id="bdClose">Lukk</button>
   </div>
   <div class="breakdown" id="bdBody"></div>
+</section>
+<div class="scrim" id="witnessScrim"></div>
+<section class="sheet" id="witnessSheet" role="dialog" aria-modal="true" aria-labelledby="witnessTitle" aria-hidden="true">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <button class="link" id="witnessSkip">Ikke jeg</button>
+    <h2 id="witnessTitle">Var du der?</h2>
+    <span style="width:60px"></span>
+  </div>
+  <p class="sub" id="witnessSub"></p>
+  <div class="starpick" id="witnessPick"></div>
 </section>
 <div class="toast" id="toast" role="status"></div>
 
@@ -635,6 +650,11 @@ const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regn
 // 06.10.2026, Theodors oppgave (andre runde): samme tekst Theodor selv
 // formulerte, ordrett - erstatter den første versjonen av denne teksten.
 const ENERGY_EXPLAINER = "Energi i bølgene ute. Lang periode gir mye mer energi og kraft, selv med samme høyde.";
+// ROADMAP oppgave I (skjerming), 06.10.2026 natt: statisk per spot (ikke per
+// time) - hvor åpen spoten er mot havet, før noe er lært fra BarentsWatch
+// eller loggene dine. Vises bare for spots der fetch.py sin resolve_shelter()
+// stolte på målingen (s.shelter_label er null ellers, se der).
+const SHELTER_EXPLAINER = "Hvor åpen spoten er mot havet, før noe er lært fra BarentsWatch eller loggene dine. Lang periode diffrakterer (bøyer seg) bedre rundt odder og inn fjorder enn kort periode, så skjermingen teller mindre for langt svell.";
 function localRulesHtml(h){
   // 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
   // "Lokalkunnskap"): egen, tydelig merket seksjon - IKKE i den vanlige
@@ -809,6 +829,7 @@ function renderSpot(){
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
       <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
       <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":(h.zone==="langtid"?"ikke tilgjengelig så langt frem":"–")} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
+      ${s.shelter_label ? `<div class="cell wide"><div class="k">Skjerming <button type="button" class="infoBtn" id="shelterInfo" aria-label="Hva betyr skjerming?">ⓘ</button></div><div class="v">${esc(s.shelter_label[0].toUpperCase()+s.shelter_label.slice(1))}</div><div class="n">Startverdi for reservemodellen, før noe er lært fra BarentsWatch eller loggene</div></div>` : ""}
     </div>
     ${localRulesHtml(h)}
     <h2 class="sec">Rapporter fra andre</h2>
@@ -819,6 +840,7 @@ function renderSpot(){
   $("#bdOpen").onclick = ()=>openBreakdown(h);
   $("#heightInfo").onclick = ()=>toast(SURF_HEIGHT_EXPLAINER, null, null, 9000);
   $("#energyInfo").onclick = ()=>toast(ENERGY_EXPLAINER, null, null, 9000);
+  if($("#shelterInfo")) $("#shelterInfo").onclick = ()=>toast(SHELTER_EXPLAINER, null, null, 9000);
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
@@ -981,6 +1003,7 @@ function renderLogs(){
       : cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
       : cal.transfer_source==="spots.json" ? "Satt i spots.json"
       : cal.transfer_source==="logs" ? "Lært fra loggene dine"
+      : cal.transfer_source==="skjerming" ? "Geometrisk startverdi fra skjerming (ROADMAP oppgave I), ikke lært ennå"
       : "Standardverdi";
     const surfFactor = cal.surf_factor_used ?? 1.0;
     const surfLogs = cal.surf_factor_logs ?? 0;
@@ -1299,10 +1322,13 @@ function localInputValue(d){
   const p = new Intl.DateTimeFormat("sv-SE",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
   return p.replace(" ","T");
 }
-function openSheet(){
-  logDraft = {spot: DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
+function openSheet(spotId, time){
+  // ROADMAP oppgave F: kalt uten argumenter fra verktøylinjens "Logg økt"
+  // (nåværende spot/nå, som før) - kalt MED fra kartets trykk-og-hold
+  // (map.js) og fra "Logg fra bilde" (bildets foreslåtte tidspunkt).
+  logDraft = {spot: spotId || DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
   $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
-  $("#logTime").value = localInputValue(new Date());
+  $("#logTime").value = localInputValue(time || new Date());
   $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
   document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
   document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
@@ -1338,6 +1364,94 @@ function closeSheet(){
 }
 $("#cancelLog").onclick = closeSheet; $("#scrim").onclick = closeSheet;
 document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeSheet(); closeBreakdown(); } });
+
+/* ---------- "Logg fra bilde" (ROADMAP oppgave F) ----------
+   Bildet lastes ALDRI opp eller lagres noe sted - bare lest i minnet her
+   (ArrayBuffer) for å finne et tidspunkt, så kastes referansen (selve
+   input-elementets value nullstilles etter bruk). Bare loggen (tall, ikke
+   bildet) lagres, akkurat som en vanlig økt. */
+function parseExifDate(buf){
+  // EXIF sitt DateTimeOriginal (helst) eller DateTime, fra JPEG sin APP1-
+  // seksjon. Returnerer en lokal Date, eller null (ikke JPEG, ingen EXIF,
+  // eller feltet mangler - svært vanlig for skjermbilder, som sjelden har
+  // EXIF i det hele tatt).
+  try{
+    const view = new DataView(buf);
+    if(view.getUint16(0) !== 0xFFD8) return null;
+    let offset = 2;
+    while(offset + 4 <= view.byteLength){
+      if(view.getUint8(offset) !== 0xFF) break;
+      const marker = view.getUint8(offset+1);
+      if(marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD9)){ offset += 2; continue; }
+      const segLen = view.getUint16(offset+2);
+      if(marker === 0xE1 && view.getUint32(offset+4) === 0x45786966 && view.getUint16(offset+8) === 0){
+        const d = parseExifTiff(view, offset+10);
+        if(d) return d;
+      }
+      if(marker === 0xDA) break; // start of scan - EXIF kommer alltid før dette
+      offset += 2 + segLen;
+    }
+  }catch(e){}
+  return null;
+}
+function parseExifTiff(view, tiffStart){
+  const little = view.getUint16(tiffStart) === 0x4949;
+  const g16 = o => view.getUint16(o, little), g32 = o => view.getUint32(o, little);
+  function readIFD(ifdOffset){
+    const n = g16(ifdOffset), tags = {};
+    for(let i=0;i<n;i++){
+      const e = ifdOffset + 2 + i*12;
+      tags[g16(e)] = {count: g32(e+4), valueOffset: e+8};
+    }
+    return tags;
+  }
+  function readAscii(entry){
+    let start = entry.valueOffset;
+    if(entry.count > 4) start = tiffStart + g32(entry.valueOffset);
+    let s = "";
+    for(let i=0;i<entry.count-1;i++) s += String.fromCharCode(view.getUint8(start+i));
+    return s;
+  }
+  const ifd0 = readIFD(tiffStart + g32(tiffStart+4));
+  let s = null;
+  if(ifd0[0x8769]){
+    const exifIfd = readIFD(tiffStart + g32(ifd0[0x8769].valueOffset));
+    s = (exifIfd[0x9003] && readAscii(exifIfd[0x9003])) || (exifIfd[0x9004] && readAscii(exifIfd[0x9004])) || null;
+  }
+  if(!s && ifd0[0x0132]) s = readAscii(ifd0[0x0132]);
+  if(!s) return null;
+  const m = s.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+  return isNaN(d.getTime()) ? null : d;
+}
+function parseFilenameDate(name){
+  // Reserve når EXIF mangler: vanlige filnavn-mønstre fra telefon-kameraer
+  // og skjermbilder (f.eks. IMG_20261006_143022.jpg, Screenshot_2026-10-06-
+  // 14-30-22.png, 2026-10-06 14.30.22.jpg).
+  const m = name.match(/(\d{4})-?(\d{2})-?(\d{2})[ _T-](\d{2})[.:-]?(\d{2})[.:-]?(\d{2})/);
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+  return isNaN(d.getTime()) ? null : d;
+}
+$("#logFromPhotoBtn").onclick = ()=>$("#logPhotoInput").click();
+$("#logPhotoInput").onchange = async ()=>{
+  const input = $("#logPhotoInput");
+  const file = input.files && input.files[0];
+  if(!file) return;
+  let when = null;
+  try{
+    const buf = await file.arrayBuffer();
+    when = parseExifDate(buf);
+  }catch(e){}
+  if(!when) when = parseFilenameDate(file.name);
+  if(!when) when = new Date(file.lastModified);
+  input.value = ""; // bildet er ferdig lest - ingen referanse beholdes
+  openSheet(null, when);
+  const typeBtns = document.querySelector('[data-group="type"]').querySelectorAll("button");
+  if(typeBtns[1]) typeBtns[1].click(); // "Observert"
+  $("#logSource").value = "Bilde";
+};
 
 /* ---------- Forklaring av ratingen ---------- */
 function breakdownRowHtml(line, isTotal){
@@ -1416,6 +1530,91 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   state.tab = t.dataset.tab; render(); window.scrollTo(0,0);
 });
 
+/* ---------- "Var du der?" (ROADMAP oppgave F) ----------
+   Appen er statisk og har ingen egen historikk-API - s.hours fra
+   forecast.json inneholder ALDRI timer før "nå" på hente-tidspunktet (se
+   fetch.py sin build_spot(), loopen starter alltid på now). Derfor bygges
+   en LITEN, egen "vitne"-logg i localStorage, fylt på hver gang appen
+   laster et nytt varsel og en favoritt sin nåværende time er ny - en
+   TILNÆRMING (fanger bare vinduer som skjedde mens appen faktisk var åpnet
+   en gang nær tidspunktet), ikke en fullstendig historikk. */
+const WITNESS_KEY = "nordsurf.witness.v1";
+const WITNESS_ASKED_KEY = "nordsurf.witnessAsked.v1";
+const WITNESS_MIN_STARS = 3;
+const WITNESS_MAX_AGE_H = 30; // hvor lenge et vitnet godt vindu fortsatt kan spørres om
+function loadWitness(){ try{ return JSON.parse(localStorage.getItem(WITNESS_KEY)) || []; }catch(e){ return []; } }
+function loadWitnessAsked(){ try{ return JSON.parse(localStorage.getItem(WITNESS_ASKED_KEY)) || []; }catch(e){ return []; } }
+function recordWitness(){
+  if(!DATA || !DATA.spots) return;
+  const favs = (window.Auth && Auth.state && Auth.state.favorites) || new Set();
+  if(!favs.size) return;
+  const w = loadWitness();
+  const seen = new Set(w.map(x=>x.spot+"|"+x.t));
+  let changed = false;
+  for(const s of DATA.spots){
+    if(!favs.has(s.id)) continue;
+    // Bare timer som allerede har startet (nåværende time og evt. én til som
+    // fortsatt henger med fra forrige kjøring) - aldri fremtidige anslag.
+    for(const h of s.hours.slice(0,2)){
+      if(new Date(h.t).getTime() > Date.now()) continue;
+      const key = s.id+"|"+h.t;
+      if(seen.has(key)) continue;
+      seen.add(key); changed = true;
+      w.push({spot:s.id, t:h.t, stars:h.stars, daylight: h.daylight!==false});
+    }
+  }
+  const cutoff = Date.now() - WITNESS_MAX_AGE_H*3600e3;
+  const pruned = w.filter(x=>new Date(x.t).getTime() >= cutoff);
+  if(changed || pruned.length!==w.length) try{ localStorage.setItem(WITNESS_KEY, JSON.stringify(pruned)); }catch(e){}
+}
+function pendingWitness(){
+  const askedSet = new Set(loadWitnessAsked());
+  const cand = loadWitness().filter(x=>x.stars>=WITNESS_MIN_STARS && x.daylight && !askedSet.has(x.spot+"|"+x.t));
+  if(!cand.length) return null;
+  cand.sort((a,b)=>b.t.localeCompare(a.t));
+  return cand[0];
+}
+function markWitnessAsked(entry){
+  try{
+    const asked = loadWitnessAsked();
+    asked.push(entry.spot+"|"+entry.t);
+    localStorage.setItem(WITNESS_ASKED_KEY, JSON.stringify(asked.slice(-200)));
+  }catch(e){}
+}
+function maybeShowWitnessPrompt(){
+  const entry = pendingWitness();
+  if(!entry) return;
+  const spot = DATA.spots.find(s=>s.id===entry.spot);
+  if(!spot) return;
+  const when = new Date(entry.t);
+  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 stjerner.`;
+  $("#witnessPick").innerHTML = PICK_WORDS.map((w,n)=>`<button data-n="${n}"><b>${n}</b>${w}</button>`).join("");
+  $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const stars = +b.dataset.n;
+    const f = forecastAt(entry.spot, when);
+    const log = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot: entry.spot, t: when.toISOString(),
+      stars, size: null, wind: null, type: "observed", source: "Var du der?",
+      forecastStars: entry.stars, forecastFaded: f ? f.faded : null, forecastHeight: f ? f.height : null,
+      swellOffshore: f ? f.swell_offshore : null, forecastPeriod: f ? f.period : null, directness: f ? f.directness : null,
+      dirOffshore: f ? f.dir_offshore : null, bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null,
+      swellShare: f ? f.swell_share : null, spotDirectionFactor: f ? f.spot_direction_factor : null,
+      bwPeriod: f ? f.bw_period : null, bwDir: f ? f.bw_dir : null, sourcesDisagree: f ? !!f.sources_disagree : false,
+      tideState: f && f.tide ? f.tide.state : null, energyTotalKj: f ? f.energy_total_kj : null, energySwellKj: f ? f.energy_swell_kj : null};
+    saveLogs([...loadLogs(), log]);
+    markWitnessAsked(entry);
+    closeWitness();
+    toast("Takk! Lagret som økt.");
+    syncLogs();
+    if(state.tab==="logger") renderLogs();
+  });
+  $("#witnessSheet").classList.add("open"); $("#witnessScrim").classList.add("open"); $("#witnessSheet").setAttribute("aria-hidden","false");
+}
+function closeWitness(){
+  $("#witnessSheet").classList.remove("open"); $("#witnessScrim").classList.remove("open"); $("#witnessSheet").setAttribute("aria-hidden","true");
+}
+$("#witnessSkip").onclick = ()=>{ const e = pendingWitness(); if(e) markWitnessAsked(e); closeWitness(); };
+$("#witnessScrim").onclick = closeWitness;
+
 /* ---------- Oppstart ---------- */
 async function start(){
   $("#app").innerHTML = `<header class="top"><h1>Varsel</h1><p class="sub">Henter varsel…</p></header>`;
@@ -1424,6 +1623,8 @@ async function start(){
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
     render();
     syncLogs();
+    recordWitness();
+    maybeShowWitnessPrompt();
   }catch(e){
     $("#app").innerHTML = `<header class="top"><h1>Varsel</h1></header><p class="empty">Fant ikke varseldata. Kjør henteren (fetcher/fetch.py) eller vent på neste automatiske kjøring.</p>`;
   }

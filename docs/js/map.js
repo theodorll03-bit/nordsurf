@@ -98,6 +98,24 @@ function globalBwUntil(){
 const mapState = { idx: 0, spotId: null, sheetOpen: false, explainOpen: false, inited: false };
 let map, markersLayer, discLayer, discMarker;
 
+// ROADMAP oppgave F ("logg rett fra kartet"): trykk og hold-gest, generisk
+// nok til å legges på et vilkårlig element uten å forstyrre dets vanlige
+// click-handler. Fanger click i CAPTURE-fasen (kjører FØR elementets egen
+// .onclick) for å stoppe den ETTERPÅLGENDE klikk-hendelsen pekeren uansett
+// sender ved slipp - uten dette ville et langt trykk ÅPNET loggarket OG
+// trigget det vanlige klikket (f.eks. kartsarket for spoten).
+function attachLongPress(el, onLongPress, ms){
+  ms = ms || 550;
+  let timer = null, fired = false;
+  const start = ()=>{ fired = false; timer = setTimeout(()=>{ fired = true; onLongPress(); }, ms); };
+  const cancel = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
+  el.addEventListener("pointerdown", start);
+  el.addEventListener("pointerup", cancel);
+  el.addEventListener("pointercancel", cancel);
+  el.addEventListener("pointerleave", cancel);
+  el.addEventListener("click", ev=>{ if(fired){ ev.stopPropagation(); ev.preventDefault(); fired = false; } }, true);
+}
+
 /* ---------- Leaflet-kart ---------- */
 function initMap(){
   if(mapState.inited) return;
@@ -472,9 +490,16 @@ function selectSpot(spotId){
   }).addTo(discLayer);
   {
     const el = discMarker.getElement();
-    el.querySelector(".disc-wrap").onclick = (ev)=>{ ev.stopPropagation(); openMapSheet(spot.id); };
+    const wrapEl = el.querySelector(".disc-wrap");
+    wrapEl.onclick = (ev)=>{ ev.stopPropagation(); openMapSheet(spot.id); };
     el.querySelector(".disc-plate").onclick = (ev)=>{ ev.stopPropagation(); openMapSheet(spot.id); };
-    if(reduceMotion()) el.querySelector(".disc-wrap").classList.remove("disc-enter");
+    if(reduceMotion()) wrapEl.classList.remove("disc-enter");
+    // ROADMAP oppgave F: trykk og hold på skiva logger direkte for denne
+    // spoten og nøyaktig det tidspunktet skiva viser akkurat nå (mapState.idx).
+    attachLongPress(wrapEl, ()=>{
+      if(navigator.vibrate) navigator.vibrate(15);
+      openSheet(spot.id, new Date(TIMELINE[mapState.idx]));
+    });
   }
 
   const targetZoom = Math.max(map.getZoom(), 10);

@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-92ed5d4efcef";
+const CACHE = "nordsurf-8364a6cb1f79";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "js/map.js", "css/map.css", "js/auth.js"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
