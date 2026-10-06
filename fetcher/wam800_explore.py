@@ -50,12 +50,13 @@ OUT_DIR = ROOT / "data" / "wam800"
 
 THREDDS = "https://thredds.met.no/thredds"
 # Kandidatkataloger - den første som svarer brukes, resten står i rapporten.
-CATALOGS = [
-    "fou-hi/mywavewam800/catalog.xml",
-    "fou-hi/mywavewam800m/catalog.xml",
-    "fou-hi/mywavewam800s/catalog.xml",
-    "fou-hi/catalog.xml",
-]
+# Første kjøring (07.10.2026) fant bare `fou-hi/mywavewam800m/` (MidtNorge,
+# 62,3-67,8 N - dekker Farstadsanden, ikke Troms/Lofoten). Nå listes
+# `fou-hi/catalog.xml` og ALLE underkataloger med "wam800"/"mywavewam" i
+# navnet følges (c0-c4-regionene ligger trolig i søsterkataloger).
+ROOT_CATALOG = "fou-hi/catalog.xml"
+CATALOG_MATCH = ("wam800", "mywavewam")
+SKIP_DATASET = ("SPC",)  # spektra, ikke parametre
 POINT_OUT_KM = 1.5
 MAX_DIST_KM = 3.0
 HOURS = 48
@@ -103,7 +104,14 @@ def classify_vars(ds):
         text = (name + " " + attrs.get("standard_name", "") + " " + attrs.get("long_name", "")).lower()
         if len(v.dimensions) < 2:
             continue
-        part = "swell" if "swell" in text else ("sea" if ("wind_sea" in text or "windsea" in text or "wind sea" in text or re.search(r"\bsea\b", name.lower())) else "total")
+        # 07.10.2026: WAM800 sine navn er hs/tp/thq (total), hs_sea/tp_sea/
+        # thq_sea (vindsjø, standard_name sea_surface_wind_wave_*) og
+        # hs_swell/tp_swell/thq_swell (svell) - pluss partisjonene fshs/
+        # sshs/tshs (første/andre/tredje svell) som hoppes over her.
+        lname = name.lower()
+        if lname.startswith(("fs", "ss", "ts")) or "primary" in text or "secondary" in text or "third" in text:
+            continue
+        part = "swell" if "swell" in text else ("sea" if ("wind_wave" in text or "wind_sea" in text or "windsea" in text or "wind sea" in text or lname.endswith("_sea")) else "total")
         if "height" in text or name.lower().startswith("hs") or "significant" in text:
             kind = "hs"
         elif "period" in text or name.lower().startswith(("tp", "tm", "t0")):
@@ -113,8 +121,14 @@ def classify_vars(ds):
         else:
             continue
         key = f"{part}_{kind}"
-        # foretrekk peak-periode (tp) foran mean (tm) der begge finnes
-        if key not in roles or ("peak" in text and "peak" not in roles[key + "_text"]):
+        # foretrekk peak-periode (tp) foran mean (tm), og MIDLERE retning
+        # (thq, "mean wave direction") foran peak-retning (Pdir) - det er
+        # middelretningen BarentsWatch-konvensjonen vår er bevist for.
+        better = (key not in roles
+                  or (kind == "tp" and "peak" in text and "peak" not in roles[key + "_text"])
+                  or (kind == "dir" and "mean" in text and "mean" not in roles[key + "_text"])
+                  or (kind == "hs" and "significant" in text and "significant" not in roles[key + "_text"]))
+        if better:
             roles[key] = name
             roles[key + "_text"] = text
     return {k: v for k, v in roles.items() if not k.endswith("_text")}, info
@@ -223,6 +237,10 @@ def write_report(results, catalog_notes, spots):
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [f"# WAM800-utforsking (ROADMAP oppgave J), kjørt {now}", ""]
     lines += ["## Kataloger", ""] + [f"- {n}" for n in catalog_notes] + [""]
+    lines += ["## Retningskonvensjon", "",
+              "WAM800 sine retninger har standard_name `*_to_direction` (retningen bølgene går MOT) - samme som BarentsWatch sin "
+              "`totalMeanWaveDirection`. Internt i Nordsurf er alt \"fra\"-retning, så +180 trengs ved en eventuell innkobling. "
+              "Tallene i tabellene under er RÅ (mot), ikke omregnet.", ""]
     fc = forecast_lookup()
     covered = {}
     for r in results:
@@ -275,18 +293,25 @@ def main():
     config = json.loads(SPOTS.read_text(encoding="utf-8"))
     spots = [s for s in config["spots"] if s.get("enabled")]
     catalog_notes, datasets = [], []
-    for c in CATALOGS:
+    try:
+        ds, subs = list_catalog(ROOT_CATALOG)
+        catalog_notes.append(f"{ROOT_CATALOG}: {len(ds)} datasett, {len(subs)} underkataloger: {[t for t, _ in subs]}")
+    except Exception as e:
+        catalog_notes.append(f"{ROOT_CATALOG}: FEIL {str(e)[:160]}")
+        subs = []
+    for title, href in subs:
+        if not any(m in (title or "").lower() or m in href.lower() for m in CATALOG_MATCH):
+            continue
+        path = href if href.startswith("fou-hi/") else f"fou-hi/{href.lstrip('/')}"
         try:
-            ds, subs = list_catalog(c)
-            catalog_notes.append(f"{c}: {len(ds)} datasett, {len(subs)} underkataloger {[t for t, _ in subs][:12]}")
+            ds, _ = list_catalog(path)
+            catalog_notes.append(f"{path}: {len(ds)} datasett {[n for n, _ in ds][:10]}")
             datasets += ds
-            if ds:
-                break
         except Exception as e:
-            catalog_notes.append(f"{c}: FEIL {str(e)[:160]}")
-    # Begrens til de nyeste filene per navnemønster (katalogene kan ha
-    # arkiv - vi vil bare ha de siste kjøringene, maks 8 datasett).
-    datasets = sorted(set(datasets), key=lambda x: x[0], reverse=True)[:8]
+            catalog_notes.append(f"{path}: FEIL {str(e)[:160]}")
+    datasets = [(n, u) for n, u in set(datasets) if not any(k in n for k in SKIP_DATASET)]
+    # Siste kjøring per region: WAVE12 foran WAVE00 (samme dag), ellers alfabetisk.
+    datasets = sorted(datasets, key=lambda x: x[0], reverse=True)[:12]
     results = []
     for name, up in datasets:
         print("Datasett:", name, up)
