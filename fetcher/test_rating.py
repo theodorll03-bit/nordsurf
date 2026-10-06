@@ -1408,4 +1408,118 @@ assert wind_type(335, U21) == "onshore"
 print("21.3: Unstad - 100 grader offshore; 294,8 (facing/verstefall), 300 og 335 grader alle onshore "
       "(rettet tilbake fra forrige versjons regresjon), OK")
 
+# ---------- 22: ROADMAP oppgave I (skjerming), 06.10.2026 natt ----------
+from rating import (shelter_period_weight, shelter_transfer_factor, transfer_prior, shelter_label,
+                     DEFAULT_TRANSFER, SHELTER_PERIOD_SHORT, SHELTER_PERIOD_LONG, SHELTER_PERIOD_LONG_WEIGHT)
+
+# 22.1: p(T) - flat 1,0 til og med 8 s, flat 0,6 fra og med 14 s, lineært
+# imellom. Ukjent periode: 1,0 (samme konservative antagelse som period_score()).
+assert shelter_period_weight(None) == 1.0
+assert shelter_period_weight(4) == 1.0
+assert shelter_period_weight(SHELTER_PERIOD_SHORT) == 1.0
+assert round(shelter_period_weight(11), 4) == round(1.0 - 0.4 * 3 / 6, 4)  # midtveis = 0,8
+assert shelter_period_weight(SHELTER_PERIOD_LONG) == SHELTER_PERIOD_LONG_WEIGHT
+assert shelter_period_weight(20) == SHELTER_PERIOD_LONG_WEIGHT
+print("22.1: shelter_period_weight() - flat 1,0 til 8 s, flat 0,6 fra 14 s, lineært imellom, OK")
+
+# 22.2: skjermingsfaktor - mangler/1,0+/ugyldig shelter_factor gir ALLTID
+# 1,0 (ingen effekt), samme vakt som energy_factor() sin egen. En reell
+# (under 1,0) shelter_factor gir mer effekt ved kort periode enn lang.
+SHELTERED = {"shelter_factor": 0.8}
+assert shelter_transfer_factor({}, 10) == 1.0
+assert shelter_transfer_factor({"shelter_factor": None}, 10) == 1.0
+assert shelter_transfer_factor({"shelter_factor": 1.0}, 10) == 1.0
+assert shelter_transfer_factor({"shelter_factor": 1.2}, 10) == 1.0  # "mer åpen enn referansen" - ingen bonus
+short = shelter_transfer_factor(SHELTERED, 6)
+long_ = shelter_transfer_factor(SHELTERED, 14)
+assert round(short, 4) == round(1 - (1 - 0.8) * 1.0, 4) == 0.8
+assert round(long_, 4) == round(1 - (1 - 0.8) * 0.6, 4) == 0.88
+assert short < long_  # kort periode straffes mer
+print(f"22.2: shelter_transfer_factor() - mangler/åpen=1,0 alltid, skjermet kort {short} < langt {long_}, OK")
+
+# 22.3: transfer_prior() = DEFAULT_TRANSFER × skjermingsfaktor.
+assert transfer_prior({}) == DEFAULT_TRANSFER
+assert transfer_prior(SHELTERED, 6) == round(DEFAULT_TRANSFER * 0.8, 3)
+assert transfer_prior(SHELTERED, 14) == round(DEFAULT_TRANSFER * 0.88, 3)
+print(f"22.3: transfer_prior() - åpen {transfer_prior({})}, skjermet kort/langt "
+      f"{transfer_prior(SHELTERED, 6)}/{transfer_prior(SHELTERED, 14)}, OK")
+
+# 22.4: shelter_label() - grensene 0,85/0,6, og None gir None (ikke en falsk
+# "skjermet" for en spot uten pålitelig mål).
+assert shelter_label(None) is None
+assert shelter_label(1.0) == "åpen"
+assert shelter_label(0.85) == "åpen"
+assert shelter_label(0.849) == "delvis skjermet"
+assert shelter_label(0.6) == "delvis skjermet"
+assert shelter_label(0.599) == "skjermet"
+assert shelter_label(0.0) == "skjermet"
+print("22.4: shelter_label() - åpen/delvis skjermet/skjermet-grensene (0,85/0,6) og None->None, OK")
+
+# 22.5: fetch.resolve_shelter() - sjekksum-vern (samme mønster som
+# resolve_exposure()) OG "reliable"-flagget fra shelter.py (facing/
+# swell_window-avvik, se shelter.py sin moduldocstring og STATUS.md).
+import fetch as _fetch
+from exposure import spot_checksum as _checksum
+_SPOT = {"id": "x", "spot": {"lat": 69.0, "lon": 18.0}, "swell_window": [280, 320], "facing": 300}
+_ok_entry = {"x": {"checksum": _checksum(_SPOT), "height_factor": 0.75, "reliable": True}}
+_unreliable_entry = {"x": {"checksum": _checksum(_SPOT), "height_factor": 0.75, "reliable": False,
+                           "facing_window_divergence_deg": 55.0}}
+_stale_entry = {"x": {"checksum": "feil-sjekksum", "height_factor": 0.75, "reliable": True}}
+hf, warn = _fetch.resolve_shelter(_SPOT, _ok_entry, "Test")
+assert hf == 0.75 and warn is None
+hf, warn = _fetch.resolve_shelter(_SPOT, _unreliable_entry, "Test")
+assert hf is None and warn is not None and "55.0" in warn
+hf, warn = _fetch.resolve_shelter(_SPOT, _stale_entry, "Test")
+assert hf is None and warn is not None and "sjekksum" in warn
+hf, warn = _fetch.resolve_shelter(_SPOT, {}, "Test")
+assert hf is None and warn is None  # ikke beregnet ennå - stille, ingen advarsel (samme som resolve_exposure() sin "mangler helt"-gren ville vært støyende her for de fleste kjøringer)
+print("22.5: fetch.resolve_shelter() - sjekksum-vern og reliable-flagget begge respektert, OK")
+
+# 22.6: calibrate.effective_transfer() - ny "skjerming"-gren MELLOM
+# spots.json og DEFAULT_TRANSFER, uten å endre de andre grenene.
+import calibrate as _calibrate
+_t, _src = _calibrate.effective_transfer({"shelter_factor": 0.8}, {}, [])
+assert _src == "skjerming" and _t == transfer_prior({"shelter_factor": 0.8})
+_t, _src = _calibrate.effective_transfer({}, {}, [])
+assert _src == "standard" and _t == DEFAULT_TRANSFER  # uendret når ingen skjerming er beregnet
+_t, _src = _calibrate.effective_transfer({"transfer": 0.5, "shelter_factor": 0.8}, {}, [])
+assert _src == "spots.json" and _t == 0.5  # spots.json vinner fortsatt over skjerming
+print("22.6: calibrate.effective_transfer() - skjerming mellom spots.json og standard, OK")
+
+# 22.7: rating.spot_height() bruker transfer_prior() PÅ NYTT per time (ekte
+# periode) når transfer_source er "skjerming" - IKKE det statiske
+# spot["transfer"]-tallet (som bare er til calibration sin visning, regnet
+# med en antatt periode - se transfer_prior() sin docstring).
+_shelter_spot = {"transfer": 0.482, "transfer_source": "skjerming", "shelter_factor": 0.8,
+                  "ideal_height": [1, 3], "max_height": 4, "surf_factor": 1.0}
+h_short, src_short, _ = _spot_height({"swell_offshore": 2.0, "dir_offshore": None, "period": 6}, _shelter_spot)
+h_long, src_long, _ = _spot_height({"swell_offshore": 2.0, "dir_offshore": None, "period": 14}, _shelter_spot)
+assert src_short == src_long == "svell_ute"
+_DIRECTNESS_UNKNOWN = 0.7  # directness(None, spot) sin egen nøytralverdi - exposure() faller tilbake til den
+assert round(h_short / (2.0 * _DIRECTNESS_UNKNOWN), 4) == transfer_prior(_shelter_spot, 6)
+assert round(h_long / (2.0 * _DIRECTNESS_UNKNOWN), 4) == transfer_prior(_shelter_spot, 14)
+assert h_short < h_long  # kort periode -> mer skjermingseffekt -> lavere transfer -> lavere høyde
+print(f"22.7: spot_height() bruker ekte periode for skjerming per time - kort {round(h_short,3)} "
+      f"< langt {round(h_long,3)} m (samme svell ute), OK")
+
+# 22.8: ekte data/shelter.json (06.10.2026 natt) - Unstad er referansen
+# (height_factor nøyaktig 1,0), Russelv og Steinkrøssa flagget UPÅLITELIG
+# (facing peker 55-60 grader fra swell_window sitt senter - se STATUS.md),
+# de andre fem pålitelige.
+_shelter_path = Path(__file__).parent.parent / "data" / "shelter.json"
+if _shelter_path.exists():
+    _shelter_data = json.loads(_shelter_path.read_text())
+    assert _shelter_data["unstad"]["height_factor"] == 1.0
+    assert _shelter_data["unstad"]["reliable"] is True
+    for _sid in ("russelv", "steinkrossa"):
+        assert _shelter_data[_sid]["reliable"] is False, f"{_sid} skulle vært flagget upålitelig"
+        assert _shelter_data[_sid]["facing_window_divergence_deg"] > 30
+    for _sid in ("grotfjord", "tromvik", "ersfjordstranda", "lenangsoyra", "farstadsanden"):
+        assert _shelter_data[_sid]["reliable"] is True, f"{_sid} skulle vært pålitelig"
+        assert _shelter_data[_sid]["height_factor"] < 1.0  # alle mindre åpne enn referansen Unstad
+    print("22.8: data/shelter.json - Unstad=1,0 (referanse), Russelv/Steinkrøssa upålitelig "
+          "(facing/vindu-avvik), de andre fem pålitelige og under 1,0, OK")
+else:
+    print("22.8: data/shelter.json finnes ikke - hoppet over (kjør fetcher/shelter.py)")
+
 print("Alle tester ok")

@@ -17,7 +17,7 @@ import sun
 import tide as tidemod
 import longrange
 from exposure import spot_checksum
-from rating import (angle_diff, directness, rate, swell_share, bw_period_factor,
+from rating import (angle_diff, directness, rate, swell_share, bw_period_factor, shelter_label,
                      SURF_FACTOR_DEFAULT, SURF_FACTOR_MIN, SURF_FACTOR_MAX)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,6 +26,7 @@ OUT = ROOT / "docs" / "data" / "forecast.json"
 BW_CALIB = ROOT / "data" / "bw_calibration.json"
 EXPOSURE_BASELINE = ROOT / "data" / "exposure_baseline.json"
 EXPOSURE_LEARNED = ROOT / "data" / "exposure.json"
+SHELTER = ROOT / "data" / "shelter.json"
 # 06.10.2026, ROADMAP oppgave B: 16 døgn (var 5), men stopper fortsatt ved
 # kortest tilgjengelige kilde. Dag 8-16 lagres hver 6. time, se longrange.py.
 HOURS_AHEAD_MAX = longrange.HOURS
@@ -119,6 +120,32 @@ def resolve_obstacle_geometry(spot, exposure_data):
     if entry is None or entry.get("checksum") != spot_checksum(spot):
         return None, None
     return entry.get("distance_km"), entry.get("width_km")
+
+
+def resolve_shelter(spot, shelter_data, name):
+    """ROADMAP oppgave I (skjerming), 06.10.2026 natt: statisk, normalisert
+    height_factor for spoten, hvis data/shelter.json er bygget, sjekksummen
+    stemmer (samme vern som resolve_exposure()) OG fetcher/shelter.py selv
+    markerte målingen "reliable" (facing og swell_window pekte på samme
+    åpning da geometrien ble beregnet - se shelter.py sin
+    FACING_WINDOW_DIVERGENCE_MAX). Russelv og Steinkrøssa har i dag facing
+    55-60 grader fra swell_window sitt senter (samme mønster som
+    Lenangsøyra hadde FØR dagens facing-fix) - height_factor er beregnet med
+    riktig metode, men mot høyst sannsynlig feil åpning, og brukes derfor
+    ikke i ratingen før det er undersøkt (se STATUS.md). Returnerer
+    (height_factor_eller_None, advarsel_eller_None)."""
+    entry = shelter_data.get(spot["id"])
+    if entry is None:
+        return None, None
+    if entry.get("checksum") != spot_checksum(spot):
+        return None, (f"{name}: skjermingens sjekksum stemmer ikke med spots.json - facing, "
+                      f"svellvindu eller koordinater er endret siden siste kjøring av "
+                      f"fetcher/shelter.py. Ingen geometrisk transfer_prior for reservemodellen")
+    if not entry.get("reliable", True):
+        return None, (f"{name}: skjerming beregnet, men IKKE brukt - facing og swell_window peker "
+                      f"{entry.get('facing_window_divergence_deg')} grader fra hverandre "
+                      f"(se STATUS.md, samme mønster som Lenangsøyra hadde før facing-fiksen)")
+    return entry.get("height_factor"), None
 
 
 def sanitize_hour_fields(hour):
@@ -352,7 +379,8 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
-def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data, ledger=None):
+def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data, shelter_data,
+               ledger=None):
     name = spot["name"]
     ledger = ledger or {}
     print(name)
@@ -442,6 +470,17 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if exposure_width_km is not None:
         spot["exposure_width_km"] = exposure_width_km
 
+    # ROADMAP oppgave I (skjerming), 06.10.2026 natt: statisk height_factor,
+    # til BÅDE energy_factor() sin terskeljustering (rating.py) OG
+    # transfer-fallback-kjeden under (calibrate.effective_transfer()) -
+    # derfor FØR transfer-blokken, samme plassering som eksponeringen over.
+    shelter_factor, shelter_warning = resolve_shelter(spot, shelter_data, name)
+    if shelter_factor is not None:
+        spot["shelter_factor"] = shelter_factor
+        spot["shelter_label"] = shelter_label(shelter_factor)
+    if shelter_warning:
+        REPORT.append((name, "Skjerming (del I)", "info", shelter_warning))
+
     # 27.09.2026, ROADMAP oppgave 4 (del B): eksponering LÆRT fra BarentsWatch,
     # per 10-graders bøtte og periodegruppe (kort/lang) - blandet med den
     # geometriske kurven (se exposure_learn.py sin modul-docstring for hele
@@ -504,6 +543,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # exposure_smoothed) - ekskludert fra offentlig utdata lenger ned,
     # siden calibration.surf_factor_source allerede dekker det samme.
     spot["surf_factor_source"] = surf_factor_source
+    # ROADMAP oppgave I, 06.10.2026 natt: samme mønster som surf_factor_source
+    # over - rating.spot_height() leser denne for å vite når den skal bruke
+    # transfer_prior() PÅ NYTT per time (ekte periode) i stedet for det
+    # statiske spot["transfer"]-tallet rett over (se der).
+    spot["transfer_source"] = transfer_source
 
     hours = []
     gust_lower_than_wind = 0  # se data_sanity_warnings() under
@@ -684,7 +728,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # rating.blocked_by_near_obstacle() - resultatet (directness/bw_confirms
     # per time) er allerede i hours, ikke rå-tabellene selv.
     _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort",
-                       "surf_factor_source", "exposure_distance_km", "exposure_width_km"}
+                       "surf_factor_source", "exposure_distance_km", "exposure_width_km", "transfer_source"}
     public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
     # 06.10.2026, Theodors rettelse (punkt 4): var 4 dager (funksjonens egen
     # standardverdi) - for kort til et 16-dagers varsel. Dag 9-16 viste
@@ -754,11 +798,12 @@ def main():
     bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
     exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
     exposure_learned_data = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
+    shelter_data = json.loads(SHELTER.read_text(encoding="utf-8")) if SHELTER.exists() else {}
     spots = []
     for s in config["spots"]:
         if s.get("enabled"):
             spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
-                                     exposure_data, exposure_learned_data, ledger))
+                                     exposure_data, exposure_learned_data, shelter_data, ledger))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)

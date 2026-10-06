@@ -75,6 +75,76 @@ EDGE_TAPER = 5  # grader innenfor kanten der høyden glir opp til 1.0
 # er anslag. Læres ALDRI fra loggene - bare transfer gjør det.
 SHADOW_CURVE = [(0, 0.667), (5, 0.333), (10, 0.167), (20, 0.05), (30, 0.0)]
 
+# ROADMAP oppgave I (skjerming), 06.10.2026 natt: bunnen av transfer-
+# fallback-kjeden (se calibrate.effective_transfer()), FØR DEFAULT_TRANSFER -
+# en geometrisk startverdi for reservemodellen, ut fra hvor åpen spoten er
+# (spot["shelter_factor"], statisk, normalisert, se fetcher/shelter.py).
+SHELTER_PERIOD_SHORT = 8    # s - p(T) = 1,0 her og kortere (full skjermingseffekt)
+SHELTER_PERIOD_LONG = 14    # s - p(T) = SHELTER_PERIOD_LONG_WEIGHT her og lengre
+SHELTER_PERIOD_LONG_WEIGHT = 0.6  # langt svell bøyer seg bedre rundt odder/inn fjorder
+
+
+def shelter_period_weight(period):
+    """p(T) i skjermingsfaktoren: kort periode straffes mer av skjerming enn
+    lang periode (langt svell diffrakterer/bøyer seg bedre rundt odder og
+    inn fjorder - samme fysiske prinsipp som exposure_baseline.py sin
+    skyggelengde-formel, bare brukt på en ÅPNING her i stedet for bak en
+    hindring). 1,0 ved SHELTER_PERIOD_SHORT eller kortere, lineært ned til
+    SHELTER_PERIOD_LONG_WEIGHT ved SHELTER_PERIOD_LONG eller lengre. Ukjent
+    periode: 1,0 (samme forsiktige antagelse som resten av ratingen - ingen
+    grunn til å anta BEDRE enn verst mulig når perioden ikke er kjent)."""
+    if period is None or period <= SHELTER_PERIOD_SHORT:
+        return 1.0
+    if period >= SHELTER_PERIOD_LONG:
+        return SHELTER_PERIOD_LONG_WEIGHT
+    span = SHELTER_PERIOD_LONG - SHELTER_PERIOD_SHORT
+    return 1.0 - (1.0 - SHELTER_PERIOD_LONG_WEIGHT) * (period - SHELTER_PERIOD_SHORT) / span
+
+
+def shelter_transfer_factor(spot, period):
+    """skjermingsfaktor = 1 - (1 - height_factor) × p(T). height_factor
+    (spot["shelter_factor"]) er det SAMME statiske, normaliserte feltet som
+    energy_factor() sin terskeljustering bruker (se der) - mangler det,
+    eller er det 1,0 eller mer (en åpen spot, ingen skjerming å trekke fra):
+    ingen effekt (1,0), akkurat som energy_factor() sin egen vakt."""
+    shelter = (spot or {}).get("shelter_factor")
+    if shelter is None or not (0 < shelter < 1):
+        return 1.0
+    return 1 - (1 - shelter) * shelter_period_weight(period)
+
+
+SHELTER_LABEL_OPEN = 0.85        # height_factor over denne: "åpen"
+SHELTER_LABEL_PARTIAL = 0.6      # ... og over denne: "delvis skjermet" (under: "skjermet")
+
+
+def shelter_label(height_factor):
+    """Tekst til detaljsiden (ROADMAP oppgave I, punkt 6) - "åpen"/"delvis
+    skjermet"/"skjermet" ut fra den statiske height_factor. None (ikke
+    beregnet, eller fetch.resolve_shelter() flagget beregningen upålitelig
+    - se der) gir ingen tekst; en spot uten pålitelig skjermingsmål skal
+    ikke late som den har én."""
+    if height_factor is None:
+        return None
+    if height_factor >= SHELTER_LABEL_OPEN:
+        return "åpen"
+    if height_factor >= SHELTER_LABEL_PARTIAL:
+        return "delvis skjermet"
+    return "skjermet"
+
+
+def transfer_prior(spot, period=None):
+    """transfer_prior = DEFAULT_TRANSFER × skjermingsfaktor (ROADMAP oppgave
+    I, punkt 3) - bunnen av transfer-fallback-kjeden, bare brukt når ingen
+    logger eller BarentsWatch-læring finnes OG spoten ikke har en håndsatt
+    transfer i spots.json (se calibrate.effective_transfer()). period=None
+    her bruker shelter_period_weight() sin konservative antagelse, til selve
+    FALLBACK-VALGET (og calibration sitt transfer_used-tall) - spot_height()
+    kaller denne på nytt PER TIME med den faktiske perioden når
+    spot["transfer_source"] er "skjerming" (se der), siden skjermingseffekten
+    ekte varierer med hver times periode, i motsetning til resten av
+    transfer-systemet (fast "lang"-antagelse, se calibrate.py)."""
+    return round(DEFAULT_TRANSFER * shelter_transfer_factor(spot, period), 3)
+
 
 def directness(d, spot):
     """0 til 1: hvor stor andel av svellet ved direkte treff som når spoten,
@@ -414,12 +484,22 @@ def spot_height(hour, spot=None):
        retningen (glattet geometri, del C - se exposure() sin docstring).
        Faktoren læres fra loggene dine (transfer). Bruker IKKE
        dreiningsregelen her, ellers straffes skrått svell to ganger.
+
+       ROADMAP oppgave I: når ingenting er lært ennå (transfer_source er
+       "skjerming", se calibrate.effective_transfer()), brukes
+       transfer_prior() PÅ NYTT her med DENNE timens ekte periode - ikke det
+       statiske, "lang"-antatte spot["transfer"]-tallet (bare til
+       calibration sin visning) - siden skjermingseffekten ekte varierer
+       time for time med perioden (se shelter_period_weight()).
     3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
     """
     if hour.get("bw_height") is not None:
         h, detail = barentswatch_height(hour, spot or {})
         return h, "barentswatch", detail
-    transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
+    if (spot or {}).get("transfer_source") == "skjerming":
+        transfer = transfer_prior(spot, hour.get("period"))
+    else:
+        transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
     if hour.get("swell_offshore") is not None:
         h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot, hour.get("period"))
         return h, "svell_ute", None

@@ -59,11 +59,16 @@ print("Grøtfjord lært faktor:", g["calibration"], "| første time:", {k: g["ho
 # gjennom henteren - inn i spot["surf_factor"] og videre inn i hver times
 # rate()-output. transfer læres derimot IKKE lenger fra loggene (fjernet
 # 26.09.2026) - uten BarentsWatch-kalibrering eller spots.json-verdi faller
-# den tilbake til DEFAULT_TRANSFER ("standard").
+# den (ROADMAP oppgave I, 06.10.2026 natt) til transfer_prior fra skjerming
+# når den ekte data/shelter.json (brukt urediret her, samme konvensjon som
+# EXPOSURE_BASELINE over - et sjeldent-bygget, lest-bare referansefelt, ikke
+# tilstand som må isoleres per test) har et PÅLITELIG mål for spoten.
+# Grøtfjord: reliable (3 graders facing/vindu-avvik), height_factor 0,803 -
+# transfer_prior(spot, period=None) = 0,6 × (1-(1-0,803)×1,0) = 0,482.
 assert g["calibration"]["surf_factor"] == 0.8 and g["calibration"]["surf_factor_used"] == 0.8
 assert g["hours"][0]["surf_factor"] == 0.8
 assert "transfer" not in g["calibration"] or g["calibration"].get("transfer") is None
-assert g["calibration"]["transfer_used"] == DEFAULT_TRANSFER and g["calibration"]["transfer_source"] == "standard"
+assert g["calibration"]["transfer_used"] == 0.482 and g["calibration"]["transfer_source"] == "skjerming"
 assert all("light" in h for h in g["hours"])
 print("Varsler sendt:", [m["title"] for m in sent])
 fetch.main()  # andre kjøring skal ikke sende samme varsel igjen
@@ -439,7 +444,7 @@ exposure_learned_fixture = {"unstad": (
     + _mk_pairs(31, 0.3)  # geometrisk helt åpen (rå 1,0), men lært lavere - skal IKKE forbli 1,0
 )}
 now9 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
-built9 = fetch.build_spot(unstad_spot, now9, {}, {}, "test-run-9", exposure_baseline_real, exposure_learned_fixture)
+built9 = fetch.build_spot(unstad_spot, now9, {}, {}, "test-run-9", exposure_baseline_real, exposure_learned_fixture, {})
 cal9 = built9["calibration"]
 print("9: del B - transfer_source, bøtter lært (lang), transfer:", cal9["transfer_source"], cal9["exposure_buckets_learned_lang"], cal9.get("transfer_used"))
 assert cal9["transfer_source"] == "eksponering"

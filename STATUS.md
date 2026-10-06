@@ -16,6 +16,79 @@ Theodor stoppet nattmodus (startet 23:53 06.10) og flytter arbeidet til en skyø
 - E (BarentsWatch-punktene) og treffsikkerhetsmåling (del av B) er begge i en "vent på data"-tilstand, ikke noe å aktivt bygge videre på akkurat nå - se egne avsnitt.
 - Oppgavene C (design), J (WAM800) og K (mindre info i appen) er ikke startet - alle er PLAN-FØRST/gated, bygg på egen gren med PR, ikke rett i ratingen på main (se ROADMAP.md).
 
+## Nattmodus (23:53, 06.10.2026 - startet, stoppet 00:36 07.10.2026)
+Theodor ba om å jobbe gjennom ROADMAP.md hele natta uten å stoppe for spørsmål. Gated endringer (vinduer/havpunkter/facing/offshorevind/grenser/design/nye kilder) bygges på egne grener med PR og anbefaling i stedet for å stoppe. Logg under, time for time.
+
+- 23:53: fortsetter oppgave I (skjerming) - geometrien er beregnet (`data/shelter.json`), fant at Russelv og Steinkrøssa sin facing avviker sterkt (55/59,5 grader) fra swell_window sitt senter, samme mønster som Lenangsøyra hadde før dagens fix - undersøker før jeg kobler skjerming inn for disse to.
+- 00:20: oppgave I ferdig bygget og testet (ekte stjernetabell: 2 av 1600 timer, maks 1 stjerne, se eget avsnitt). Fysikk-kontrollør kjører i bakgrunnen - venter på GODKJENT før commit til main. Starter oppgave F (enklere logging) i mellomtiden.
+- 00:35: oppgave F (enklere logging) ferdig bygget og testet i nettleser - "Var du der?", "Logg fra bilde" (EXIF/filnavn/lastModified) og trykk-og-hold på kartskiva. Ingen fetcher/-endring, berører ikke ratingen - fysikk-kontrollør ikke relevant (se eget avsnitt for begrunnelse). Committer til main.
+- 00:36: fysikk-kontrollør svarte MÅ RETTES på oppgave I (algebra-feil, se Oppgave I-avsnittet). Samtidig stoppet Theodor nattmodus for å flytte arbeidet til en skyøkt. Avslutter: oppgave F til main, oppgave I sin nåværende (ikke rettede) kode til grenen `lokal/uferdig`, skriver denne overleveringen, stopper caffeinate, stopper.
+
+## Oppgave I: skjerming (06.10.2026 natt) - PÅBEGYNT, IKKE FERDIG. Fysikk-kontrollør: MÅ RETTES. Ligger på gren `lokal/uferdig`, ikke main.
+
+**Fysikk-kontrollørens funn (06.10.2026, kjørt som `general-purpose`-agent med full persona, se `.claude/agents/fysikk-kontrollor.md`), i prioritert rekkefølge:**
+
+1. **Algebra-feil i kjernen av `fetcher/shelter.py`:** `b_km = radians(width_deg) × d_open` og `spread = 2 × d_open × tan(20°)` - `d_open` er en FELLES FAKTOR i både teller og nevner i `f = b_km/(b_km+spread)`, og kansellerer seg algebraisk helt ut. Bekreftet numerisk (samme `f` uansett om `d_open` settes til 15,5 eller 999). Konsekvens: HELE `find_d_open()`-søket (tre stråler, opptil 80 km, halvsirkel-sveip per steg - det dyreste og mest kompliserte i skriptet) påvirker ikke resultatet i det hele tatt. `height_factor` er i praksis bare en funksjon av `width_deg` (vinkelen målt VED SPOTEN). Må rettes - trolig ved å måle B som en EKTE, uavhengig bredde VED d_open-punktet (vinkelrett sveip fra det punktet, ikke en projeksjon av vinkelen ved spoten), slik ROADMAP sin ordlyd faktisk ber om.
+2. `test_docs_cache.py` feilet på reviewens snapshot (docs/index.html ble endret etter siste cache-bump) - løst i løpet av natta (sw.js bumpet på nytt etter oppgave F), men illustrerer at rekkefølgen commit/cache-bump må sjekkes helt til slutt.
+3. Normaliserings-forklaringen i `shelter.py` sin docstring regner feil (påstår et teoretisk tak på 0,901 som IKKE er det koden faktisk normaliserer mot - den normaliserer mot Unstad sin rå verdi 0,8206). Må rettes til å beskrive hva koden faktisk gjør.
+4. `energy_factor()`/`energy_thresholds_used()` sine docstrings i `rating.py` er nå usanne ("ikke bygget ennå ... ingen spot har dette feltet") - seks spots har feltet og det flytter stjerner. Må oppdateres.
+5. Manglende tester: ingen direkte test av `shelter.py` sin egen geometri (`open_within`, `width_deg`, `build_spot_shelter`). De faste observasjonene i `test_rating.py` testes ALDRI med `shelter_factor`/`transfer_source="skjerming"` satt (spot-dictene bygges rett fra spots.json, som aldri har disse feltene - de settes bare av `fetch.py` ved kjøretid). Reviewen verifiserte MANUELT at alle faste observasjoner holder likevel (Grøtfjord, Lenangsøyra, Farstadsanden 338°) - men det bør være en ekte test, ikke noe en reviewer må gjøre for hånd hver gang.
+6. Stjernetabellen ("2 av 1600 timer, maks 1") er MISVISENDE som bevis: uka som ble testet er unormalt flat (86-99,5 % av timene allerede 0 stjerner for de fem berørte spotene) - nesten ingenting KUNNE endre seg. Reviewen sin egen, grundigere sjekk: (a) mot EKTE `docs/data/forecast.json` (med ekte BarentsWatch-data, i motsetning til nattens lokale degraderte kjøring): 6 av 1005 timer endret, 0 av 305 BarentsWatch-timer. (b) Et SYNTETISK sveip over surfbare forhold (H 0,5-6 m, T 6-18 s, vindretning/styrke variert), fem spots: **1908 av 9360 kombinasjoner endret (20,4 %), maks endring 2 stjerner, IKKE ensrettet (1028 opp, 880 ned)** - stikk i strid med nattens fremstilling som en ren, liten nedjustering. Et konkret 2-stjerners tilfelle: Grøtfjord 0,8 m/14 s/10° fra senter krysser flat-grensa (0,35 m) akkurat pga. transfer-reduksjonen.
+7. `OPEN_HORIZON_KM=25` er uten praktisk betydning for 5 av 6 pålitelige spots (nærgeometri under 10 km avgjør), men er HELE forklaringen på Lenangsøyra sitt tall - ved 10 km ville Lenangsøyra rangert som MER åpen enn Unstad, ved 60 km havner den på 0,513. Nettopp Lenangsøyra (spoten ROADMAP selv peker ut som mest skjermet) er altså mest følsom for et vilkårlig valgt tall.
+
+**Vurdert og funnet i orden av reviewen:** reliable-flagget for Russelv/Steinkrøssa (ekte, falsifiserbar separasjon - 0-8° for de seks, 55-60° for de to ekskluderte, ikke en bekvem terskel tilpasset resultatet); fallback-kjedens rekkefølge (skjerming kan aldri slå noe faktisk lært - bare dokumentasjonen av selve kjeden er unøyaktig, mangler "eksponering"-grenen som faktisk ligger mellom logger og BarentsWatch); periode-inkonsistensen mellom `transfer_used` (vist, periode=None) og faktisk brukt verdi per time (akseptabelt, dokumentert, feiler på den forsiktige siden - men bør vises tydeligere i UI-en); alle faste observasjoner holder (manuelt verifisert, se punkt 5 over).
+
+**SPØR THEODOR (reviewens egne spørsmål, uavklart):**
+- **A. Dobbelttelling:** reviewen mener energiterskel-justeringen (oppgave D sin hook) og transfer-reduksjonen (oppgave I) er to oversettelser av SAMME geometriske demping, pluss at energihooken slår inn selv for BarentsWatch-timer (der BarentsWatch allerede har modellert skjermingen fysisk, en høyere rangert kilde enn geometri i CLAUDE.md sitt sannhetshierarki). Reviewens anbefaling: begrens energihooken til `height_source != "barentswatch"`.
+- **B. Bør skjermingskonstantene (`OPEN_HORIZON_KM`, `FACING_WINDOW_DIVERGENCE_MAX`, etikettgrensene) inn på CLAUDE.md sin "krever Theodors ja"-liste, på linje med SHADOW_CURVE/DEFAULT_TRANSFER?**
+- **C. Stemmer den sammenpressede skjermingsgraden med Theodors magefølelse?** Lenangsøyra (~40 km inn i Ullsfjorden, observasjon sier IKKE surfbart) får transfer 0,46-0,52 - modellen sier altså at nesten halvparten av åpent-hav-svellet når inn dit.
+- **D. ROADMAP sin etterspurte sammenligning mot lært BarentsWatch-transfer mangler i tabellen** - finnes for én spot (Unstad: 0,57 lært mot 0,60 DEFAULT, innenfor 5 %) - en fin, men eneste, validering av selve ankeret.
+
+**Ikke rettet i natt** (Theodor stoppet nattmodus før dette kunne gjøres) - se overleveringen øverst i fila for hva skyøkten bør gjøre. Koden under (metode, tabell, kobling) beskriver TILSTANDEN SOM BLE REVIEWET, ikke en rettet versjon - tallene i tabellen pre-daterer altså funn 1 (d_open-bugen) og må regnes på nytt etter rettelsen.
+
+## Oppgave I: opprinnelig skrevet status (06.10.2026 natt, FØR fysikk-kontrollør) - se MÅ RETTES-avsnittet over for hva som faktisk gjelder
+
+**Metode** (`fetcher/shelter.py`, ny, gjenbruker `exposure_baseline.py` sin landdeteksjon - GSHHS, 300 m kysttoleranse): for hver spot, gå ut fra spoten i retning facing (og facing±20, korteste vinner) til hele halvsirkelen (180°, sentrert på facing) har fri linje til åpent hav innen en lokal 25 km-horisont (`d_open`). Mål samtidig, VED SPOTEN, hvor stor andel av halvsirkelen som er fri (`opening_frac`) og bredden på den sammenhengende vifta av frie grader rundt facing (`width_deg`), omregnet til km ved `d_open` (`B = width_deg_i_radianer × d_open`). `f = B / (B + 2×d_open×tan(20°))`, `height_factor_raw = √f`. Normalisert mot Unstad (venta mest åpen) - `height_factor = height_factor_raw / height_factor_raw[unstad]`.
+
+**Tabell, alle åtte spots** (`data/shelter.json`):
+
+| Spot | d_open (km) | opening_frac | B (km) | f | height_factor | Pålitelig |
+|---|---|---|---|---|---|---|
+| Unstad | 6,0 | 0,475 | 9,01 | 0,673 | **1,000** (referanse) | Ja |
+| Farstadsanden | 14,0 | 0,243 | 10,75 | 0,513 | 0,873 | Ja |
+| Tromvik | 20,5 | 0,227 | 13,95 | 0,483 | 0,847 | Ja |
+| Ersfjordstranda | 7,5 | 0,182 | 4,32 | 0,442 | 0,810 | Ja |
+| Grøtfjord | 15,5 | 0,177 | 8,66 | 0,434 | 0,803 | Ja |
+| Lenangsøyra | 51,5 | 0,149 | 24,27 | 0,393 | 0,764 | Ja |
+| Steinkrøssa | 54,5 | 0,343 | 58,97 | 0,598 | 0,942 | **Nei, se under** |
+| Russelv | 56,0 | 0,160 | 1,95 | 0,046 | 0,261 | **Nei, se under** |
+
+De seks pålitelige spotene treffer EKSAKT den rekkefølgen Theodor selv ventet i ROADMAP.md: "Unstad/Farstadsanden åpne, Grøtfjord/Tromvik/Ersfjordstranda i midten, Lenangsøyra mest skjermet" - en god, uavhengig bekreftelse på at metoden er fysisk fornuftig der den har riktig grunnlag.
+
+**Russelv og Steinkrøssa: height_factor beregnet, men IKKE brukt i ratingen.** Metoden er forankret i facing (Theodors egen instruks - "gå ut i retning facing"). For disse to spotene ligger facing 55 (Russelv) og 59,5 (Steinkrøssa) grader fra swell_window sitt senter - samme mønster som Lenangsøyra hadde FØR i natt sin facing-fiks (var 20 grader), bare mye større. Sjekket Russelv direkte (`first_land_distance()` per grad fra spoten): facing=315 har land 16-18 km unna, mens 350-15 grader (nesten nøyaktig swell_window=[[5,15],[349,356]]) er helt åpne til 150 km. Min metode, forankret i facing, finner da en smal, lite representativ åpning (2 grader) nær facing i stedet for den ekte, brede åpningen 35-55 grader unna - height_factor 0,261 er mest sannsynlig en kraftig UNDERVURDERING, ikke et reelt mål på hvor skjermet Russelv er. Samme mistanke for Steinkrøssa (kjent fra før: "svellet bøyer seg rundt en odde", se ROADMAP "Venter på Theodor").
+
+`fetcher/shelter.py` beregner og lagrer tallene for alle åtte (ingenting skjult), men merker disse to `"reliable": false` med avviksgraden - `fetch.resolve_shelter()` bruker IKKE `shelter_factor` for en spot merket slik (verken i `energy_factor()` sin terskeljustering eller i transfer-fallback-kjeden). **Foreslår (ikke endret - krever Theodors ja, "facing" står på stoppliste):** samme type geometrisk facing-undersøkelse som Lenangsøyra fikk i kveld, for begge. Ikke gjort i natt - egen oppfølging, se "Venter på Theodor" i ROADMAP.md.
+
+**Koblet inn i ratingen** (bare de seks pålitelige spotene):
+1. `rating.shelter_period_weight(period)`: p(T), 1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre, lineært imellom (Theodors formel - kort periode diffrakterer dårligere enn langt).
+2. `rating.shelter_transfer_factor(spot, period)` = 1-(1-height_factor)×p(T), `rating.transfer_prior(spot, period)` = DEFAULT_TRANSFER × skjermingsfaktor.
+3. `calibrate.effective_transfer()`: ny rekkefølge - logger > BarentsWatch-lært > spots.json > **skjerming (ny)** > DEFAULT_TRANSFER. Bare bunnen av kjeden, aldri foran noe som faktisk er lært.
+4. `rating.spot_height()`: bruker `transfer_prior()` PÅ NYTT per time med timens EKTE periode (ikke en antatt verdi) når `transfer_source=="skjerming"` - i motsetning til resten av transfer-systemet, som bruker én fast "lang"-antagelse (~12 s) for hele kjøringen.
+5. `energy_factor()`/`energy_thresholds_used()` sin eksisterende `shelter_factor`-hook (forberedt i går kveld under oppgave D, inert til nå): justerer energitersklene OPP for en skjermet spot - trer nå i kraft for de seks.
+6. `rating.shelter_label()`: "åpen" (≥0,85) / "delvis skjermet" (0,6-0,85) / "skjermet" (under 0,6), til visning. Ny celle "Skjerming" på detaljsiden (bare når beregnet OG pålitelig), trykk-forklaring (enkel toast, samme mønster som kJ - den fulle "trykk for forklaring"-mekanikken er oppgave D).
+
+**Stjernetabell før og etter, ekte data (06.10.2026 kl. 00:13, `git stash`-sammenligning av gammel/ny kode mot SAMME ekte kjøring - BarentsWatch-nøkler mangler lokalt som vanlig, så sammenligningen er i reservemodell-sonen der skjermingen faktisk virker):**
+
+| | Timer endret | av totalt | Maks stjerneendring |
+|---|---|---|---|
+| Alle 8 spots, 200 timer hver | 2 | 1600 | **1** (aldri 2+) |
+
+De to eneste endrede timene: Tromvik 09.10 kl. 22 (1→0, transfer 0,6→0,508) og Farstadsanden 17.10 kl. 00 (1→0, transfer 0,6→0,524, allerede `treffer_ikke` begge veier - retningen var allerede utenfor vinduet). Russelv/Steinkrøssa/Unstad helt uendret (de to første fordi `shelter_factor` ikke er satt, Unstad fordi den har ekte BarentsWatch-lært transfer på denne horisonten uansett - og er dessuten referansen, 1,0, så selv om den hadde trigget ville det vært et nulltall). **Stoppregelen er IKKE utløst** (ingen timer med 2 eller flere stjerners endring) - committet rett til main.
+
+**Tester:** nytt avsnitt 22 i `test_rating.py` (period-kurven, skjermingsfaktor, transfer_prior, shelter_label, `resolve_shelter()` sjekksum/reliable-vern, `effective_transfer()` sin nye gren, `spot_height()` sin per-time periode-bruk, og et direkte avtrykk av `data/shelter.json` - Unstad=1,0, Russelv/Steinkrøssa upålitelig, de andre fem under). `test_pipeline.py` sin gamle "ingen kalibrering -> DEFAULT_TRANSFER/standard"-sjekk for Grøtfjord oppdatert til "skjerming/0,482" (ekte, forventet konsekvens - Grøtfjord HAR nå en pålitelig, ekte `data/shelter.json`, akkurat som den allerede ekte `exposure_baseline.json` samme test alltid har brukt urediret). Alle 6 testfiler grønne (inkl. Playwright).
+
+**Ikke gjort i natt** (utenfor denne oppgavens kjerne, egen oppfølging): full "trykk for forklaring"-mekanikk (oppgave D), `data/shelter.json` sin sjekksum-varsling i kilderapporten hvis spots.json endres uten å kjøre `shelter.py` på nytt (samme mønster som `resolve_exposure()`, allerede der via `resolve_shelter()` - bare ikke eksplisitt nevnt over), og selve Russelv/Steinkrøssa facing-undersøkelsen.
+
 ## Oppgave F: enklere logging (06.10.2026 natt) - FERDIG, committet til main
 
 Ingen `fetcher/`-endring, rører ikke ratingen eller hvordan noe tall regnes ut eller vises - bare nye MÅTER å lage en logg på. Fysikk-kontrollør er derfor ikke relevant her (dens eget mandat, se `.claude/agents/fysikk-kontrollor.md`: "etter hver endring i fetcher/ eller i hvordan appen viser tall").

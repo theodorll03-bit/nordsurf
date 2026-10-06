@@ -127,10 +127,13 @@ def bw_transfer(pairs):
 
 def effective_transfer(spot, learned, bw_pairs):
     """Rekkefølge: 1) lært fra BarentsWatch, 2) transfer satt i spots.json,
-    3) DEFAULT_TRANSFER. 26.09.2026: learn() setter ikke lenger "transfer"
-    (se modul-docstringen) - "logs"-grenen under er bare igjen for at
+    3) transfer_prior fra skjerming (ROADMAP oppgave I, 06.10.2026 natt - en
+    geometrisk startverdi ut fra hvor åpen spoten er, bare når
+    spot["shelter_factor"] er satt av fetch.py sin resolve_shelter()), 4)
+    DEFAULT_TRANSFER. 26.09.2026: learn() setter ikke lenger "transfer" (se
+    modul-docstringen) - "logs"-grenen under er bare igjen for at
     rekkefølgen fortsatt virker om noe skulle sette den eksternt."""
-    from rating import DEFAULT_TRANSFER
+    from rating import DEFAULT_TRANSFER, transfer_prior
     if learned.get("transfer"):
         return learned["transfer"], "logs"
     bw_t = bw_transfer(bw_pairs)
@@ -138,4 +141,6 @@ def effective_transfer(spot, learned, bw_pairs):
         return bw_t, "barentswatch"
     if spot.get("transfer") is not None:
         return spot["transfer"], "spots.json"
+    if spot.get("shelter_factor") is not None:
+        return transfer_prior(spot), "skjerming"
     return DEFAULT_TRANSFER, "standard"
