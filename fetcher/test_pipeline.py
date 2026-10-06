@@ -671,4 +671,32 @@ assert len([m for m in sent12 if m.get("title") == "Nordsurf: henteren har et pr
 sources.kartverket_tide = saved_tide
 print("11: helsesjekk og driftsvarsler ok")
 
+# ---------- 12: ROADMAP oppgave H (mørketid i praksis), 07.10.2026 ----------
+# Midtvinters (21.12) har Tromsø-spotene og Unstad ingen sol, men 4-6 timer
+# borgerlig skumring midt på dagen (sun.USABLE = -6 grader) - det er det
+# brukbare vinduet. light_days skal gi start/slutt og sun=False, light()
+# skal gi "skumring" midt på dagen og "mørkt" morgen/kveld, og
+# notify.windows() skal regne skumringstimer som brukbare (daylight er
+# True for alt som ikke er "mørkt"). Farstadsanden (63 N) har fortsatt sol.
+# Nettleser-delen (timestripe/dagbrikker/beste vindu) er sjekket manuelt
+# med skjermbilder, se STATUS.md.
+import sun as _sun
+_dec = dt.datetime(2026, 12, 21, 12, 0, tzinfo=dt.timezone.utc)
+for _sid, _has_sun in (("grotfjord", False), ("unstad", False), ("farstadsanden", True)):
+    _sp = next(x for x in json.loads((Path(__file__).parent.parent / "spots.json").read_text())["spots"] if x["id"] == _sid)
+    _la, _lo = _sp["spot"]["lat"], _sp["spot"]["lon"]
+    _ld = _sun.light_days(_la, _lo, _dec, days=1)["2026-12-21"]
+    assert _ld["start"] and _ld["end"] and _ld["sun"] is _has_sun, (_sid, _ld)
+    _usable = (dt.datetime.fromisoformat(_ld["end"]) - dt.datetime.fromisoformat(_ld["start"])).total_seconds() / 3600
+    assert 3.5 <= _usable <= 8.5, (_sid, _usable)
+    _noon = _sun.light(_la, _lo, dt.datetime(2026, 12, 21, 11, 0, tzinfo=dt.timezone.utc))
+    assert _noon == ("dag" if _has_sun else "skumring"), (_sid, _noon)
+    assert _sun.light(_la, _lo, dt.datetime(2026, 12, 21, 6, 0, tzinfo=dt.timezone.utc)) == "mørkt"
+    print(f"12.1 {_sp['name']}: brukbart lys {_ld['start'][11:16]}-{_ld['end'][11:16]} UTC ({_usable:.1f} t), sol={_ld['sun']}, kl. 12 norsk: {_noon}")
+_dusk_hours = [{"t": sources.hour_key(_dec + dt.timedelta(hours=i - 4)), "stars": 4, "daylight": i in range(2, 7), "light": "skumring" if i in range(2, 7) else "mørkt",
+                "height_source": "svell_ute", "height": 1.0, "period": 12, "wind_type": "offshore"} for i in range(12)]
+_ws = notify.windows({"id": "x", "name": "X", "hours": _dusk_hours, "bw_until": None}, 3, 36, _dec - dt.timedelta(hours=5))
+assert len(_ws) == 1 and len(_ws[0]["hours"]) == 5 and all(h["light"] == "skumring" for h in _ws[0]["hours"]), _ws
+print("12.2 notify.windows(): fem skumringstimer gir ett varselvindu, mørke timer ikke, OK")
+
 print("Pipeline ok")

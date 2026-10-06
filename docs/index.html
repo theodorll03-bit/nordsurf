@@ -19,7 +19,7 @@
 <style>
 :root{
   --surface:#F1F3F2; --raised:#FFFFFF; --ink:#16252D; --muted:#52646C; --line:#D5DCDE;
-  --star:#A86F08; --night:#DDE3E5; --selected:#16252D; --on-selected:#FFFFFF;
+  --star:#A86F08; --night:#C9D2D5; --dusk:#E2E7E9; --selected:#16252D; --on-selected:#FFFFFF;
   /* Kart: grønt (vindu) og blått (vind) er faste valg. Svell er lilla, ikke
      blågrønn/turøs - det ville ligget for nært vindfargen for fargeblinde
      på det gråtonede kartet. Rav-gult (--star) er forbeholdt rating. */
@@ -34,13 +34,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
-    --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+    --star:#F2B544; --night:#0A1418; --dusk:#1E3039; --selected:#E4EBED; --on-selected:#0F1B21;
     --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
   }
 }
 :root[data-theme="dark"]{
   --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
-  --star:#F2B544; --night:#0A1418; --selected:#E4EBED; --on-selected:#0F1B21;
+  --star:#F2B544; --night:#0A1418; --dusk:#1E3039; --selected:#E4EBED; --on-selected:#0F1B21;
   --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -120,7 +120,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 .hours{display:flex}
 .h{width:30px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding:6px 0 4px;background:none;border:0;cursor:pointer;border-radius:8px}
 .h.dark{background:var(--night)}
-.h.dusk{background:color-mix(in srgb,var(--night) 50%,transparent)}
+.h.dusk{background:var(--dusk)}
 .h.sel{background:var(--selected);color:var(--on-selected)}
 .h.resmodel{opacity:.55}
 .h.langtid{opacity:.4}
@@ -827,7 +827,7 @@ function renderSpot(){
     <div class="legend">
       <span><i class="sw" style="background:var(--star)"></i>Stjerner</span>
       <span><i class="sw" style="border:1.5px dashed var(--star)"></i>Tapt på vind eller tidevann</span>
-      <span><i class="sw" style="background:color-mix(in srgb,var(--night) 50%,transparent);border:1px solid var(--line)"></i>Skumring</span>
+      <span><i class="sw" style="background:var(--dusk);border:1px solid var(--line)"></i>Skumring</span>
       <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
     </div>
     <div class="grid">

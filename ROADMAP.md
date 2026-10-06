@@ -31,7 +31,8 @@ Etter hvert gode vindu (3 stjerner eller mer i dagslys) for en favoritt: et "Var
 Appen viser "Varselet er ikke oppdatert siden ..." øverst på lista og detaljsiden når forecast.json er over 6 timer gammel. Workflowen sender ntfy-varsel (curl, uavhengig av Python) hvis kjøringen feiler, og `fetch.health_check()` sender ett driftsvarsel per problem (en kilde mangler for alle spots, for få timer, ugyldige tall), høyst én gang per døgn per problem. Helsesjekk-rader i kilderapporten. Se STATUS.md.
 Appen: vis tydelig advarsel øverst hvis forecast.json er mer enn 6 timer gammel ("Varselet er ikke oppdatert siden kl. X"). Workflowen: send ntfy-varsel til Theodor hvis henteren feiler, eller hvis en kilde (BarentsWatch, met.no, Open-Meteo, Kartverket) mangler for alle spots i en kjøring. En enkel helsesjekk i kilderapporten: alle spots har data, ingen tomme eller ugyldige tall, horisont som forventet.
 
-## H. Mørketid i praksis
+## H. Mørketid i praksis - FERDIG (skyøkt 07.10.2026), committet til main
+Lys for 15.11/21.12/15.01 for alle spots tabellført i STATUS.md (4-6 t skumring midt på dagen selv 21.12, aldri "mørkt hele dagen"). Beste vindu, dagbrikker og varsler bruker skumringstimene riktig. Rettet: timestripa skilte ikke skumring fra mørkt visuelt (nytt `--dusk`-token i begge moduser). Ny test (test_pipeline 12).
 Kjør lysberegningen for alle spots for 15. november, 21. desember og 15. januar. Vis brukbart lys per dag og sjekk at timestripa, dagbrikkene, beste vindu og varsler oppfører seg riktig når det bare er skumring. Rett det som ikke fungerer.
 
 ## I. Skjerming: hvor langt inn i en bukt ligger spoten

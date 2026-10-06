@@ -1,5 +1,26 @@
 # Nordsurf: status
 
+## Oppgave H: mørketid i praksis (skyøkt 07.10.2026) - FERDIG, committet til main
+
+**Lysberegningen (`sun.py`, borgerlig skumring = sola over −6°), alle spots, norsk tid:**
+
+| Dato | Grøtfjord/Tromvik (69,8 N) | Ersfjordstranda/Steinkrøssa (69,5 N) | Russelv/Lenangsøyra (69,9 N) | Unstad (68,3 N) | Farstadsanden (63,0 N) |
+|---|---|---|---|---|---|
+| 15.11.2026 | 08:00-15:00, sol (maks 1,7°), 3 t dag + 4 t skumring | 08:00-15:10, sol | 07:50-14:50, sol | 08:10-15:30, sol (3,2°) | 08:00-16:30, sol (8,5°), 7 t dag |
+| 21.12.2026 | 09:40-13:50, INGEN sol (maks −3,2°), 4 t skumring | 09:40-14:00, ingen sol | 09:40-13:40, ingen sol | 09:30-14:30, ingen sol (−1,7°), 6 t skumring | 09:00-16:00, sol (3,6°), 5 t dag |
+| 15.01.2027 | 09:10-14:40, ingen sol (−0,9°), 6 t skumring | 09:10-14:50, ingen sol | 09:00-14:40, ingen sol | 09:10-15:20, sol tilbake (0,6°), 2 t dag | 08:50-16:30, sol (5,9°) |
+
+Ingen spot får "Mørkt hele dagen" noen gang - selv 21.12 ved 70 N er det 4 timer borgerlig skumring. Det stemmer med virkeligheten (surfing i Lofoten/Tromsø i desember foregår i nettopp det vinduet).
+
+**Nettleser-sjekk (Playwright, iPhone 13, klokka låst til 21.12.2026 kl. 08 norsk tid, ekte `fetch.build_spot()` med falske gode kilder for Grøtfjord/Unstad/Farstadsanden, lys og mørk modus):**
+- Lista: "Best i dag 09-15, 4 stjerner" for Unstad - beste vindu finner skumringstimene (`bestWindow()` bruker `daylight !== false`, og `daylight` er True for alt som ikke er "mørkt"). Ingen dagbrikke viser "Mørkt" (0 av 12) - brikkene velger beste SKUMRINGS-time per dag. Riktig.
+- Detaljsiden: "i dag kl. 08, mørkt" i undertittelen (riktig - brukbart fra 09:30), "Brukbart lys 09:30-14:30, Mørketid, bare skumring" i lys-cella. Timestripa har 24 skumrings- og 56 mørke celler for Unstad (ingen dag-celler), klassene settes riktig.
+- Varsler: `notify.windows()` gir Unstad ett vindu 08-13 UTC med bare skumringstimer - varsler sendes altså i mørketida. Riktig.
+- **Rettet:** timestripa VISTE ikke forskjellen. Skumring var `color-mix(var(--night) 50 %)`, som i lys modus var nesten identisk med mørkt (#DDE3E5 mot ca. #E7ECED) og i mørk modus umulig å skille fra både mørkt (#0A1418) og bakgrunnen (#0F1B21) - i mørketida, der HELE stripa er mørkt/skumring og skumringen ER det brukbare vinduet, ga stripa dermed ingen visuell hjelp. Nytt token `--dusk` (lys: #E2E7E9, mørk: #1E3039) for både cellene og forklaringens fargeprøve, og `--night` i lys modus mørknet litt (#DDE3E5 → #C9D2D5) så mørkt/skumring/dag blir tre synlige nivåer. Skjermbilder i begge moduser tatt før og etter. Ingen tall eller stjerner rørt; `docs/sw.js` bumpet.
+- Ny test `test_pipeline.py` avsnitt 12: light_days 21.12 for Grøtfjord/Unstad (start/slutt, sun=False, 4-5 t) og Farstadsanden (sun=True), `light()` gir "skumring" kl. 12 og "mørkt" kl. 07, `notify.windows()` tar med skumringstimer og ikke mørke.
+
+Ikke endret (vurdert OK): rating-stjernene settes uavhengig av lys (en 4-stjerners time kl. 07 i mørket vises som 4 stjerner i stripa, men telles aldri som beste vindu, dagbrikke eller varsel) - samme regel som før, ingen grunn til å kappe.
+
 ## Oppgave G: overvåking av henteren (skyøkt 07.10.2026) - FERDIG, committet til main
 
 Tre deler, alle testet:
