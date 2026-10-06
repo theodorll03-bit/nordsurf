@@ -54,8 +54,13 @@ THREDDS = "https://thredds.met.no/thredds"
 # 62,3-67,8 N - dekker Farstadsanden, ikke Troms/Lofoten). Nå listes
 # `fou-hi/catalog.xml` og ALLE underkataloger med "wam800"/"mywavewam" i
 # navnet følges (c0-c4-regionene ligger trolig i søsterkataloger).
-ROOT_CATALOG = "fou-hi/catalog.xml"
-CATALOG_MATCH = ("wam800", "mywavewam")
+# Andre kjøring: `fou-hi/catalog.xml` finnes ikke (404) - produktene har hver
+# sin katalog. Derfor: gå fra THREDDS sin rotkatalog og følg alle
+# katalogreferanser (to nivåer) som matcher, PLUSS gjett søsterkatalogene
+# til mywavewam800m direkte.
+ROOT_CATALOGS = ["catalog.xml", "fou-hi/mywavewam800m/catalog.xml"]
+GUESS_CATALOGS = [f"fou-hi/mywavewam800{x}/catalog.xml" for x in ("m", "n", "s", "v", "f", "w", "e", "nn", "no", "ms", "c0", "c1", "c2", "c3", "c4", "lofoten", "troms", "finnmark")]
+CATALOG_MATCH = ("wam800", "mywavewam", "wam_800", "wam-800")
 SKIP_DATASET = ("SPC",)  # spektra, ikke parametre
 POINT_OUT_KM = 1.5
 MAX_DIST_KM = 3.0
@@ -76,7 +81,7 @@ def dist_km(lat1, lon1, lat2, lon2):
 
 def list_catalog(path):
     """Alle datasett (navn, urlPath) i en THREDDS-katalog, pluss underkataloger."""
-    url = f"{THREDDS}/catalog/{path}"
+    url = f"{THREDDS}/catalog/{path}" if not path.startswith("http") else path
     r = requests.get(url, headers=UA, timeout=60)
     r.raise_for_status()
     root = ET.fromstring(r.content)
@@ -292,26 +297,48 @@ def write_report(results, catalog_notes, spots):
 def main():
     config = json.loads(SPOTS.read_text(encoding="utf-8"))
     spots = [s for s in config["spots"] if s.get("enabled")]
-    catalog_notes, datasets = [], []
-    try:
-        ds, subs = list_catalog(ROOT_CATALOG)
-        catalog_notes.append(f"{ROOT_CATALOG}: {len(ds)} datasett, {len(subs)} underkataloger: {[t for t, _ in subs]}")
-    except Exception as e:
-        catalog_notes.append(f"{ROOT_CATALOG}: FEIL {str(e)[:160]}")
-        subs = []
-    for title, href in subs:
-        if not any(m in (title or "").lower() or m in href.lower() for m in CATALOG_MATCH):
-            continue
-        path = href if href.startswith("fou-hi/") else f"fou-hi/{href.lstrip('/')}"
+    catalog_notes, datasets, seen = [], [], set()
+
+    def resolve(base, href):
+        if href.startswith("http"):
+            return href
+        if href.startswith("/thredds/"):
+            return f"https://thredds.met.no{href}"
+        base_dir = base.rsplit("/", 1)[0] + "/" if "/" in base else ""
+        return (base_dir + href) if not href.startswith("/") else href.lstrip("/")
+
+    def walk(path, depth):
+        if path in seen or depth > 2:
+            return
+        seen.add(path)
         try:
-            ds, _ = list_catalog(path)
-            catalog_notes.append(f"{path}: {len(ds)} datasett {[n for n, _ in ds][:10]}")
-            datasets += ds
+            ds, subs = list_catalog(path)
         except Exception as e:
-            catalog_notes.append(f"{path}: FEIL {str(e)[:160]}")
+            catalog_notes.append(f"{path}: FEIL {str(e)[:120]}")
+            return
+        hit = any(m in path.lower() for m in CATALOG_MATCH)
+        catalog_notes.append(f"{path}: {len(ds)} datasett, {len(subs)} underkataloger" + (f" {[n for n, _ in ds][:8]}" if hit else ""))
+        if hit:
+            datasets.extend(ds)
+        for title, href in subs:
+            sub = resolve(path, href)
+            if any(m in (title or "").lower() or m in href.lower() for m in CATALOG_MATCH) or depth == 0:
+                walk(sub, depth + 1)
+
+    for root in ROOT_CATALOGS:
+        walk(root, 0)
+    for g in GUESS_CATALOGS:
+        if g not in seen:
+            try:
+                ds, _ = list_catalog(g)
+                catalog_notes.append(f"{g} (gjettet): {len(ds)} datasett {[n for n, _ in ds][:8]}")
+                datasets += ds
+            except Exception as e:
+                pass  # 404 for gjett er normalt - listes ikke
     datasets = [(n, u) for n, u in set(datasets) if not any(k in n for k in SKIP_DATASET)]
     # Siste kjøring per region: WAVE12 foran WAVE00 (samme dag), ellers alfabetisk.
-    datasets = sorted(datasets, key=lambda x: x[0], reverse=True)[:12]
+    datasets = sorted(datasets, key=lambda x: x[0], reverse=True)[:16]
+    catalog_notes.append(f"Datasett som undersøkes: {[n for n, _ in datasets]}")
     results = []
     for name, up in datasets:
         print("Datasett:", name, up)
