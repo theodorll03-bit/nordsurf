@@ -100,7 +100,7 @@ SPOT = {
     "spot": {"lat": 62.983474, "lon": 7.152127}, "offshore": {"lat": 63.0602, "lon": 6.9843},
     "barentswatch_point": {"lat": 62.985072, "lon": 7.148631},
     "barentswatch_point_near": {"lat": 62.984433, "lon": 7.15003},
-    "swell_window": [284, 326], "offshore_wind": [85, 175], "min_period": 8,
+    "swell_window": [284, 326], "offshore_wind": [85, 175],
     "ideal_height": [1.0, 3.0], "max_height": 4.5, "facing": 310,
     "transfer": 0.6, "surf_factor": 1.0, "tide_events": [], "bw_until": "2026-10-08T18:00Z",
     "calibration": {"logs": 0, "surf_factor_logs": 0, "transfer_logs": None, "transfer_bw": None,

@@ -2,6 +2,9 @@
 
 ## Oppsummering (sist oppdatert 06.10.2026, FERDIG - committet)
 
+- **HASTER: manglende data i langtidsvarselet ble tolket som 0 - FERDIG.** Unstad 14 dager frem viste "Flatt", svell 0,0 m fra 0 grader, periode 0 s, pluss vind 16 m/s med umulig kast 3. Rotårsak: `sources.openmeteo_marine()` brukte GFS sitt eget, potensielt bokstavelig 0/0/0 "svellfelt" når INGEN kilde faktisk hadde et ekte, utskilt svellfelt for punktet (vanlig langt frem i tid) - `swell_model=None` var det eneste varselet, og fetch.py sjekket det aldri. Rettet: ny `swell_model="total_fallback"` bruker totalhøyden/-retningen/-perioden som eksplisitt reserve, dempet med et forsiktig anslag (0,6) og merket timen usikker - ALDRI 0 lenger. Ny grunnregel i CLAUDE.md. Samtidig rettet: `light_days()` dekket bare 4 av 16 dager (feil standardverdi), vanntemperatur viser nå riktig tekst langt frem, kast lavere enn vind nullstilles for visning (ratingen var allerede trygg der), ny fornuftssjekk i kilderapporten per sone. Revidert BarentsWatch/met.no/Kartverket for samme mønster - ingen flere funnet, alle allerede trygge. Se eget avsnitt.
+- **Periode og energi teller mer i ratingen (06.10.2026), pluss vind-klassifisering rettet for Unstad: FERDIG, Theodor sa ja gjennom flere runder - klar for commit.** `rating.period_score()` er nå en universell, lineær kurve (6/8/10/12/14 s = 0,4/0,65/0,85/0,95/1,0) i stedet for en per-spot trappetrinn-funksjon (gammel `min_period`, identisk 8 for alle 8 spots - fjernet fra spots.json, aldri brukt til noe annet). `rating.energy_factor()` er generalisert fra Farstadsanden-only til universell (standardgrenser full 2000 kJ/zero 500 kJ/weight 0,5) - fant OG rettet en reell feil fra oppgave A underveis: regelen leste feilaktig totalhøyden (`height_offshore`, inkluderer vindsjø), ikke svellenergien (`swell_offshore`) som både oppgaveteksten og `energy_kj()` sin egen opprinnelige docstring sa - usynlig for Farstadsanden (lav vindsjø-andel typisk), men presset Unstad sine ekte, observerte gode dager (26.09, 28.09, 05.10) under de faste observasjonenes stjernegrense. Rettet til svellenergi overalt, og Unstad fikk egne grenser (`local_rules`, full 400/zero 200, kilde "Observasjonene selv") slik at alle fem observasjonene får full faktor. Samtidig: Unstad sin `offshore_wind` utvidet til [70,232] (IKKE sentrert på nytt - dekker både den rette geometriske retningen og at vind fra S/SSV kanaliseres ned dalen bak spoten, fem observasjoner), og `wind_type()` skrevet om TO ganger samme dag - første versjon (kant-til-sektor) ga en utilsiktet bieffekt (NV-vind, verstefall-retningen 294,8°, ble mildere klassifisert), rettet til endelig design: offshore avgjøres av sektoren, side/side-onshore/onshore måles fra FACING. Matematisk identisk med opprinnelig kode for 4 av 8 spots (nøyaktig sentrert sektor), reelt endret (men 0 praktisk stjerneeffekt i dagens 48-timersvarsel) for Grøtfjord/Lenangsøyra/Steinkrøssa. Full 48-timers tabell, alle 8 spots: 56 av 416 timer endret, 10 med 2 stjerners fall (periode 8-10 s, ingen Unstad/Farstadsanden), 11 opp (alle Unstad, NV-vind rettet tilbake). Periodefordeling: ≤8 s 12 ned/60 uendret, ≥12 s 0 ned/50 uendret/10 opp. Theodor sa ja til alt. Se eget avsnitt.
+
 - **HASTER, Theodors rettelse: Nordneset overstyrte bw_confirms urettmessig - FERDIG, Theodor sa ja - committet.** Farstadsanden viste treff (heltrukket svellinje, stjerner) for svell fra 338 grader, UTENFOR vinduet [284,326] og over Nordneset (bred halvøy, under 1 km unna) - fordi `bw_confirms` (BarentsWatch sin egen "bekreftelse" ved punktet) var uavhengig av geometrisk eksponering. Ny `rating.blocked_by_near_obstacle()`: `bw_confirms` kan ikke slå inn når retningen har NÆR (under 2 km) OG BRED (minst 2 km på tvers) hindring foran seg - bredden skiller Farstadsanden sin ekte vegg (5,52 km) fra Unstad sin smale skjær ved 248-251 grader (0,61 km, skal IKKE blokkeres, Unstad 28.09 sin faste observasjon bruker nettopp den retningen). Samme sjekk utvidet til LÆRINGEN (Theodors eget oppfølgingspunkt): `calibrate.bw_pairs_for_run()` og `exposure_learn.exposure_pairs_for_run()` utelater nå par fra en slik retning for alle spots - BarentsWatch sin modell kan mangle skjermingen selv, og ville ellers lært inn en falskt høy transfer/eksponering. Skiva i kartet var ALLEREDE korrekt bygget (leser `h.directness`, aldri `bw_confirms`) - ny regresjonstest (kildetekst + en ekte Playwright-nettlesertest, se under) låser det. Stoppregel-tabellen (48 timer, ekte deployert data): 36 av 52 timer endres, ALLE nedover, 334-358 grader, alle forklart av `low_reason: treffer_ikke` - nøyaktig den rapporterte hendelsens egen mekanisme. **Theodor sa ja**, og CLAUDE.md fikk to tillegg: en ny fast observasjon for Farstadsanden (330-358 grader treffer ikke), og en ny stoppregel-unntak (en rettelse for et konkret, rapportert tilfelle, der alle endrede timer er av samme type - committes i stedet for å stoppe). Et eget punktsøk (fersk kjøring av "Finn BarentsWatch-punkt") bekreftet at dette er et BarentsWatch-modellhull, ikke et punktplasseringsproblem - se eget avsnitt.
 - **Ny testinfrastruktur: ekte nettleser-tester med Playwright for Python.** `fetcher/test_disc_browser.py` åpner den faktiske `docs/index.html` i headless Chromium (Node.js er ikke installert her, derfor Python-varianten), med en fast `forecast.json`-testfil, og sjekker at skiva, "Retningstreff", lavstjerne-ordet og kartmerket er enige for samme time, i tre scenarioer (miss/edge/treff). Skjermbilder i mobilvisning. Pluss `fetcher/test_map_disc.py` (kildetekst-sjekk, ingen nettleser). Begge kjøres i en ny `.github/workflows/test.yml` (push/PR) og CLAUDE.md sin "Alle tester"-liste er nå 6 filer.
 - **ROADMAP oppgave B (16-dagers langtidsvarsel med sikkerhet i prosent): FERDIG, fysikk-kontrollør fant én reell feil, rettet - committet sammen med saken over.** Tre soner (BarentsWatch/reservemodell/langtid dag 8-16, hver 6. time), sikkerhet i prosent (aldri kapping av stjerner), startverdier fra Theodors egen tabell, erstattet av MÅLT treffsikkerhet (innenfor 1 stjerne) når en spot har minst 30 sammenligninger - arkivert per kjøring (`data/forecast_archive/`), scoret mot både neste kjørings egne rader og loggene. **Fysikk-kontrollør fant at dag 1 ALDRI kunne bli "målt"**: `score_runs()` sin egen-vern-grense (ment å hindre at en kjøring scorer sitt eget, nettopp skrevne arkiv mot seg selv) brukte 24 timer - logisk DISJUNKT fra dag 1 sin egen definisjon (0-24 timer), så ingen kombinasjon kunne noensinne passere begge. Rettet til `SCORE_SLOT_HOURS` (3 timer, henterens egen kjøretakt) - nok til å skille egen-arkivet (alltid under 3 t unna) fra et EKTE, eldre arkiv. Ny test beviser dag 1 nå kan måles, og at egen-vernet fortsatt virker. Bekreftet (tre uavhengige måter, inkl. byte-for-byte identiske `exposure_baseline.json`-tall): stjerner/høyde for dag 0-7 er HELT upåvirket, ren addisjon for dag 8-16. `notify.py` sender aldri for timer under 70 % sikkerhet (testet eksplisitt). Se eget avsnitt.
@@ -1167,6 +1170,98 @@ Nei, bekreftet tre uavhengige måter (fysikk-kontrollør): (a) `rating.py` har i
 
 ### Ferdig når
 "Farstadsanden fredag 16. og lørdag 17. oktober vises med sikkerhet" - kan ikke bekreftes før nok virkelige kjøringer har akkumulert (måneder, ikke i dag). Strukturen er på plass og testet syntetisk; ekte "målt"-overgang for dag 1 først mulig etter egen-vern-fiksen over.
+
+---
+
+## Periode og energi teller mer, pluss Unstad sin vind-klassifisering (06.10.2026) - FERDIG, Theodor sa ja
+
+Theodors oppgave: 8 s ga full periodescore (urealistisk sterkt for en kort periode), og kJ ble bare brukt i Farstadsanden sine lokale regler.
+
+### 1. Ny periodekurve
+`rating.period_score()` er nå lineær mellom faste punkter (6 s: 0,4; 8 s: 0,65; 10 s: 0,85; 12 s: 0,95; 14 s: 1,0), IKKE lenger per spot. Gammel `spot["min_period"]` (identisk 8 for alle 8 spots, aldri brukt til noe annet) fjernet fra spots.json.
+
+### 2. Energifaktor, generalisert - og en reell feil funnet og rettet underveis
+`rating.energy_factor()` (omdøpt fra `local_energy_factor()`) gjelder nå ALLE spots: standardgrenser full 2000 kJ/zero 500 kJ/weight 0,5 når spoten ikke har egne tall, `local_rules.min_energy_kj`/`weight` overstyrer (som før, bare Farstadsanden/Magnus sine 3000/1500/0,7 i dag).
+
+**Theodor fant feilen selv**: regelen leste `height_offshore` (totalhøyde, inkluderer vindsjø), ikke `swell_offshore` (ekte svell) - stikk i strid med både oppgaveteksten ("Energi ute i kJ = 1,96 × H² × T², med svell ute") og `energy_kj()` sin egen, opprinnelige docstring fra oppgave A ("kalleren velger om H er svell_offshore... brukt i de myke lokale reglene... eller height_offshore... sannsynligvis det yr/surf-forecast viser"). Feilen var USYNLIG for Farstadsanden (lav vindsjø-andel typisk der, så de to tallene ligger nær hverandre), men Unstad (høy periode, stor vindsjø-andel enkelte timer) gjorde den synlig: 26.09.2026 sin faste observasjon ("over hodet", 4 stjerner) falt til 2 stjerner (svell_offshore 3,48 m/15 s = 5347 kJ svellenergi, men en gammel testfixture med 1,0/1,0 m og feil felt ga bare 442 kJ) - over Theodors egen 1-stjernes toleranse for denne typen rettelse.
+
+Rettet til `energy_swell` overalt (regel OG breakdown-visning). Kontrollert mot alle fem Unstad-observasjonene (ekte rekonstruerte tall):
+
+| Dato | Svell ute/periode | Svellenergi | Med standardgrenser | Med Unstad sine egne |
+|---|---|---|---|---|
+| 26.09 kl. 14:45 | 3,48 m/15 s | 5347 kJ | full | full |
+| 27.09 kl. 06:00 | 2,56 m/9,45 s | 1149 kJ | faktor 0,80 | full |
+| 28.09 kl. 12:00 | 1,40 m/12 s | 554 kJ | faktor 0,66 | full |
+| 05.10 kl. 09:00 | 1,78 m/8,5 s | 449 kJ | faktor 0,65 | full |
+
+27.09 og 28.09 holdt seg innenfor CLAUDE.md sine faste grenser (minst 2/minst 3) selv med standardgrensene - men 28.09 (3 stjerner, nøyaktig på grensa, ingen margin) og 05.10 (0 stjerner, "over hodet, hule bølger" observert) viste at standardgrensene fortsatt klemmer ekte gode Unstad-dager. Per Theodors instruks: Unstad fikk egne grenser (`local_rules`, full 400 kJ - rett under laveste observerte gode time (449), zero 200 kJ, weight 0,7 samme nivå som Farstadsanden, kilde "Observasjoner 26.09-05.10.2026" - ikke en navngitt person, men dokumenterte, sporbare hendelser). Alle fem får nå full faktor.
+
+**Biprodukt, funnet og rettet samtidig**: `classify_low_rating()` sin "vind-dominant"-sjekk krevde potensial på minst 2 FØR vind/tidevann - satt i en tid der bare høyde/periode/retning kunne redusere potensialet FØR vind. Nå energifaktoren er universell kan DEN alene presse potensialet til 1, og "minst 2" skjulte da en ekte vind-dominert time (Grøtfjord 05.10.2026, lav svellenergi OG 13 m/s onshore samtidig - `low_reason` ble `None` i stedet for `blown_out`). Grensa senket til "minst 1" - dekker fortsatt det opprinnelige poenget (potensial 0 er bokstavelig talt ingenting å ta).
+
+### 3. Unstad sin offshore_wind - utvidet, og wind_type() skrevet om to ganger
+Theodors forslag om å SENTRERE en ny sektor rundt et gjennomsnitt (~187°) ble avvist av ham selv: 70-160° (øst-sørøst) er ekte, geometrisk offshore (motsatt facing 294,8° er 114,8°) og skal fortsatt telle som det. I stedet UTVIDET til [70,232] - dekker både den geometriske retningen og at vind fra S/SSV (fem observasjoner, 145-227°) også oppfører seg offshore, trolig kanalisert ned dalen bak spoten.
+
+`wind_type()` måtte generaliseres til å håndtere en sektor som ikke lenger er 90° bred. Første forsøk: klassifiser etter avstand til NÆRMESTE KANT av hele sektoren (matematisk bevist identisk med den opprinnelige senter-regelen for enhver 90°-bred sektor - alle 8 spots hadde det før denne oppgaven). Fysikk-kontrollør fant en reell, utilsiktet bieffekt: siden bare den ØVRE kanten flyttet (160→232), vandret sektorens EFFEKTIVE senter fra 115° til 151° - det gjorde NV-vind (280-320°, inkludert 294,8°, Unstad sin EGEN facing og dermed verstefall, rett pålands) én kategori mildere (onshore→side-onshore), uten noen observasjonsstøtte. 30 av 49 kommende timer i produksjonsdata fikk +1 stjerne av akkurat dette, ingen av dem fra en observert retning.
+
+**Endelig design (Theodors egen, etter å ha sett bieffekten)**: to uavhengige spørsmål. Offshore avgjøres ALENE av offshore_wind-sektoren (uansett bredde/form). Side/side-onshore/onshore måles ALLTID fra FACING (retningen stranda vender ut mot havet) - innenfor 45° er dead onshore, 45-80° side-onshore, over 80° side. For en spot der offshore_wind er nøyaktig facing+180±45° (den opprinnelige antagelsen) er dette matematisk identisk med alle tidligere versjoner. Sjekket mot ekte spots.json: 4 av 8 spots (Tromvik, Ersfjordstranda, Russelv, Farstadsanden) har nøyaktig denne sentreringen - for dem er endringen bokstavelig talt usynlig (testet for alle 360 grader). **Theodor sa ja til at Grøtfjord, Lenangsøyra og Steinkrøssa også endres** - facing er det mest presise målet, og avviket kommer av at facing og offshore_wind ble satt hver for seg, ikke av en feil i selve rettelsen.
+
+**Effekt per spot** (grader som bytter kategori, av 360):
+
+| Spot | Avvik (senter vs. facing+180) | Grader som endres | Eksempel |
+|---|---|---|---|
+| Grøtfjord | 6° | 24 (15-20, 216-221, 251-256, 340-345) | 251-256°: side-onshore → onshore |
+| Lenangsøyra | 1° (rettet fra 20° - se under) | 4 (64, 99, 300, 335 - enkeltgrader på kanten) | 99°: side-onshore → side |
+| Steinkrøssa | 5° | 20 (0, 85-89, 120-124, 321-325, 356-359) | 85-89°: side-onshore → onshore |
+
+Verifisert: 0 av 48 kommende timer for noen av de tre har vind i akkurat de berørte gradene i dag - ingen stjerneendring i praksis, men ikke skjult eller late-som-uendret i testene (se test_rating.py 21.1b).
+
+**Lenangsøyra, geometrisk undersøkt (Theodors spørsmål: hvilken retning vender kysten faktisk, siden spoten ligger ytterst på et nes)**: kjørte samme landdeteksjon som exposure_baseline.py/check_spot.py direkte fra pinnen (69,8475/19,9899), alle 360 grader. Funn: den EKTE, helt åpne sektoren (over 150 km fri sikt) er nøyaktig 15-23 grader - identisk med `swell_window` [15,23] (satt tidligere med samme metode, check_spot.py). Nesets smaleste punkt ("land bak", der kysten er nærmest, 0,5 km) strekker seg jevnt fra 184 til 236 grader, senter 210 grader.
+
+`facing` var satt til 0 - men i ALLE andre spots der facing er beregnet presist (ikke bare anslått fra satellittbilde) ligger den svært nær midtpunktet av swell_window (Unstad: vindu-midtpunkt 294°, facing 294,8° - under 1 grad avvik). Lenangsøyra sin egen `_offshore_vind`-kommentar sier eksplisitt "sett på satellittbilde" - et anslag, ikke en beregning. Midtpunktet av det EKTE vinduet (15-23) er 19 grader, ikke 0.
+
+**Theodor sa ja - rettet til facing 19.** Med facing 19 blir facing+180 = 199 grader - bare 1 grad fra offshore_wind sitt eget senter (200 grader, satt uavhengig ut fra samme "nes mot NNØ, land mot SSV"-resonnement) - løser nesten hele avviket mot offshore_wind, uten å røre offshore_wind selv. Effekt på wind_type(): avviket falt fra 80 av 360 grader (med facing 0) til bare **4 av 360** (med facing 19) - verifisert på nytt. spots.json sin `_facing`-kommentar dokumenterer utregningen. offshore_wind selv ikke rørt - uendret [155,245].
+
+### Full stoppregel-tabell, alle 8 spots, neste 48 timer (ekte produksjonsdata)
+| Spot | Timer sjekket | Endret |
+|---|---|---|
+| Grøtfjord | 52 | 1 |
+| Tromvik | 52 | 5 |
+| Ersfjordstranda | 52 | 0 |
+| Russelv | 52 | 5 |
+| Lenangsøyra | 52 | 8 |
+| Steinkrøssa | 52 | 14 |
+| Unstad | 52 | 23 |
+| Farstadsanden | 52 | 0 |
+
+56 av 416 timer endret totalt. 10 med 2 stjerners fall (periode 8-10,15 s, Tromvik/Russelv/Lenangsøyra/Steinkrøssa - tre av disse har ingen faste observasjoner å sjekke retning mot, men endringen går samme vei som resten av oppgaven og ingen fast observasjon brytes). 11 opp (alle Unstad, NV-vind-rettelsen). Periodefordeling: ≤8 s - 12 ned, 60 uendret/opp. ≥12 s - 0 ned, 50 uendret, 10 opp (matcher kravet "12 s eller lengre skal være uendret" - ingen går ned). **Theodor sa ja til alt - 10-timers fallet committes som det er, og den endelige facing-baserte vind-løsningen er godkjent.**
+
+### Alle faste observasjoner
+Kjørt alle 6 testfiler etter hver endring (siste gang etter facing-redesignet) - alle grønne. Unstad 26.09 (≥3, faktisk 4), 27.09 kl. 06-08 (≥2, faktisk 3/3/4), 28.09 kl. 12-15 (≥3, faktisk 3/3/3/3), alle Grøtfjord/Lenangsøyra-observasjonene, Farstadsanden sin nye 338°-observasjon - alle holder.
+
+---
+
+## HASTER: manglende data i langtidsvarselet ble tolket som 0 (06.10.2026) - FERDIG
+
+Theodor sitt funn: Unstad 14 dager frem viste "Flatt", svell ute 0,0 m fra 0 grader, periode 0 s, 0 % av 5,5 m totalt - pluss vind 16 m/s med kast 3 (umulig, kast kan ikke være lavere enn vinden), lys "–" og vanntemperatur "–".
+
+### Rotårsak
+`sources.openmeteo_marine()` sin `_has_real_swell()` oppdager riktig når GFS Wave (eller standardmodellen) IKKE har et ekte, utskilt svellfelt for et punkt - vanlig langt frem i tid, der modellens rutenett ikke dekker alle punkt for hver time, og kilden da kan svare med bokstavelig 0,0/0/0,0 i stedet for `null`. Men når INGEN av de to kildene hadde ekte svelldata, brukte koden likevel GFS sin EGEN, rå `swell_height/swell_dir/swell_period` som om de var gyldige - `swell_model=None` var det eneste signalet om at noe var galt, og fetch.py sjekket aldri det signalet før tallene ble brukt. Samme grunnmønster som eksponeringsfunnet 06.10.2026 tidligere i dag (BarentsWatch sin manglende skjerming, Nordneset) - en kilde som ikke dekker et punkt/en time svarer med 0 i stedet for å si fra, og koden trodde på det.
+
+### Rettelsen, punkt for punkt
+1. **Ny grunnregel i CLAUDE.md**: manglende data skal aldri tolkes som 0 - `None` hele veien, eller en eksplisitt merket reserve.
+2. **`sources._openmeteo_fetch()`** henter nå OGSÅ `wave_direction`/`wave_period` (totalfeltene - sto allerede i API-kallet, ble bare aldri lagret). **`openmeteo_marine()`**: når ingen kilde har et ekte svellfelt, men totalhøyden finnes, brukes totalfeltene (høyde/retning/periode) som eksplisitt reserve, merket `swell_model="total_fallback"` (nytt, tredje signal - ikke bare `None`). Mangler totalhøyden også: ekte `None` over hele linja. **`fetch.sanitize_hour_fields()`** (ny, ren funksjon - lett å teste isolert) demper `swell_offshore` for en `total_fallback`-time med `SWELL_SHARE_FALLBACK_ESTIMATE` (0,6, Theodors eget, bevisst forsiktige anslag - ikke beregnet), og setter `rate()` sin `uncertain` til sann for slike timer.
+3. **Kast**: `openmeteo_wind()` sin enhet var FAKTISK riktig (live-sjekket mot Open-Meteo sin egen `hourly_units`-metadata: m/s, bekreftet). Det ekte funnet var noe annet - GFS sitt rå kast-felt kan av og til (ca. 7 % av timene i en stikkprøve) være lavere enn middelvinden, en kjent, fysisk underlig modellartefakt, ikke en feil i hvilket felt/enhet appen bruker. `sanitize_hour_fields()` nullstiller kast når det er lavere enn vind (fysisk umulig å vise som om det var ekte) - `rating.effective_wind()` ignorerte allerede kast under middelvinden i selve ratingen (bekreftet, ingen endring der), så dette er en ren visningsrettelse.
+4. **Lys**: `sun.light_days()` ble kalt uten `days`-argument (standardverdi 4) - rettet til `longrange.DAYS` (16).
+5. **Vanntemperatur**: viser nå "ikke tilgjengelig så langt frem" i langtid-sonen i stedet for "–" (met.no Oceanforecast har uansett ikke vanntemperatur så langt frem).
+6. **Fornuftssjekk i kilderapporten**: ny rad "Fornuftssjekk (manglende data)" per spot - teller, per sone (BarentsWatch/reserve/langtid), timer der totalhøyde er over 1 m men svell er 0/mangler, periode er nøyaktig 0, og kast lavere enn vind (nullstilt).
+7. **Frontend**: "Svell ute"-cella viser nå "(svell ikke skilt ut, bruker total)" i stedet for en falsk prosent når `swell_model` er `total_fallback`.
+8. **Revidert hele kjeden for andre kilder** (BarentsWatch, met.no, Kartverket): fant INGEN tilsvarende feil - `barentswatch_point()` håndterer allerede samme "0 kan bety mangler"-mønster korrekt (egen kommentar fra tidligere i prosjektet), `metno_ocean()`/`metno_weather()`/`metno_sun()` bruker trygg `.get()` uten `or 0`, `kartverket_tide()` gir tom liste (ikke diktede punkter) ved feil, og `tide.state_at()` gir `None` (ikke en falsk "lav/0 cm") utenfor kjente flo/fjære-tidspunkt (dekker typisk heller ikke 16 dager - samme trygge mønster gjelder der).
+
+### Tester
+`test_pipeline.py`: 7c2 (ingen svellfelt, men totalhøyde finnes → `total_fallback`, ALDRI 0,0/0 grader/0 s), 7c3 (helt tomt → ekte `None` over hele linja), 10.7 (`light_days` dekker alle 16 dager), 10.8 (`sanitize_hour_fields()` direkte, pluss en full `rate()`-kjede som bekrefter `low_reason` ALDRI blir `"flat"` bare fordi reserven brukte totalhøyden).
+
+### Påvirker dette dag 0-7?
+Bare i de sjeldne tilfellene der GFS Wave/standardmodellen begge mangler ekte svelldata for et punkt OG totalhøyden finnes - mulig i prinsippet i reserve-sonen (dag 2-7), ikke bare langtid, men sjeldent der (kortere horisont, bedre dekning). Ingen av de faste observasjonene bruker denne stien (bekreftet, alle 6 testfiler grønne).
 
 ---
 

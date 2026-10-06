@@ -46,6 +46,31 @@ Grøtfjord ligger flere km inne i en bukt med smal åpning, Unstad rett ut mot h
 
 Etter hver oppgave (A-I): oppdater STATUS.md, kjør fysikk-kontrollør (for A og B), commit og push.
 
+## J. met.no sin bølgemodell WAM800 som kilde for svell langs kysten (PLAN FØRST)
+Bakgrunn: BarentsWatch (ST-wave, 100 m, laget for farleder) gir bare total bølgehøyde og snittretning for svell og vindsjø sammen. I skjermede områder dominerer vindsjøen, så ekte svell forsvinner i tallet. Vi har sett det ved Lenangsøyra (vindsjø som så ut som bølger), Unstad (konsekvent for lav) og Farstadsanden (blind for Nordneset). Met.no anbefalte selv i en rapport fra 2017 å kalibrere BarentsWatch mot WAM800 og bruke WAM800 direkte der oppløsningen er god nok.
+WAM800 (MyWave WAM, 800 m) dekker kysten og deler bølgene i svell og vindsjø med egen høyde, periode og retning.
+
+1. Finn datasettene på thredds.met.no (katalogen for WAM800 / MyWave 800 m), hvilke regioner som dekker hver spot, variabelnavn for total, svell og vindsjø (høyde, periode, retning, og retningskonvensjon), horisont og hvor ofte de oppdateres. Hent bare punktene vi trenger (OPeNDAP eller tilsvarende), ikke hele filer.
+2. For hver spot: velg nærmeste vått rutepunkt som ligger åpent foran spoten (typisk 1 til 2 km ut i retning facing, ikke inne i le). Vis koordinater og avstand.
+3. Hent WAM800 for alle spots og vis en tabell for neste 48 timer: svell (høyde, periode, retning), vindsjø, total, sammenlignet med BarentsWatch ved spoten og Open-Meteo/GFS svell ute.
+4. Hvis det finnes arkivdata for datoene med observasjoner: sammenlign kildene mot observasjonene (Unstad 26.09, 27.09, 28.09, 05.10, Grøtfjord 24. til 26.09, Lenangsøyra 26.09). Hvilken kilde forklarer observasjonene best?
+5. Foreslå hvordan WAM800 skal brukes, f.eks.:
+   a. Svellretning og periode fra WAM800 i stedet for GFS når WAM800 finnes (bedre oppløsning nær kysten), også for vindu, eksponering og "kildene er uenige".
+   b. Svellandel ved kysten fra WAM800 i stedet for anslaget fra Open-Meteo ute.
+   c. Svellhøyde fra WAM800 direkte for åpne spots (Unstad, Farstadsanden), og BarentsWatch fortsatt for skjermede spots der 800 m er for grovt.
+   d. Hvilken kilde som brukes per spot kan bestemmes av treffsikkerhetsmålingen over tid.
+6. Vis planen og tabellene, og vent på ja før noe kobles inn i ratingen. Legg WAM800 i kilderapporten.
+
+## K. Mindre info i appen, mer ved trykk
+Appen viser for mye på en gang. Standard skal være enkelt, og detaljer skal komme når man trykker.
+1. Lista: per spot bare navn, rating (farge og stjerner), surfehøyde, og vind som pil med type. Ingenting mer.
+2. Detaljsiden, øverst: stjerner med ett ord ("Bra", "Blåst ut", "Treffer ikke"), surfehøyde, periode og vind. Så timestripa eller grafen.
+3. Alt annet (svell ute, svellandel, energi, retningstreff, eksponering, tidevann, lys, vann og luft, kilder, lokale regler, sikkerhet) samles under én seksjon "Detaljer" som er lukket som standard og åpnes ved trykk.
+4. Hvert tall eller begrep åpner forklaring ved trykk (oppgave D), med tallene for spoten og hvordan det er regnet ut.
+5. Kartet: merke med farge og stjerner. Skiva og høydeplata som i dag, men høydeplata bare med surfehøyde og periode. Mer ved trykk.
+6. Advarsler (kildene er uenige, BarentsWatch i le, gammel data) vises som én kort linje øverst, med forklaring ved trykk.
+7. Bygges sammen med oppgave C (design) og D. Vis skjermbilder i mobilvisning før og etter.
+
 ## 1. Unstad for lav høyde - FERDIG, Theodor sa ja
 Fire observasjoner (26.09 kl. 14:45, 27.09 morgen, 28.09 kl. 13/"Safe to say it's firing") viste at Unstad rates for lavt, av to ulike årsaker. Først: retningsfaktor-fiksen (ja, også for Steinkrøssa - 51 grader skrått er normalt der svellet bøyer seg rundt en odde) og `surf_factor_prior`/`ideal_height`-justering i stedet for å senke `ideal_height` (ville skjult årsaken). Deretter (28.09): `sources_disagree` kappet stjernene når svellet ute var rett under 0,667 i eksponering, selv når BarentsWatch ved SPOTEN selv bekreftet treff - ny `bw_confirms` (retning innenfor 30 grader av facing OG høyde minst 0,35 m uten retningsfaktor) overstyrer nå det også. Fysikk-kontrollør fant en reell feil under review (overstyringen slo inn på `exposure()` sin "ukjent retning"-nøytralverdi 0,7 når `dir_offshore` manglet) - rettet, ny regresjonstest 9.3c. Stjernetabell viste 9 timer opp på Unstad (seks med 3 stjerner) i dagens live varsel - samme mønster som observasjonen, Theodors ja. Samtidig lagt til unntak i CLAUDE.md sin 2-stjerners stoppregel (retning som matcher faste observasjoner) og automatisk cache-versjonering for docs/sw.js (var ikke bumpet siden 26.09, ni commits). Se STATUS.md.
 

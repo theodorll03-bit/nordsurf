@@ -511,17 +511,33 @@ def height_score(h, spot):
     return 0.25
 
 
-def period_score(p, spot):
-    """26.09.2026: breaking_height() (over) belønner nå lang periode
-    fysisk, via selve surfehøyden - denne skal ikke lenger gjøre det samme
-    en gang til. Bare straff for KORT periode (dårlig energi, lite driv)."""
+PERIOD_SCORE_POINTS = [(6, 0.4), (8, 0.65), (10, 0.85), (12, 0.95), (14, 1.0)]  # se period_score()
+
+
+def period_score(p):
+    """06.10.2026, Theodors rettelse (se CLAUDE.md/STATUS.md): lineær kurve
+    mellom faste punkter - 6 s eller kortere 0,4; 8 s 0,65; 10 s 0,85; 12 s
+    0,95; 14 s eller lengre 1,0. Universell, IKKE lenger per spot (gammel
+    `spot["min_period"]`, identisk 8 for alle 8 spots - feltet er derfor
+    fjernet fra spots.json, det differensierte aldri noe i praksis).
+
+    Begrunnelse (Theodors egen, ikke oppfunnet): breaking_height() (Komar og
+    Gaughan) belønner lang periode gjennom selve surfehøyden (høyere bølger
+    ved samme Hs) - men IKKE kraften i bølgene. Kort periode gir svake
+    bølger selv ved samme høyde (mindre vannmasse i bevegelse per bølge,
+    kortere bølgelengde). Dette er IKKE dobbelttelling: høyde og kraft er to
+    ulike fysiske egenskaper, og formelen fanger bare den første. Gammel
+    kurve ga 8 s FULL uttelling (1,0) - urealistisk sterkt for en kort
+    periode, og ga typiske 8-sekunders dager 3 stjerner for lett."""
     if p is None:
         return 0.5
-    if p < spot["min_period"] - 2:
-        return 0.4
-    if p < spot["min_period"]:
-        return 0.6
-    return 1.0
+    (x0, y0) = PERIOD_SCORE_POINTS[0]
+    if p <= x0:
+        return y0
+    for (x0, y0), (x1, y1) in zip(PERIOD_SCORE_POINTS, PERIOD_SCORE_POINTS[1:]):
+        if p <= x1:
+            return y0 + (y1 - y0) * (p - x0) / (x1 - x0)
+    return PERIOD_SCORE_POINTS[-1][1]
 
 
 def direction_score(d, spot, source=None):
@@ -543,21 +559,48 @@ def direction_score(d, spot, source=None):
 # ---------- Vind ----------
 
 def wind_type(wind_dir, spot):
-    """Firedelt etter vinkelen mellom vindretningen og MIDTEN av spotens
-    offshore_wind-sektor (0 = rett fra land): offshore 0-45, side 45-100,
-    side-onshore 100-135, onshore 135-180."""
+    """06.10.2026, Theodors rettelse (andre runde - Unstad sin utvidede
+    offshore_wind [70,232] gjorde en tidligere versjon av denne funksjonen
+    (kant-avstand til SEKTOREN for hele firedelingen) mildere for NV-vind
+    (280-320 grader) UTEN observasjonsstøtte - se STATUS.md). To uavhengige
+    spørsmål nå, ikke ett:
+
+    1. Offshore: avgjøres ALENE av spotens offshore_wind-sektor (kan være
+       utvidet, eller i prinsippet flere deler - se in_sector()). Rent
+       geografisk/empirisk, ikke avledet fra facing.
+    2. Ellers (side/side-onshore/onshore): avgjøres av vinkelen til FACING
+       (retningen stranda vender ut mot havet - IKKE senteret eller kanten
+       av offshore-sektoren). Vind innenfor 45 grader av facing er dead
+       onshore (kommer rett fra den kanten havet står åpent), 45-80 grader
+       side-onshore, over 80 side. Fysisk riktigere enn å måle fra
+       offshore-sektoren: en VID offshore-sektor (som Unstad sin nye) skal
+       ikke gjøre den stikk motsatte, verste retningen (294,8 grader for
+       Unstad) mildere bare fordi sektoren ble bredere et annet sted.
+
+    For en spot der offshore_wind er NØYAKTIG facing+180 ± 45 grader (den
+    opprinnelige, implisitte antagelsen for alle 8 spots) gir dette TALLMESSIG
+    samme svar som den aller første versjonen av denne funksjonen (vinkel til
+    SENTERET av offshore_wind) - bevist: utenfor sektoren er vinkel-til-kant
+    X alltid senter-avstand 45+X, og senter-avstand = 180 - vinkel-til-facing
+    (facing og senteret er motsatte punkter) gir nøyaktig de samme fire
+    grensene (45/100/135 fra senter <-> 45/80 fra facing). Men IKKE alle 8
+    spots har offshore_wind eksakt sentrert på facing+180 (Grøtfjord,
+    Lenangsøyra og Steinkrøssa avviker 5-20 grader, sjekket mot spots.json)
+    - for DEM endrer denne rettelsen altså noe reelt, ikke bare Unstad. Se
+    STATUS.md for den fulle, verifiserte tabellen (ikke antatt)."""
     if wind_dir is None:
         return None
-    off_sector = spot["offshore_wind"]
-    center = (off_sector[0] + ((off_sector[1] - off_sector[0]) % 360) / 2) % 360
-    a = angle_diff(wind_dir, center)
-    if a <= 45:
+    if in_sector(wind_dir, spot["offshore_wind"]):
         return "offshore"
-    if a <= 100:
-        return "side"
-    if a <= 135:
+    facing = spot.get("facing")
+    if facing is None:
+        return "onshore"  # ukjent facing: anta verste fall, samme filosofi som andre steder
+    b = angle_diff(wind_dir, facing)
+    if b < 45:
+        return "onshore"
+    if b < 80:
         return "sideonshore"
-    return "onshore"
+    return "side"
 
 
 def effective_wind(speed, gust):
@@ -711,7 +754,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
                      potential, solid, lost_wind, lost_tide, uncertain,
-                     sources_disagree, capped_from, disagree_cap):
+                     sources_disagree, capped_from, disagree_cap,
+                     energy_swell_kj=None, energy_factor_value=1.0):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -755,6 +799,18 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             items.append("Periode (ute): ukjent")
         else:
             items.append(f"Periode {period:.0f} s (ute): {_period_word(ps)}")
+        # 06.10.2026, Theodors oppgave (andre runde): energifaktoren er nå
+        # universell (alle spots) - egen linje her i stedet for bare i
+        # local_rules sin egen seksjon (som fortsatt bare viser Farstadsanden
+        # sine tide-/vind-spesifikke straffer). Viser svell-energien (det
+        # regelen faktisk bruker, se rate()), IKKE totalhøyde-energien
+        # ("Svell ute"-cella over viser den, som energy_total_kj).
+        if energy_swell_kj is not None:
+            if energy_factor_value < 0.999:
+                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ: faktor {energy_factor_value:.2f} "
+                              f"(potensial ganget ned)")
+            else:
+                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ: over terskelen, ingen effekt")
         if blown_out:
             items.append(f"Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
@@ -859,8 +915,18 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     2. blown_out: IKKE flatt (reell høyde, eller den gamle
        is_blown_out()-saken: reell BarentsWatch-totalhøyde PÅ TROSS AV
        low_hs), men vindstraffen er det som faktisk tok (de fleste av)
-       stjernene. "Vind-dominant" krever et potensial på minst 2 FØR vind
+       stjernene. "Vind-dominant" krever et potensial på minst 1 FØR vind
        og tidevann - ellers var det ingenting vinden kunne ta.
+       06.10.2026, Theodors rettelse (andre runde, se STATUS.md): grensa var
+       opprinnelig 2, satt i en tid der bare høyde/periode/retning (og en
+       sjelden Farstadsanden-only energiregel) kunne redusere potensialet
+       FØR vind. Nå energifaktoren er universell kan DEN alene presse
+       potensialet ned til 1 - "minst 2" ville da feilaktig skjult en ekte
+       vind-dominert time (Grøtfjord 05.10.2026, lav svellenergi OG 13 m/s
+       onshore samtidig) bak et tomt `low_reason`. "Minst 1" dekker fortsatt
+       det opprinnelige poenget (potensial 0 betyr bokstavelig talt
+       ingenting å ta), og krever fortsatt at vind faktisk tok noe
+       (lost_wind > 0) minst like mye som tidevannet.
     3. stormsjo: lav svellandel (det meste av BarentsWatch sin totalhøyde
        er vindsjø, ikke ekte svell) OG en reell totalhøyde (ikke lite
        energi totalt - det er heller 1, flat).
@@ -878,7 +944,7 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     flat = little_total and (low_hs or (surf_height is not None and surf_height < LOW_RATING_FLAT_SURF_HEIGHT_MAX))
     if flat:
         return "flat"
-    wind_dominant = potential >= 2 and lost_wind > 0 and lost_wind >= lost_tide
+    wind_dominant = potential >= 1 and lost_wind > 0 and lost_wind >= lost_tide
     if blown_out or wind_dominant:
         return "blown_out"
     if bw_detail is not None and not little_total and bw_detail["swell_share"] < STORMSJO_SHARE_MAX:
@@ -896,37 +962,73 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
 # trenger finnes, ikke bare at local_rules selv finnes) - en spot kan sette
 # bare energi, bare tidevann, osv.
 
-LOCAL_ENERGY_FACTOR_FLOOR = 0.3  # se local_energy_factor()
+LOCAL_ENERGY_FACTOR_FLOOR = 0.3  # se energy_factor()
+# 06.10.2026, Theodors rettelse (se CLAUDE.md/STATUS.md): energifaktoren er
+# ikke lenger en Farstadsanden-only "myk regel" (spot["local_rules"]) - den
+# gjelder nå ALLE spots, med disse standardgrensene. En spot med
+# local_rules.min_energy_kj/weight (i dag bare Farstadsanden, Magnus sine
+# 3000/1500/0,7) overstyrer dem, akkurat som før.
+ENERGY_FULL_DEFAULT = 2000   # kJ
+ENERGY_ZERO_DEFAULT = 500    # kJ
+ENERGY_WEIGHT_DEFAULT = 0.5
 
 
-def local_energy_factor(spot, energy_total):
+def energy_factor(spot, energy_swell):
     """Hvor mye svellstjernene (potensialet) skal ganges med ut fra
-    totalenergien ute, FØR vind og tidevann trekker fra (Theodors
-    eksplisitte rekkefølge, se rate()). 1,0 fra min_energy_kj.full, lineært
-    ned til 0,3 ved min_energy_kj.zero, 0,3 under zero.
+    SVELLENERGIEN ute (energy_swell - EKTE svell, IKKE totalhøyden som
+    inkluderer vindsjø, se energy_kj()/rate() sin egen begrunnelse), FØR
+    vind og tidevann trekker fra (Theodors eksplisitte rekkefølge, se
+    rate()). 1,0 fra full-grensa, lineært ned til 0,3 ved zero-grensa, 0,3
+    under zero. Universell (se modulnivå-konstantene over) - en spot med
+    `local_rules.min_energy_kj`/`weight` (i dag bare Farstadsanden)
+    overstyrer begge deler.
 
     weight (0-1, Theodors "klype salt") demper EFFEKTEN av regelen, ikke
     terskelen: faktor = 1 - weight*(1 - rå_faktor) - weight=0 gir alltid
     faktor 1,0 (ingen effekt i det hele tatt), weight=1 gir rå_faktor
-    ublandet. Mangler energi eller terskler: ingen effekt (nøytral 1,0) -
-    en myk regel skal aldri straffe for data den ikke har."""
-    rules = spot.get("local_rules")
-    if not rules or energy_total is None:
+    ublandet. Mangler energi: ingen effekt (nøytral 1,0) - en myk regel
+    skal aldri straffe for data den ikke har.
+
+    ROADMAP oppgave I (skjerming, ikke bygget ennå): `spot["shelter_factor"]`
+    - når den finnes - justerer BEGGE grensene OPP (delt på faktoren, som er
+    under 1,0 for en skjermet spot), siden en skjermet spot trenger mer
+    energi UTE for samme effekt PÅ STRANDA. Ingen spot har dette feltet i
+    dag - rent forberedt, uten effekt før oppgave I setter det."""
+    if energy_swell is None:
         return 1.0
-    thresholds = rules.get("min_energy_kj")
-    if not thresholds or thresholds.get("full") is None or thresholds.get("zero") is None:
+    rules = spot.get("local_rules") or {}
+    thresholds = rules.get("min_energy_kj") or {}
+    full = thresholds.get("full", ENERGY_FULL_DEFAULT)
+    zero = thresholds.get("zero", ENERGY_ZERO_DEFAULT)
+    shelter = spot.get("shelter_factor")
+    if shelter is not None and 0 < shelter < 1:
+        full, zero = full / shelter, zero / shelter
+    if full is None or zero is None or full <= zero:
         return 1.0
-    full, zero = thresholds["full"], thresholds["zero"]
-    if full <= zero:
-        return 1.0
-    if energy_total >= full:
+    if energy_swell >= full:
         raw = 1.0
-    elif energy_total <= zero:
+    elif energy_swell <= zero:
         raw = LOCAL_ENERGY_FACTOR_FLOOR
     else:
-        raw = LOCAL_ENERGY_FACTOR_FLOOR + (1 - LOCAL_ENERGY_FACTOR_FLOOR) * (energy_total - zero) / (full - zero)
-    weight = rules.get("weight", 1.0)
+        raw = LOCAL_ENERGY_FACTOR_FLOOR + (1 - LOCAL_ENERGY_FACTOR_FLOOR) * (energy_swell - zero) / (full - zero)
+    weight = rules.get("weight", ENERGY_WEIGHT_DEFAULT)
     return 1 - weight * (1 - raw)
+
+
+def energy_thresholds_used(spot):
+    """(full, zero, weight) FAKTISK brukt for spoten akkurat nå - samme
+    standard/override/skjerming-logikk som energy_factor(), men uten å
+    trenge en energi-verdi. Til visning (calibration sine *_used-felt,
+    samme mønster som transfer_used/surf_factor_used) og til
+    Logger-fanen sitt læringsforslag (se docs/index.html)."""
+    rules = spot.get("local_rules") or {}
+    thresholds = rules.get("min_energy_kj") or {}
+    full = thresholds.get("full", ENERGY_FULL_DEFAULT)
+    zero = thresholds.get("zero", ENERGY_ZERO_DEFAULT)
+    shelter = spot.get("shelter_factor")
+    if shelter is not None and 0 < shelter < 1:
+        full, zero = full / shelter, zero / shelter
+    return full, zero, rules.get("weight", ENERGY_WEIGHT_DEFAULT)
 
 
 def local_rules_penalty(hour, spot, wind_type_, wind_speed):
@@ -1047,7 +1149,7 @@ def rate(hour, spot):
     surf_height_sets = None if surf_height is None else surf_height * SURF_SETS_FACTOR
 
     hs = height_score(surf_height, spot)
-    ps = period_score(period, spot)
+    ps = period_score(period)
     ds = direction_score(hour.get("dir_offshore"), spot, source)
     score = hs * ps * ds
     potential = int(5 * score + 1e-9)  # rund ned
@@ -1066,6 +1168,13 @@ def rate(hour, spot):
         (source != "barentswatch" and ((hour.get("turn") or 0) >= 10 or (deg_out or 0) > 0))
         or (source == "barentswatch" and bw_detail is not None
             and not bw_detail["spot_direction_known"])
+        # 06.10.2026, Theodors rettelse (manglende svelldata, se CLAUDE.md):
+        # ingen kilde hadde et ekte, utskilt svellfelt for timen - svellet
+        # ute er et forsiktig anslag fra totalhøyden (se fetch.build_spot()
+        # og sources.openmeteo_marine()), ikke en ekte måling. Gjør timen
+        # usikker uansett kilde (vanligvis svell_ute/langtid, men prinsippet
+        # er generelt).
+        or hour.get("swell_model") == "total_fallback"
     )
     # Kildene uenige: BarentsWatch viser en reell totalhøyde (0,5 m+), men
     # svellet ute er dårlig eksponert mot spoten, mest av totalhøyden er
@@ -1101,16 +1210,34 @@ def rate(hour, spot):
         potential = min(potential, 3)
 
     # 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
-    # "Lokalkunnskap"): bølgeenergi i kJ, og den myke energiregelen - FØR
-    # vind og tidevann, se local_energy_factor(). energy_total (totalhøyde
-    # ute) er leddet Magnus sin regel og surf-forecast sitt tall gjelder
-    # (se energy_kj()) - energy_swell (ekte svell) vises også, men brukes
-    # ikke i selve regelen.
+    # "Lokalkunnskap"): bølgeenergi i kJ, og energifaktoren - FØR vind og
+    # tidevann, se energy_factor(). energy_swell (EKTE svell ute, ikke
+    # totalhøyden - samme mål som surf-forecast og Magnus bruker) er leddet
+    # regelen (standard eller Magnus sin) faktisk gjelder mot (se
+    # energy_kj()). energy_total (totalhøyde, inkluderer vindsjø) vises også
+    # (energy_total_kj, til "Svell ute"-cella når svell_offshore mangler),
+    # men brukes ALDRI i selve regelen - vindsjø er ikke organisert
+    # svellenergi, og ville latt en vindsjø-dominert time telle som mye
+    # energi den ikke har.
+    #
+    # 06.10.2026, Theodors rettelse (andre runde, fant av fysikk-kontrollør
+    # sin indirekte avsløring via Unstad - se STATUS.md): regelen leste
+    # FEILAKTIG energy_total her, ikke energy_swell, helt siden oppgave A
+    # (dette feltet het da bare "energy_total", og var det eneste tallet
+    # Farstadsanden sine kontrollverdier ble sjekket mot - men Farstadsanden
+    # har typisk lav vindsjø-andel, så feilen var usynlig der). Unstad (høy
+    # periode, stor vindsjø-andel i enkelte timer) gjorde feilen synlig:
+    # 26.09.2026 sin ekte observasjon ("over hodet", 4 stjerner) har
+    # svell_offshore 3,48 m/15 s (ca. 5300 kJ, full faktor) men
+    # height_offshore langt høyere i den gamle, upresise testfixturen - ga
+    # feilaktig lav faktor (0,65) og falt 2 stjerner, over Theodors egen
+    # 1-stjernes toleranse. energifaktoren er nå UNIVERSELL (alle spots,
+    # ikke bare Farstadsanden) - se energy_factor() sine standardgrenser.
     energy_swell = energy_kj(hour.get("swell_offshore"), period)
     energy_total = energy_kj(hour.get("height_offshore"), period)
-    local_energy_factor_value = local_energy_factor(spot, energy_total)
-    if local_energy_factor_value < 0.999:
-        potential = int(potential * local_energy_factor_value + 1e-9)
+    energy_factor_value = energy_factor(spot, energy_swell)
+    if energy_factor_value < 0.999:
+        potential = int(potential * energy_factor_value + 1e-9)
 
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
     wt = wind_type(wind_dir, spot)
@@ -1127,11 +1254,6 @@ def rate(hour, spot):
     if spot.get("local_rules"):
         src = spot["local_rules"].get("source", "")
         local_rules_source = src.split(",")[0].strip() if src else None
-        if local_energy_factor_value < 0.999:
-            local_rules_lines.insert(0, f"Energi {round(energy_total) if energy_total is not None else '-'} kJ: "
-                                         f"faktor {local_energy_factor_value:.2f} (potensial ganget ned)")
-        elif energy_total is not None and spot["local_rules"].get("min_energy_kj"):
-            local_rules_lines.insert(0, f"Energi {round(energy_total)} kJ: over terskelen, ingen effekt")
 
     low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
                                       potential, lost_wind, lost_tide, solid, blown_out)
@@ -1141,7 +1263,7 @@ def rate(hour, spot):
         surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
         wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
         potential, solid, lost_wind, lost_tide, uncertain,
-        sources_disagree, capped_from, disagree_cap,
+        sources_disagree, capped_from, disagree_cap, energy_swell, energy_factor_value,
     )
 
     return {
@@ -1227,8 +1349,10 @@ def rate(hour, spot):
         # når spoten ikke har local_rules. "stars_lost" er ETT tall (allerede
         # avrundet, summert på tvers av tidevann/vind-delreglene) - energi
         # sin effekt er IKKE i dette tallet (den ganger potensialet NED før
-        # vind/tidevann i det hele tatt, se local_energy_factor() - det er
-        # ikke et eget stjerne-fradrag å telle opp samme måte).
+        # vind/tidevann i det hele tatt, se energy_factor() - det er ikke et
+        # eget stjerne-fradrag å telle opp samme måte, og vises nå som egen
+        # linje i den vanlige breakdown over i stedet for her, siden
+        # energifaktoren er universell og ikke lenger Farstadsanden-only).
         "local_rules": None if not spot.get("local_rules") else {
             "source": local_rules_source,
             "stars_lost": local_extra_stars,

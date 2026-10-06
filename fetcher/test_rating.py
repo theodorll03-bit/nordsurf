@@ -36,12 +36,15 @@ sv = rate({"swell_offshore": 1.0, "height_spot_model": 2.4, "dir_offshore": 300,
 show("Svell 1,0 m ute, met.no total 2,4 m", sv)
 assert sv["height_source"] == "svell_ute" and sv["height"] == 0.6
 
-# 26.09.2026: mildere vind. En BarentsWatch-dag midt i idealhøyden med bare
-# 3 m/s offshore skal nå gi full pott - det er nesten ingen vind i praksis.
-# bw_dir = spotens facing (rett inn mot stranda) - uten den blir timen
-# "usikker" (se testene i bunnen for hvorfor) og ville feilaktig kappes.
+# 26.09.2026: mildere vind - 3 m/s offshore gir ingen vindstraff i det hele
+# tatt (se breakdown). bw_dir = spotens facing (rett inn mot stranda) - uten
+# den blir timen "usikker" (se testene i bunnen for hvorfor) og ville
+# feilaktig kappes.
+# 06.10.2026, Theodors rettelse (andre runde): 10 s periode gir nå 0,85
+# (god, ikke lenger full uttelling - se period_score()), derfor 3 stjerner
+# her (4 krever enten lengre periode eller høyde nærmere idealmidten).
 ok = rate({"bw_height": 1.2, "dir_offshore": 300, "bw_dir": G["facing"], "turn": 5, "period": 10, "wind_speed": 3, "wind_dir": 120}, G)
-show("Vanlig ok dag", ok); assert ok["stars"] == 4
+show("Vanlig ok dag", ok); assert ok["stars"] == 3
 
 # 5 stjerner krever alt: SURFEHØYDE (Hb, se breaking_height) nøyaktig midt i
 # ideal_height, lang periode, midt i vinduet, blankt. Ved 15 s periode gir Hs
@@ -231,10 +234,15 @@ show("7.1: Lenangsøyra 26.09 (mest vindsjø)", l1)
 assert l1["height"] < 0.35 and l1["likely_flat"] and l1["sources_disagree"] and l1["stars"] == 0
 
 # 7.2: samme dag, men med ekte nordlig svell rett inn mot stranda.
+# 06.10.2026, Theodors rettelse (andre runde, se STATUS.md): energifaktoren
+# er nå universell - 560 kJ totalenergi er like over standard "zero"-grensa
+# (500), faktor 0,66 ganger potensialet ned. Fortsatt ekte kilder enige
+# (sources_disagree skal fortsatt være usann - lav energi er ikke det samme
+# som uenige kilder).
 l2 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
            "period": 13, "bw_dir": 5, "wind_speed": 2, "wind_dir": None}, L)
 show("7.2: Lenangsøyra, ekte nordlig svell", l2)
-assert l2["stars"] >= 3 and not l2["sources_disagree"]
+assert l2["stars"] >= 2 and not l2["sources_disagree"]
 
 # 7.3: samme som 7.2, men BarentsWatch-periode 5 s - tydelig vindsjø selv om
 # swell_share og retningen isolert sett ser fine ut.
@@ -253,7 +261,8 @@ assert l3["height"] < l2["height"] and l3["stars"] < l2["stars"]
 l4 = rate({"bw_height": 1.0, "swell_offshore": 1.2, "dir_offshore": 19, "height_offshore": 1.3,
            "period": 13, "bw_dir": 80, "wind_speed": 2, "wind_dir": None}, L)
 show("7.4: samme, men BarentsWatch-retning 80 grader", l4)
-assert l4["height"] == 0.92 and l4["stars"] == 4 and l4["spot_direction_overridden"]
+# 06.10.2026: samme energifaktor-effekt som 7.2 (560 kJ, faktor 0,66) - se der.
+assert l4["height"] == 0.92 and l4["stars"] == 2 and l4["spot_direction_overridden"]
 
 # 7.5: retningskonvensjonen (rettet 27.09.2026, andre runde, mot en lagret,
 # garantert rå logg fra FØR noen konvertering fantes: en diagnose-kjøring
@@ -433,14 +442,22 @@ learned_obs = _calibrate.learn("x", logs_obs)
 print("8.9: observasjoner teller i surf_factor:", learned_obs)
 assert learned_obs["surf_factor"] == 0.8
 
-# 8.10: period_score straffer bare kort periode nå (Grøtfjord min_period=8).
+# 8.10: 06.10.2026, Theodors rettelse (andre runde, se CLAUDE.md/STATUS.md) -
+# period_score() er nå en universell, lineær kurve mellom faste punkter,
+# IKKE lenger per spot (gammel spot["min_period"], identisk 8 for alle 8
+# spots, ga 8 s FULL uttelling - for sterkt for en kort periode). Fjernet
+# fra spots.json (ubrukt alle andre steder, sjekket).
 from rating import period_score
-print(f"{'8.10: period_score 5/7/8/12s (min_period 8)':<40} "
-      f"{period_score(5, G)} {period_score(7, G)} {period_score(8, G)} {period_score(12, G)}")
-assert period_score(5, G) == 0.4   # under min_period - 2
-assert period_score(7, G) == 0.6   # under min_period
-assert period_score(8, G) == 1.0   # akkurat min_period: full uttelling
-assert period_score(12, G) == 1.0  # lang periode: ingen ekstra straff eller bonus her
+assert period_score(None) == 0.5
+assert period_score(4) == 0.4    # under laveste punkt: flat på 0,4
+assert period_score(6) == 0.4
+assert period_score(7) == 0.525  # lineært mellom 6 (0,4) og 8 (0,65)
+assert period_score(8) == 0.65
+assert period_score(10) == 0.85
+assert period_score(12) == 0.95
+assert period_score(14) == 1.0
+assert period_score(20) == 1.0   # over høyeste punkt: flat på 1,0
+print("8.10: period_score() - ny lineær kurve (6/8/10/12/14 s = 0,4/0,65/0,85/0,95/1,0), OK")
 
 # Grøtfjord 26.09.2026 (denne samtalen): tredje dag på rad med flatt,
 # svellet kommer fra vest/rett utenfor vinduet. Ekte rådata fra kjøringen
@@ -1004,13 +1021,22 @@ assert U16["exposure_distance_km"] is not None and U16["exposure_width_km"] is n
 
 # 16.1: Unstad 26.09.2026 kl. 14:45 (fast observasjon i CLAUDE.md) - minst
 # 3 stjerner, og surfehøyden skal være ca. 2,4 m (det faktisk observerte).
+# 06.10.2026, Theodors rettelse (andre runde, se STATUS.md): svell_offshore/
+# height_offshore var 1,0/1,0 her siden denne testen opprinnelig ble skrevet
+# (surf_factor_prior-saken, 30.09.2026) - bare bw_height/bw_dir/surf_factor
+# betydde noe DA. Energifaktoren (ny, se rate()) leser disse to feltene -
+# rettet til EKTE svell ute (3,48 m/15 s, Theodors egen rekonstruksjon,
+# ca. 5300 kJ). height_offshore satt likt (ikke en egen vindsjø-andel kjent)
+# - gir samme swell_share=1,0 som 1,0/1,0 ga, så selve høyde-/stjernekjeden
+# (bw_height, surf_factor_prior) er UENDRET av dette, bare energifaktoren er.
 r_2609 = rate({"bw_height": 0.9, "bw_dir": U16["facing"], "bw_period": 15.0, "dir_offshore": 300,
-               "swell_offshore": 1.0, "height_offshore": 1.0, "period": 15, "wind_speed": 3.0,
+               "swell_offshore": 3.48, "height_offshore": 3.48, "period": 15, "wind_speed": 3.0,
                "wind_dir": sum(U16["offshore_wind"]) // 2}, U16)
 show("16.1: Unstad 26.09 kl. 14:45 (surf_factor_prior)", r_2609)
 assert r_2609["stars"] >= 3
 assert abs(r_2609["surf_height"] - 2.4) < 0.1
 assert any(line.startswith("Surf-faktor 1,45 (startverdi fra 2 observasjoner)") for line in r_2609["breakdown"])
+assert r_2609["energy_swell_kj"] is not None and r_2609["energy_swell_kj"] >= 2000  # full energifaktor
 
 # 16.2: Unstad 27.09.2026 kl. 06-08 (fast observasjon i CLAUDE.md) - minst
 # 2 stjerner. Ekte historiske inndata (rekonstruert fra git-historikken til
@@ -1144,6 +1170,16 @@ del F19_no_rules["local_rules"]
 # 19.3: Farstadsanden med 1,6 m svell ute og 10 s (ca. 500 kJ, under Magnus
 # sin "zero"-grense 1500 kJ) skal gi klart færre stjerner MED reglene enn
 # UTEN - energifaktoren ganger potensialet kraftig ned før vind/tidevann.
+# 06.10.2026, Theodors rettelse (andre runde): energifaktoren er nå
+# UNIVERSELL - "UTEN lokale regler" (F19_no_rules) får nå OGSÅ en viss
+# demping (standardgrensene 2000/500/0,5, ikke lenger nøytral 1,0), bare
+# svakere enn Magnus sine strengere 3000/1500/0,7. Sammenligner derfor
+# FAKTOREN direkte (fra energy_factor(), robust mot avrunding til hele
+# stjerner - ca. 500 kJ havner så vidt over standard-"zero" 500 men langt
+# under Magnus sin 1500, så begge dempes, men Magnus sin klart mer) - i
+# tillegg til stjernene, som fortsatt skal gå samme vei eller være like
+# (aldri at reglene gir FLERE stjerner enn uten).
+from rating import energy_factor as _energy_factor
 h_lowenergy = {"swell_offshore": 1.6, "height_offshore": 1.8, "dir_offshore": 310, "period": 10,
                "wind_speed": 3, "wind_dir": 130, "gust": 4, "tide": {"state": "lav", "rising": True}}
 r_with_rules = rate(h_lowenergy, F19)
@@ -1151,7 +1187,9 @@ r_without_rules = rate(h_lowenergy, F19_no_rules)
 show("19.3: Farstadsanden 1,6 m/10 s MED lokale regler", r_with_rules)
 show("19.3: Farstadsanden 1,6 m/10 s UTEN lokale regler", r_without_rules)
 assert abs(r_with_rules["energy_swell_kj"] - 500) < 50  # "ca. 500 kJ"
-assert r_with_rules["stars"] < r_without_rules["stars"]
+assert (_energy_factor(F19, r_with_rules["energy_swell_kj"])
+        < _energy_factor(F19_no_rules, r_without_rules["energy_swell_kj"]))
+assert r_with_rules["stars"] <= r_without_rules["stars"]
 
 # 19.4: 5,5 m, 16 s, ØSØ vind (112,5 grader - offshore for Farstadsanden sin
 # offshore_wind [85,175], senter 130), lavvann - ingen straff fra reglene
@@ -1173,10 +1211,11 @@ show("19.5: Farstadsanden 5,5 m/16 s, ØSØ, høyvann", r_bigday_hoy)
 assert r_bigday_hoy["local_rules"]["stars_lost"] == 1
 assert r_bigday_lav["stars"] - r_bigday_hoy["stars"] == 1
 
-# 19.6: ingen andre spots har local_rules - rate() sitt resultat for dem skal
-# derfor være identisk med/uten denne hele oppgaven (regresjon mot resten av
-# testfila, ikke bare et nytt sjekkpunkt her).
-for other_id in ("grotfjord", "tromvik", "ersfjordstranda", "russelv", "lenangsoyra", "steinkrossa", "unstad"):
+# 19.6: ingen andre spots (utenom Farstadsanden og, siden 06.10.2026 andre
+# runde, Unstad - se STATUS.md) har local_rules - rate() sitt resultat for
+# dem skal derfor være identisk med/uten denne hele oppgaven (regresjon mot
+# resten av testfila, ikke bare et nytt sjekkpunkt her).
+for other_id in ("grotfjord", "tromvik", "ersfjordstranda", "russelv", "lenangsoyra", "steinkrossa"):
     assert spots[other_id].get("local_rules") is None, f"{other_id} skal IKKE ha local_rules"
 
 # ---------- 06.10.2026, Theodors rettelse (urgent): bw_confirms skal ikke
@@ -1271,5 +1310,102 @@ assert r_305["stars"] > r_338["stars"]
 for h in h_2809:
     r17b = rate(h, U16)
     assert r17b["bw_confirms"] is True and r17b["stars"] >= 3
+
+# ---------- 06.10.2026, Theodors rettelse (andre runde): offshore avgjøres
+# av offshore_wind-sektoren (kan være utvidet), men side/side-onshore/onshore
+# måles fra FACING, ikke fra sektorens senter eller kant - se wind_type()
+# sin docstring for begrunnelsen (en bredere offshore-sektor et sted skal
+# ikke gjøre den stikk motsatte, verste retningen mildere) ----------
+from rating import wind_type
+
+# 21.1: for en spot der offshore_wind er NØYAKTIG facing+180 ± 45 grader
+# (den opprinnelige, implisitte antagelsen for alle 8 spots) er dette
+# matematisk identisk med den aller første versjonen (vinkel til SENTERET
+# av offshore_wind) - se wind_type() sin docstring for beviset. Sveip hele
+# senter-avstanden 0-180 i hele grader for hver spot, sammenlignet mot den
+# opprinnelige firedelte grensa (0-45/45-100/100-135/135-180).
+#
+# MEN: sjekket mot ekte spots.json (06.10.2026) - bare 4 av de 7 andre
+# spotene (tromvik, ersfjordstranda, russelv, farstadsanden) har FAKTISK
+# offshore_wind nøyaktig sentrert på facing+180 (0 graders avvik). Grøtfjord
+# (6 grader), lenangsøyra (opprinnelig 20 grader - se under) og steinkrossa
+# (5 grader) avviker - for DISSE endrer rettelsen altså noe reelt (24/80/20
+# av 360 grader bytter kategori i den opprinnelige sjekken), ikke bare for
+# Unstad. Verifisert: ingen av disse timene endret stjerner i dagens ekte
+# 48-timersvarsel (se STATUS.md) - men IKKE en usynlig endring i prinsippet,
+# og derfor ikke stilltiende antatt uendret her lenger - testet eksplisitt
+# begge veier i stedet. Theodor sa ja til at alle tre endres reelt.
+#
+# 06.10.2026, andre runde: Lenangsøyra sin facing (var 0, "sett på
+# satellittbilde") rettet til 19 grader - midtpunktet av den EKTE, helt
+# åpne sektoren (samme landdeteksjon som exposure_baseline.py/
+# check_spot.py, se STATUS.md), identisk med swell_window [15,23]. Falt
+# avviket fra 80 til 4 av 360 grader - testet under som en egen sjekk,
+# IKKE lagt i OFFSET_CENTER_SPOTS sin "avviker reelt"-sjekk lenger (for
+# liten/usikker til å garantere n_diff > 0 ved en fremtidig avrundingsendring
+# andre steder - se 21.1c).
+OLD_BOUNDARIES = ((45, "offshore"), (100, "side"), (135, "sideonshore"), (180, "onshore"))
+
+
+def old_wind_type_by_center(center_offset):
+    for limit, kind in OLD_BOUNDARIES:
+        if center_offset <= limit:
+            return kind
+
+
+def old_wind_type(wind_dir, spot):
+    from rating import angle_diff as _ad
+    a, b = spot["offshore_wind"]
+    center = (a + ((b - a) % 360) / 2) % 360
+    return old_wind_type_by_center(_ad(wind_dir, center))
+
+
+EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda", "russelv", "farstadsanden")
+OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa")
+
+for other_id in EXACT_CENTER_SPOTS:
+    sp = spots[other_id]
+    for d in range(360):
+        assert wind_type(d, sp) == old_wind_type(d, sp), f"{other_id} ved {d} grader"
+print(f"21.1a: {len(EXACT_CENTER_SPOTS)} spots (offshore_wind nøyaktig sentrert på facing+180) - "
+      f"wind_type() matematisk uendret for alle 360 grader, OK")
+
+for other_id in OFFSET_CENTER_SPOTS:
+    sp = spots[other_id]
+    n_diff = sum(1 for d in range(360) if wind_type(d, sp) != old_wind_type(d, sp))
+    assert n_diff > 0, f"{other_id} forventet å avvike fra senter-regelen (offshore_wind ikke sentrert på facing+180)"
+print(f"21.1b: {len(OFFSET_CENTER_SPOTS)} spots (offshore_wind IKKE sentrert på facing+180) - "
+      f"wind_type() endrer seg reelt for noen grader, bekreftet (ikke antatt uendret)")
+
+# 21.2: Unstad - de fem observasjonene (modellvind, se STATUS.md punkt 14)
+# skal ALLE klassifiseres offshore med den utvidede sektoren [70,232] -
+# selve grunnen til den første rettelsen.
+U21 = spots["unstad"]
+assert U21["offshore_wind"] == [70, 232]
+_unstad_obs_wind = [
+    ("26.09 kl. 14:45", 213), ("26.09 kl. 14:45 (øvre)", 220),
+    ("27.09 morgen", 193), ("27.09 morgen (øvre)", 227),
+    ("27.09 ettermiddag", 188), ("27.09 ettermiddag (øvre)", 191),
+    ("28.09 (allerede riktig)", 145), ("28.09 (øvre)", 150),
+    ("05.10", 199), ("05.10 (øvre)", 206),
+]
+for label, d in _unstad_obs_wind:
+    assert wind_type(d, U21) == "offshore", f"{label} ({d} grader) ga {wind_type(d, U21)}, forventet offshore"
+print("21.2: Unstad - alle 10 observerte vindretninger (fem observasjoner) er offshore med [70,232], OK")
+
+# 21.3: 06.10.2026, Theodors rettelse (andre runde) - 294,8 grader (Unstad
+# sin facing, altså dead onshore, verstefall) skal ALLTID være onshore,
+# uansett hvor bred offshore_wind er et annet sted. Dette var selve
+# regresjonen den forrige kant-til-sektor-versjonen innførte (294,8/300
+# grader ble mildere klassifisert bare fordi sektoren ble bredere på
+# S/SSV-siden) - nå målt fra facing i stedet, uavhengig av sektorens bredde.
+# 100 grader (midt i den opprinnelige, rene geometriske offshore-sektoren)
+# er fortsatt offshore.
+assert wind_type(100, U21) == "offshore"
+assert wind_type(294.8, U21) == "onshore"
+assert wind_type(300, U21) == "onshore"
+assert wind_type(335, U21) == "onshore"
+print("21.3: Unstad - 100 grader offshore; 294,8 (facing/verstefall), 300 og 335 grader alle onshore "
+      "(rettet tilbake fra forrige versjons regresjon), OK")
 
 print("Alle tester ok")

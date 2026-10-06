@@ -303,6 +303,43 @@ print("7c GFS svarer med 0.0 pa alt (ingen dekning) -> faller til standardmodell
 assert result["2026-01-01T00:00Z"]["dir"] == 271 and result["2026-01-01T00:00Z"]["swell_model"] == "standard"
 assert result["2026-01-01T00:00Z"]["height"] == 0.88
 
+# ---------- 7c2: 06.10.2026, Theodors rettelse (manglende data tolket som
+# 0, se CLAUDE.md) - INGEN av kildene har et ekte, utskilt svellfelt (begge
+# bokstavelig 0/0/0, vanlig langt frem i tid der GFS Wave sitt rutenett ikke
+# dekker punktet), men totalhøyden FINNES - skal bruke totalfeltene som
+# reserve (swell_model="total_fallback"), ALDRI stille vise 0,0 m/0 grader/
+# 0 s som om det var en ekte måling ----------
+def fake_openmeteo_fetch_no_swell_has_total(lat, lon, model=None):
+    # Begge "kildene" mangler et ekte svellfelt, men har en ekte totalhøyde/
+    # -retning/-periode (den samlede sjøtilstanden) - typisk for et punkt
+    # GFS Wave ikke dekker, men som den vanlige (ikke-svell-separerte)
+    # bølgemodellen fortsatt har noe for.
+    return {"2026-01-01T00:00Z": {"height": 5.5, "swell_height": 0.0, "swell_dir": 0, "swell_period": 0.0,
+                                   "total_dir": 243, "total_period": 7.8,
+                                   "secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0}}
+sources._openmeteo_fetch = fake_openmeteo_fetch_no_swell_has_total
+result = real_openmeteo_marine(68.27, 13.58)
+sources._openmeteo_fetch = real_openmeteo_fetch
+r = result["2026-01-01T00:00Z"]
+print("7c2 ingen svellfelt, men totalhøyde finnes -> total_fallback:", r)
+assert r["swell_model"] == "total_fallback"
+assert r["height"] == 5.5 and r["swell_height"] == 5.5  # reserve = totalhøyden, ALDRI 0,0
+assert r["dir"] == 243 and r["period"] == 7.8  # fra totalfeltene, ALDRI 0/0
+
+# ---------- 7c3: som 7c2, men totalhøyden mangler/er 0 OGSÅ - genuint intet
+# å hente for punktet/timen. Skal gi ekte None over hele linja, ALDRI 0 ----------
+def fake_openmeteo_fetch_nothing(lat, lon, model=None):
+    return {"2026-01-01T00:00Z": {"height": 0.0, "swell_height": 0.0, "swell_dir": 0, "swell_period": 0.0,
+                                   "total_dir": 0, "total_period": 0.0,
+                                   "secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0}}
+sources._openmeteo_fetch = fake_openmeteo_fetch_nothing
+result = real_openmeteo_marine(68.27, 13.58)
+sources._openmeteo_fetch = real_openmeteo_fetch
+r = result["2026-01-01T00:00Z"]
+print("7c3 absolutt ingenting for punktet -> ekte None, ikke 0:", r)
+assert r["swell_model"] is None
+assert r["height"] is None and r["swell_height"] is None and r["dir"] is None and r["period"] is None
+
 # ---------- 7d: _get prøver igjen på midlertidige HTTP-feil (429/5xx), men
 # ikke på varige (sett i Actions: kildene svarer av og til med 503 når flere
 # spots hentes tett etter hverandre) ----------
@@ -523,5 +560,41 @@ assert fetch.ARCHIVE_DIR.exists() and list(fetch.ARCHIVE_DIR.glob("*.json")) and
 assert not (Path(fetch.__file__).resolve().parent.parent / "data" / "forecast_accuracy.json").exists() or True  # ekte fil kan finnes fra bot - bare tmp-en skal være skrevet av testen
 assert isinstance(g["calibration"]["accuracy"], list) and len(g["calibration"]["accuracy"]) == 16
 print("10.6 henteren: rader merket, arkiv+ledger i tmp, accuracy-tabell ok")
+
+# ---------- 10.7: 06.10.2026, Theodors rettelse (punkt 4) - light_days skal
+# dekke alle 16 dager, ikke bare sun.light_days() sin egen standardverdi (4) ----------
+assert len(g["light_days"]) == 16, f"forventet 16 dager lys, fikk {len(g['light_days'])}"
+print(f"10.7 light_days: {len(g['light_days'])} dager (alle 16), ok")
+
+# ---------- 10.8: 06.10.2026, Theodors rettelse (HASTER-funn) -
+# sanitize_hour_fields(): svell-fallback dempes med SWELL_SHARE_FALLBACK_ESTIMATE,
+# kast lavere enn vind nullstilles (og telles), rating ALDRI "Flatt" bare
+# fordi reserven brukte totalhøyden ----------
+h_fallback = {"swell_offshore": 5.5, "swell_model": "total_fallback", "gust": 3.0, "wind_speed": 16.0}
+gust_flagged = fetch.sanitize_hour_fields(h_fallback)
+print("10.8a sanitize_hour_fields() svell-fallback+kast<vind:", h_fallback, "flagget:", gust_flagged)
+assert h_fallback["swell_offshore"] == 5.5 * fetch.SWELL_SHARE_FALLBACK_ESTIMATE  # dempet, ALDRI 0 eller urørt total
+assert h_fallback["gust"] is None  # kast < vind er fysisk umulig - nullstilt, ikke vist
+assert gust_flagged is True
+
+h_normal = {"swell_offshore": 1.2, "swell_model": "gfs", "gust": 14.0, "wind_speed": 8.0}
+gust_flagged2 = fetch.sanitize_hour_fields(h_normal)
+print("10.8b sanitize_hour_fields() normal time, uendret:", h_normal, "flagget:", gust_flagged2)
+assert h_normal["swell_offshore"] == 1.2 and h_normal["gust"] == 14.0  # ekte svellmodell og gyldig kast - urørt
+assert gust_flagged2 is False
+
+# Full kjede: en time der INGEN kilde har et ekte svellfelt skal ALDRI vise
+# "Flatt" bare fordi totalhøyden er stor (5,5 m) men swell_offshore var 0/
+# mangler FØR rettelsen - test direkte mot rate() med en realistisk,
+# dempet reserve (3,3 m - 5,5 × 0,6).
+from rating import rate as _rate_1008
+_spot_1008 = {"ideal_height": [0.8, 2.0], "max_height": 3.5, "facing": 295, "offshore_wind": [76, 166],
+              "swell_window": [286, 310], "transfer": 0.6, "surf_factor": 1.0}
+r_1008 = _rate_1008({"swell_offshore": 3.3, "height_offshore": 5.5, "dir_offshore": 298, "period": 7.8,
+                      "swell_model": "total_fallback", "wind_speed": 5, "wind_dir": 100}, _spot_1008)
+print("10.8c full rate() med svell-fallback (3,3/5,5 m):", r_1008["stars"], "stjerner, low_reason:", r_1008["low_reason"], "uncertain:", r_1008["uncertain"])
+assert r_1008["low_reason"] != "flat"
+assert r_1008["uncertain"] is True
+print("10.8 sanitize_hour_fields() + full rate()-kjede ok")
 
 print("Pipeline ok")

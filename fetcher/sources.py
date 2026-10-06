@@ -113,7 +113,16 @@ OPENMETEO_SWELL_MODEL = "ncep_gfswave025"
 def _openmeteo_fetch(lat, lon, model=None):
     """Rådata fra Open-Meteo Marine, ev. med en bestemt modell valgt eksplisitt
     via `models`. {time: {height, swell_height, swell_dir, swell_period,
-    secondary_swell_height, secondary_swell_dir, secondary_swell_period}}"""
+    total_dir, total_period, secondary_swell_height, secondary_swell_dir,
+    secondary_swell_period}}
+
+    06.10.2026, Theodors rettelse (manglende data ble tolket som 0, se
+    CLAUDE.md og STATUS.md): total_dir/total_period (wave_direction/
+    wave_period - den SAMLEDE sjøtilstanden, svell + vindsjø) ble FØR hentet
+    fra API-et (sto allerede i "hourly"-parameteren over) men ALDRI lagret -
+    trengs nå som reserve i openmeteo_marine() når ingen av kildene har et
+    ekte, utskilt svellfelt for punktet (vanlig langt frem i tid, der GFS
+    Wave sitt rutenett ikke dekker alle punkt for hver time)."""
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -143,6 +152,8 @@ def _openmeteo_fetch(lat, lon, model=None):
             "swell_height": h["swell_wave_height"][i],
             "swell_dir": h["swell_wave_direction"][i],
             "swell_period": h["swell_wave_period"][i],
+            "total_dir": h["wave_direction"][i],
+            "total_period": h["wave_period"][i],
             "secondary_swell_height": h.get("secondary_swell_wave_height", missing)[i],
             "secondary_swell_dir": h.get("secondary_swell_wave_direction", missing)[i],
             "secondary_swell_period": h.get("secondary_swell_wave_period", missing)[i],
@@ -165,11 +176,32 @@ def openmeteo_marine(lat, lon):
     sekundærsvellet lagres bare - det skal ikke vises eller brukes i ratingen.
     {time: {height, swell_height, dir, period, swell_model,
     secondary_swell_height, secondary_swell_dir, secondary_swell_period}}
-    swell_model er "gfs", "standard" eller None (ingen av kildene har svelldata).
+    swell_model er "gfs", "standard", "total_fallback" (se under) eller None
+    (ingen av kildene har NOE, verken svell eller totalhøyde, for punktet).
 
     Henter GFS- og standardmodell-kallene hver for seg: timer det ene ut
     (sett i praksis - Open-Meteo kan svare tregt), skal ikke det andre
-    kastes bort også. Bare hvis BEGGE feiler gir funksjonen tomt resultat."""
+    kastes bort også. Bare hvis BEGGE feiler gir funksjonen tomt resultat.
+
+    06.10.2026, Theodors rettelse (HASTER-funn: Unstad 14 dager frem viste
+    "Flatt, svell 0,0 m fra 0 grader, periode 0 s" - manglende data var
+    tolket som 0 hele veien ned, se CLAUDE.md sin nye grunnregel). Når INGEN
+    av kildene har et ekte, utskilt svellfelt (_has_real_swell() falsk for
+    begge - vanlig langt frem i tid, der GFS Wave sitt rutenett ikke dekker
+    alle punkt for hver time), brukte den gamle koden likevel GFS sin EGNE,
+    rå `swell_height/swell_dir/swell_period` som om de var gyldige - og de
+    kan være bokstavelig 0/0/0 i akkurat denne situasjonen (samme årsak som
+    _has_real_swell() selv ble laget for å oppdage), ikke bare `None`.
+    `swell_model=None` var det ENESTE signalet om at noe var galt - et
+    signal fetch.py ikke sjekket før den brukte tallene.
+
+    Nå: bruker TOTALFELTENE (wave_height/wave_direction/wave_period - den
+    samlede sjøtilstanden, svell + vindsjø) som en eksplisitt RESERVE i
+    stedet, markert `swell_model="total_fallback"` - et tredje, ekte signal
+    fetch.py bruker til å dempe svellandelen med et forsiktig anslag (se
+    der) og merke timen usikker. Bare hvis TOTALHØYDEN også mangler for
+    begge kilder er resultatet ekte `None` over hele linja, med
+    `swell_model=None`."""
     try:
         primary = _openmeteo_fetch(lat, lon, model=OPENMETEO_SWELL_MODEL)
     except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
@@ -194,6 +226,28 @@ def openmeteo_marine(lat, lon):
         height = p.get("height")
         if not height:  # None eller 0.0 - GFS har ikke gyldig dekning i punktet (se _has_real_swell)
             height = f.get("height")
+        if model is None:
+            # 06.10.2026, Theodors rettelse: INGEN ekte svellfelt - bruk
+            # totalhøyden/-retningen/-perioden (samlet sjøtilstand) som
+            # reserve i stedet for GFS sine egne, potensielt 0/0/0 "svell"-
+            # felt (se modul-docstringen). total_dir/total_period kommer fra
+            # samme kilde `height` allerede falt tilbake til over.
+            total_dir = p.get("total_dir") if p.get("height") else None
+            total_period = p.get("total_period") if p.get("height") else None
+            if total_dir is None:
+                total_dir, total_period = f.get("total_dir"), f.get("total_period")
+            if height:  # har i det minste en totalhøyde å bruke som reserve
+                out[k] = {
+                    "height": height, "swell_height": height, "dir": total_dir, "period": total_period,
+                    "swell_model": "total_fallback",
+                    "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
+                }
+            else:  # ingenting i det hele tatt for dette punktet/timen - ekte None, ikke 0
+                out[k] = {
+                    "height": None, "swell_height": None, "dir": None, "period": None, "swell_model": None,
+                    "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
+                }
+            continue
         out[k] = {
             "height": height,
             "swell_height": src.get("swell_height"),

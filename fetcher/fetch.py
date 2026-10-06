@@ -31,6 +31,12 @@ EXPOSURE_LEARNED = ROOT / "data" / "exposure.json"
 HOURS_AHEAD_MAX = longrange.HOURS
 ARCHIVE_DIR = longrange.ARCHIVE_DIR   # overstyres av test_pipeline.py (tmp)
 LEDGER = longrange.LEDGER
+# 06.10.2026, Theodors rettelse (manglende svelldata ble tolket som 0, se
+# CLAUDE.md og STATUS.md): forsiktig anslått svellandel for en time der
+# sources.openmeteo_marine() måtte bruke totalhøyden som reserve (ingen
+# kilde har et ekte, utskilt svellfelt) - IKKE beregnet, et bevisst
+# forsiktig Theodor-tall (se build_spot()).
+SWELL_SHARE_FALLBACK_ESTIMATE = 0.6
 REPORT = []  # kilderapport, vises i Actions
 # Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
 # igjen (se build_spot()) - vises ØVERST i kilderapporten, ikke i selve
@@ -113,6 +119,39 @@ def resolve_obstacle_geometry(spot, exposure_data):
     if entry is None or entry.get("checksum") != spot_checksum(spot):
         return None, None
     return entry.get("distance_km"), entry.get("width_km")
+
+
+def sanitize_hour_fields(hour):
+    """06.10.2026, Theodors rettelse (HASTER-funn, Unstad 14 dager frem
+    viste "Flatt, svell 0,0 m fra 0 grader, periode 0 s" - manglende data
+    var tolket som 0 hele veien, se CLAUDE.md sin nye grunnregel). To
+    uavhengige opprensker, begge FØR rate() kalles (slik at både ratingen
+    OG breakdown-teksten får de riktige, sanerte tallene - ikke bare
+    visningen etterpå):
+
+    1. Svell ute markert `swell_model=="total_fallback"` (se
+       sources.openmeteo_marine()) har fått `swell_offshore` satt til
+       TOTALHØYDEN (reserve, ingen kilde hadde et ekte, utskilt svellfelt) -
+       dempes her med SWELL_SHARE_FALLBACK_ESTIMATE, et forsiktig ANSLAG
+       (ikke beregnet - vi vet bokstavelig talt ikke den ekte svellandelen
+       for timen).
+    2. Kast kan fysisk ikke være lavere enn middelvinden - settes til None
+       for å unngå å vise en selvmotsigende kombinasjon ("16 m/s med kast
+       3"). rating.effective_wind() ignorerer allerede kast under
+       middelvinden (kun gust>speed gir et tillegg), så dette endrer ALDRI
+       ratingen - bare visningen og breakdown-teksten ("mangler kast, vis
+       bare vind", se CLAUDE.md).
+
+    Muterer `hour` i stedet (kalt rett før rate(), samme mønster som resten
+    av build_spot()). Returnerer True hvis kast ble nullstilt (til
+    fornuftssjekken i kilderapporten sin telling), ellers False."""
+    if hour.get("swell_model") == "total_fallback" and hour.get("swell_offshore") is not None:
+        hour["swell_offshore"] *= SWELL_SHARE_FALLBACK_ESTIMATE
+    gust, wind_speed = hour.get("gust"), hour.get("wind_speed")
+    if gust is not None and wind_speed is not None and gust < wind_speed:
+        hour["gust"] = None
+        return True
+    return False
 
 
 def convention_warning(hours, spot, name):
@@ -467,6 +506,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     spot["surf_factor_source"] = surf_factor_source
 
     hours = []
+    gust_lower_than_wind = 0  # se data_sanity_warnings() under
     for i in range(horizon):
         t = now + dt.timedelta(hours=i)
         k = sources.hour_key(t)
@@ -528,6 +568,8 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "daylight": light != "mørkt",  # brukbart lys, også skumring i mørketida
             "tide": tidemod.state_at(tides, t + dt.timedelta(minutes=30)) if tides else None,
         }
+        if sanitize_hour_fields(hour):
+            gust_lower_than_wind += 1
         hour.update(rate(hour, spot))
         # ROADMAP oppgave B: sone, dag frem og sikkerhet i prosent (kapper
         # ALDRI stjernene - bare merket). "målt" når spoten har nok
@@ -550,8 +592,33 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
 
     gfs_hours = sum(1 for h in hours if h.get("swell_model") == "gfs")
     std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
+    total_fallback_hours = sum(1 for h in hours if h.get("swell_model") == "total_fallback")
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
-    REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
+    REPORT.append((name, "Svellmodell", "ok",
+                   f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, "
+                   f"totalhøyde-reserve {total_fallback_hours}t, ingen svelldata {none_hours}t"))
+    # 06.10.2026, Theodors rettelse (punkt 6, se CLAUDE.md): fornuftssjekk -
+    # tilfeller der tallene motsier hverandre, telt per sone (ikke bare
+    # totalt), til å fange nye varianter av "manglende data tolket som 0"
+    # tidlig, i kilderapporten, uten å vente på at noen legger merke til det
+    # i appen.
+    sanity_zones = ("barentswatch", "reserve", "langtid")
+    height_no_swell = {z: 0 for z in sanity_zones}
+    zero_period = {z: 0 for z in sanity_zones}
+    for h in hours:
+        z = h.get("zone")
+        if z not in height_no_swell:
+            continue
+        if (h.get("height_offshore") or 0) > 1 and not h.get("swell_offshore"):
+            height_no_swell[z] += 1
+        if h.get("period") == 0:
+            zero_period[z] += 1
+    sanity_hits = sum(height_no_swell.values()) + sum(zero_period.values()) + gust_lower_than_wind
+    sanity_txt = (f"totalhøyde over 1 m men svell 0/mangler: BarentsWatch {height_no_swell['barentswatch']}, "
+                  f"reserve {height_no_swell['reserve']}, langtid {height_no_swell['langtid']}. "
+                  f"Periode nøyaktig 0: BarentsWatch {zero_period['barentswatch']}, reserve {zero_period['reserve']}, "
+                  f"langtid {zero_period['langtid']}. Kast lavere enn vind (nullstilt): {gust_lower_than_wind}.")
+    REPORT.append((name, "Fornuftssjekk (manglende data)", "ok" if sanity_hits == 0 else "feil", sanity_txt))
     zones = {z: sum(1 for h in hours if h.get("zone") == z) for z in ("barentswatch", "reserve", "langtid")}
     winds = {w: sum(1 for h in hours if h.get("wind_source") == w) for w in ("metno", "openmeteo")}
     REPORT.append((name, "Soner (rader)", "ok", f"BarentsWatch {zones['barentswatch']}, reserve {zones['reserve']}, langtid {zones['langtid']} (hver 6. time)"))
@@ -619,7 +686,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort",
                        "surf_factor_source", "exposure_distance_km", "exposure_width_km"}
     public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
-    light_days = sun.light_days(s["lat"], s["lon"], now)
+    # 06.10.2026, Theodors rettelse (punkt 4): var 4 dager (funksjonens egen
+    # standardverdi) - for kort til et 16-dagers varsel. Dag 9-16 viste
+    # dermed "–" for lys/mørketid der appen faktisk har time- og
+    # dagbrikke-data (langtid-sonen).
+    light_days = sun.light_days(s["lat"], s["lon"], now, days=longrange.DAYS)
     calibration = {
         **learned,
         "transfer_logs": learned.get("transfer"),
