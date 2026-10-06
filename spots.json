@@ -345,7 +345,16 @@
       "ideal_height": [1.0, 3.0],
       "max_height": 4.5,
       "facing": 310,
+      "local_rules": {
+        "source": "Magnus, lokal surfer (Molde)",
+        "min_energy_kj": {"full": 3000, "zero": 1500},
+        "tide_prefer": ["lav", "middels"],
+        "tide_penalty_high": 1,
+        "offshore_strict": true,
+        "weight": 0.7
+      },
       "_foreløpig": "05.10.2026: lagt til med foreløpige verdier (Theodors eksplisitte instruks) - swell_window, offshore_wind og facing er IKKE bekreftet av lokal surfer ennå. Se 'Venter på Theodor' i ROADMAP.md.",
+      "_local_rules": "06.10.2026: myke regler fra Magnus (lokal surfer, Molde) - 'bra når det er lavvann, minst 3000 kJ energi (surf-forecast sitt tall), offshorevind og minst 3 m på yr. Noe annet har alltid vært bomtur.' Martin (annen lokal) er enig i at lavvann er best. Martin sin del er ikke tallfestet (ingen egne terskler oppgitt) og er derfor ikke lagt inn som egen regel - bare Magnus sine tall. Én persons erfaring, vektet ned med weight 0,7 ('klype salt', se rating.local_energy_factor()/local_rules_penalty()) i stedet for harde sperrer - loggene kan foreslå å myke opp en regel videre (se Logger-fanen), aldri endre den automatisk. Se CLAUDE.md sin 'Lokalkunnskap'.",
       "_pinne": "06.10.2026 (Theodors rettelse): ny pinne fra Theodor, ca. 200 m nordvest (340,8 grader, egen geodesiberegning) for den opprinnelige. Mistanke: den GAMLE pinnen lå der kystlinja krummer inn i en bukt mot nordøst, så facing OG begge BarentsWatch-punktene havnet innerst i bukta - trolig forklaringen på den implausible 0,08 m BarentsWatch målte midt i en storm (6,1 m totalt ute, se STATUS.md). Alle verdiene under (spot, swell_window, facing, havpunkt, barentswatch_point_near) er regnet ut fra DENNE nye pinnen.",
       "_vindu": "06.10.2026: regnet mot GSHHS full oppløsning, 300 m kysttoleranse. Fri linje til åpent hav 284-326 grader (check_spot.py bekrefter uavhengig: 284-327, 1 grad avvik i avrunding). Rett vest (260-270) er det land 0,4 km unna, mot nord/nordøst (330-55) land 0,5-0,9 km unna - begge nærmere enn ved den gamle pinnen, konsistent med at den nye pinnen står lenger ut mot åpent vann.",
       "_offshore_vind": "facing=310 er kystlinjenormalen nærmest DENNE pinnen (Theodors egen beregning) - 5 grader fra vinduets midtpunkt (305), innenfor normal variasjon når stranda ikke er perfekt symmetrisk om det åpne vinduet. offshore_wind [85,175] er foreløpig (utledet fra facing), ikke bekreftet lokalt.",

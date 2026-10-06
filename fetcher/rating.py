@@ -3,6 +3,7 @@
 Svellet gir 0 til 5 stjerner. Vinden trekker fra. Det som trekkes fra vises
 som blasse stjerner: hvor bra det kunne vært med riktig vind.
 """
+import math
 
 
 def angle_diff(a, b):
@@ -399,6 +400,37 @@ def breaking_height(h, period):
     if h is None or period is None or h <= 0:
         return None
     return 0.39 * SURF_G ** 0.2 * (period * h ** 2) ** 0.4
+
+
+WATER_RHO = 1025  # kg/m3, sjøvann
+ENERGY_COEF = WATER_RHO * SURF_G ** 2 / (16 * math.pi)  # se energy_kj()
+
+
+def energy_kj(height, period):
+    """06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
+    'Lokalkunnskap'): bølgeenergi i kJ, samme mål som surf-forecast.com viser.
+    E = rho * g^2 * H^2 * T^2 / (16*pi) - energien i ÉN BØLGELENGDE PER METER
+    BØLGETOPP for en jevn (monokromatisk) bølge: arealenergitetthet
+    (1/8)*rho*g*H^2 ganget med bølgelengden i dypt vann, L = g*T^2/(2*pi).
+    H og T er SAMME par som resten av appen bruker ute (ikke BarentsWatch sin
+    periode ved kysten) - kalleren velger om H er svell_offshore (ekte svell,
+    brukt i de myke lokale reglene) eller height_offshore (totalhøyde,
+    sannsynligvis det yr/surf-forecast selv viser, se 1b i oppgaven).
+
+    Kontrollert mot fem tall Theodor leste av surf-forecast.com for
+    Farstadsanden: 2,4 m/11 s, 3 m/11 s, 3 m/14 s, 4 m/15 s, 5,5 m/16 s.
+    Formelen (fysisk korrekt utledet, se over) treffer tre av fem innenfor
+    5 % (1,1-4,5 % avvik), men IKKE 3 m/11 s (7,9 %) eller 5,5 m/16 s (5,6 %)
+    - ingen enkelt konstant foran H^2*T^2 kan treffe alle fem innenfor 5 %
+    samtidig (det underliggende forholdstallet surf-forecast sitt tall/
+    (H^2*T^2) spriker fra 1,82 til 2,06 mellom de fem punktene, et 11,5 %
+    sprik i seg selv - trolig avrunding i H/T før surf-forecast sin egen,
+    interne beregning, forsterket av kvadratleddene). Theodor varslet selv
+    (se STATUS.md). Endret ALDRI stjernene direkte - bare et tall til visning
+    og én av flere faktorer i de myke lokale reglene (se local_rules_effect())."""
+    if height is None or period is None or height <= 0 or period <= 0:
+        return None
+    return ENERGY_COEF * height ** 2 * period ** 2 / 1000
 
 
 # ---------- Svellstjerner ----------
@@ -799,6 +831,90 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     return None
 
 
+# ---------- Myke lokale regler (Magnus, se CLAUDE.md "Lokalkunnskap") ----------
+# 06.10.2026, Theodors oppgave. Valgfritt felt spot["local_rules"] - ingen
+# effekt i det hele tatt når feltet mangler (de aller fleste spots). Hver
+# delregel i local_rules er uavhengig valgfri (sjekk begge nøklene den
+# trenger finnes, ikke bare at local_rules selv finnes) - en spot kan sette
+# bare energi, bare tidevann, osv.
+
+LOCAL_ENERGY_FACTOR_FLOOR = 0.3  # se local_energy_factor()
+
+
+def local_energy_factor(spot, energy_total):
+    """Hvor mye svellstjernene (potensialet) skal ganges med ut fra
+    totalenergien ute, FØR vind og tidevann trekker fra (Theodors
+    eksplisitte rekkefølge, se rate()). 1,0 fra min_energy_kj.full, lineært
+    ned til 0,3 ved min_energy_kj.zero, 0,3 under zero.
+
+    weight (0-1, Theodors "klype salt") demper EFFEKTEN av regelen, ikke
+    terskelen: faktor = 1 - weight*(1 - rå_faktor) - weight=0 gir alltid
+    faktor 1,0 (ingen effekt i det hele tatt), weight=1 gir rå_faktor
+    ublandet. Mangler energi eller terskler: ingen effekt (nøytral 1,0) -
+    en myk regel skal aldri straffe for data den ikke har."""
+    rules = spot.get("local_rules")
+    if not rules or energy_total is None:
+        return 1.0
+    thresholds = rules.get("min_energy_kj")
+    if not thresholds or thresholds.get("full") is None or thresholds.get("zero") is None:
+        return 1.0
+    full, zero = thresholds["full"], thresholds["zero"]
+    if full <= zero:
+        return 1.0
+    if energy_total >= full:
+        raw = 1.0
+    elif energy_total <= zero:
+        raw = LOCAL_ENERGY_FACTOR_FLOOR
+    else:
+        raw = LOCAL_ENERGY_FACTOR_FLOOR + (1 - LOCAL_ENERGY_FACTOR_FLOOR) * (energy_total - zero) / (full - zero)
+    weight = rules.get("weight", 1.0)
+    return 1 - weight * (1 - raw)
+
+
+def local_rules_penalty(hour, spot, wind_type_, wind_speed):
+    """Tidevann og en strengere offshore-sjekk, begge "koster stjerner" -
+    trekkes fra `solid` (ETTER vind og tidevann sin vanlige straff, se
+    rate()), som et eget, klart merket fradrag - IKKE lagt inn i
+    faded_wind/faded_tide sin bokføring, som fortsatt bare skal vise hva
+    VIND og TIDEVANN alene tar.
+
+    weight demper hvert fradrag direkte (effektiv straff = weight*rå_straff
+    stjerner), summert FØR avrunding til nærmeste hele stjerne (0,5 rundes
+    OPP - vanlig avrunding, ikke Pythons "bankers rounding" som ville gitt
+    0 for nøyaktig 0,5 her, uforutsigbart for noe som skal vises som "koster
+    én stjerne")."""
+    rules = spot.get("local_rules")
+    if not rules:
+        return 0, []
+    weight = rules.get("weight", 1.0)
+    lines = []
+    raw_total = 0.0
+
+    if "tide_penalty_high" in rules and "tide_prefer" in rules:
+        tide = hour.get("tide")
+        state = tide.get("state") if tide else None
+        if state is not None:
+            if state not in rules["tide_prefer"]:
+                pen = weight * rules["tide_penalty_high"]
+                raw_total += pen
+                lines.append(f"Tidevann ({state}): ikke blant det lokale favoriserer - "
+                             f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.1f})")
+            else:
+                lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
+
+    if rules.get("offshore_strict"):
+        strict_hit = (wind_type_ in ("side", "sideonshore")
+                      and wind_speed is not None and wind_speed > 4)
+        if strict_hit:
+            pen = weight * 1
+            raw_total += pen
+            lines.append(f"Vind {wind_speed:.0f} m/s {WIND_TYPE_WORD.get(wind_type_, wind_type_)}: "
+                         f"strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −{pen:.1f})")
+
+    extra_stars = math.floor(raw_total + 0.5)
+    return extra_stars, lines
+
+
 def rate(hour, spot):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     h, source, bw_detail = spot_height(hour, spot)
@@ -926,6 +1042,18 @@ def rate(hour, spot):
     elif uncertain:
         potential = min(potential, 3)
 
+    # 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
+    # "Lokalkunnskap"): bølgeenergi i kJ, og den myke energiregelen - FØR
+    # vind og tidevann, se local_energy_factor(). energy_total (totalhøyde
+    # ute) er leddet Magnus sin regel og surf-forecast sitt tall gjelder
+    # (se energy_kj()) - energy_swell (ekte svell) vises også, men brukes
+    # ikke i selve regelen.
+    energy_swell = energy_kj(hour.get("swell_offshore"), period)
+    energy_total = energy_kj(hour.get("height_offshore"), period)
+    local_energy_factor_value = local_energy_factor(spot, energy_total)
+    if local_energy_factor_value < 0.999:
+        potential = int(potential * local_energy_factor_value + 1e-9)
+
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
     wt = wind_type(wind_dir, spot)
     wp = wind_penalty(wind_speed, wind_dir, spot, gust)
@@ -933,6 +1061,19 @@ def rate(hour, spot):
     tide_pen = tide_penalty(hour.get("tide"), spot)
     lost_tide = min(potential - lost_wind, tide_pen)
     solid = potential - lost_wind - lost_tide
+
+    local_extra_stars, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed)
+    if local_extra_stars:
+        solid = max(0, solid - local_extra_stars)
+    local_rules_source = None
+    if spot.get("local_rules"):
+        src = spot["local_rules"].get("source", "")
+        local_rules_source = src.split(",")[0].strip() if src else None
+        if local_energy_factor_value < 0.999:
+            local_rules_lines.insert(0, f"Energi {round(energy_total) if energy_total is not None else '-'} kJ: "
+                                         f"faktor {local_energy_factor_value:.2f} (potensial ganget ned)")
+        elif energy_total is not None and spot["local_rules"].get("min_energy_kj"):
+            local_rules_lines.insert(0, f"Energi {round(energy_total)} kJ: over terskelen, ingen effekt")
 
     low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
                                       potential, lost_wind, lost_tide, solid, blown_out)
@@ -1017,4 +1158,22 @@ def rate(hour, spot):
         # likely_flat/blown_out over beholdes uendret (egen, mer snever
         # betydning de alt var i bruk for), ikke erstattet av dette.
         "low_reason": low_reason,
+        # 06.10.2026, Theodors oppgave: bølgeenergi i kJ, se energy_kj().
+        # energy_swell er fra ekte svell (swell_offshore) - det de myke
+        # lokale reglene under bruker. energy_total er fra totalhøyde ute
+        # (height_offshore) - trolig det yr/surf-forecast selv viser, vist
+        # ved siden av, ikke brukt i reglene.
+        "energy_swell_kj": None if energy_swell is None else round(energy_swell),
+        "energy_total_kj": None if energy_total is None else round(energy_total),
+        # Myke lokale regler (Magnus, se CLAUDE.md "Lokalkunnskap") - None
+        # når spoten ikke har local_rules. "stars_lost" er ETT tall (allerede
+        # avrundet, summert på tvers av tidevann/vind-delreglene) - energi
+        # sin effekt er IKKE i dette tallet (den ganger potensialet NED før
+        # vind/tidevann i det hele tatt, se local_energy_factor() - det er
+        # ikke et eget stjerne-fradrag å telle opp samme måte).
+        "local_rules": None if not spot.get("local_rules") else {
+            "source": local_rules_source,
+            "stars_lost": local_extra_stars,
+            "lines": local_rules_lines,
+        },
     }

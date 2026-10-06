@@ -1095,4 +1095,79 @@ show("18.3: Farstadsanden - stormsjø med realistisk BarentsWatch-høyde", storm
 assert stormsjo18["low_reason"] == "stormsjo"
 assert stormsjo18["swell_share"] < 0.4
 
+# ---------- 06.10.2026, Theodors oppgave: bølgeenergi (kJ) og myke lokale
+# regler for Farstadsanden (Magnus, lokal surfer) ----------
+from rating import energy_kj as _energy_kj
+
+# 19.1: energiformelen mot fem tall Theodor leste av surf-forecast.com for
+# Farstadsanden. Tre av fem treffer innenfor Theodors egen 5 %-grense -
+# IKKE alle fem, og Theodor har godkjent at det er greit (06.10.2026).
+# Grunnen: surf-forecast AVRUNDER høyde og periode i visningen ("3 m 11 s"),
+# mens deres egen energiberegning bruker de uavrundede tallene - og siden
+# både H og T står i kvadrat, forsterkes en liten avrunding i inputene.
+# Forholdet kJ/(H²T²) varierer derfor ca. 11 % mellom surf-forecast sine
+# EGNE fem tall (1,82-2,06), mer enn 5 %-målet - ingen enkelt konstant kan
+# treffe alle fem samtidig, uansett hvilken vi velger. Formelen er den
+# fysisk korrekte og er ikke justert med en kunstig konstant (se README
+# "Bølgeenergi (kJ)" og energy_kj() sin docstring). De to som ikke treffer
+# (3 m/11 s og 5,5 m/16 s) sjekkes likevel mot en løsere, dokumentert grense
+# (10 %) - ikke utelatt, bare ikke forventet å holde Theodors strengere mål.
+_energy_cases = [
+    (2.4, 11, 1427), (3, 11, 1981), (3, 14, 3500), (4, 15, 7400), (5.5, 16, 14396),
+]
+_energy_within_5pct = 0
+for H, T, expected in _energy_cases:
+    got = _energy_kj(H, T)
+    diff_pct = abs(got - expected) / expected * 100
+    print(f"19.1: energy_kj({H}, {T}) = {got:.1f} kJ (surf-forecast {expected}), avvik {diff_pct:.1f} %")
+    assert diff_pct < 10, f"{H} m/{T} s avvek {diff_pct:.1f} %, over selv den løse 10 %-grensen"
+    if diff_pct < 5:
+        _energy_within_5pct += 1
+assert _energy_within_5pct == 3, f"forventet nøyaktig 3 av 5 innenfor 5 % (se docstring), fikk {_energy_within_5pct}"
+
+# 19.2: 19.3-19.6 trenger en Farstadsanden-kopi UTEN local_rules, til å
+# sammenligne "med" mot "uten" reglene på nøyaktig samme værinndata.
+F19 = spots["farstadsanden"]
+assert F19.get("local_rules") is not None  # sjekker at feltet faktisk er satt før vi tester det
+F19_no_rules = dict(F19)
+del F19_no_rules["local_rules"]
+
+# 19.3: Farstadsanden med 1,6 m svell ute og 10 s (ca. 500 kJ, under Magnus
+# sin "zero"-grense 1500 kJ) skal gi klart færre stjerner MED reglene enn
+# UTEN - energifaktoren ganger potensialet kraftig ned før vind/tidevann.
+h_lowenergy = {"swell_offshore": 1.6, "height_offshore": 1.8, "dir_offshore": 310, "period": 10,
+               "wind_speed": 3, "wind_dir": 130, "gust": 4, "tide": {"state": "lav", "rising": True}}
+r_with_rules = rate(h_lowenergy, F19)
+r_without_rules = rate(h_lowenergy, F19_no_rules)
+show("19.3: Farstadsanden 1,6 m/10 s MED lokale regler", r_with_rules)
+show("19.3: Farstadsanden 1,6 m/10 s UTEN lokale regler", r_without_rules)
+assert abs(r_with_rules["energy_swell_kj"] - 500) < 50  # "ca. 500 kJ"
+assert r_with_rules["stars"] < r_without_rules["stars"]
+
+# 19.4: 5,5 m, 16 s, ØSØ vind (112,5 grader - offshore for Farstadsanden sin
+# offshore_wind [85,175], senter 130), lavvann - ingen straff fra reglene
+# (energien er godt over "full", vinden er offshore ikke side/-onshore,
+# lavvann er foretrukket).
+h_bigday_lav = {"swell_offshore": 5.5, "height_offshore": 5.8, "dir_offshore": 310, "period": 16,
+                "wind_speed": 6, "wind_dir": 112.5, "gust": 8, "tide": {"state": "lav", "rising": True}}
+r_bigday_lav = rate(h_bigday_lav, F19)
+show("19.4: Farstadsanden 5,5 m/16 s, ØSØ, lavvann", r_bigday_lav)
+assert r_bigday_lav["wind_type"] == "offshore"
+assert r_bigday_lav["local_rules"]["stars_lost"] == 0
+
+# 19.5: samme som 19.4, men høyvann - én stjerne mindre enn 19.4, utelukkende
+# fra tide_penalty_high (vektet med weight 0,7: 0,7 stjerne, rundet opp til
+# én hel - se local_rules_penalty()).
+h_bigday_hoy = dict(h_bigday_lav); h_bigday_hoy["tide"] = {"state": "høy", "rising": False}
+r_bigday_hoy = rate(h_bigday_hoy, F19)
+show("19.5: Farstadsanden 5,5 m/16 s, ØSØ, høyvann", r_bigday_hoy)
+assert r_bigday_hoy["local_rules"]["stars_lost"] == 1
+assert r_bigday_lav["stars"] - r_bigday_hoy["stars"] == 1
+
+# 19.6: ingen andre spots har local_rules - rate() sitt resultat for dem skal
+# derfor være identisk med/uten denne hele oppgaven (regresjon mot resten av
+# testfila, ikke bare et nytt sjekkpunkt her).
+for other_id in ("grotfjord", "tromvik", "ersfjordstranda", "russelv", "lenangsoyra", "steinkrossa", "unstad"):
+    assert spots[other_id].get("local_rules") is None, f"{other_id} skal IKKE ha local_rules"
+
 print("Alle tester ok")

@@ -2,6 +2,39 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
+## A. Energi (kJ) på alle spots, og myke lokale regler for Farstadsanden
+Energi = ρ g² H² T² / (16π), ρ = 1025, g = 9,81, altså ca. 1,96 × H² × T² kJ. Samme mål som surf-forecast. Kontroll for Farstad: 2,4 m 11 s = 1427, 3 m 11 s = 1981, 3 m 14 s = 3500, 4 m 15 s = 7400, 5,5 m 16 s = 14396, innenfor 5 prosent. Regn fra svell ute og svellperiode. Vis også energien med totalhøyde ute. Vis kJ for alle spots, i lista, på detaljsiden og i timestripa. Farstadsanden: myke lokale regler fra Magnus med "klype salt" (weight 0,7): energi full fra 3000 kJ, gradvis ned til 1500 kJ; høyvann koster 1 stjerne; offshore_strict. Loggene kan foreslå å myke opp reglene, aldri automatisk. Ferdig når: testene for formel og regler passerer, og kJ vises overalt.
+
+## B. Langtidsvarsel 16 dager med sikkerhet i prosent
+Svell: Open-Meteo GFS Wave med forecast_days 16. Vind: met.no så langt den rekker, deretter Open-Meteo GFS-vind. Merk kilden. Tre soner: BarentsWatch til bw_until, reservemodell til dag 7, langtid dag 8 til 16 (3- eller 6-timers verdier hvis forecast.json blir for stor). Sikkerhet i prosent per dag, ikke kapping av stjerner. Startverdier (sannsynlighet for treff innenfor én stjerne): dag 1: 90, dag 2: 85, dag 3: 80, dag 4: 70, dag 5: 65, dag 6 og 7: 55, dag 8 til 10: 40, dag 11 til 16: 30. Merket "anslag". Mål treffsikkerheten selv: arkiver varselet hver kjøring (data/forecast_archive/, små filer), sammenlign med varselet laget under 6 timer før og med loggene. Når en spot har minst 30 sammenligninger for et antall dager frem, bruk målt prosent ("målt"). Varsler bare for timer med sikkerhet 70 prosent eller mer. Logger-fanen: treffprosent per antall dager frem per spot. Ferdig når: Farstadsanden fredag 16. og lørdag 17. oktober vises med sikkerhet, og testene for soner, prosent og varsler passerer.
+
+## C. Ny visuell design, inspirert av Surfline - KREVER DESIGNPLAN MED SKJERMBILDER FØR BYGGING
+Mål: appen skal se ut og føles som en ordentlig surfeapp: mer farge, tydelige grafer, rask å lese. Inspirert av Surfline sitt oppsett, men ikke kopi av deres logo, navn eller grafiske profil.
+1. Fargeskala for rating, brukt overalt (stjerner, ringen på skiva, kartmerker, søyler, dagbrikker): 0 grå, 1 rød-oransje, 2 gul, 3 grønn, 4 turkis, 5 blå eller lilla. Tokens for lys og mørk modus, sjekket kontrast. Farge aldri eneste bærer av informasjon - tall eller stjerner alltid ved siden av.
+2. Forsiden (lista): hvert spot som et kort med fargestripe for dagens beste rating, surfehøyde ("1,2 til 1,6 m"), kJ, vind med pil og type, og en mini-graf for de neste dagene.
+3. Detaljsiden, ovenfra og ned: (a) overskrift med nåværende rating i farge, surfehøyde og ett ord; (b) surfehøyde-graf over 16 dager (søyler per time de første 7 dagene, per dag etterpå, farget etter rating, sett-høyde som tynnere søyle over, langtidsdager skravert/blekere, trykk velger tidspunkt); (c) svell (hovedsvell og vindsjø hver for seg, retning som pil, høyde, periode, kJ); (d) vind (piler farget etter type, styrke, kast); (e) tidevann (kurve over dagen, flo/fjære, nåtid); (f) lys (dag/skumring/mørke som bakgrunn i grafene); (g) lokale regler og kalibrering lenger ned.
+4. Kartet: merkene farget etter rating, skiva beholdes med ringen i ratingfargen.
+5. Lys og mørk modus, mobil først, iOS-kjent navigasjon, minst 44 pt trykkflater, prefers-reduced-motion.
+6. Lite grafbibliotek fra cdnjs (fast versjon) eller egen SVG, ingen bundler.
+**Vis designplan med skjermbilder av forsiden, detaljsiden og kartet, i lys og mørk modus, FØR bygging.** Ferdig når Theodor har sagt ja og alt er bygget og testet.
+
+## D. Trykk for forklaring
+Alle tall og begreper skal kunne trykkes: surfehøyde, sett, signifikant høyde, svell ute, vindsjø, periode, kJ, retningstreff, eksponering, vindtype, tidevann, sikkerhet, stjerner, kilder (BarentsWatch, anslag, langtid). Trykk åpner et ark nederfra med: (a) hva det betyr, kort og enkelt, med et eksempel; (b) tallene for akkurat denne spoten og timen; (c) hvordan det er regnet ut (samme kjede som breakdown), og hvilke kilder. Fjern de små "i"-ikonene der arket erstatter dem. Ett felles forklaringsbibliotek (én fil med tekstene), så samme forklaring brukes overalt. Skjermleservennlig, fungerer med tastatur. Bygges sammen med C.
+
+## E. Sjekk BarentsWatch-punktene for alle spots
+Utvid workflowen "Finn BarentsWatch-punkt" til alle spots: 150, 250, 500 og 1000 m ut i retning facing, og facing ± 20 grader, pluss dagens punkter. Sammenlign med totalhøyde ute. Flagg spots der dagens punkt gir under 25 prosent av totalhøyden ute på dager der svellet ute kommer inn i vinduet. Foreslå nye punkter med lenker. Ikke endre uten Theodors ja.
+
+## F. Enklere logging
+Etter hvert gode vindu (3 stjerner eller mer i dagslys) for en favoritt: et "Var du der?"-spørsmål neste gang Theodor åpner appen, med ett trykk for flatt, dårlig, ok, bra og rått. "Logg fra bilde": velg et skjermbilde, appen foreslår tidspunkt (fra bildets metadata eller filnavn), og Theodor velger spot, stjerner og størrelse. Lagres som Observert med kilde. Bildet lagres ikke, bare loggen. Logg rett fra kartet: trykk og hold på skiva for å logge for den spoten og tiden.
+
+## G. Overvåking av henteren
+Appen: vis tydelig advarsel øverst hvis forecast.json er mer enn 6 timer gammel ("Varselet er ikke oppdatert siden kl. X"). Workflowen: send ntfy-varsel til Theodor hvis henteren feiler, eller hvis en kilde (BarentsWatch, met.no, Open-Meteo, Kartverket) mangler for alle spots i en kjøring. En enkel helsesjekk i kilderapporten: alle spots har data, ingen tomme eller ugyldige tall, horisont som forventet.
+
+## H. Mørketid i praksis
+Kjør lysberegningen for alle spots for 15. november, 21. desember og 15. januar. Vis brukbart lys per dag og sjekk at timestripa, dagbrikkene, beste vindu og varsler oppfører seg riktig når det bare er skumring. Rett det som ikke fungerer.
+
+Etter hver oppgave (A-H): oppdater STATUS.md, kjør fysikk-kontrollør (for A og B), commit og push.
+
 ## 1. Unstad for lav høyde - FERDIG, Theodor sa ja
 Fire observasjoner (26.09 kl. 14:45, 27.09 morgen, 28.09 kl. 13/"Safe to say it's firing") viste at Unstad rates for lavt, av to ulike årsaker. Først: retningsfaktor-fiksen (ja, også for Steinkrøssa - 51 grader skrått er normalt der svellet bøyer seg rundt en odde) og `surf_factor_prior`/`ideal_height`-justering i stedet for å senke `ideal_height` (ville skjult årsaken). Deretter (28.09): `sources_disagree` kappet stjernene når svellet ute var rett under 0,667 i eksponering, selv når BarentsWatch ved SPOTEN selv bekreftet treff - ny `bw_confirms` (retning innenfor 30 grader av facing OG høyde minst 0,35 m uten retningsfaktor) overstyrer nå det også. Fysikk-kontrollør fant en reell feil under review (overstyringen slo inn på `exposure()` sin "ukjent retning"-nøytralverdi 0,7 når `dir_offshore` manglet) - rettet, ny regresjonstest 9.3c. Stjernetabell viste 9 timer opp på Unstad (seks med 3 stjerner) i dagens live varsel - samme mønster som observasjonen, Theodors ja. Samtidig lagt til unntak i CLAUDE.md sin 2-stjerners stoppregel (retning som matcher faste observasjoner) og automatisk cache-versjonering for docs/sw.js (var ikke bumpet siden 26.09, ni commits). Se STATUS.md.
 

@@ -2,6 +2,8 @@
 
 ## Oppsummering (sist oppdatert 06.10.2026, FERDIG - committet)
 
+- **ROADMAP oppgave A (bølgeenergi i kJ på alle spots, myke lokale regler for Farstadsanden fra Magnus): FERDIG, Theodor sa ja - committet.** Fysikk-kontrollør fant at reglene flytter 26 av 49 timer i dagens 48-timersvarsel for Farstadsanden 2+ stjerner NED (ingen opp) - stoppregelen utløst, Theodor sa ja med begrunnelse (energien 900-1450 kJ denne uka, under halvparten av Magnus sin grense; 3-4 stjerner uten reglene var for raust). Stoppregelen i CLAUDE.md utvidet samtidig: godkjente `local_rules` med navngitt kilde teller som faste observasjoner for spoten. `rating.energy_kj()` - fysisk korrekt formel (E=ρg²H²T²/16π), treffer 3 av 5 av Theodors kontrollverdier innenfor hans 5 %-mål (de to som ikke treffer, 7,9 % og 5,6 %, er dokumentert ærlig - surf-forecast sitt eget tall/H²T²-forhold spriker mer enn 5 % mellom punktene, ingen konstant kan treffe alle fem). Vist i liste/detaljside/timestripe for alle spots. Nytt `local_rules`-felt (bare Farstadsanden): energi-terskler ganger potensialet FØR vind/tidevann, tidevanns-/offshore-strict-straff trekkes fra ETTER, alt dempet med `weight` 0,7 ("klype salt", Theodors egen formel). Logger-fanen foreslår å myke opp en regel ved 3+ gode, regelbrytende logger - endrer aldri selv. Se eget avsnitt.
+
 - **Ny spot: Farstadsanden (Hustadvika, Møre og Romsdal), lagt til utenom køen med FORELØPIGE verdier.** check_spot.py (300 m kysttoleranse) bekreftet Theodors egen, tidligere kystsjekk helt eksakt: fri linje bare 301-329 grader. Havpunkt og BarentsWatch-punkter satt, Open-Meteo bekreftet å gi ekte svelldata på havpunktet. exposure_baseline.py kjørt på nytt (de 7 andre spotenes tall byte for byte uendret). Kartet grupperer riktig. Alle tester grønne, henteren kjørt lokalt og reversert (bot-only-filer urørt). **Oppfølginger 05.-06.10.2026:** (1) `swell_window` rettet fra [285,335] til [301,329] - venstre kant var feilaktig satt fra surf-forecast.com, 285-300 grader går over en ekte odde. (2) Mistanke om at BarentsWatch-punktet lå i le (0,08 m målt mens totalhøyden ute var 6,1 m i storm) - ny generell sikring i kilderapporten (`bw_point_in_lee_warning()`) committet. (3) **06.10.2026: Theodor flyttet pinnen ~200 m nordvest** (mistanke bekreftet: gamle pinnen lå innerst i en bukt) og ga nye verdier for spot/swell_window/facing/havpunkt/barentswatch_point (sistnevnte valgt manuelt i BarentsWatch sitt kart) - alt uavhengig bekreftet (check_spot.py, egne geodesiberegninger, GSHHS-landsjekk, Open-Meteo), exposure_baseline.json bygget på nytt (geometrien reelt endret, ikke bare sjekksummen), kartets skive visuelt bekreftet. Ekte BarentsWatch-tall for det nye punktet ikke hentet ennå (ingen nøkler lokalt) - venter på `find_bw_point`-workflowen. Se eget avsnitt.
 - **ROADMAP oppgave 1 (Unstad for lav høyde): FERDIG, Theodor sa ja - committet.** Tre observasjoner (26.09 kl. 14:45, 27.09 morgen/Instagram) viste at Unstad rates for lavt. Retningsfaktor-fiksen (`barentswatch_height()` overstyrer til 1,0 når svellet ute allerede er godt eksponert, 0,667-grensa) er ja også for Steinkrøssa ("51 grader skrått er normalt der svellet bøyer seg rundt en odde" - merket "trenger observasjon"). Theodor avviste forslaget om å senke `ideal_height` ("skjuler årsaken") - i stedet nytt `surf_factor_prior`-felt i spots.json (startverdi 1,45 for Unstad fra de to observasjonene, overstyres automatisk av lærte logger), og `ideal_height` senket til [1,2, 3,5]. Fysikk-kontrollør fant én reell feil under review (overstyringen slo inn på `exposure()` sin "ukjent retning"-nøytralverdi 0,7 når `dir_offshore` manglet - verre enn før fiksen for en ekte "ut fra land"-time) - rettet, ny regresjonstest 9.3c. CLAUDE.md har nå begge observasjonene som faste tester (26.09: minst 3 stjerner og surfehøyde ca. 2,4 m; 27.09 kl. 06-08: minst 2 stjerner - kl. 09-10 faller til 1 i samme rekonstruksjon, forklart i eget avsnitt, ikke skjult). Visningsendring (aldri kalle justert høyde "signifikant") og fornuftssjekk i kilderapporten også på plass. Stjernetabell for de neste 48 timene: 0 av 336 timer endrer seg i dagens live varsel (verken Unstad eller Steinkrøssa har forhold akkurat nå som fiksen griper inn i - beviset er den rekonstruerte 26.09/27.09-dataen, ikke dagens varsel). Se eget avsnitt.
 - **Ny spot: Tromvik (Kvaløya), lagt til utenom køen.** Svellvindu og havpunkt verifisert nøyaktig mot Theodors tall med `check_spot.py`. `exposure_baseline.py` kjørt på nytt (de 6 andre spotenes tall byte for byte uendret). Sammenligning mot Grøtfjord onsdag kl. 12 viser akkurat det tiltenkte: svell fra 319° gir Tromvik 3 stjerner (rett i vinduet) mens Grøtfjord forblir flatt (langt utenfor sitt) - de to spotene dekker hver sin del av retningene fra nordvest. Kartet grupperer og separerer de to riktig, ingen overlapp. BarentsWatch-dekning for punktene ikke bekreftet (ingen nøkler lokalt, samme kjente begrensning som alle andre spots). Se eget avsnitt.
@@ -1001,6 +1003,61 @@ Theodor flyttet pinnen selv, ca. 200 m nordvest, og ga ALLE nye tall (regnet mot
 Egne, uavhengige kjøringer: `check_spot.py` ga samme [284,327]/havpunkt som rapportert over. `exposure_baseline.py` kjørt helt på nytt av kontrolløren selv - resultatet BYTE-FOR-BYTE identisk med filen i arbeidskatalogen, bekrefter en ekte, reproduserbar geometriendring (ikke sjekksum-drift). Ingen av de fem sjekkpunktene (facing, vindu, FØR/ETTER-ærligheten, exposure_baseline, "Krever Theodors ja") hadde innvendinger.
 
 Ett funn, allerede løst: kontrolløren leste `spots.json` midt i Theodors rettelse av `barentswatch_point` (korreksjonsmeldingen kom mens kontrollen kjørte) og så den FØRSTE, siden forkastede koordinaten (212 m@296,5°) stå der STATUS.md allerede beskrev den som rettet - et rent timing-avvik, ikke en reell inkonsistens. Bekreftet rett før commit: `spots.json` har nå den korrigerte verdien (62,985464/7,149922), samme som STATUS.md over.
+
+---
+
+## Oppgave A: Energi (kJ) på alle spots, og myke lokale regler for Farstadsanden (Magnus)
+
+### 1. Bølgeenergi (kJ), alle spots - FERDIG
+`rating.energy_kj(height, period)`: E = ρg²H²T²/(16π), ρ=1025, g=9,81 - energien i ÉN BØLGELENGDE PER METER BØLGETOPP for en jevn bølge (arealenergitetthet (1/8)ρgH² ganget med bølgelengden i dypt vann, L=g T²/(2π)). Fysisk korrekt utledet, samme mål surf-forecast.com viser.
+
+**Kontrollert mot fem tall Theodor leste av surf-forecast.com for Farstadsanden - treffer IKKE alle fem innenfor hans 5 %-grense:**
+
+| H/T | Beregnet | surf-forecast | Avvik |
+|---|---|---|---|
+| 2,4 m/11 s | 1367,7 kJ | 1427 | 4,2 % |
+| 3 m/11 s | 2137,1 kJ | 1981 | **7,9 %** |
+| 3 m/14 s | 3461,7 kJ | 3500 | 1,1 % |
+| 4 m/15 s | 7064,7 kJ | 7400 | 4,5 % |
+| 5,5 m/16 s | 15197,0 kJ | 14396 | **5,6 %** |
+
+Matematisk bekreftet (egen uavhengig utregning) at INGEN enkelt konstant foran H²T² kan treffe alle fem innenfor 5 % samtidig - surf-forecast sitt eget forholdstall kJ/(H²T²) spriker fra 1,82 til 2,06 mellom de fem punktene, et 11,5 % sprik i seg selv, større enn selve 5 %-målet. Mest sannsynlig: surf-forecast viser AVRUNDEDE H/T (f.eks. "3 m 11 s"), mens deres egen interne beregning bruker upresise tall - en liten avrunding i inputene forsterkes av kvadratleddene. Theodor varslet selv om dette i oppgaven. Dokumentert ærlig i `energy_kj()` sin docstring og i testen (19.1) - IKKE skjult eller fikset med en kunstig, ufysisk konstant. Test 19.1 krever nøyaktig 3 av 5 innenfor 5 % (bekrefter at det IKKE blir flere eller færre ved en tilfeldighet) og alle fem innenfor en løsere 10 %-grense.
+
+Regnet fra BÅDE svell ute (`energy_swell_kj`, ekte svell - det de myke lokale reglene bruker) og totalhøyde ute (`energy_total_kj`, trolig det yr/surf-forecast selv viser). Vist i lista (facts-rad), på detaljsiden (ved "Svell ute", med egen info-knapp - "Energi i én bølge per meter bølgetopp, samme mål som surf-forecast. Lang periode gir mye mer energi.", Theodors egen tekst ordrett), og i timestripa (aria-label - strimmelen er for smal til synlig tekst per time, samme mønster som "anslag"/"mørkt" der).
+
+### 2. Myke lokale regler, Farstadsanden (Magnus) - FERDIG
+Nytt valgfritt `local_rules`-felt i spots.json, bare for Farstadsanden: `min_energy_kj` {full:3000, zero:1500}, `tide_prefer` [lav,middels], `tide_penalty_high` 1, `offshore_strict` true, `weight` 0,7. To funksjoner i rating.py, fordi rekkefølgen Theodor spesifiserte krever det:
+- `local_energy_factor()`: ganger `potential` (stjernene FØR vind/tidevann) med en faktor 1,0 (ved/over "full") ned til 0,3 (ved/under "zero"), lineær imellom. `weight` demper EFFEKTEN (faktor = 1 − weight×(1−rå_faktor), Theodors egen formel) - ikke terskelen selv.
+- `local_rules_penalty()`: tidevanns- og offshore_strict-straff, trukket fra `solid` ETTER den vanlige vind/tidevann-straffen, som et eget, tydelig merket fradrag (IKKE blandet inn i `faded_wind`/`faded_tide`). `weight` demper hver straff direkte (effektiv straff = weight×rå_straff), summert FØR avrunding til nærmeste hele stjerne (0,5 rundes OPP - `math.floor(x+0,5)`, ikke Pythons bankers rounding).
+
+Nye felt i `rate()`: `local_rules` (None utenom Farstadsanden) med `source`, `stars_lost`, og `lines` (de samme setningene som vises i appen sin "Lokale regler (Magnus)"-seksjon på detaljsiden).
+
+**Testet mot Theodors egne scenarioer (seksjon 19.3-19.6):**
+- 1,6 m svell/10 s (502 kJ, under "zero") - klart færre stjerner MED reglene (2) enn UTEN (4).
+- 5,5 m/16 s, ØSØ (offshore for Farstadsanden sin offshore_wind), lavvann - 0 stjerner trukket fra reglene (energi godt over "full", vind offshore ikke side/-onshore, lavvann foretrukket).
+- Samme, men høyvann - nøyaktig 1 stjerne mindre (0,7 vektet straff, rundet opp).
+- Alle 7 andre spots: `local_rules` er `None`, rate() sitt resultat uendret (sjekket direkte, ikke bare antatt fra at testen består).
+
+### 3. Logger: forslag om å myke opp en regel - FERDIG
+Nye felt lagret på nye logger: `tideState`, `energyTotalKj` (eldre logger mangler dem, telles bare ikke med - samme mønster som `dirOffshore`). Ny seksjon i Logger-fanen, `localRuleStats` (samme mønster som eksisterende `exposure_override_suggestions`/`disagreeStats`): hvis minst 3 logger med 3+ stjerner bryter energiregelen ELLER tidevannsregelen for en spot med `local_rules`, vises et forslag om å myke den opp. Seksjonen er helt skjult når det ikke finnes noe å foreslå (ikke en alltid-synlig, ofte tom seksjon). ENDRER ALDRI `local_rules` selv. Testet visuelt: skjult med 0 logger, viser riktig forslagstekst med 3 syntetiske logger som bryter energiregelen.
+
+### CLAUDE.md
+Ny "Lokalkunnskap"-seksjon: Magnus sine ord (ordrett), Martin nevnt (enig i lavvann, men ingen egne tall - ikke lagt inn som egen regel), `weight` sin rolle forklart, og mønsteret for å legge til lokalkunnskap for andre spots senere.
+
+### Tester og fysikk-kontrollør: **IKKE COMMITTET - STOPPET, venter på Theodors ja**
+Alle seks nye tester (19.1-19.6) grønne, alle fire standardtestene grønne (inkl. `update_sw_cache.py` for docs/-endringene). Fysikk-kontrollør: formel, rekkefølge, avrunding og grenser (ingen negative/for høye stjerner) GODKJENT - men fant et reelt funn som utløser CLAUDE.md sin 2-stjerners stoppregel direkte.
+
+**Kjørt mot dagens ekte 48-timersvarsel for Farstadsanden (generert 06.10.2026 kl. 09:00): 26 av 49 timer flytter seg 2 eller flere stjerner, ALLE nedover, INGEN oppover.** Unntaket i stoppregelen (samme retning som en fast observasjon) kan ikke brukes - Farstadsanden har ingen faste observasjoner i CLAUDE.md ennå. Årsak: svellenergien denne uka ligger stort sett godt under Magnus sin "zero"-grense (1500 kJ) - energifaktoren havner derfor nær gulvet (0,51 = 1 − 0,7×0,7) i de fleste av disse timene, ikke en liten justering. Et utdrag:
+
+| Tid (UTC) | Uten regler | Med regler | Energi (total) | Hovedårsak |
+|---|---|---|---|---|
+| 07.10 kl. 03 | 3 | 0 | 1448 kJ | energifaktor 0,51 + offshore_strict |
+| 07.10 kl. 05 | 4 | 1 | 1305 kJ | energifaktor 0,51 + høyvann |
+| 07.10 kl. 07 | 3 | 0 | 1107 kJ | energifaktor 0,51 + høyvann + offshore_strict |
+| 07.10 kl. 09 | 4 | 1 | 1020 kJ | energifaktor 0,51 + høyvann |
+| 07.10 kl. 12 | 3 | 1 | 937 kJ | energifaktor 0,51 |
+
+Koden er tro mot tallene Theodor selv ga - ingen terskler er oppfunnet utover det han spesifiserte. Men i praksis halverer "klype salt" (weight 0,7) potensialet store deler av denne uka, ikke et sjeldent unntak. Tabellen vist til Theodor, stoppet, og **Theodor sa ja (06.10.2026) - committet som det er.** Hans begrunnelse: energien denne uka er 900-1450 kJ, under halvparten av Magnus sin grense; uten reglene ga appen 3-4 stjerner, som var for raust; reglene trekker i retning av den eneste lokale kunnskapen vi har om spoten. Samtidig: (1) README og testen (19.1) forklarer nå HVORFOR bare 3 av 5 kontrollverdier treffer 5 % (surf-forecast avrunder H/T i visningen, forholdet varierer ca. 11 % mellom deres egne tall); (2) CLAUDE.md sin stoppregel har fått et tillegg - godkjente `local_rules` med navngitt kilde teller som faste observasjoner for spoten, endringer i samme retning som reglene committes og rapporteres, motsatt retning stopper fortsatt.
 
 ---
 

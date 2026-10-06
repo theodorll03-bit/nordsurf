@@ -308,6 +308,36 @@ meterverdien. Samme tabell i `docs/index.html` og `fetcher/calibrate.py` -
 `test_pipeline.py` sjekker at de er like (ingen bundler til å dele en
 felles fil mellom app og henter).
 
+### Bølgeenergi (kJ)
+
+06.10.2026: appen viser bølgeenergi i kJ for alle spots (lista,
+detaljsiden ved "Svell ute", og timestripa), samme mål som
+surf-forecast.com. `rating.energy_kj(H, T)`:
+
+    E = ρ g² H² T² / (16π),  ρ = 1025 kg/m³, g = 9,81  (ca. 1,96 × H² × T² kJ)
+
+Det er energien i ÉN bølgelengde per meter bølgetopp for en jevn bølge -
+arealenergitetthet (1/8)ρgH² ganget med bølgelengden i dypt vann,
+L = gT²/(2π). Lang periode gir mye mer energi enn høyden alene tilsier.
+Regnes både fra svellet ute (`energy_swell_kj`, det de myke lokale reglene
+bruker) og fra totalhøyden ute (`energy_total_kj`, trolig det yr og
+surf-forecast selv viser).
+
+Kontrollert mot fem tall Theodor leste av surf-forecast.com for
+Farstadsanden: 3 av 5 treffer innenfor 5 %, 2 av 5 ikke (7,9 % og 5,6 %).
+Det er ikke en feil i formelen: surf-forecast AVRUNDER høyde og periode i
+visningen ("3 m 11 s"), mens deres egen energiberegning bruker de
+uavrundede tallene - og fordi både H og T står i kvadrat, forsterkes en
+liten avrunding i inputene. Forholdet kJ/(H²T²) varierer derfor ca. 11 %
+mellom surf-forecast sine egne fem tall, mer enn 5 %-målet, så ingen
+enkelt konstant kan treffe alle fem. Formelen er beholdt som den fysisk
+korrekte, ikke justert med en kunstig konstant - `test_rating.py` (19.1)
+krever nøyaktig 3 av 5 innenfor 5 %.
+
+Energien brukes aldri direkte i stjernene - bare som tall til visning, og
+som ett av leddene i myke lokale regler der en spot har det (se CLAUDE.md
+"Lokalkunnskap" og `local_rules` i spots.json; bare Farstadsanden nå).
+
 ### Automatisk kalibrering mot BarentsWatch
 
 For spots med BarentsWatch bygger henteren, ved hver kjøring, et forhold

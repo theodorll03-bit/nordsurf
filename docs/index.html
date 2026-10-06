@@ -193,6 +193,9 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 .calib .t{font-weight:600}
 .calib p{margin:4px 0 0;color:var(--muted);font-size:15px}
 .calib .sugg{margin:6px 0 0;padding:8px 10px;border-radius:10px;background:var(--surface);font-size:14px}
+.localrules{background:var(--raised);border-radius:14px;padding:14px 16px;margin:10px 0}
+.localrules .sub{margin:4px 0}
+.localrules .sub:first-child{margin-top:0}
 .expo-chart{width:100%;height:auto;display:block;margin-top:8px}
 .expo-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--muted)}
 .expo-legend span{display:inline-flex;align-items:center;gap:5px}
@@ -529,8 +532,10 @@ function renderList(){
     const h = s.hours[currentHour(s)];
     if(!h) return "";
     const listM = heightMForDisplay(h);
+    const listKj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
     const facts = [
       listM!=null ? `${nf1.format(listM)} m` : null,
+      listKj!=null ? `${nf0.format(listKj)} kJ` : null,
       h.period!=null ? `${nf0.format(h.period)} s` : null,
       h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
     ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
@@ -615,6 +620,30 @@ function surfAdjustmentLine(h){
   return `Etter justering ${nf1.format(h.height)} m (${reasons.join(", ")})`;
 }
 const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet - langt svell reiser seg mer når det treffer grunnen.";
+// 06.10.2026, Theodors oppgave: samme tekst Theodor selv formulerte, ordrett.
+const ENERGY_EXPLAINER = "Energi i én bølge per meter bølgetopp, samme mål som surf-forecast. Lang periode gir mye mer energi.";
+function localRulesHtml(h){
+  // 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
+  // "Lokalkunnskap"): egen, tydelig merket seksjon - IKKE i den vanlige
+  // stjerne-forklaringen (openBreakdown), siden dette er en helt annen
+  // type regel (myk, lokal, kan avvike fra kilden) enn resten av kjeden.
+  const lr = h.local_rules;
+  if(!lr) return "";
+  const lost = lr.stars_lost;
+  return `<h2 class="sec">Lokale regler (${esc(lr.source||"lokalkunnskap")})</h2>
+    <div class="localrules">
+      ${lr.lines.map(l=>`<p class="sub">${esc(l)}</p>`).join("")}
+      ${lost ? `<p class="sub"><b>Trekker ${lost} stjerne${lost===1?"":"r"} fra tidevann/vind-reglene over.</b></p>` : ""}
+    </div>`;
+}
+function energyText(h){
+  // Samme høyde som selve "v"-tallet i cella viser (swell_offshore, ellers
+  // height_offshore) - energien skal alltid matche TALLET den står ved
+  // siden av, se rating.energy_kj() sin docstring for hvorfor de to kJ-
+  // feltene (svell/total) kan avvike.
+  const kj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
+  return kj!=null ? ` · ${nf0.format(kj)} kJ` : "";
+}
 function windowText(spot){
   const w = spot.swell_window;
   if(!w) return "";
@@ -681,7 +710,12 @@ function renderSpot(){
       if(!x.stars && !x.faded) pips = `<span class="pip z"></span>`;
       const isReserve = !!(s.bw_until && x.t > s.bw_until);
       const isBreak = isReserve && (i===0 || !(s.bw_until && s.hours[i-1].t > s.bw_until));
-      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}${isReserve?", anslag":""}`;
+      // 06.10.2026, Theodors oppgave: kJ i timestripa - strimmelen er for
+      // smal til synlig tekst per time (dusinvis av timer i en rad), så
+      // energien legges i aria-label i stedet, samme mønster som
+      // faded/mørkt/anslag over (allerede ikke vist som egen tekst i cella).
+      const xKj = x.swell_offshore!=null ? x.energy_swell_kj : x.energy_total_kj;
+      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}${isReserve?", anslag":""}${xKj!=null?`, ${Math.round(xKj)} kJ`:""}`;
       return `<button class="h${lightClass(x)}${i===state.sel?" sel":""}${isReserve?" resmodel":""}${isBreak?" bw-break":""}" data-i="${i}" aria-label="${lbl}" aria-pressed="${i===state.sel}">
         <span class="bar">${pips}</span><span class="hl">${fmtHour.format(new Date(x.t))}</span></button>`;
     }).join("");
@@ -745,7 +779,7 @@ function renderSpot(){
     </div>
     <div class="grid">
       <div class="cell"><div class="k">Høyde på spoten <button type="button" class="infoBtn" id="heightInfo" aria-label="Hva er surfehøyde?">ⓘ</button></div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>${surfAdjustmentLine(h)?`<div class="n">${esc(surfAdjustmentLine(h))}</div>`:""}</div>
-      <div class="cell"><div class="k">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
+      <div class="cell"><div class="k">Svell ute <button type="button" class="infoBtn" id="energyInfo" aria-label="Hva er kJ?">ⓘ</button></div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}${esc(energyText(h))}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
       <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${esc(windLabel(h))} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}${h.wind_interpolated?" · vind jevnet ut":""}</div></div>
@@ -753,6 +787,7 @@ function renderSpot(){
       <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
       <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":"–"} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
     </div>
+    ${localRulesHtml(h)}
     <h2 class="sec">Rapporter fra andre</h2>
     <div class="reports" id="reportsSection"><p style="color:var(--muted);padding:14px 0">Laster…</p></div>`;
 
@@ -760,6 +795,7 @@ function renderSpot(){
   wireFavButtons();
   $("#bdOpen").onclick = ()=>openBreakdown(h);
   $("#heightInfo").onclick = ()=>toast(SURF_HEIGHT_EXPLAINER, null, null, 9000);
+  $("#energyInfo").onclick = ()=>toast(ENERGY_EXPLAINER, null, null, 9000);
   document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
     const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
   });
@@ -994,6 +1030,34 @@ function renderLogs(){
     return `<div class="calib"><div class="t">${esc(s.name)}: ${surfable} av ${flagged.length} var surfbare likevel</div>
       <p>Gjelder økter logget mens BarentsWatch-høyden trolig var mest vindsjø eller ikke traff stranda. Mange treff her betyr at regelen kanskje er for streng.</p></div>`;
   }).join("");
+  // 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md
+  // "Lokalkunnskap"): foreslå å myke opp en lokal regel når minst 3 gode
+  // logger (3 stjerner eller mer) BRYTER den samme regelen - det er et tegn
+  // på at terskelen er strengere enn det du faktisk opplever. Samme mønster
+  // som disagreeStats over (og exposure_override_suggestions): bare et
+  // forslag, ENDRER ALDRI spots.json sin local_rules selv. Eldre logger uten
+  // tideState/energyTotalKj telles bare ikke med (samme mønster som
+  // dirOffshore - "figuren viser dem bare ikke").
+  const LOCAL_RULE_SUGGEST_MIN = 3;
+  const localRuleStats = DATA.spots.filter(s=>s.local_rules).map(s=>{
+    const lr = s.local_rules, good = logs.filter(l=>l.spot===s.id && l.stars>=3);
+    const items = [];
+    const zero = lr.min_energy_kj && lr.min_energy_kj.zero;
+    if(zero!=null){
+      const broke = good.filter(l=>l.energyTotalKj!=null && l.energyTotalKj < zero);
+      if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ stjerner) hadde under ${nf0.format(zero)} kJ totalenergi - under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
+      }
+    }
+    if(lr.tide_prefer && lr.tide_penalty_high!=null){
+      const broke = good.filter(l=>l.tideState!=null && !lr.tide_prefer.includes(l.tideState));
+      if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ stjerner) var utenfor tidevannet den lokale regelen favoriserer (${lr.tide_prefer.join("/")}) . Vurder å myke opp tidevanns-straffen. Endres aldri automatisk.</div>`);
+      }
+    }
+    if(!items.length) return "";
+    return `<div class="calib"><div class="t">${esc(s.name)}: lokale regler (${esc(lr.source||"lokalkunnskap")})</div>${items.join("")}</div>`;
+  }).join("");
   const rows = logs.map(l=>{
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
     const extra = [l.size,l.wind].filter(Boolean).join(", ");
@@ -1009,6 +1073,7 @@ function renderLogs(){
     <h2 class="sec">Eksponering per retning</h2>${exposureCal}
     <h2 class="sec">BarentsWatch-punkt</h2>${bwCompare}
     <h2 class="sec">Uenige kilder</h2>${disagreeStats}
+    ${localRuleStats ? `<h2 class="sec">Forslag til lokale regler</h2>${localRuleStats}` : ""}
     <h2 class="sec">Økter</h2>
     <div class="list">${rows || `<p class="empty">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" id="newLog">Logg økt</button></div>`;
@@ -1256,7 +1321,14 @@ $("#saveLog").onclick = ()=>{
     // regelen er for streng eller for snill.
     swellShare: f ? f.swell_share : null, spotDirectionFactor: f ? f.spot_direction_factor : null,
     bwPeriod: f ? f.bw_period : null, bwDir: f ? f.bw_dir : null,
-    sourcesDisagree: f ? !!f.sources_disagree : false};
+    sourcesDisagree: f ? !!f.sources_disagree : false,
+    // 06.10.2026, Theodors oppgave: tidevannstilstand og totalenergi slik de
+    // sto på loggtidspunktet - trengs for å sjekke loggene dine mot myke
+    // lokale regler (local_rules, se CLAUDE.md "Lokalkunnskap") i etterkant,
+    // se localRuleSuggestions() i Logger-fanen. Eldre logger mangler dette
+    // feltet - forslaget hopper da bare over dem, samme mønster som
+    // dirOffshore over.
+    tideState: f && f.tide ? f.tide.state : null, energyTotalKj: f ? f.energy_total_kj : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
   toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");
