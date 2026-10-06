@@ -170,7 +170,7 @@ def diffraction_period_weight(period):
 def diffraction_damping(dir_hit, period):
     """Ekstra Hb-demping for svell som bare når spoten ved diffraksjon (rå
     eksponering 0, se raw_exposure_zero()): 1 - (1 - dir_hit) × p(T). Ved
-    8 s eller kortere er det nøyaktig dir_hit (som før 07.10.2026), ved 14 s
+    8 s eller kortere er det lik dir_hit (som før 07.10.2026), ved 14 s
     eller lengre bare 60 % av tapet."""
     if dir_hit is None:
         return 1.0

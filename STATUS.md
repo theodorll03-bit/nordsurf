@@ -1,5 +1,28 @@
 # Nordsurf: status
 
+## Theodors rettelse 07.10.2026, punkt 2: periodeavhengig diffraksjonsdemping - FERDIG, fysikk-kontrollør GODKJENT etter rettelser, merget til main (stoppregelen slo ikke inn)
+
+`rating.diffraction_damping(dir_hit, period) = 1 − (1 − dir_hit) × p(T)`, med p(T) fra `diffraction_period_weight()` (1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre, lineært imellom - samme kurve som skjermingen i oppgave I; holdes som egne konstanter til `lokal/uferdig` eventuelt merges, da skal de deles). Brukes bare der den gamle dempingen ble brukt: reservemodellen (svell_ute), rå eksponering 0, ingen exposure_override. Ved 8 s er resultatet identisk med før (dir_hit). Kurven står på CLAUDE.md sin "krever ja"-liste.
+
+**Theodors kontroller:** Grøtfjord 24.09 (met.no/BarentsWatch/Windy, 11 s, men met.no-reserven og BarentsWatch er ikke rørt) og 25.09 (9,2 s, 0,21 m på spoten) gir fortsatt 0 stjerner (test 24). **Denne timen (Grøtfjord 16.10 kl. 06 UTC, 2,3 m/15 s fra 271°): UENDRET** - 0,12 m på spoten (2,3 × 0,6 × 0,087) er under flat-grensa 0,35 m, så flat-sperren slår inn før den ekstra Hb-dempingen får betydning. 0 stjerner, ordet "Treffer ikke" (punkt 1). Dempingen gjør bare en forskjell når svellet ute er stort nok til at 0,35 m passeres TROSS lav eksponering - f.eks. samme svell fra 280° (6° utenfor, eksponering 0,33, 0,45 m på spoten): demping 0,33 → 0,60 ved 15 s, surfehøyde 0,31 → 0,57 m, 0 → 2 stjerner; ved 8 s som før (0,24 m).
+
+**Stjernetabell (frakoblet re-rating av dagens `forecast.json`, 1 608 timer, main-kode mot grenen, samme inndata):**
+
+| Spot | Endret | Opp | Ned | Maks | Timene |
+|---|---|---|---|---|---|
+| Grøtfjord | 0 | | | | - |
+| Tromvik | 0 | | | | - |
+| Ersfjordstranda | 1 | 1 | 0 | **2** | 21.10 kl. 18 UTC 0→2 (3,26 m/11,85 s fra 281°, 13° utenfor [294,320], surf 0,54→0,75 m, langtid dag 15) |
+| Russelv, Lenangsøyra, Steinkrøssa | 0 | | | | - |
+| Unstad | 5 | 5 | 0 | 1 | 11.10 kl. 15-19 UTC 2→3 (1,2-1,3 m/13-14 s fra 250-251°, like utenfor [253,335], surf 0,9→1,1 m, reserve dag 5) |
+| Farstadsanden | 2 | 2 | 0 | 1 | 17.10 kl. 00 1→2 (3,0 m/16 s fra 282°), 18.10 kl. 12 0→1 (3,2 m/13 s fra 283°, blåst ut), begge langtid |
+
+8 av 1 608 timer endret, alle opp, maks 2 (én time, dag 15). **Ingen time med 2+ endring innen 48 timer - stoppregelen slår IKKE inn.** Alle faste observasjoner holder (test_rating 22/23/24 og de gamle). Alle 6 testfiler grønne.
+
+**Fysikk-kontrollør:** kjørt som subagent på grenen. Dom: **MÅ RETTES → godkjent når rettet** - (a) test 24 sammenlignet flyttall med `==` (1 − 0,7 × 1,0 = 0,30000000000000004) - rettet med `round`; (b) CLAUDE.md sin konvensjonslinje om diffraksjonsdemping nevnte ikke perioden - rettet (formelen og p(T) står der nå); (c) docstring "nøyaktig dir_hit" → "lik dir_hit". Kontrollørens vurdering ellers: **ingen dobbelttelling i dag** (eksponeringen i h er periodeuavhengig: exposure_baseline bruker fast λ = 0,225 km/12 s, og del B har 0 lærte bøtter) - men to ting å følge med på: når del B lærer `exposure_smoothed_lang` ligger periodegevinsten delvis i h allerede, og hvis oppgave I merges bruker både transfer (skjermingsfaktor(T)) og Hb-dempingen samme p(T) i samme kjede (notert i ROADMAP oppgave I). Fysikken er riktig vei (langt svell diffrakterer bedre), men 0,6-gulvet er Theodors valg, ikke kalibrert - ingen fast observasjon prøver det (Grøtfjord 25.09 ligger i override-sonen 311-330 der den ekstra dempingen ikke brukes, 26.09 stoppes av flat-sperren). Perioden er riktig valgt (svellets periode ute, samme som Komar og Gaughan; BarentsWatch-perioden ved kysten er forurenset av vindsjø). Ingen fast observasjon svekkes (Ersfjordstranda 30.09 er et modelltilfelle, ikke i CLAUDE.md; Unstad 11.10 250-251° går 2→3, samme vei som observasjonen 28.09). Stjernetabellen uavhengig bekreftet.
+
+**Til Theodor (ikke blokkerende, fra kontrolløren):** Grøtfjord 26.09 er den eneste observasjonen med langt svell bak Tromvik-halvøya (2,18 m/15,6 s fra 272°, helt flatt) - gjennom reservemodellen er den fortsatt flat (0,14 m). Men hvis GFS hadde bommet 7-12° på retningen (279-284°) gir samme svell nå: 281° 0→1 stjerne, 282-283° 0→2, 284° 1→2. 0,6-gulvet gjør Grøtfjord mer følsom for feil i GFS-retningen nettopp i sektoren der eneste observasjon er flatt. Spørsmål: er det ønsket, eller skal Grøtfjord få et eget unntak i 279-284° (f.eks. en exposure_override)? Ikke gjort - exposure_override står på "krever ja"-lista.
+
 ## Theodors rettelse 07.10.2026 (natt): Grøtfjord "Flatt" med 2 166 kJ ute - PUNKT 1 FERDIG, committet til main
 
 Timen finnes i dagens `forecast.json`: Grøtfjord 16.10 kl. 06 UTC, svell ute 2,3 m/15 s fra 271°, 2 166 kJ, reservemodellen gir 0,12 m på spoten (eksponering 0,087 - 15° utenfor vinduet [286,310], bak Tromvik-halvøya), flat-sperren slår inn (under 0,35 m), 0 stjerner. Ordet var "Flatt".
@@ -8,7 +31,7 @@ Timen finnes i dagens `forecast.json`: Grøtfjord 16.10 kl. 06 UTC, svell ute 2,
 
 **Effekt i dagens varsel (frakoblet re-rating av alle 1 608 timer):** 144 timer bytter ord Flatt → Treffer ikke (Ersfjordstranda 36, Tromvik 32, Grøtfjord 19, Lenangsøyra 17, Unstad 15, Steinkrøssa 14, Russelv 9, Farstadsanden 2), **0 timer endrer stjerner** - regelen rører bare ordet. Stoppregelen gjelder ikke.
 
-**Punkt 2 (periodeavhengig diffraksjonsdemping):** på gren `natt/diffraksjon`, se eget avsnitt der/under.
+**Punkt 2 (periodeavhengig diffraksjonsdemping):** se avsnittet over - merget til main.
 
 ## Skyøkt 07.10.2026 - timelogg (norsk tid)
 

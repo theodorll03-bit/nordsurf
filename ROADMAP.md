@@ -2,10 +2,10 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## 0. Grøtfjord "Flatt" med 2 166 kJ ute (Theodor, 07.10.2026) - PUNKT 1 FERDIG på main, PUNKT 2 på gren `natt/diffraksjon`
+## 0. Grøtfjord "Flatt" med 2 166 kJ ute (Theodor, 07.10.2026) - FERDIG, begge punkter på main
 Grøtfjord om ca. 10 dager: svell ute 2,3 m, 15 s, 2166 kJ, fra 271 grader (15 grader utenfor vinduet, bak Tromvik-halvøya), offshore 5 m/s. Appen viser "Flatt", 0,1 m.
 1. Ordet er feil: med 2166 kJ og 2,3 m svell ute er det ikke flatt. Når årsaken til lav høyde er retningen (svell ute utenfor vinduet med lav eksponering), og energien ute er høy, skal ordet være "Treffer ikke", ikke "Flatt". "Flatt" bare når energien ute også er lav. Rett i klassifiseringen og test. **FERDIG (main): `rating.classify_low_rating()`, test 23, 144 av 1608 timer i dagens varsel bytter ord (0 stjerner endret).**
-2. Diffraksjonsdempingen (ekstra demping av Hb når rå eksponering er 0) skal avhenge av perioden: langt svell bøyer seg bedre rundt land. Bruk samme p(T)-kurve som skjermingen i oppgave I (full demping ved 8 s eller kortere, 60 prosent av dempingen ved 14 s eller lengre). Kontroller at Grøtfjord 24. og 25.09 (kortere periode) fortsatt gir 0 stjerner, og vis hva denne timen blir. **Se gren `natt/diffraksjon` og STATUS.md.**
+2. Diffraksjonsdempingen (ekstra demping av Hb når rå eksponering er 0) skal avhenge av perioden: langt svell bøyer seg bedre rundt land. Bruk samme p(T)-kurve som skjermingen i oppgave I (full demping ved 8 s eller kortere, 60 prosent av dempingen ved 14 s eller lengre). Kontroller at Grøtfjord 24. og 25.09 (kortere periode) fortsatt gir 0 stjerner, og vis hva denne timen blir. **FERDIG (main, via gren `natt/diffraksjon`): fysikk-kontrollør godkjent, stoppregelen slo ikke inn (8 av 1 608 timer opp, ingen 2+ innen 48 t), denne timen uendret (flat-sperren først). Kontrollørens spørsmål om Grøtfjord 279-284° står i STATUS.md.**
 3. Stoppregelen gjelder: Grøtfjord har faste observasjoner med kortere periode, så dette er ikke samme tilfelle. Legg endringen i punkt 2 på egen gren med tabell og anbefaling hvis den slår inn. Punkt 1 kan gå på main.
 
 ## A. Energi (kJ) på alle spots, og myke lokale regler for Farstadsanden
@@ -42,6 +42,7 @@ Lys for 15.11/21.12/15.01 for alle spots tabellført i STATUS.md (4-6 t skumring
 Kjør lysberegningen for alle spots for 15. november, 21. desember og 15. januar. Vis brukbart lys per dag og sjekk at timestripa, dagbrikkene, beste vindu og varsler oppfører seg riktig når det bare er skumring. Rett det som ikke fungerer.
 
 ## I. Skjerming: hvor langt inn i en bukt ligger spoten
+Merk (fysikk-kontrollør 07.10.2026): hvis skjermingen merges, bruker både transfer (skjermingsfaktor(T)) og den nye periodeavhengige diffraksjonsdempingen (ROADMAP 0, punkt 2) samme p(T) i samme kjede - må vurderes som mulig dobbelttelling da.
 Grøtfjord ligger flere km inne i en bukt med smal åpning, Unstad rett ut mot havet. BarentsWatch tar hensyn til dette de første ca. 60 timene, men reservemodellen bruker samme startverdi for transfer (0,6) for alle spots til en egen verdi er lært. Gi hver spot en startverdi ut fra geometrien.
 1. Beregn for hver spot (offline, GSHHS, samme regler som check_spot.py - 300 m kysttoleranse, 150 m klaring): (a) avstand til åpent hav d_open - gå ut i retning facing (og facing ± 20, bruk kortest) til hele halvsirkelen (180°) sentrert på facing har fri linje; (b) åpning ved spoten - andel av halvsirkelen med fri linje fra spoten selv; (c) bredde på åpningen B ved punktet i a, vinkelrett på facing; (d) andel energi gjennom åpningen f = B / (B + 2 × d_open × tan(20°)), høydefaktor = √f.
 2. Periode straffer kort mer enn langt: skjermingsfaktor = 1 − (1 − høydefaktor) × p(T), p(T) = 1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre, lineært imellom.
