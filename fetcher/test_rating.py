@@ -1447,7 +1447,7 @@ assert diffraction_period_weight(None) == 1.0 and diffraction_period_weight(8) =
 assert diffraction_period_weight(14) == 0.6 and diffraction_period_weight(18) == 0.6
 assert round(diffraction_period_weight(11), 4) == 0.8
 assert diffraction_damping(None, 12) == 1.0
-assert diffraction_damping(0.3, 8) == 0.3                      # som før ved kort periode
+assert round(diffraction_damping(0.3, 8), 9) == 0.3            # som før ved kort periode (flyttall)
 assert round(diffraction_damping(0.3, 14), 4) == round(1 - 0.7 * 0.6, 4)  # 0,58 ved langt svell
 assert diffraction_damping(0.3, 11) > diffraction_damping(0.3, 8)
 # Grøtfjord 24.09 (met.no/Windy, kortere periode) og 25.09 (9,2 s): fortsatt 0 stjerner (g, w, just_outside over).
