@@ -30,19 +30,44 @@ base_hour = {"t": "2026-09-27T00:00Z", "height_source": "barentswatch", "bw_inte
 def mk(**over):
     return {**base_hour, **over}
 
-p_ok = exposure_pairs_for_run([mk()], "run1")
+# Fiktiv spot, egen geometri (ikke fra spots.json/exposure_baseline.json -
+# denne fila skal være selvforsynt og rask). 330-349 er NÆR (1 km) OG BRED
+# (5 km på tvers) - samme slags hindring som Farstadsanden/Nordneset (se
+# STATUS.md), de andre gradene er åpne (rå eksponering 1,0, aldri blokkert).
+NEAR_WIDE = range(330, 350)
+spot_fx = {
+    "swell_window": [284, 326],
+    "exposure_raw": [0.0 if d in NEAR_WIDE else 1.0 for d in range(360)],
+    "exposure_distance_km": [1.0 if d in NEAR_WIDE else None for d in range(360)],
+    "exposure_width_km": [5.0 if d in NEAR_WIDE else None for d in range(360)],
+}
+
+p_ok = exposure_pairs_for_run([mk()], "run1", spot_fx)
 assert len(p_ok) == 1
 assert p_ok[0]["bucket"] == bucket_of(295) and p_ok[0]["period_group"] == "lang"
 assert p_ok[0]["ratio"] == round(1.0 * 0.9 / 2.0, 4)
 
-assert exposure_pairs_for_run([mk(height_source="svell_ute")], "r") == []
-assert exposure_pairs_for_run([mk(bw_interpolated=True)], "r") == []
-assert exposure_pairs_for_run([mk(sources_disagree=True)], "r") == []
-assert exposure_pairs_for_run([mk(swell_offshore=0.4)], "r") == []
-assert exposure_pairs_for_run([mk(swell_share=0.6)], "r") == []
-assert exposure_pairs_for_run([mk(period=None)], "r") == []
-assert exposure_pairs_for_run([mk(dir_offshore=None)], "r") == []
+assert exposure_pairs_for_run([mk(height_source="svell_ute")], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(bw_interpolated=True)], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(sources_disagree=True)], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(swell_offshore=0.4)], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(swell_share=0.6)], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(period=None)], "r", spot_fx) == []
+assert exposure_pairs_for_run([mk(dir_offshore=None)], "r", spot_fx) == []
 print("3: exposure_pairs_for_run() filtrering ok, 1 gyldig par av 8 varianter")
+
+# 3b: 06.10.2026, Theodors rettelse (Farstadsanden/Nordneset) - svell ute fra
+# en retning med en nær, BRED hindring skal IKKE bli et kalibreringspar,
+# selv om BarentsWatch (her simulert av bw_height/swell_share som om alt var
+# normalt) viser en vanlig, troverdig-seende høyde. Uten denne sjekken ville
+# bøtte 33-34 (330-349) lært en falskt høy eksponering fra akkurat en slik
+# modellsvikt hos BarentsWatch.
+assert exposure_pairs_for_run([mk(dir_offshore=338)], "r", spot_fx) == []
+# Kontroll: samme spot, en retning UTENFOR den smale/brede hindringen (295,
+# brukt i p_ok over) blokkeres fortsatt ikke - sjekken er per retning, ikke
+# en sperre for hele spoten.
+assert len(exposure_pairs_for_run([mk(dir_offshore=295)], "r", spot_fx)) == 1
+print("3b: exposure_pairs_for_run() utelater par fra en nær, bred hindring (Nordneset-saken)")
 
 # 4: merge_pairs() - dedup og 120-dagers grense
 now = dt.datetime(2026, 9, 27, tzinfo=dt.timezone.utc)

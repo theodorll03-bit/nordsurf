@@ -12,7 +12,7 @@ tidevann/stjerne-bias som før."""
 import datetime as dt
 from statistics import median
 
-from rating import breaking_height, FLAT_HS_THRESHOLD, SURF_FACTOR_MIN, SURF_FACTOR_MAX
+from rating import breaking_height, FLAT_HS_THRESHOLD, SURF_FACTOR_MIN, SURF_FACTOR_MAX, blocked_by_near_obstacle
 
 DIRECTNESS_MIN_FOR_SURF_FACTOR = 0.667  # se learn()
 
@@ -66,7 +66,7 @@ def learn(spot_id, logs):
     return out
 
 
-def bw_pairs_for_run(hours, run_id):
+def bw_pairs_for_run(hours, run_id, spot):
     """Kalibreringspar for denne kjøringen: bare RÅ (ikke interpolerte)
     BarentsWatch-timer der svellet ute klart dominerer bildet og retningen
     treffer godt nok til at et forhold sier noe fornuftig om direkte treff.
@@ -74,7 +74,16 @@ def bw_pairs_for_run(hours, run_id):
     kildene er uenige (sources_disagree), og bare der bølgene ved
     BarentsWatch-punktet klart går inn mot stranda (spot_direction_factor
     minst 0,7) - ellers lærer vi feil forhold fra en time som i
-    virkeligheten var mest vindsjø eller feil retning."""
+    virkeligheten var mest vindsjø eller feil retning.
+
+    06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset - se
+    STATUS.md): heller aldri timer der svellet ute kommer fra en retning med
+    en nær, BRED hindring (rating.blocked_by_near_obstacle()) - samme risiko
+    som i exposure_learn.exposure_pairs_for_run() (se dens docstring): en
+    hindring BarentsWatch sin egen modell ikke ser, ville gitt en kunstig
+    HØY transfer her (bw deles på en lav, men FEILAKTIG lav, dn - directness
+    - uten denne sjekken alene, siden dn<0,3-grensa under ikke fanger hele
+    skyggesonen, bare den dypeste delen av den)."""
     pairs = []
     for h in hours:
         if h.get("height_source") != "barentswatch" or h.get("bw_interpolated"):
@@ -87,6 +96,8 @@ def bw_pairs_for_run(hours, run_id):
         if bw is None or swell is None or dn is None:
             continue
         if swell < 0.3 or dn < 0.3:
+            continue
+        if blocked_by_near_obstacle(h.get("dir_offshore"), spot):
             continue
         total = h.get("height_offshore")
         if total is not None and swell < 0.7 * total:

@@ -1,0 +1,38 @@
+name: Tester
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests playwright
+      # --with-deps installerer OS-biblitotekene Chromium trenger på
+      # ubuntu-latest sin runner - uten dette feiler ofte selve
+      # nettleser-oppstarten (ikke bare nedlastingen), ikke en overflødig flagg.
+      - run: python -m playwright install --with-deps chromium
+      - name: Test ratingen mot kjente dager
+        run: python fetcher/test_rating.py
+      - name: Test hele henteren uten nett
+        run: python fetcher/test_pipeline.py
+      - name: Test eksponering lært fra BarentsWatch (del B)
+        run: python fetcher/test_exposure_learn.py
+      - name: Sjekk at docs/sw.js sin cache-versjon stemmer med docs/
+        run: python fetcher/test_docs_cache.py
+      - name: Sjekk skivas kildetekst (treff/bom leser bare directness)
+        run: python fetcher/test_map_disc.py
+      - name: Ekte nettleser-test av skiva (Playwright)
+        run: python fetcher/test_disc_browser.py
+      - name: Last opp skjermbilder (til feilsøking, selv om testen bestod)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disc-screenshots
+          path: fetcher/test_screenshots/
+          if-no-files-found: ignore

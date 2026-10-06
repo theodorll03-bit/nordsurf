@@ -15,6 +15,7 @@ import exposure_learn
 import notify
 import sun
 import tide as tidemod
+import longrange
 from exposure import spot_checksum
 from rating import (angle_diff, directness, rate, swell_share, bw_period_factor,
                      SURF_FACTOR_DEFAULT, SURF_FACTOR_MIN, SURF_FACTOR_MAX)
@@ -25,7 +26,11 @@ OUT = ROOT / "docs" / "data" / "forecast.json"
 BW_CALIB = ROOT / "data" / "bw_calibration.json"
 EXPOSURE_BASELINE = ROOT / "data" / "exposure_baseline.json"
 EXPOSURE_LEARNED = ROOT / "data" / "exposure.json"
-HOURS_AHEAD_MAX = 120  # 5 døgn, men stopper ved kortest tilgjengelige kilde
+# 06.10.2026, ROADMAP oppgave B: 16 døgn (var 5), men stopper fortsatt ved
+# kortest tilgjengelige kilde. Dag 8-16 lagres hver 6. time, se longrange.py.
+HOURS_AHEAD_MAX = longrange.HOURS
+ARCHIVE_DIR = longrange.ARCHIVE_DIR   # overstyres av test_pipeline.py (tmp)
+LEDGER = longrange.LEDGER
 REPORT = []  # kilderapport, vises i Actions
 # Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
 # igjen (se build_spot()) - vises ØVERST i kilderapporten, ikke i selve
@@ -93,6 +98,21 @@ def resolve_exposure(spot, exposure_data, name):
                              f"svellvindu eller koordinater er endret siden siste kjøring av "
                              f"fetcher/exposure_baseline.py. Bruker vindu og skyggekurve som reserve")
     return entry["smoothed"], entry["raw"], None
+
+
+def resolve_obstacle_geometry(spot, exposure_data):
+    """06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset -
+    se STATUS.md): avstand OG bredde (km) til nærmeste hindring per grad,
+    samme sjekksum-vern som resolve_exposure() - men ALDRI en advarsel i
+    kilderapporten for seg selv (resolve_exposure() sitt kall varsler
+    allerede om sjekksum-avvik). (None, None) (ingen blokkering mulig, samme
+    trygge retning som blocked_by_near_obstacle() sin egen fallback) hvis
+    eksponeringsdata mangler, sjekksummen ikke stemmer, eller fila er fra
+    FØR distance_km/width_km fantes (eldre exposure_baseline.json)."""
+    entry = exposure_data.get(spot["id"])
+    if entry is None or entry.get("checksum") != spot_checksum(spot):
+        return None, None
+    return entry.get("distance_km"), entry.get("width_km")
 
 
 def convention_warning(hours, spot, name):
@@ -293,8 +313,9 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
-def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data):
+def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data, ledger=None):
     name = spot["name"]
+    ledger = ledger or {}
     print(name)
     # Kopi FØR noe muteres under (exposure_smoothed/exposure_raw/transfer/
     # surf_factor osv. settes rett på denne dicten) - ellers ville config
@@ -313,6 +334,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # Open-Meteo Marine sjekket for samme problem (se _timestep_summary()
     # under) - ingen av dem trenger tilsvarende interpolering.
     weather = sources.weather_interpolate(weather_raw)
+    # 06.10.2026, ROADMAP oppgave B: met.no så langt den rekker (ca. 10 døgn,
+    # 6-timers steg mot slutten, interpolert over), deretter Open-Meteo
+    # GFS-vind til dag 16. Hver time får wind_source ("metno"/"openmeteo").
+    wind_lr_raw = safe(name, "Open-Meteo GFS-vind (langtid)", sources.openmeteo_wind, s["lat"], s["lon"])
+    weather = sources.merge_wind(weather, wind_lr_raw)
     for label, raw_src in (("met.no hav (spot)", ocean_spot), ("met.no hav (ute)", ocean_off),
                             ("Open-Meteo svell (ute)", marine), ("met.no vind", weather_raw)):
         _, txt = _timestep_summary(raw_src, now)
@@ -366,6 +392,16 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         spot["exposure_raw"] = exposure_raw
     if exposure_warning:
         REPORT.append((name, "Eksponering (del C)", "feil", exposure_warning))
+
+    # 06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset -
+    # se STATUS.md): avstand/bredde til nærmeste hindring, til
+    # rating.blocked_by_near_obstacle() - samme kilde (exposure_baseline.json)
+    # og sjekksum-vern som eksponeringen over, bare de to ekstra feltene.
+    exposure_distance_km, exposure_width_km = resolve_obstacle_geometry(spot, exposure_data)
+    if exposure_distance_km is not None:
+        spot["exposure_distance_km"] = exposure_distance_km
+    if exposure_width_km is not None:
+        spot["exposure_width_km"] = exposure_width_km
 
     # 27.09.2026, ROADMAP oppgave 4 (del B): eksponering LÆRT fra BarentsWatch,
     # per 10-graders bøtte og periodegruppe (kort/lang) - blandet med den
@@ -434,6 +470,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     for i in range(horizon):
         t = now + dt.timedelta(hours=i)
         k = sources.hour_key(t)
+        # ROADMAP oppgave B: dag 8-16 bare hver 6. time (filstørrelse, se longrange.py).
+        day = longrange.day_index(now, t)
+        if not longrange.keep_row(t, day):
+            continue
         sp, off, mar, w = ocean_spot.get(k), ocean_off.get(k), marine.get(k), weather.get(k)
         if not sp and not mar:
             continue
@@ -489,6 +529,12 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "tide": tidemod.state_at(tides, t + dt.timedelta(minutes=30)) if tides else None,
         }
         hour.update(rate(hour, spot))
+        # ROADMAP oppgave B: sone, dag frem og sikkerhet i prosent (kapper
+        # ALDRI stjernene - bare merket). "målt" når spoten har nok
+        # sammenligninger for dette antallet dager frem, ellers "anslag".
+        hour["day"] = day
+        hour["zone"] = longrange.zone_for(hour["height_source"], day)
+        hour["confidence"], hour["confidence_source"] = longrange.confidence_for(ledger, spot["id"], day)
         hours.append(hour)
 
     if not hours and horizon:
@@ -506,6 +552,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
     REPORT.append((name, "Svellmodell", "ok", f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, ingen svelldata {none_hours}t"))
+    zones = {z: sum(1 for h in hours if h.get("zone") == z) for z in ("barentswatch", "reserve", "langtid")}
+    winds = {w: sum(1 for h in hours if h.get("wind_source") == w) for w in ("metno", "openmeteo")}
+    REPORT.append((name, "Soner (rader)", "ok", f"BarentsWatch {zones['barentswatch']}, reserve {zones['reserve']}, langtid {zones['langtid']} (hver 6. time)"))
+    REPORT.append((name, "Vindkilde (rader)", "ok" if winds["metno"] else "tom",
+                   f"met.no {winds['metno']}, Open-Meteo GFS {winds['openmeteo']}, ingen {len(hours) - winds['metno'] - winds['openmeteo']}"))
 
     # 27.09.2026: hvilke BarentsWatch source/fileSource-kombinasjoner som
     # faktisk ble brukt denne kjøringen - permanent sjekk (se ROADMAP og
@@ -545,7 +596,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if warning:
         CONVENTION_WARNINGS.append(warning)
 
-    new_pairs = calibrate.bw_pairs_for_run(hours, run_id)
+    new_pairs = calibrate.bw_pairs_for_run(hours, run_id, spot)
     merged_pairs = calibrate.merge_bw_pairs(bw_pairs_existing, new_pairs, now)
     bw_calib[spot["id"]] = merged_pairs
     bw_days = len({p["t"][:10] for p in merged_pairs})
@@ -553,7 +604,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # Del B: nye eksponeringspar bygges FRA hours (trenger swell_share,
     # sources_disagree osv. - rate() sitt resultat), og lagres for BRUK NESTE
     # KJØRING (se kommentaren over exposure_pairs_existing lenger opp).
-    new_exposure_pairs = exposure_learn.exposure_pairs_for_run(hours, run_id)
+    new_exposure_pairs = exposure_learn.exposure_pairs_for_run(hours, run_id, spot)
     merged_exposure_pairs = exposure_learn.merge_pairs(exposure_pairs_existing, new_exposure_pairs, now)
     exposure_learned_data[spot["id"]] = merged_exposure_pairs
     exposure_override_suggestions = exposure_learn.override_removal_suggestions(
@@ -561,9 +612,12 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
 
     # exposure_smoothed/exposure_raw/exposure_smoothed_lang/exposure_smoothed_kort
     # er interne tall (én per grad) bare til bruk i rate() over - ikke noe
-    # appen trenger å vise, ekskludert fra utdata.
+    # appen trenger å vise, ekskludert fra utdata. exposure_distance_km/
+    # exposure_width_km (06.10.2026) er samme slags tabell, bare til
+    # rating.blocked_by_near_obstacle() - resultatet (directness/bw_confirms
+    # per time) er allerede i hours, ikke rå-tabellene selv.
     _internal_keys = {"exposure_smoothed", "exposure_raw", "exposure_smoothed_lang", "exposure_smoothed_kort",
-                       "surf_factor_source"}
+                       "surf_factor_source", "exposure_distance_km", "exposure_width_km"}
     public = {k: v for k, v in spot.items() if not k.startswith("_") and k not in _internal_keys}
     light_days = sun.light_days(s["lat"], s["lon"], now)
     calibration = {
@@ -584,6 +638,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         "exposure_buckets_learned_lang": len(learned_lang),
         "exposure_buckets_learned_kort": len(learned_kort),
         "exposure_override_suggestions": exposure_override_suggestions,
+        # ROADMAP oppgave B: treffprosent per antall dager frem (Logger-fanen),
+        # fra kjøringene FØR denne (denne kjøringens egen scoring skjer etter
+        # at spotene er bygget, se main()).
+        "accuracy": longrange.accuracy_table(ledger, spot["id"]),
         # Til figuren i Logger-fanen: én rad per 10-graders bøtte. "geometrisk"
         # er del C sin glattede kurve midt i bøtta (uendret av del B) - til
         # sammenligning med det som faktisk er lært.
@@ -621,6 +679,7 @@ def main():
     now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
     run_id = now.isoformat()
     logs = safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[])
+    ledger = longrange.load_ledger(LEDGER)
     bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
     exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
     exposure_learned_data = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
@@ -628,12 +687,20 @@ def main():
     for s in config["spots"]:
         if s.get("enabled"):
             spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
-                                     exposure_data, exposure_learned_data))
+                                     exposure_data, exposure_learned_data, ledger))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(forecast, ensure_ascii=False), encoding="utf-8")
     print(f"Skrev {OUT}")
+    # ROADMAP oppgave B: arkiver denne kjøringen (små filer), mål eldre
+    # varsel mot fasit (denne kjøringens nærmeste timer + loggene), lagre.
+    longrange.write_archive(now, spots, ARCHIVE_DIR)
+    pruned = longrange.prune_archives(now, ARCHIVE_DIR)
+    scored_now, scored_logs = longrange.score_runs(now, spots, logs, ledger, ARCHIVE_DIR)
+    longrange.save_ledger(ledger, LEDGER)
+    REPORT.append(("alle", "Treffsikkerhet (langtid)", "ok",
+                   f"{scored_now} nye sammenligninger mot eget varsel, {scored_logs} mot logger, {pruned} arkiv slettet"))
     BW_CALIB.parent.mkdir(parents=True, exist_ok=True)
     BW_CALIB.write_text(json.dumps(bw_calib, ensure_ascii=False, indent=1), encoding="utf-8")
     EXPOSURE_LEARNED.parent.mkdir(parents=True, exist_ok=True)

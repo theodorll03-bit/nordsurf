@@ -29,7 +29,7 @@ Metode, kort:
 import datetime as dt
 from statistics import median
 
-from rating import in_sector, PERIOD_SHORT_MAX
+from rating import in_sector, PERIOD_SHORT_MAX, blocked_by_near_obstacle
 
 BUCKET_DEG = 10
 N_BUCKETS = 360 // BUCKET_DEG
@@ -54,13 +54,23 @@ def period_group(period):
     return "kort" if period < PERIOD_SHORT_MAX else "lang"
 
 
-def exposure_pairs_for_run(hours, run_id):
+def exposure_pairs_for_run(hours, run_id, spot):
     """Kalibreringspar for denne kjøringen: bare RÅ (ikke interpolerte)
     BarentsWatch-timer med et stort nok, overveiende ekte svell ute til at
     forholdet bw_height*swell_share / swell_offshore sier noe fornuftig om
     hvor mye av svellet som når punktet fra akkurat denne retningen. Aldri
     timer der kildene er uenige (sources_disagree) - de er per definisjon
-    ikke til å stole på."""
+    ikke til å stole på.
+
+    06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset - se
+    STATUS.md): heller aldri timer der svellet ute kommer fra en retning med
+    en nær, BRED hindring (se rating.blocked_by_near_obstacle()) - samme
+    sjekk som hindrer bw_confirms i å overstyre. BarentsWatch kan mangle
+    skjerming fra en slik hindring i sin EGEN modell (bekreftet ved
+    Farstadsanden: BarentsWatch viste 0,6-1,8 m for retninger som geometrisk
+    ligger i dyp skygge bak Nordneset), og ville da lært INN den samme
+    feilen her - en falskt høy eksponering for akkurat den bøtta, i stedet
+    for å la den forbli den geometriske (lave) verdien fra del C."""
     pairs = []
     for h in hours:
         if h.get("height_source") != "barentswatch" or h.get("bw_interpolated"):
@@ -76,6 +86,8 @@ def exposure_pairs_for_run(hours, run_id):
         if None in (swell, share, dir_off, bw, pg):
             continue
         if swell < 0.5 or share < 0.7:
+            continue
+        if blocked_by_near_obstacle(dir_off, spot):
             continue
         pairs.append({
             "t": h["t"], "bucket": bucket_of(dir_off), "period_group": pg,

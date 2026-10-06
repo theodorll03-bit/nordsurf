@@ -10,6 +10,8 @@ from pathlib import Path
 
 import requests
 
+from longrange import NOTIFY_MIN_CONFIDENCE
+
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "data" / "notified.json"
 TZ_OFFSET_NOTE = "Europe/Oslo"
@@ -30,7 +32,11 @@ def notifiable_hours(spot):
     hours = spot["hours"]
     if spot.get("bw_until"):
         hours = [h for h in hours if h.get("height_source") == "barentswatch"]
-    return [h for h in hours if not h.get("sources_disagree")]
+    # 06.10.2026, ROADMAP oppgave B: varsler bare for timer med sikkerhet på
+    # minst 70 % (se longrange.py) - langtidsrader uten sikkerhet-felt
+    # (eldre forecast.json) behandles som før.
+    return [h for h in hours if not h.get("sources_disagree")
+            and (h.get("confidence") is None or h["confidence"] >= NOTIFY_MIN_CONFIDENCE)]
 
 
 def windows(spot, min_stars, hours_ahead, now):

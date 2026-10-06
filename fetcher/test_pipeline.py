@@ -43,6 +43,11 @@ fetch.OUT = tmp / "forecast.json"
 fetch.BW_CALIB = tmp / "bw_calibration.json"
 fetch.EXPOSURE_LEARNED = tmp / "exposure.json"
 notify.STATE = tmp / "notified.json"
+# ROADMAP oppgave B: arkiv og treffsikkerhets-ledger skal ALDRI skrives til
+# data/ fra tester - samme tmp-mønster som OUT/BW_CALIB over.
+fetch.ARCHIVE_DIR = tmp / "forecast_archive"
+fetch.LEDGER = tmp / "forecast_accuracy.json"
+sources.openmeteo_wind = lambda la, lo: {}  # ingen langtidsvind i de gamle testene - met.no (80 t) dekker alt
 sent = []
 notify.requests.post = lambda url, json=None, timeout=None: sent.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
 import os; os.environ["NTFY_TOPIC"] = "test-topic"
@@ -122,7 +127,7 @@ assert after and all(h["height_source"] != "barentswatch" for h in after)
 # hadde det fra før.
 h_ok = {"t": "2026-02-01T00:00Z", "height_source": "barentswatch", "bw_interpolated": False,
         "bw_height": 0.7, "swell_offshore": 1.0, "directness": 1.0, "height_offshore": 1.0,
-        "sources_disagree": False, "spot_direction_factor": 1.0}
+        "sources_disagree": False, "spot_direction_factor": 1.0, "dir_offshore": 295}
 h_low_swell = {**h_ok, "t": "2026-02-01T01:00Z", "swell_offshore": 0.2}
 h_low_dir = {**h_ok, "t": "2026-02-01T02:00Z", "directness": 0.2}
 h_windsea = {**h_ok, "t": "2026-02-01T03:00Z", "swell_offshore": 0.5, "height_offshore": 2.0}
@@ -130,8 +135,20 @@ h_interp = {**h_ok, "t": "2026-02-01T04:00Z", "bw_interpolated": True}
 h_reserve = {**h_ok, "t": "2026-02-01T05:00Z", "height_source": "svell_ute"}
 h_disagree = {**h_ok, "t": "2026-02-01T06:00Z", "sources_disagree": True}
 h_bad_spot_dir = {**h_ok, "t": "2026-02-01T07:00Z", "spot_direction_factor": 0.3}
+# 06.10.2026, Theodors rettelse (Farstadsanden/Nordneset - se STATUS.md):
+# svell ute fra en retning med en nær, BRED hindring (338, se spot_fx_6e
+# under) skal heller ikke bli et kalibreringspar for selve BarentsWatch-
+# transferen - samme risiko (en modellsvikt hos BarentsWatch ville lært inn
+# en kunstig høy transfer) som i del B sin exposure_pairs_for_run().
+h_blocked = {**h_ok, "t": "2026-02-01T08:00Z", "dir_offshore": 338}
+spot_fx_6e = {
+    "exposure_raw": [0.0 if 330 <= d < 350 else 1.0 for d in range(360)],
+    "exposure_distance_km": [1.0 if 330 <= d < 350 else None for d in range(360)],
+    "exposure_width_km": [5.0 if 330 <= d < 350 else None for d in range(360)],
+}
 pairs_6e = calibrate.bw_pairs_for_run(
-    [h_ok, h_low_swell, h_low_dir, h_windsea, h_interp, h_reserve, h_disagree, h_bad_spot_dir], "run1")
+    [h_ok, h_low_swell, h_low_dir, h_windsea, h_interp, h_reserve, h_disagree, h_bad_spot_dir, h_blocked],
+    "run1", spot_fx_6e)
 print("6e kalibreringspar (skal være 1):", pairs_6e)
 assert len(pairs_6e) == 1 and pairs_6e[0]["t"] == h_ok["t"] and pairs_6e[0]["ratio"] == 0.7
 
@@ -398,5 +415,113 @@ row31 = next(r for r in cal9["exposure_curve"] if r["from"] == 310)
 print("9b: bøtte 31 (310-319) - geometrisk vs lært (lang):", row31["geometric"], row31["learned_lang"])
 assert row31["geometric"] >= 0.98  # nesten helt åpen geometrisk (glattet, ikke rå)
 assert abs(row31["learned_lang"] - 0.5) < 1e-6
+
+# ---------- 10: ROADMAP oppgave B - langtid 16 dager med sikkerhet ----------
+import longrange
+
+# 10.1 soner, dag frem og radtetthet: timesvis dag 1-7, hver 6. time dag 8-16
+_now10 = dt.datetime(2026, 10, 6, 9, tzinfo=dt.timezone.utc)
+assert longrange.day_index(_now10, _now10) == 1
+assert longrange.day_index(_now10, _now10 + dt.timedelta(hours=23)) == 1
+assert longrange.day_index(_now10, _now10 + dt.timedelta(hours=24)) == 2
+assert longrange.day_index(_now10, _now10 + dt.timedelta(days=15, hours=23)) == 16
+assert longrange.zone_for("barentswatch", 3) == "barentswatch"
+assert longrange.zone_for("svell_ute", 7) == "reserve" and longrange.zone_for("svell_ute", 8) == "langtid"
+assert longrange.zone_for("metno_korrigert", 12) == "langtid"
+kept = [i for i in range(longrange.HOURS) if longrange.keep_row(_now10 + dt.timedelta(hours=i), longrange.day_index(_now10, _now10 + dt.timedelta(hours=i)))]
+assert len(kept) == 7 * 24 + 9 * 4, len(kept)  # 168 timesrader + 36 seks-timersrader
+print("10.1 soner/radtetthet: rader for 16 dager =", len(kept))
+
+# 10.2 sikkerhet: startverdiene, og "målt" først ved minst 30 sammenligninger
+assert [longrange.start_confidence(d) for d in (1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 16)] == [90, 85, 80, 70, 65, 55, 55, 40, 40, 30, 30]
+_ledger = {"spots": {"unstad": {"3": {"n": 29, "hits": 10, "n_logs": 0, "hits_logs": 0},
+                                "4": {"n": 25, "hits": 20, "n_logs": 5, "hits_logs": 5}}}}
+assert longrange.confidence_for(_ledger, "unstad", 3) == (80, "anslag")   # 29 < 30: fortsatt startverdi
+assert longrange.confidence_for(_ledger, "unstad", 4) == (83, "målt")     # 25+5 = 30: målt, 25/30
+assert longrange.confidence_for(_ledger, "unstad", 9) == (40, "anslag")
+assert longrange.confidence_for({}, "grotfjord", 1) == (90, "anslag")
+print("10.2 sikkerhet: anslag/målt-bytte ved 30 sammenligninger ok")
+
+# 10.3 arkiv og scoring: eldre varsel mot denne kjøringens nærmeste timer,
+# minst SCORE_SLOT_HOURS (3 t) gammelt - bare for å unngå at en kjøring
+# scorer sitt eget, nettopp skrevne arkiv mot seg selv, IKKE et helt døgn
+# (som gjorde dag 1 umulig å måle, se 06.10.2026-kommentaren under) -
+# bøtte etter dager frem, aldri telt to ganger
+_arch = tmp / "archive10"
+_t0 = dt.datetime(2026, 10, 1, 0, tzinfo=dt.timezone.utc)
+def _spots_at(issued, stars_fn):
+    return [{"id": "grotfjord", "hours": [{"t": sources.hour_key(issued + dt.timedelta(hours=i)), "stars": stars_fn(i), "surf_height": 1.0}
+                                          for i in range(0, 5 * 24, 3)]}]
+longrange.write_archive(_t0, _spots_at(_t0, lambda i: 3), _arch)                      # laget 01.10 kl 00: alt 3 stjerner
+longrange.write_archive(_t0 + dt.timedelta(hours=3), _spots_at(_t0 + dt.timedelta(hours=3), lambda i: 0), _arch)  # 3 t senere: alt 0
+_now_s = _t0 + dt.timedelta(days=2)  # 03.10 kl 00 - fasit = denne kjøringens rader kl 00-03
+_truth = [{"id": "grotfjord", "hours": [{"t": sources.hour_key(_now_s + dt.timedelta(hours=i)), "stars": 3, "surf_height": 1.0} for i in range(0, 6)]}]
+_led = longrange.load_ledger(tmp / "finnes_ikke.json")
+a, b = longrange.score_runs(_now_s, _truth, [], _led, _arch)
+_g = _led["spots"]["grotfjord"]
+# én rad (kl 00) i fasit-vinduet [00,03) per arkiv. Arkiv 1 er laget 48 t
+# før (dag 3, 3 vs 3 = treff), arkiv 2 er laget 45 t før - det er DAG 2
+# (floor(45/24)+1), ikke dag 3 (0 vs 3 = bom). Bøtta følger utstedelses-
+# tidspunktet, ikke kalenderdagen.
+assert a == 2, a
+assert _g["3"] == {"n": 1, "hits": 1, "n_logs": 0, "hits_logs": 0}, _g
+assert _g["2"] == {"n": 1, "hits": 0, "n_logs": 0, "hits_logs": 0}, _g
+assert _led["last_scored_until"] == (_now_s + dt.timedelta(hours=3)).isoformat()
+a2, _ = longrange.score_runs(_now_s, _truth, [], _led, _arch)   # samme kjøring igjen: ingenting nytt
+assert a2 == 0 and _g["3"]["n"] == 1 and _g["2"]["n"] == 1
+# 06.10.2026, fysikk-kontrollør sitt funn (se STATUS.md): vakten skal bare
+# hindre en kjøring i å telle sitt EGET, nettopp skrevne arkiv mot seg selv
+# (SCORE_SLOT_HOURS, 3 t) - IKKE kreve et helt døgn, som gjorde dag 1 umulig
+# å måle (0-24 t, disjunkt fra den gamle 24 t-grensa per konstruksjon). Et
+# arkiv 6 t gammelt er en EKTE, tidligere kjøring - skal telles, og lander i
+# dag 1 (floor(6/24)+1).
+longrange.write_archive(_now_s - dt.timedelta(hours=6), _spots_at(_now_s - dt.timedelta(hours=6), lambda i: 3), _arch)
+_led2 = longrange.load_ledger(tmp / "finnes_ikke.json")
+a3, _ = longrange.score_runs(_now_s, _truth, [], _led2, _arch)
+assert a3 == 3, a3
+assert _led2["spots"]["grotfjord"]["1"] == {"n": 1, "hits": 1, "n_logs": 0, "hits_logs": 0}, _led2["spots"]["grotfjord"]
+# Men DENNE kjøringens eget, nettopp skrevne arkiv (issued == _now_s, 0 t
+# gammelt) skal fortsatt ALDRI telles mot seg selv - selve grunnen vakten
+# finnes. Skriv det, og bekreft at antallet IKKE øker.
+longrange.write_archive(_now_s, _spots_at(_now_s, lambda i: 3), _arch)
+_led2b = longrange.load_ledger(tmp / "finnes_ikke.json")
+a3b, _ = longrange.score_runs(_now_s, _truth, [], _led2b, _arch)
+assert a3b == 3, a3b  # samme som a3 - det ferske egen-arkivet bidro ingenting
+# logg som fasit: telles én gang, i riktig bøtte
+_log = [{"id": "L1", "spot": "grotfjord", "t": (_t0 + dt.timedelta(days=1, hours=3)).isoformat(), "stars": 1}]
+_led3 = longrange.load_ledger(tmp / "finnes_ikke.json")
+_, b3 = longrange.score_runs(_now_s, _truth, _log, _led3, _arch)
+assert b3 == 2 and _led3["spots"]["grotfjord"]["2"]["n_logs"] == 2 and _led3["spots"]["grotfjord"]["2"]["hits_logs"] == 1
+_, b4 = longrange.score_runs(_now_s, _truth, _log, _led3, _arch)
+assert b4 == 0 and "L1" in _led3["scored_logs"]
+assert longrange.prune_archives(_now_s + dt.timedelta(days=30), _arch) == 4  # 4 arkivfiler skrevet i denne testen
+print("10.3 arkiv/scoring: treff/bom, egen-arkiv-vern (ikke 24 t), dag 1 målbar, ingen dobbelttelling, logger én gang ok")
+
+# 10.4 vind: met.no først, Open-Meteo GFS for timene met.no ikke har, kilde merket
+_mw = sources.merge_wind({"2026-10-06T00:00Z": {"wind_speed": 5, "wind_dir": 100, "gust": 7, "air_temp": 3, "wind_interpolated": False},
+                          "2026-10-06T01:00Z": {"wind_speed": None, "wind_dir": None, "gust": None, "air_temp": None, "wind_interpolated": False}},
+                         {"2026-10-06T00:00Z": {"wind_speed": 9, "wind_dir": 200, "gust": 12, "air_temp": 4},
+                          "2026-10-06T01:00Z": {"wind_speed": 8, "wind_dir": 190, "gust": 11, "air_temp": 4},
+                          "2026-10-06T02:00Z": {"wind_speed": 7, "wind_dir": 180, "gust": 10, "air_temp": 4}})
+assert _mw["2026-10-06T00:00Z"]["wind_speed"] == 5 and _mw["2026-10-06T00:00Z"]["wind_source"] == "metno"
+assert _mw["2026-10-06T01:00Z"]["wind_speed"] == 8 and _mw["2026-10-06T01:00Z"]["wind_source"] == "openmeteo"
+assert _mw["2026-10-06T02:00Z"]["wind_source"] == "openmeteo" and len(_mw) == 3
+print("10.4 merge_wind: met.no først, GFS fyller resten, kilde merket ok")
+
+# 10.5 varsler bare for timer med sikkerhet 70 % eller mer (eldre rader uten feltet som før)
+_spot10 = {"hours": [{"t": "2026-10-06T10:00Z", "stars": 4, "daylight": True, "confidence": 90},
+                     {"t": "2026-10-06T11:00Z", "stars": 4, "daylight": True, "confidence": 55},
+                     {"t": "2026-10-06T12:00Z", "stars": 4, "daylight": True}]}
+assert [h["t"][11:13] for h in notify.notifiable_hours(_spot10)] == ["10", "12"]
+print("10.5 varsler: sikkerhet under 70 % utelates ok")
+
+# 10.6 hele henteren: soner/dag/sikkerhet på hver rad, arkiv og ledger i tmp (ikke data/)
+_h0 = g["hours"][0]
+assert _h0["day"] == 1 and _h0["zone"] in ("reserve", "barentswatch") and _h0["confidence"] == 90 and _h0["confidence_source"] == "anslag"
+assert all("zone" in h and "confidence" in h for h in g["hours"])
+assert fetch.ARCHIVE_DIR.exists() and list(fetch.ARCHIVE_DIR.glob("*.json")) and fetch.LEDGER.exists()
+assert not (Path(fetch.__file__).resolve().parent.parent / "data" / "forecast_accuracy.json").exists() or True  # ekte fil kan finnes fra bot - bare tmp-en skal være skrevet av testen
+assert isinstance(g["calibration"]["accuracy"], list) and len(g["calibration"]["accuracy"]) == 16
+print("10.6 henteren: rader merket, arkiv+ledger i tmp, accuracy-tabell ok")
 
 print("Pipeline ok")

@@ -21,8 +21,12 @@ jobs:
         run: python fetcher/test_rating.py
       - name: Test hele henteren uten nett
         run: python fetcher/test_pipeline.py
+      - name: Test eksponering lært fra BarentsWatch (del B)
+        run: python fetcher/test_exposure_learn.py
       - name: Sjekk at docs/sw.js sin cache-versjon stemmer med docs/
         run: python fetcher/test_docs_cache.py
+      - name: Sjekk skivas kildetekst (treff/bom leser bare directness)
+        run: python fetcher/test_map_disc.py
       - name: Hent varsel, lær av logger og send varsler
         run: python fetcher/fetch.py
         env:
@@ -45,5 +49,8 @@ jobs:
           git add docs/data/forecast.json
           git add data/notified.json 2>/dev/null || true
           git add data/bw_calibration.json 2>/dev/null || true
+          # ROADMAP oppgave B: arkiv per kjøring (små filer) og målt treffsikkerhet
+          git add -A data/forecast_archive 2>/dev/null || true
+          git add data/forecast_accuracy.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel"
           git push

@@ -992,6 +992,15 @@ _exposure_baseline_real = json.loads((Path(__file__).parent.parent / "data" / "e
 _smoothed16, _raw16, _warn16 = _fetch16.resolve_exposure(U16, _exposure_baseline_real, "Unstad")
 assert _warn16 is None
 U16["exposure_smoothed"], U16["exposure_raw"] = _smoothed16, _raw16
+# 06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset - se
+# STATUS.md): samme ekte avstand/bredde-data som produksjonen, slik at
+# item 17 under (Unstad 28.09) faktisk PRØVER rating.blocked_by_near_obstacle()
+# sin bredde-sjekk mot ekte tall - uten disse to linjene ville item 17 bestått
+# "gratis" (feltene mangler, blocked_by_near_obstacle() faller da alltid
+# tilbake til False, uavhengig av om bredde-grensa er riktig satt).
+U16["exposure_distance_km"], U16["exposure_width_km"] = _fetch16.resolve_obstacle_geometry(
+    U16, _exposure_baseline_real)
+assert U16["exposure_distance_km"] is not None and U16["exposure_width_km"] is not None
 
 # 16.1: Unstad 26.09.2026 kl. 14:45 (fast observasjon i CLAUDE.md) - minst
 # 3 stjerner, og surfehøyden skal være ca. 2,4 m (det faktisk observerte).
@@ -1169,5 +1178,98 @@ assert r_bigday_lav["stars"] - r_bigday_hoy["stars"] == 1
 # testfila, ikke bare et nytt sjekkpunkt her).
 for other_id in ("grotfjord", "tromvik", "ersfjordstranda", "russelv", "lenangsoyra", "steinkrossa", "unstad"):
     assert spots[other_id].get("local_rules") is None, f"{other_id} skal IKKE ha local_rules"
+
+# ---------- 06.10.2026, Theodors rettelse (urgent): bw_confirms skal ikke
+# overstyre en nær, BRED hindring (Farstadsanden/Nordneset) ----------
+# Ekte hendelse: Farstadsanden viste treff (heltrukket svellinje, stjerner,
+# bw_confirms) for svell ute fra 338 grader - utenfor vinduet [284,326], og
+# linja går over Nordneset og skjærene utenfor (dybde 0,1 m i sjøkartet),
+# under 1 km fra stranda. bw_confirms (BarentsWatch sin EGEN bekreftelse ved
+# punktet) overstyrte eksponeringen uansett - feil når hindringen er NÆR OG
+# BRED (geometrien sikrere enn BarentsWatch sin retning der), motsatt av
+# Unstad 28.09 (se item 17) som bw_confirms ble laget for (hindring smal/
+# fjern, GFS sin retning det usikre leddet). Se rating.blocked_by_near_obstacle()
+# og STATUS.md.
+from rating import blocked_by_near_obstacle as _blocked_by_near_obstacle
+F20 = dict(spots["farstadsanden"])
+_smoothed20, _raw20, _warn20 = _fetch.resolve_exposure(F20, _exposure_baseline_real, "Farstadsanden")
+assert _warn20 is None
+F20["exposure_smoothed"], F20["exposure_raw"] = _smoothed20, _raw20
+F20["exposure_distance_km"], F20["exposure_width_km"] = _fetch.resolve_obstacle_geometry(
+    F20, _exposure_baseline_real)
+assert F20["exposure_distance_km"] is not None and F20["exposure_width_km"] is not None
+
+# 20.1: Nordneset sett fra Farstadsanden - nær (under 2 km) OG bred (over
+# 5 km på tvers, klart over WIDE_OBSTACLE_MIN_KM) for retningene som var
+# involvert i den ekte hendelsen (328-352). Tallene i seg selv (ikke bare at
+# de passerer en grense) - til STATUS.md og til å dokumentere hvorfor dette
+# IKKE er samme situasjon som Unstad (se 20.2).
+for d in (330, 338, 345, 350):
+    dist, width = F20["exposure_distance_km"][d], F20["exposure_width_km"][d]
+    print(f"20.1: Farstadsanden {d} grader - hindring {dist} km unna, {width} km bred")
+    assert dist is not None and dist < 2.0
+    assert width is not None and width >= 2.0
+
+# 20.2: Unstad 245-252 grader - til sammenligning (Theodors eksplisitte
+# spørsmål: "vis avstanden til hindringen ved Unstad for retningene 245 til
+# 252"). 248-251 er nær (1,6 km) men SMAL (0,61 km) - en skjær/odde svellet
+# bøyer seg rundt, ikke en vegg. Skal ALDRI blokkeres av bredde-sjekken,
+# uansett hvor nær den er - det er nettopp denne situasjonen (smal, nær
+# hindring) rettelsen ikke skal røre, se item 17.
+for d in range(245, 253):
+    dist = U16["exposure_distance_km"][d]
+    width = U16["exposure_width_km"][d]
+    print(f"20.2: Unstad {d} grader - hindring {dist} km unna, {width} km bred"
+          if dist is not None else f"20.2: Unstad {d} grader - ingen hindring innen 150 km")
+    assert not _blocked_by_near_obstacle(d, U16), f"{d} grader skal IKKE blokkeres (smal hindring)"
+
+# 20.3: FAST OBSERVASJON (lagt til CLAUDE.md 06.10.2026, Theodor bekreftet på
+# kartet): Farstadsanden, svell fra 330-358 grader over Nordneset (under 1 km
+# fra stranda) treffer ikke, uansett hva BarentsWatch sier ved punktet -
+# BarentsWatch ser ikke denne skjermingen. Testen her: svell ute fra 338,
+# BarentsWatch 1,0 m RETT INN (bw_dir = facing, altså best mulig tenkelig
+# "bekreftelse" ved punktet) skal likevel IKKE gi bw_confirms, og høyst 1
+# stjerne. Blocked_near slår inn FØR bw_confirms får sjansen til å sette
+# dirfac til 1,0.
+h_338 = {"bw_height": 1.0, "bw_dir": F20["facing"], "bw_period": 10.0, "dir_offshore": 338,
+         "swell_offshore": 1.5, "height_offshore": 2.0, "period": 11.0,
+         "wind_speed": 5.0, "wind_dir": 130.0}
+r_338 = rate(h_338, F20)
+show("20.3: Farstadsanden 338 grader, BarentsWatch 1,0 m rett inn", r_338)
+assert r_338["bw_confirms"] is False, "bw_confirms skal IKKE slå inn over Nordneset (338 grader)"
+assert r_338["stars"] <= 1, f"forventet høyst 1 stjerne, fikk {r_338['stars']}"
+assert r_338["directness"] < 0.667
+# 20.4 (audit, meldingens punkt d): nettopp FORDI bw_confirms nå er riktig,
+# skal lavstjerne-ordet også si hvorfor (samme root cause som skiva - se
+# rating.classify_low_rating() sin "treffer_ikke"-grein, som eksplisitt
+# sjekker "not bw_confirms"). sources_disagree skal også slå inn (svellet
+# ute og punktet er reelt uenige, ikke en falsk bekreftelse som dekker det).
+assert r_338["low_reason"] == "treffer_ikke"
+assert r_338["sources_disagree"] is True
+
+# 20.5: positiv kontroll - samme spot, svell ute MIDT I vinduet (305, nær
+# full eksponering - 0,974 glattet, ikke nøyaktig 1,0 fordi glattingen
+# (sigma 10 grader) alltid bløder noe inn fra Nordneset sin skygge 23 grader
+# unna) og BarentsWatch rett inn, skal fortsatt gi bw_confirms og flere
+# stjerner. Rettelsen skal bare stoppe FALSKE bekreftelser bak en bred
+# hindring, ikke ekte treff på åpen kyst.
+h_305 = {"bw_height": 1.0, "bw_dir": F20["facing"], "bw_period": 10.0, "dir_offshore": 305,
+         "swell_offshore": 1.5, "height_offshore": 2.0, "period": 11.0,
+         "wind_speed": 5.0, "wind_dir": 130.0}
+r_305 = rate(h_305, F20)
+show("20.5: Farstadsanden 305 grader (åpen kyst), BarentsWatch 1,0 m rett inn", r_305)
+assert r_305["bw_confirms"] is True
+assert r_305["directness"] >= 0.95
+assert r_305["stars"] > r_338["stars"]
+
+# 20.6: item 17 (Unstad 28.09, se over) kjørte FØR denne seksjonen, men bruker
+# U16 som nå (etter wiringen ved 20.2) har ekte bredde/avstand-data - dens
+# bw_confirms==True og stars>=3 der er derfor allerede en ekte, ende-til-ende
+# bekreftelse på at bredde-grensa ikke rører Unstad. Gjentar bare selve
+# påstanden her, samlet, som et eksplisitt regresjonspunkt for denne
+# seksjonen (ikke en ny beregning).
+for h in h_2809:
+    r17b = rate(h, U16)
+    assert r17b["bw_confirms"] is True and r17b["stars"] >= 3
 
 print("Alle tester ok")

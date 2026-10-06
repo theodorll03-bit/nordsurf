@@ -434,12 +434,16 @@ function discPlateMarkup(spot, h){
   const m = h ? heightMForDisplay(h) : null;
   const big = h ? (reason ? (m!=null ? `${LOW_REASON_WORD[reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[reason]) : (h.surf_height!=null?nf1.format(h.surf_height)+" m":"–")) : "–";
   const sets = h && h.surf_height>0 && h.surf_height_sets!=null ? `sett ${nf1.format(h.surf_height_sets)} m` : "";
+  // 06.10.2026, Theodors oppgave: kJ også på kartets høydeplate - samme
+  // svell/total-valg som energyText() på detaljsiden (global, delt).
+  const kjVal = h ? (h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj) : null;
+  const kj = kjVal!=null ? `${nf0.format(kjVal)} kJ` : "";
   const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
   const night = h && (h.light==="mørkt" || h.daylight===false);
-  const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : "anslag") : "";
+  const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : (h.zone==="langtid" ? "langtid" : "anslag")) + (h.confidence!=null ? ` · ${h.confidence} %` : "") : "";
   const max = h && h.bw_height_max!=null ? `<div class="max">BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m</div>` : "";
   return `<div class="big">${esc(big)}</div>
-    <div class="mid">${[sets, period, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
+    <div class="mid">${[sets, period, kj, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
     ${max}
     <div class="src">${esc(src)} <span class="chev" aria-hidden="true">›</span></div>`;
 }

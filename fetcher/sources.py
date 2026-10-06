@@ -121,7 +121,12 @@ def _openmeteo_fetch(lat, lon, model=None):
         "swell_wave_direction,swell_wave_period,secondary_swell_wave_height,"
         "secondary_swell_wave_direction,secondary_swell_wave_period",
         "timezone": "GMT",
-        "forecast_days": 5,
+        # 06.10.2026, ROADMAP oppgave B: 16 dager. Live sjekket samme dag:
+        # GFS Wave (ncep_gfswave025) gir svelldata alle 384 timer, mens
+        # standardmodellen (models=None) bare har svelldata til ca. dag 9 -
+        # dag 10-16 kommer derfor alltid fra GFS alene (openmeteo_marine() sin
+        # time-for-time-sammenslåing håndterer det uten egen kode).
+        "forecast_days": 16,
     }
     if model:
         params["models"] = model
@@ -446,6 +451,59 @@ def weather_interpolate(raw):
                 "air_temp": _lerp(v0.get("air_temp"), v1.get("air_temp"), frac),
                 "wind_interpolated": True,
             }
+    return out
+
+
+# ---------- Open-Meteo GFS-vind (langtid, ROADMAP oppgave B) ----------
+
+OPENMETEO_WIND_MODEL = "gfs_seamless"
+
+
+def openmeteo_wind(lat, lon):
+    """06.10.2026, ROADMAP oppgave B: vind 16 dager frem fra Open-Meteo sin
+    GFS-kjede, SAMME dict-form som metno_weather() (wind_speed i m/s,
+    wind_dir "fra", gust, air_temp) så den kan skjøtes rett på met.no der
+    met.no slutter - se merge_wind(). Live sjekket 06.10.2026: 384 timer,
+    alle felt satt, m/s bekreftet via wind_speed_unit=ms.
+    {time: {wind_speed, wind_dir, gust, air_temp}}"""
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m",
+        "wind_speed_unit": "ms",
+        "timezone": "GMT",
+        "forecast_days": 16,
+        "models": OPENMETEO_WIND_MODEL,
+    }
+    r = _get("https://api.open-meteo.com/v1/forecast", params)
+    h = r.json()["hourly"]
+    out = {}
+    for i, t in enumerate(h["time"]):
+        key = t + "Z" if len(t) == 16 else t
+        key = key[:13] + ":00Z"
+        out[key] = {
+            "wind_speed": h["wind_speed_10m"][i],
+            "wind_dir": h["wind_direction_10m"][i],
+            "gust": h["wind_gusts_10m"][i],
+            "air_temp": h["temperature_2m"][i],
+        }
+    return out
+
+
+def merge_wind(metno_hourly, openmeteo_hourly):
+    """met.no først (finere, lokal modell) så langt den rekker - inkludert de
+    interpolerte timene fra weather_interpolate() - deretter Open-Meteo GFS
+    for timer met.no ikke har. Hver time merkes med wind_source ("metno"
+    eller "openmeteo") så appen kan vise kilden. Timer uten vind i noen av
+    dem utelates (rating.wind_penalty() gir da "ukjent vind"-straffen som
+    før)."""
+    out = {}
+    for t, v in (metno_hourly or {}).items():
+        if v.get("wind_speed") is not None:
+            out[t] = {**v, "wind_source": "metno"}
+    for t, v in (openmeteo_hourly or {}).items():
+        if t not in out and v.get("wind_speed") is not None:
+            out[t] = {**v, "wind_interpolated": False, "wind_source": "openmeteo"}
     return out
 
 

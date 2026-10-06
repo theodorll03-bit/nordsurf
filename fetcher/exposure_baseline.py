@@ -164,12 +164,38 @@ def build_spot_baseline(spot):
     lat, lon = spot["spot"]["lat"], spot["spot"]["lon"]
     land = build_land(lat, lon)
     hits = [first_land_distance(land, lat, lon, b) for b in range(360)]
-    raw = [shadow_exposure(hits, b)[0] for b in range(360)]
+    shadow = [shadow_exposure(hits, b) for b in range(360)]
+    raw = [s[0] for s in shadow]
     smoothed = gaussian_smooth(raw)
     return {
         "checksum": spot_checksum(spot),
         "raw": [round(v, 3) for v in raw],
         "smoothed": [round(v, 3) for v in smoothed],
+        # 06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset -
+        # se STATUS.md): avstand til nærmeste hindring i km, per grad. None =
+        # helt åpent (ingen hindring innen MAXD) eller blokkert fra start
+        # (0,0 - "hindringen" er da stranda/neset selv, ikke en avgrenset
+        # gjenstand å måle avstand til). shadow_exposure() regnet dette
+        # allerede ut for selve eksponeringstallet - lagres nå i tillegg, til
+        # rating.blocked_by_near_obstacle() (ikke brukt i eksponeringstallet
+        # selv, bare til å avgjøre om bw_confirms kan overstyre en retning).
+        "distance_km": [round(s[1], 2) if s[1] is not None else None for s in shadow],
+        # 06.10.2026: hindringens BREDDE på tvers, i km (samme s[2] som
+        # allerede regnes ut for selve skyggelengde-formelen) - Theodor
+        # kalte Farstadsanden sin hindring (Nordneset) "en nær, BRED
+        # hindring". En kort skyggelengde L=W²/λ kan gjøre rå eksponering 0
+        # selv for en SMAL hindring tett innpå (sett ved Unstad 248-251
+        # grader, se STATUS.md) - bredden skiller de to, avstanden alene
+        # gjør det ikke.
+        # 06.10.2026, fysikk-kontrollør sitt funn: "if s[1]/s[2] else None"
+        # (over og her) brukte Python-sannhet på et flyttall - en EKTE
+        # avstand/bredde på 0,0 (blokkert fra start, se kommentaren over) ble
+        # da feilaktig til None, selv om 0,0 er en gyldig, meningsbærende
+        # verdi (ikke "mangler data"). "is not None" skiller de to riktig.
+        # Ufarlig i praksis i dag (shadow_exposure() returnerer alltid
+        # width_km=None nettopp når distance_km=0,0), men ingen grunn til å
+        # stole stilltiende på at den koblingen aldri endres.
+        "width_km": [round(s[2], 2) if s[2] is not None else None for s in shadow],
     }
 
 

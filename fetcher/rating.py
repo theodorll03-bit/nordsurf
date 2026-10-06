@@ -165,6 +165,58 @@ def raw_exposure_zero(d, spot):
     return degrees_outside(d, spot) > 0
 
 
+NEAR_OBSTACLE_MAX_KM = 2.0  # se blocked_by_near_obstacle()
+WIDE_OBSTACLE_MIN_KM = 2.0  # se blocked_by_near_obstacle()
+
+
+def blocked_by_near_obstacle(d, spot):
+    """06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset -
+    se STATUS.md): sann når retning d har en NÆR, BRED hindring foran seg -
+    rå geometrisk eksponering 0 (spoten står i dyp skygge, se
+    raw_exposure_zero()) OG hindringen (første landtreff langs strålen) er
+    NÆRMERE enn NEAR_OBSTACLE_MAX_KM (2 km) OG BREDERE enn WIDE_OBSTACLE_MIN_KM
+    (2 km) på tvers.
+
+    Bredden er IKKE valgfri pynt: en skyggelengde L=W²/λ kan gjøre rå
+    eksponering 0 selv for en SMAL hindring tett innpå (Unstad 248-251
+    grader: 1,6 km unna, men bare 0,61 km BRED - en liten skjær/odde svellet
+    bøyer seg rundt, ikke en vegg). Farstadsanden sin hindring (Nordneset,
+    330-352 grader) er 1,0 km unna OG 5,5 km BRED - en helt annen situasjon.
+    Avstand alene (Theodors opprinnelige, bokstavelige ordlyd) ville blokkert
+    BEGGE - verifisert at det ville brutt Unstad 28.09.2026 sin faste
+    observasjon (dir_offshore 248-250 grader der). Lagt til bredde-kravet
+    for akkurat denne grunnen, samme 2 km-terskel som avstanden (symmetrisk,
+    ikke en ny, ubegrunnet konstant) - se STATUS.md for tallene fra begge
+    spots og hvorfor.
+
+    Theodors tredje betingelse ("spoten ligger innenfor skyggelengden L fra
+    exposure_baseline") er for øvrig IKKE en egen sjekk - den er, ved
+    konstruksjon, allerede det samme som rå eksponering 0:
+    exposure_baseline.shadow_exposure() setter nettopp raw=0,0 NÅR OG BARE
+    NÅR avstanden til hindringen er mindre enn skyggelengden L.
+    raw_exposure_zero() alene dekker den betingelsen.
+
+    Brukt til å avgjøre når bw_confirms IKKE skal kunne overstyre
+    retningsfaktoren (se barentswatch_height()) - motsatt situasjon av
+    Unstad 28.09.2026, som bw_confirms ble laget for: der var svellet ute
+    bare 3-5 grader utenfor vinduet og hindringen smal, så GFS sin retning
+    var det usikre leddet. Her er geometrien (en bred halvøy under 2 km
+    unna) sikrere enn BarentsWatch sin retning ved punktet.
+
+    Mangler avstands- eller breddedata (eldre exposure_baseline.json, eller
+    ugyldig sjekksum): faller tilbake til False (ingen blokkering) - samme
+    forsiktige retning som raw_exposure_zero() sin egen fallback når rådata
+    mangler helt."""
+    if not raw_exposure_zero(d, spot):
+        return False
+    dist, width = spot.get("exposure_distance_km"), spot.get("exposure_width_km")
+    if not dist or not width:
+        return False
+    i = int(round(d)) % 360
+    km, w = dist[i], width[i]
+    return km is not None and km < NEAR_OBSTACLE_MAX_KM and w is not None and w >= WIDE_OBSTACLE_MIN_KM
+
+
 def swell_share(hour):
     """Andel av totalhøyden ute (swell_offshore / height_offshore) som er
     ekte svell - resten er vindsjø. BarentsWatch måler TOTALHØYDE (svell +
@@ -296,14 +348,20 @@ def barentswatch_height(hour, spot):
     # Høyden UTEN retningsfaktoren - bw_confirms sin egen bekreftelse skal
     # ikke avhenge av overstyringen den selv er med på å avgjøre.
     h_sans_dir = bw * min(share, pf)
-    bw_confirms = dir_known and diff <= BW_CONFIRM_DIFF_DEG and h_sans_dir >= FLAT_HS_THRESHOLD
+    # 06.10.2026, Theodors rettelse (Farstadsanden 337 grader - se STATUS.md):
+    # bw_confirms skal ikke kunne overstyre når svellet ute (dir_off, IKKE
+    # bw_dir - det er bw_confirms sin EGEN retning, aldri sjekket mot seg
+    # selv) treffer en nær, bred hindring - se blocked_by_near_obstacle().
+    dir_off = hour.get("dir_offshore")
+    blocked_near = blocked_by_near_obstacle(dir_off, spot)
+    bw_confirms = (dir_known and diff <= BW_CONFIRM_DIFF_DEG
+                   and h_sans_dir >= FLAT_HS_THRESHOLD and not blocked_near)
     # Krever at dir_offshore FAKTISK er kjent - exposure()/directness() sin
     # egen "ukjent retning"-nøytralverdi (0,7, se directness() sin docstring)
     # ligger OVER 0,667-grensa, og ville ellers overstyrt retningsfaktoren
     # uten noen bekreftelse i det hele tatt på at svellet ute treffer -
     # stikk i strid med selve premisset for regelen. Funnet av
     # fysikk-kontrollør 30.09.2026 (Theodors rettelse, Unstad for lav).
-    dir_off = hour.get("dir_offshore")
     offshore_exposure = exposure(dir_off, spot, hour.get("period")) if dir_off is not None else None
     exposure_overridden = offshore_exposure is not None and offshore_exposure >= SPOT_DIRECTION_OVERRIDE_EXPOSURE
     overridden = exposure_overridden or bw_confirms
