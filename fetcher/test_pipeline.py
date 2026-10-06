@@ -63,12 +63,13 @@ print("Grøtfjord lært faktor:", g["calibration"], "| første time:", {k: g["ho
 # når den ekte data/shelter.json (brukt urediret her, samme konvensjon som
 # EXPOSURE_BASELINE over - et sjeldent-bygget, lest-bare referansefelt, ikke
 # tilstand som må isoleres per test) har et PÅLITELIG mål for spoten.
-# Grøtfjord: reliable (3 graders facing/vindu-avvik), height_factor 0,803 -
-# transfer_prior(spot, period=None) = 0,6 × (1-(1-0,803)×1,0) = 0,482.
+# Grøtfjord: reliable (3 graders facing/vindu-avvik), height_factor 0,790
+# (07.10.2026, etter algebra-rettelsen i shelter.py) -
+# transfer_prior(spot, period=None) = 0,6 × (1-(1-0,790)×1,0) = 0,474.
 assert g["calibration"]["surf_factor"] == 0.8 and g["calibration"]["surf_factor_used"] == 0.8
 assert g["hours"][0]["surf_factor"] == 0.8
 assert "transfer" not in g["calibration"] or g["calibration"].get("transfer") is None
-assert g["calibration"]["transfer_used"] == 0.482 and g["calibration"]["transfer_source"] == "skjerming"
+assert g["calibration"]["transfer_used"] == 0.474 and g["calibration"]["transfer_source"] == "skjerming"
 assert all("light" in h for h in g["hours"])
 print("Varsler sendt:", [m["title"] for m in sent])
 fetch.main()  # andre kjøring skal ikke sende samme varsel igjen

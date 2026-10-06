@@ -5,12 +5,13 @@
   "d_open_ray": "facing",
   "opening_frac": 0.177,
   "width_deg": 32.0,
-  "b_km": 8.66,
-  "f": 0.434,
-  "height_factor_raw": 0.6589,
+  "b_km": 4.0,
+  "d_b_km": 6.5,
+  "f": 0.458,
+  "height_factor_raw": 0.6768,
   "facing_window_divergence_deg": 3.0,
   "reliable": true,
-  "height_factor": 0.803
+  "height_factor": 0.79
  },
  "tromvik": {
   "checksum": "41d5685b157b95dc",
@@ -18,12 +19,13 @@
   "d_open_ray": "facing-20",
   "opening_frac": 0.227,
   "width_deg": 39.0,
-  "b_km": 13.95,
-  "f": 0.483,
-  "height_factor_raw": 0.6951,
+  "b_km": 12.25,
+  "d_b_km": 5.5,
+  "f": 0.754,
+  "height_factor_raw": 0.8682,
   "facing_window_divergence_deg": 1.5,
   "reliable": true,
-  "height_factor": 0.847
+  "height_factor": 1.014
  },
  "ersfjordstranda": {
   "checksum": "64b61c10e630c84b",
@@ -31,12 +33,13 @@
   "d_open_ray": "facing",
   "opening_frac": 0.182,
   "width_deg": 33.0,
-  "b_km": 4.32,
-  "f": 0.442,
-  "height_factor_raw": 0.6646,
+  "b_km": 4.75,
+  "d_b_km": 6.5,
+  "f": 0.501,
+  "height_factor_raw": 0.7078,
   "facing_window_divergence_deg": 8.0,
   "reliable": true,
-  "height_factor": 0.81
+  "height_factor": 0.827
  },
  "russelv": {
   "checksum": "b2bcee5a74ba1d2d",
@@ -44,12 +47,13 @@
   "d_open_ray": "facing+20",
   "opening_frac": 0.16,
   "width_deg": 2.0,
-  "b_km": 1.95,
-  "f": 0.046,
-  "height_factor_raw": 0.2139,
+  "b_km": 0.75,
+  "d_b_km": 23.0,
+  "f": 0.043,
+  "height_factor_raw": 0.2071,
   "facing_window_divergence_deg": 55.0,
   "reliable": false,
-  "height_factor": 0.261
+  "height_factor": 0.242
  },
  "lenangsoyra": {
   "checksum": "35ede7a4e401dc76",
@@ -57,12 +61,13 @@
   "d_open_ray": "facing",
   "opening_frac": 0.149,
   "width_deg": 27.0,
-  "b_km": 24.27,
-  "f": 0.393,
-  "height_factor_raw": 0.6269,
+  "b_km": 10.0,
+  "d_b_km": 46.0,
+  "f": 0.23,
+  "height_factor_raw": 0.4796,
   "facing_window_divergence_deg": 0.0,
   "reliable": true,
-  "height_factor": 0.764
+  "height_factor": 0.56
  },
  "steinkrossa": {
   "checksum": "f7424cd94da774d6",
@@ -70,12 +75,13 @@
   "d_open_ray": "facing-20",
   "opening_frac": 0.343,
   "width_deg": 62.0,
-  "b_km": 58.97,
-  "f": 0.598,
-  "height_factor_raw": 0.7732,
+  "b_km": 105.25,
+  "d_b_km": 54.5,
+  "f": 0.726,
+  "height_factor_raw": 0.8522,
   "facing_window_divergence_deg": 59.5,
   "reliable": false,
-  "height_factor": 0.942
+  "height_factor": 0.995
  },
  "unstad": {
   "checksum": "889db05b20eb99fc",
@@ -83,9 +89,10 @@
   "d_open_ray": "facing+20",
   "opening_frac": 0.475,
   "width_deg": 86.0,
-  "b_km": 9.01,
-  "f": 0.673,
-  "height_factor_raw": 0.8206,
+  "b_km": 2.0,
+  "d_b_km": 1.0,
+  "f": 0.733,
+  "height_factor_raw": 0.8563,
   "facing_window_divergence_deg": 0.8,
   "reliable": true,
   "height_factor": 1.0
@@ -96,11 +103,12 @@
   "d_open_ray": "facing",
   "opening_frac": 0.243,
   "width_deg": 44.0,
-  "b_km": 10.75,
-  "f": 0.513,
-  "height_factor_raw": 0.7165,
+  "b_km": 1.75,
+  "d_b_km": 1.0,
+  "f": 0.706,
+  "height_factor_raw": 0.8404,
   "facing_window_divergence_deg": 5.0,
   "reliable": true,
-  "height_factor": 0.873
+  "height_factor": 0.981
  }
 }

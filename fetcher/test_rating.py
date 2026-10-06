@@ -1502,10 +1502,14 @@ assert h_short < h_long  # kort periode -> mer skjermingseffekt -> lavere transf
 print(f"22.7: spot_height() bruker ekte periode for skjerming per time - kort {round(h_short,3)} "
       f"< langt {round(h_long,3)} m (samme svell ute), OK")
 
-# 22.8: ekte data/shelter.json (06.10.2026 natt) - Unstad er referansen
-# (height_factor nøyaktig 1,0), Russelv og Steinkrøssa flagget UPÅLITELIG
-# (facing peker 55-60 grader fra swell_window sitt senter - se STATUS.md),
-# de andre fem pålitelige.
+# 22.8: ekte data/shelter.json (regnet på nytt 07.10.2026 etter algebra-
+# rettelsen) - Unstad er referansen (height_factor nøyaktig 1,0), Russelv og
+# Steinkrøssa flagget UPÅLITELIG (facing peker 55-60 grader fra swell_window
+# sitt senter - se STATUS.md), de andre fem pålitelige. Rekkefølgen Theodor
+# ventet i ROADMAP (Unstad/Farstadsanden åpne, Grøtfjord/Ersfjordstranda i
+# midten, Lenangsøyra mest skjermet) låses her; Tromvik kom ut som ÅPEN
+# (over 1,0 - vid bukt, 12 km tverrbredde, ingen effekt i ratingen), avvik
+# fra forventningen, rapportert i STATUS.md - ikke skjult med en løsere test.
 _shelter_path = Path(__file__).parent.parent / "data" / "shelter.json"
 if _shelter_path.exists():
     _shelter_data = json.loads(_shelter_path.read_text())
@@ -1516,9 +1520,14 @@ if _shelter_path.exists():
         assert _shelter_data[_sid]["facing_window_divergence_deg"] > 30
     for _sid in ("grotfjord", "tromvik", "ersfjordstranda", "lenangsoyra", "farstadsanden"):
         assert _shelter_data[_sid]["reliable"] is True, f"{_sid} skulle vært pålitelig"
-        assert _shelter_data[_sid]["height_factor"] < 1.0  # alle mindre åpne enn referansen Unstad
-    print("22.8: data/shelter.json - Unstad=1,0 (referanse), Russelv/Steinkrøssa upålitelig "
-          "(facing/vindu-avvik), de andre fem pålitelige og under 1,0, OK")
+        assert _shelter_data[_sid]["b_km"] is not None and _shelter_data[_sid]["d_b_km"] is not None
+    _hf = {k: v["height_factor"] for k, v in _shelter_data.items()}
+    assert _hf["lenangsoyra"] < _hf["grotfjord"] < _hf["ersfjordstranda"] < _hf["farstadsanden"] <= 1.0, _hf
+    assert _hf["farstadsanden"] > 0.9 and _hf["lenangsoyra"] < 0.6
+    assert _hf["tromvik"] > 1.0  # se kommentaren over - endres dette, oppdater STATUS.md også
+    print("22.8: data/shelter.json - Unstad=1,0 (referanse), Russelv/Steinkrøssa upålitelig, rekkefølge "
+          f"Lenangsøyra {_hf['lenangsoyra']} < Grøtfjord {_hf['grotfjord']} < Ersfjordstranda {_hf['ersfjordstranda']} "
+          f"< Farstadsanden {_hf['farstadsanden']} <= Unstad 1,0; Tromvik {_hf['tromvik']} (åpen), OK")
 else:
     print("22.8: data/shelter.json finnes ikke - hoppet over (kjør fetcher/shelter.py)")
 
