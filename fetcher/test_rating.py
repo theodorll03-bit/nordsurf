@@ -1522,4 +1522,136 @@ if _shelter_path.exists():
 else:
     print("22.8: data/shelter.json finnes ikke - hoppet over (kjør fetcher/shelter.py)")
 
+# 22.9: SELVE GEOMETRIEN i fetcher/shelter.py, med SYNTETISK land (shapely,
+# ingen basemap/GSHHS) - fysikk-kontrollør 06.10.2026 natt: "ingen direkte
+# test av shelter.py sin egen geometri", og selve algebra-feilen (d_open
+# kansellerte seg ut av f). Tre kystformer, alle med spoten på kystlinja og
+# facing rett nord: (a) rett kyst skal gi f nær 1; (b) en smal, dyp bukt
+# (2 km bred, 10 km lang) skal gi lav f; (c) SAMME bredde, dobbelt så lang
+# bukt skal gi LAVERE f enn (b) - regresjonstest for kanselleringen (med
+# den gamle formelen var f identisk for (b) og (c)). Hoppes over hvis
+# shapely mangler (forecast.yml installerer ikke shapely; test.yml gjør).
+try:
+    from shapely.geometry import Polygon as _Poly
+    from shapely.prepared import prep as _prep
+    _have_shapely = True
+except ImportError:
+    _have_shapely = False
+if _have_shapely:
+    import math as _math
+    import shelter as _shelter
+    _LAT, _LON = 69.0, 18.0
+    _KM_LAT, _KM_LON = 1 / 110.57, 1 / (111.32 * _math.cos(_math.radians(_LAT)))
+
+    def _box(lat0, lat1, lon0, lon1):
+        return _Poly([(lon0, lat0), (lon1, lat0), (lon1, lat1), (lon0, lat1)])
+
+    def _bay_land(width_km, length_km):
+        """Land overalt sør for spoten OG på begge sider av en bukt som går
+        length_km nordover fra spoten, width_km bred - bukta er vann."""
+        outer = _box(_LAT - 3, _LAT + length_km * _KM_LAT, _LON - 5, _LON + 5)
+        bay = _box(_LAT - 0.01, _LAT + length_km * _KM_LAT + 1e-4,
+                   _LON - width_km / 2 * _KM_LON, _LON + width_km / 2 * _KM_LON)
+        return _prep(outer.difference(bay))
+
+    _SPOT_N = {"id": "syntetisk", "spot": {"lat": _LAT + 1e-4, "lon": _LON}, "facing": 0, "swell_window": [340, 20]}
+    _straight = _shelter.build_spot_shelter(_SPOT_N, land=_prep(_box(_LAT - 3, _LAT, _LON - 5, _LON + 5)))
+    _bay10 = _shelter.build_spot_shelter(_SPOT_N, land=_bay_land(2.0, 10.0))
+    _bay20 = _shelter.build_spot_shelter(_SPOT_N, land=_bay_land(2.0, 20.0))
+    assert _straight["f"] is not None and _straight["f"] > 0.95, _straight
+    assert _straight["d_open_km"] <= 1.0  # rett kyst: halvsirkelen fri nesten med en gang
+    assert _bay10["f"] is not None and _bay10["f"] < 0.4, _bay10
+    assert abs(_bay10["b_km"] - 2.0) < 0.3 and _bay10["d_b_km"] >= 8.0, _bay10  # smaleste snitt = bukta, langt inne
+    assert _bay20["f"] < _bay10["f"], (_bay10["f"], _bay20["f"])  # d_open teller nå
+    assert _bay20["d_open_km"] > _bay10["d_open_km"]
+    assert _straight["height_factor_raw"] > _bay10["height_factor_raw"] > _bay20["height_factor_raw"]
+    # energy_fraction() selv: uendelig bred åpning eller d=0 gir 1,0, og f
+    # synker med avstanden for fast bredde (det som manglet før).
+    assert _shelter.energy_fraction(2.0, 0.0) == 1.0
+    assert _shelter.energy_fraction(2.0, 5.0) > _shelter.energy_fraction(2.0, 10.0)
+    assert round(_shelter.energy_fraction(2.0, 10.0), 4) == round(2.0 / (2.0 + 20 * _math.tan(_math.radians(20))), 4)
+    # normalize(): referansen blir nøyaktig 1,0, en råere spot over 1,0 (ingen
+    # bonus i ratingen - se 22.2), manglende rå verdi gir None.
+    _n = _shelter.normalize({"unstad": {"height_factor_raw": 0.8}, "a": {"height_factor_raw": 0.4},
+                             "b": {"height_factor_raw": 0.9}, "c": {"height_factor_raw": None}})
+    assert _n["unstad"]["height_factor"] == 1.0 and _n["a"]["height_factor"] == 0.5
+    assert _n["b"]["height_factor"] == 1.125 and _n["c"]["height_factor"] is None
+    print(f"22.9: shelter.py geometri (syntetisk land) - rett kyst f={_straight['f']}, bukt 2x10 km "
+          f"f={_bay10['f']} (B {_bay10['b_km']} km ved {_bay10['d_b_km']} km), bukt 2x20 km f={_bay20['f']} "
+          f"(lavere - d_open teller), normalize() OK")
+else:
+    print("22.9: shapely mangler - shelter.py sin geometri-test hoppet over (pip install shapely)")
+
+# 22.10: FASTE OBSERVASJONER MED SKJERMING SATT (fysikk-kontrollør 06.10.2026
+# natt, punkt 5: spot-dictene i denne fila bygges fra spots.json, som aldri
+# har shelter_factor/transfer_source - fetch.py setter dem ved kjøretid, så
+# observasjonene ble aldri testet med skjermingen aktiv). Her settes
+# nøyaktig det fetch.py ville satt (transfer_source "skjerming", en reell
+# shelter_factor) på kopier av spotene, og de faste observasjonene fra
+# CLAUDE.md kjøres på nytt. Skjermingen kan bare senke reservemodellens
+# høyde - en observasjon som var flatt/ikke surfbar skal forbli det, og
+# BarentsWatch-timer (Unstad 26.09/28.09, Grøtfjord BW-dagene,
+# Farstadsanden 338) skal være HELT uendret (spot_height() returnerer
+# BarentsWatch før transfer i det hele tatt leses).
+import copy as _copy
+def _with_shelter(spot, factor):
+    sp = _copy.deepcopy(spot)
+    sp["shelter_factor"] = factor
+    sp["transfer_source"] = "skjerming"
+    sp["transfer"] = transfer_prior(sp)
+    return sp
+_G_sh = _with_shelter(G, 0.79)   # Grøtfjord, tallet fra data/shelter.json 07.10.2026 (avrundet)
+_L_sh = _with_shelter(L, 0.56)   # Lenangsøyra
+_F_sh = _with_shelter(F20, 0.98)  # Farstadsanden
+# Grøtfjord 24.09 (met.no 1,9 m, BW 0,3 m, Windy 1,7 m), 25.09 (3 grader utenfor), 26.09 (ekte BW) - alle fortsatt 0.
+for _label, _hour, _spot in (
+    ("Grøtfjord 24.09 met.no", {"height_spot_model": 1.9, "dir_offshore": 311, "turn": 32, "period": 11, "wind_speed": 3, "wind_dir": 180}, _G_sh),
+    ("Grøtfjord 24.09 BW", {"bw_height": 0.3, "dir_offshore": 311, "turn": 32, "period": 11, "wind_speed": 3, "wind_dir": 180}, _G_sh),
+    ("Grøtfjord 24.09 Windy", {"height_spot_model": 1.7, "dir_offshore": 267, "turn": None, "period": 11, "wind_speed": 3, "wind_dir": 120}, _G_sh),
+    ("Grøtfjord 25.09", {"swell_offshore": 1.76, "dir_offshore": 313.3, "turn": 13.6, "period": 9.2, "wind_speed": 1.6, "wind_dir": 79}, _G_sh),
+    ("Lenangsøyra 26.09", {"bw_height": 0.7, "bw_height_max": 1.4, "swell_offshore": 1.3, "dir_offshore": 277, "height_offshore": 2.7, "period": 9, "bw_dir": 290, "wind_speed": 7, "wind_dir": 200, "gust": 10}, _L_sh),
+):
+    _r = rate(_hour, _spot)
+    assert _r["stars"] == 0, f"{_label} med skjerming: {_r['stars']} stjerner, skulle vært 0"
+_h_g26 = {"bw_height": 0.33, "bw_dir": 294.0, "bw_period": 6.5, "swell_offshore": 2.18,
+          "height_offshore": 5.0, "dir_offshore": 272, "period": 15.6,
+          "height_spot_model": 2.4, "turn": 27.0, "wind_speed": 3.4, "wind_dir": 217.0,
+          "gust": 5.3, "tide": {"level": 0.0, "rising": False, "state": "lav"}}  # = g26 sin time
+_r26 = rate(_h_g26, _G_sh)
+assert _r26["stars"] == 0 and _r26["likely_flat"] and _r26["height"] == g26["height"]  # BW-time: identisk
+# Farstadsanden 338 (fast observasjon, BarentsWatch-time): byte for byte samme resultat med og uten skjerming.
+_r338_sh = rate(h_338, _F_sh)
+assert _r338_sh["stars"] == r_338["stars"] == 0 or _r338_sh["stars"] <= 1
+assert _r338_sh["low_reason"] == "treffer_ikke" and _r338_sh["height"] == r_338["height"]
+# Unstad er referansen (height_factor 1,0 -> ingen effekt, 22.2) - og alle
+# Unstad-observasjonene er dessuten BarentsWatch-timer. 16.1 (26.09) på nytt
+# med shelter_factor 1,0 satt eksplisitt: identisk.
+_U_sh = _with_shelter(U16, 1.0)
+_h_2609 = {"bw_height": 0.9, "bw_dir": U16["facing"], "bw_period": 15.0, "dir_offshore": 300,
+           "swell_offshore": 3.48, "height_offshore": 3.48, "period": 15, "wind_speed": 3.0,
+           "wind_dir": sum(U16["offshore_wind"]) // 2}  # = r_2609 sin time
+_r2609_sh = rate(_h_2609, _U_sh)
+assert _r2609_sh["stars"] == r_2609["stars"] >= 3 and _r2609_sh["surf_height"] == r_2609["surf_height"]
+# Den positive kontrollen: reservemodell-timen "Svell 1,0 m ute" (0,6 m uten
+# skjerming, toppen av fila) blir LAVERE med skjerming - 0,6 × 0,79 ved 11 s
+# gir p(11)=0,8 -> faktor 1-(0,21×0,8)=0,832 -> transfer 0,499 -> 0,499 m.
+_sv_sh = rate({"swell_offshore": 1.0, "height_spot_model": 2.4, "dir_offshore": 300, "turn": 5,
+               "period": 11, "wind_speed": 3, "wind_dir": 120}, _G_sh)
+assert _sv_sh["height_source"] == "svell_ute" and _sv_sh["height"] < sv["height"]
+assert abs(_sv_sh["height"] / sv["height"] - transfer_prior(_G_sh, 11) / DEFAULT_TRANSFER) < 0.02  # height avrundes til 2 desimaler
+print(f"22.10: faste observasjoner MED skjerming satt (Grøtfjord 24-26.09, Lenangsøyra 26.09, Farstadsanden 338, "
+      f"Unstad 26.09) holder; reservetime Grøtfjord 1,0 m/11 s: {sv['height']} -> {_sv_sh['height']} m, OK")
+
+# 22.11: Theodors avgjørelse 07.10.2026 (svar 1): skjermingen rører ALDRI
+# energigrensene - energy_factor()/energy_thresholds_used() skal gi nøyaktig
+# samme svar med og uten shelter_factor (den gamle koden delte grensene på
+# faktoren - dobbelttelling av samme geometri, fjernet).
+from rating import energy_factor as _ef, energy_thresholds_used as _etu
+for _spot_e in (G, F20, spots["unstad"]):
+    _sh_e = _with_shelter(_spot_e, 0.5)
+    for _e in (300, 800, 1500, 2500, 4000):
+        assert _ef(_sh_e, _e) == _ef(_spot_e, _e), (_spot_e["id"], _e)
+    assert _etu(_sh_e) == _etu(_spot_e)
+print("22.11: energy_factor()/energy_thresholds_used() er uavhengige av shelter_factor (ingen energikobling), OK")
+
 print("Alle tester ok")

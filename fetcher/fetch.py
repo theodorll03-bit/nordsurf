@@ -471,9 +471,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         spot["exposure_width_km"] = exposure_width_km
 
     # ROADMAP oppgave I (skjerming), 06.10.2026 natt: statisk height_factor,
-    # til BÅDE energy_factor() sin terskeljustering (rating.py) OG
-    # transfer-fallback-kjeden under (calibrate.effective_transfer()) -
-    # derfor FØR transfer-blokken, samme plassering som eksponeringen over.
+    # BARE til transfer-fallback-kjeden under (calibrate.effective_transfer()
+    # -> rating.transfer_prior()) - derfor FØR transfer-blokken, samme
+    # plassering som eksponeringen over. Energitersklene (rating.energy_factor())
+    # rører den med vilje ikke (Theodors avgjørelse 07.10.2026: energien
+    # måles ute, før skjermingen).
     shelter_factor, shelter_warning = resolve_shelter(spot, shelter_data, name)
     if shelter_factor is not None:
         spot["shelter_factor"] = shelter_factor

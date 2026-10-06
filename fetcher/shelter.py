@@ -20,41 +20,62 @@ pt() derfra - ingen egen kystlinje-håndtering):
    grader, sentrert på facing) har fri linje til åpent hav. "Fri linje"
    her betyr ingen land innen OPEN_HORIZON_KM: en LOKAL "ute av
    bukta/odden"-horisont, IKKE samme 150 km som exposure_baseline.py sin
-   rå eksponering bruker for selve bølgegenereringen ute i havet - den
-   er irrelevant for dette, bukten/åpningen løser seg innen få titalls
-   km for alle spotene vi har.
-2. Åpning ved spoten (opening_frac): andel av samme halvsirkel som ER fri
-   linje når man måler fra SPOTEN selv, ikke fra d_open-punktet (0-1).
-3. B: bredden på selve åpningen, vinkelrett på facing. Målt som den
-   sammenhengende vifta av frie grader rundt facing - ved spoten - omregnet
-   til km ved avstanden d_open (bredde = vinkel i radianer × d_open; vifta
-   blir bredere med avstanden, som en kjegle ut fra spoten).
-4. f = B / (B + 2 × d_open × tan(20 grader)) - andelen bølgeenergi som
-   diffrakterer gjennom åpningen og videre inn til spoten (Theodors formel
-   - en fast spredningsvinkel i stedet for exposure_baseline.py sin
-   Fresnel-skyggelengde, som gjelder et annet spørsmål: skygge bak EN
-   hindring, ikke gjennom EN åpning). height_factor_raw = sqrt(f).
-5. Normalisering: height_factor = height_factor_raw delt på Unstad sin
-   egen height_factor_raw. Unstad er den mest åpne av de åtte (ventet,
-   se STATUS.md for tabellen) - uten normalisering ville selv en
-   fullstendig åpen spot (halvsirkelen 100 % fri helt fra spoten) fått
-   height_factor_raw ≈ sqrt(pi / (pi + 2*tan(20°))) ≈ 0,90, ikke 1,0
-   (B og d_open skalerer likt når vifta er konstant bred, så f har et
-   tak som ikke avhenger av avstanden alene - normaliseringen flytter
-   DETTE taket til 1,0, Theodors egen instruks).
+   rå eksponering bruker for selve bølgegenereringen ute i havet. d_open
+   er grensa for hvor langt ut åpningen (punkt 3) letes etter - utenfor
+   d_open ligger spoten per definisjon i åpent vann.
+2. Åpning ved spoten (opening_frac, width_deg): andel av samme halvsirkel
+   som ER fri linje når man måler fra SPOTEN selv (0-1), og den
+   sammenhengende vifta av frie grader rundt facing. Bare til informasjon
+   (tabellen i STATUS.md) - brukes IKKE i f lenger, se punkt 3.
+3. Åpningen B og avstanden d til den: for hvert punkt langs strålen som
+   ga d_open (RADIAL_STEP km mellom punktene, fra spoten og ut til
+   d_open) måles den frie TVERRBREDDEN W(d) = fri avstand til land
+   vinkelrett på facing, til venstre (facing-90) pluss til høyre
+   (facing+90), hver side begrenset til WIDTH_CAP_KM. Punkter der strålen
+   selv krysser land (skjær, holme) hoppes over. For hvert punkt regnes
+   f(d) = W(d) / (W(d) + 2 × d × tan(20 grader)) - Theodors formel, med
+   W(d) som åpningens bredde og d som avstanden fra åpningen inn til
+   spoten. Spotens f er det MINSTE f(d) langs strålen: det smaleste
+   snittet, vektet med hvor langt inn fra det snittet spoten ligger, er
+   det som begrenser hvor mye energi som når fram. B = W ved det
+   punktet, d_b = avstanden dit. height_factor_raw = sqrt(f).
+
+   07.10.2026 (skyøkt, etter fysikk-kontrollør 06.10 natt): den første
+   versjonen satte B = (vifta i radianer ved spoten) × d_open og spread =
+   2 × d_open × tan(20°), så d_open forkortet seg bort og f var bare en
+   funksjon av vinkelen ved spoten. Nå er B en EKTE, uavhengig målt
+   bredde (meter land-til-land på tvers av strålen) og d en ekte avstand
+   - ingen felles faktor. Avviket fra ROADMAP sin ordlyd ("B ved punktet
+   i a, vinkelrett på facing", altså ved d_open selv): ved d_open-punktet
+   er bæringene facing±90 PER DEFINISJON frie i minst OPEN_HORIZON_KM, så
+   B målt der ville alltid vært minst 2 × OPEN_HORIZON_KM = 50 km - et
+   tall som styres av horisontkonstanten, ikke av bukta. Det smaleste
+   snittet på veien ut er derimot en ekte egenskap ved bukta. Se
+   STATUS.md for tabellen med begge variantene.
+4. Normalisering: height_factor = height_factor_raw delt på Unstad sin
+   egen height_factor_raw (REFERENCE_SPOT, Theodors instruks: "normalisert
+   så en åpen spot (Unstad) får ca. 1,0"). Unstad ligger selv i en liten
+   vik (ca. 1,5-2 km bred, se STATUS.md) og får derfor rå f under 1,0 -
+   normaliseringen setter den vika som "åpen". En spot som er råere enn
+   Unstad (f.eks. Tromvik, 07.10.2026) får height_factor over 1,0 og
+   dermed INGEN skjermingseffekt i ratingen (rating.shelter_transfer_factor()
+   gir 1,0 for alt som ikke er strengt mellom 0 og 1) - aldri en bonus.
 
 Periode-vektingen (skjermingsfaktor = 1-(1-height_factor)×p(T), kort
 periode straffes mer enn lang) er IKKE del av dette skriptet - det er en
 EGEN, time-for-time-beregning i rating.py (bruker hver times ekte
 periode) - bare inputet (denne normaliserte height_factor, statisk per
-spot) lagres her. Se rating.shelter_transfer_factor()/transfer_prior()."""
+spot) lagres her. Se rating.shelter_transfer_factor()/transfer_prior().
+
+Skjermingen påvirker BARE høyden ved stranda (transfer_prior i
+reservemodellen) - aldri energigrensene (Theodors avgjørelse 07.10.2026:
+energien måles ute, før skjermingen). Konstantene under
+(DIFFRACTION_HALF_ANGLE, REFERENCE_SPOT) og p(T)-kurven i rating.py står
+på CLAUDE.md sin "krever Theodors ja"-liste."""
 import json
 import math
 from pathlib import Path
 
-from shapely.geometry import Point
-
-from exposure_baseline import build_land, pt, COAST_FUZZ, COAST_STEP
 from exposure import spot_checksum
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,8 +86,11 @@ OPEN_HORIZON_KM = 25.0     # km - lokal "ute av bukta"-horisont, se moduldocstri
 RADIAL_STEP = 0.5          # km - steg utover langs facing-strålene og langs hver bæring
 MAX_SEARCH_KM = 80.0       # km - øvre grense for d_open-søket (Lenangsøyra venter ~40 km, se ROADMAP)
 ANGLE_STEP_SEARCH = 5      # grader - halvsirkel-sveipets oppløsning UNDER d_open-søket (kostnad)
-DIFFRACTION_HALF_ANGLE = 20  # grader - Theodors spredningsvinkel i f-formelen
-REFERENCE_SPOT = "unstad"   # normaliseres mot denne, se moduldocstring punkt 5
+DIFFRACTION_HALF_ANGLE = 20  # grader - Theodors spredningsvinkel i f-formelen (krever Theodors ja)
+REFERENCE_SPOT = "unstad"   # normaliseres mot denne, se moduldocstring punkt 4 (krever Theodors ja)
+WIDTH_CAP_KM = MAX_SEARCH_KM  # km per side - tak på tverrbredde-sveipet (bare en kostnadsgrense:
+                              # en side som er åpen til havs gir f ≈ 1 uansett om taket er 80 eller 150)
+WIDTH_STEP = 0.25          # km - oppløsning i tverrbredde-sveipet (finere enn RADIAL_STEP, smale sund)
 
 # 06.10.2026, natt: metoden over er forankret i facing (Theodors egen instruks
 # - "gå ut i retning facing"). For Russelv og Steinkrøssa viste en manuell
@@ -100,9 +124,31 @@ def facing_window_divergence_deg(spot):
     return round(_ang_diff(spot["facing"], _window_center(spot["swell_window"])), 1)
 
 
+def _land_tools():
+    """basemap/shapely lastes først her (ikke på modulnivå), så rating-
+    testene kan importere modulen og teste geometrien med SYNTETISK land
+    (en hvilken som helst `land` med .contains(Point)) uten basemap."""
+    from exposure_baseline import build_land, pt, COAST_FUZZ, COAST_STEP
+    from shapely.geometry import Point
+    return build_land, pt, COAST_FUZZ, COAST_STEP, Point
+
+
 def _is_land(land, lat, lon, bearing, d):
+    _, pt, _, _, Point = _land_tools()
     la, lo = pt(lat, lon, bearing, d)
     return land.contains(Point(lo, la))
+
+
+def _skip_coast(land, lat, lon, bearing):
+    """Første avstand med vann innen kysttoleransen (COAST_FUZZ), eller
+    None hvis land er sammenhengende gjennom hele toleransen."""
+    _, _, COAST_FUZZ, COAST_STEP, _ = _land_tools()
+    d0 = 0.0
+    while d0 < COAST_FUZZ and _is_land(land, lat, lon, bearing, d0):
+        d0 += COAST_STEP
+    if _is_land(land, lat, lon, bearing, d0):
+        return None
+    return d0
 
 
 def open_within(land, lat, lon, bearing, horizon=OPEN_HORIZON_KM, step=RADIAL_STEP):
@@ -112,17 +158,28 @@ def open_within(land, lat, lon, bearing, horizon=OPEN_HORIZON_KM, step=RADIAL_ST
     first_land_distance() (som alltid søker til hele MAXD=150 km - unødig
     dyrt når vi bare spør om spoten har sluppet unna den nære
     bukt-/odde-geometrien)."""
-    d0 = 0.0
-    while d0 < COAST_FUZZ and _is_land(land, lat, lon, bearing, d0):
-        d0 += COAST_STEP
-    if _is_land(land, lat, lon, bearing, d0):
+    d = _skip_coast(land, lat, lon, bearing)
+    if d is None:
         return False  # land sammenhengende gjennom hele kysttoleransen
-    d = d0
     while d < horizon:
         if _is_land(land, lat, lon, bearing, d):
             return False
         d += step
     return True
+
+
+def free_width_km(land, lat, lon, bearing, cap=WIDTH_CAP_KM, step=WIDTH_STEP):
+    """Fri avstand (km) til land langs bæringen fra (lat, lon), etter
+    kysttoleransen, begrenset til cap. 0,0 hvis land er sammenhengende
+    gjennom hele toleransen (punktet ligger inntil land i den retningen)."""
+    d = _skip_coast(land, lat, lon, bearing)
+    if d is None:
+        return 0.0
+    while d < cap:
+        if _is_land(land, lat, lon, bearing, d):
+            return d
+        d += step
+    return cap
 
 
 def half_circle_open(land, lat, lon, facing, horizon=OPEN_HORIZON_KM, step=RADIAL_STEP,
@@ -140,17 +197,22 @@ def half_circle_open(land, lat, lon, facing, horizon=OPEN_HORIZON_KM, step=RADIA
     return True
 
 
+RAYS = (("facing", 0), ("facing-20", -20), ("facing+20", 20))
+
+
 def find_d_open(land, lat, lon, facing):
     """Korteste avstand - over de tre strålene facing, facing-20, facing+20
     (Theodors instruks: "bruk kortest") - før halvsirkelen sentrert på
     facing er helt fri fra det punktet. Returnerer (d_open_km, hvilken_stråle)
     eller None hvis ingen av de tre åpner seg innen MAX_SEARCH_KM (ingen av
     de åtte ekte spotene ventes å treffe denne grensen, se STATUS.md)."""
+    _, pt, _, _, _ = _land_tools()
     best = None
-    for ray_name, ray in (("facing", facing), ("facing-20", facing - 20), ("facing+20", facing + 20)):
+    for ray_name, offset in RAYS:
+        ray = (facing + offset) % 360
         d = RADIAL_STEP
         while d <= MAX_SEARCH_KM:
-            plat, plon = pt(lat, lon, ray % 360, d)
+            plat, plon = pt(lat, lon, ray, d)
             if half_circle_open(land, plat, plon, facing):
                 if best is None or d < best[0]:
                     best = (d, ray_name)
@@ -165,7 +227,8 @@ def opening_frac_and_width_deg(land, lat, lon, facing):
     (b) width_deg - den sammenhengende vifta av frie grader RUNDT facing
     (robust mot at facing selv havner på feil side av en kystlinje-piksel
     helt tett på spoten: starter på nærmeste frie grad til facing i stedet
-    for å kreve at facing selv er fri)."""
+    for å kreve at facing selv er fri). Bare til informasjon siden
+    07.10.2026 - se moduldocstring punkt 2."""
     half = [(facing + b) % 360 for b in range(-90, 91)]
     open_flags = [open_within(land, lat, lon, b) for b in half]
     opening_frac = sum(open_flags) / len(open_flags)
@@ -191,32 +254,80 @@ def opening_frac_and_width_deg(land, lat, lon, facing):
     return opening_frac, float(width)
 
 
-def build_spot_shelter(spot):
+def energy_fraction(width_km, distance_km):
+    """Theodors formel: f = B / (B + 2 × d × tan(20°)) - andelen av energien
+    gjennom en åpning med bredde B (km) som fortsatt ligger innenfor samme
+    bredde d km lenger inn, når bølgene sprer seg med halv vinkel
+    DIFFRACTION_HALF_ANGLE. 1,0 for uendelig bred åpning eller d = 0."""
+    spread = 2 * distance_km * math.tan(math.radians(DIFFRACTION_HALF_ANGLE))
+    if width_km + spread <= 0:
+        return 0.0
+    return width_km / (width_km + spread)
+
+
+def aperture_profile(land, lat, lon, facing, ray_bearing, d_open, step=RADIAL_STEP):
+    """Tverrbredde W(d) og f(d) for hvert punkt langs strålen fra spoten ut
+    til d_open (moduldocstring punkt 3). Hver rad: dict med d_km, left_km,
+    right_km, width_km, f. Punkter der strålen selv ligger på land hoppes
+    over (ingen rad)."""
+    _, pt, _, _, Point = _land_tools()
+    rows = []
+    d = step
+    while d <= d_open + 1e-9:
+        plat, plon = pt(lat, lon, ray_bearing, d)
+        if land.contains(Point(plon, plat)):
+            d += step
+            continue
+        left = free_width_km(land, plat, plon, (facing - 90) % 360)
+        right = free_width_km(land, plat, plon, (facing + 90) % 360)
+        width = left + right
+        rows.append({"d_km": round(d, 2), "left_km": round(left, 2), "right_km": round(right, 2),
+                     "width_km": round(width, 2), "f": round(energy_fraction(width, d), 4)})
+        d += step
+    return rows
+
+
+def limiting_aperture(rows):
+    """Raden med MINSTE f langs strålen - det smaleste snittet vektet med
+    avstanden inn til spoten (moduldocstring punkt 3). None uten rader."""
+    if not rows:
+        return None
+    return min(rows, key=lambda r: r["f"])
+
+
+def build_spot_shelter(spot, land=None):
+    """Hele geometrien for én spot. `land` kan gis inn (tester med syntetisk
+    kystlinje) - ellers bygges GSHHS-landet rundt spoten."""
     lat, lon = spot["spot"]["lat"], spot["spot"]["lon"]
     facing = spot["facing"]
-    land = build_land(lat, lon)
+    if land is None:
+        build_land = _land_tools()[0]
+        land = build_land(lat, lon)
     found = find_d_open(land, lat, lon, facing)
     opening_frac, width_deg = opening_frac_and_width_deg(land, lat, lon, facing)
     divergence = facing_window_divergence_deg(spot)
     reliable = divergence <= FACING_WINDOW_DIVERGENCE_MAX
-    if found is None:
-        return {
-            "checksum": spot_checksum(spot),
-            "d_open_km": None, "d_open_ray": None,
-            "opening_frac": round(opening_frac, 3), "width_deg": width_deg,
-            "b_km": None, "f": None, "height_factor_raw": None,
-            "facing_window_divergence_deg": divergence, "reliable": False,
-        }
-    d_open, ray = found
-    b_km = math.radians(width_deg) * d_open
-    spread = 2 * d_open * math.tan(math.radians(DIFFRACTION_HALF_ANGLE))
-    f = b_km / (b_km + spread) if (b_km + spread) > 0 else 0.0
-    height_factor_raw = math.sqrt(f)
-    return {
+    base = {
         "checksum": spot_checksum(spot),
-        "d_open_km": round(d_open, 2), "d_open_ray": ray,
+        "d_open_km": None, "d_open_ray": None,
         "opening_frac": round(opening_frac, 3), "width_deg": width_deg,
-        "b_km": round(b_km, 2), "f": round(f, 3), "height_factor_raw": round(height_factor_raw, 4),
+        "b_km": None, "d_b_km": None, "f": None, "height_factor_raw": None,
+        "facing_window_divergence_deg": divergence, "reliable": False,
+    }
+    if found is None:
+        return base
+    d_open, ray_name = found
+    ray_bearing = (facing + dict(RAYS)[ray_name]) % 360
+    rows = aperture_profile(land, lat, lon, facing, ray_bearing, d_open)
+    lim = limiting_aperture(rows)
+    if lim is None:
+        return {**base, "d_open_km": round(d_open, 2), "d_open_ray": ray_name}
+    f = lim["f"]
+    return {
+        **base,
+        "d_open_km": round(d_open, 2), "d_open_ray": ray_name,
+        "b_km": lim["width_km"], "d_b_km": lim["d_km"],
+        "f": round(f, 3), "height_factor_raw": round(math.sqrt(f), 4),
         # 06.10.2026, natt: ROADMAP oppgave I ber om å forankre søket i
         # facing. Når facing og swell_window (en egen, uavhengig
         # kystlinjesjekk) peker mer enn FACING_WINDOW_DIVERGENCE_MAX grader
@@ -226,8 +337,20 @@ def build_spot_shelter(spot):
         # åpning. "reliable": false her gjør at fetch.py sin resolve_shelter()
         # IKKE bruker tallet i ratingen (se der) - verdien vises likevel her,
         # ingenting skjules.
-        "facing_window_divergence_deg": divergence, "reliable": reliable,
+        "reliable": reliable,
     }
+
+
+def normalize(out, reference=REFERENCE_SPOT):
+    """height_factor = height_factor_raw / referansens height_factor_raw
+    (moduldocstring punkt 4). None der rå verdi eller referanse mangler.
+    Kan bli over 1,0 for en spot råere enn referansen - ratingen gir da
+    ingen effekt (aldri bonus), se rating.shelter_transfer_factor()."""
+    ref = (out.get(reference) or {}).get("height_factor_raw")
+    for entry in out.values():
+        raw = entry.get("height_factor_raw")
+        entry["height_factor"] = round(raw / ref, 3) if (raw is not None and ref) else None
+    return out
 
 
 def main():
@@ -237,15 +360,10 @@ def main():
     for spot in spots:
         print(spot["name"])
         out[spot["id"]] = build_spot_shelter(spot)
-
-    ref = out.get(REFERENCE_SPOT, {}).get("height_factor_raw")
-    for sid, entry in out.items():
-        raw = entry["height_factor_raw"]
-        if raw is None or not ref:
-            entry["height_factor"] = None
-            continue
-        entry["height_factor"] = round(raw / ref, 3)
-
+        e = out[spot["id"]]
+        print(f"  d_open {e['d_open_km']} km ({e['d_open_ray']}), B {e['b_km']} km ved {e['d_b_km']} km, "
+              f"f {e['f']}, rå {e['height_factor_raw']}, pålitelig {e['reliable']}")
+    normalize(out)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"Skrev {OUT}")

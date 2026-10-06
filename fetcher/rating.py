@@ -103,10 +103,12 @@ def shelter_period_weight(period):
 
 def shelter_transfer_factor(spot, period):
     """skjermingsfaktor = 1 - (1 - height_factor) × p(T). height_factor
-    (spot["shelter_factor"]) er det SAMME statiske, normaliserte feltet som
-    energy_factor() sin terskeljustering bruker (se der) - mangler det,
-    eller er det 1,0 eller mer (en åpen spot, ingen skjerming å trekke fra):
-    ingen effekt (1,0), akkurat som energy_factor() sin egen vakt."""
+    (spot["shelter_factor"]) er det statiske, normaliserte tallet fra
+    fetcher/shelter.py (data/shelter.json) - mangler det, eller er det 1,0
+    eller mer (en åpen spot, ingen skjerming å trekke fra): ingen effekt
+    (1,0). Dette er det ENESTE stedet skjermingen virker inn i ratingen
+    (via transfer_prior() -> spot_height()) - energitersklene rører den
+    ikke (Theodors avgjørelse 07.10.2026, se energy_factor())."""
     shelter = (spot or {}).get("shelter_factor")
     if shelter is None or not (0 < shelter < 1):
         return 1.0
@@ -1069,20 +1071,19 @@ def energy_factor(spot, energy_swell):
     ublandet. Mangler energi: ingen effekt (nøytral 1,0) - en myk regel
     skal aldri straffe for data den ikke har.
 
-    ROADMAP oppgave I (skjerming, ikke bygget ennå): `spot["shelter_factor"]`
-    - når den finnes - justerer BEGGE grensene OPP (delt på faktoren, som er
-    under 1,0 for en skjermet spot), siden en skjermet spot trenger mer
-    energi UTE for samme effekt PÅ STRANDA. Ingen spot har dette feltet i
-    dag - rent forberedt, uten effekt før oppgave I setter det."""
+    Skjerming (ROADMAP oppgave I, `spot["shelter_factor"]`) rører IKKE
+    grensene her - Theodors avgjørelse 07.10.2026: energien måles UTE, før
+    skjermingen, og skjermingen skal bare påvirke høyden ved stranda
+    (transfer_prior i reservemodellen, se transfer_prior()). En tidligere
+    versjon (06.10.2026 natt) delte begge grensene på faktoren - det ville
+    ha dempet samme geometri to ganger (én gang i transfer, én gang i
+    energifaktoren), påpekt av fysikk-kontrollør og fjernet."""
     if energy_swell is None:
         return 1.0
     rules = spot.get("local_rules") or {}
     thresholds = rules.get("min_energy_kj") or {}
     full = thresholds.get("full", ENERGY_FULL_DEFAULT)
     zero = thresholds.get("zero", ENERGY_ZERO_DEFAULT)
-    shelter = spot.get("shelter_factor")
-    if shelter is not None and 0 < shelter < 1:
-        full, zero = full / shelter, zero / shelter
     if full is None or zero is None or full <= zero:
         return 1.0
     if energy_swell >= full:
@@ -1097,17 +1098,15 @@ def energy_factor(spot, energy_swell):
 
 def energy_thresholds_used(spot):
     """(full, zero, weight) FAKTISK brukt for spoten akkurat nå - samme
-    standard/override/skjerming-logikk som energy_factor(), men uten å
-    trenge en energi-verdi. Til visning (calibration sine *_used-felt,
-    samme mønster som transfer_used/surf_factor_used) og til
-    Logger-fanen sitt læringsforslag (se docs/index.html)."""
+    standard/override-logikk som energy_factor() (skjerming er med vilje
+    IKKE med, se der), men uten å trenge en energi-verdi. Til visning
+    (calibration sine *_used-felt, samme mønster som
+    transfer_used/surf_factor_used) og til Logger-fanen sitt
+    læringsforslag (se docs/index.html)."""
     rules = spot.get("local_rules") or {}
     thresholds = rules.get("min_energy_kj") or {}
     full = thresholds.get("full", ENERGY_FULL_DEFAULT)
     zero = thresholds.get("zero", ENERGY_ZERO_DEFAULT)
-    shelter = spot.get("shelter_factor")
-    if shelter is not None and 0 < shelter < 1:
-        full, zero = full / shelter, zero / shelter
     return full, zero, rules.get("weight", ENERGY_WEIGHT_DEFAULT)
 
 

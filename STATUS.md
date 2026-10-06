@@ -1,5 +1,15 @@
 # Nordsurf: status
 
+## Skyøkt (startet 22:42 UTC 06.10.2026 / 00:42 norsk tid 07.10.2026)
+
+Skyøkt startet 00:42 (norsk tid), tester grønne på main (alle 6 filer). Miljønotat: skyens nettverkspolicy blokkerer cdnjs/unpkg, så `test_disc_browser.py` kjøres her via en lokal wrapper som serverer Leaflet 1.9.4 fra npm-tarballen (ingen endring i testen selv); Playwright måtte pinnes til 1.56 (forhåndsinstallert Chromium 1194). GitHub Actions kjører testen uendret.
+
+Theodors svar på de tre spørsmålene om oppgave I kom inn ved oppstart: (1) skjerming skal BARE påvirke høyden ved stranda (transfer_prior) - fjern koblingen til energigrensene; (2) skjermingskonstantene (spredningsvinkel 20 grader, p(T)-kurven, normaliseringen) inn på "krever ja"-lista i CLAUDE.md; (3) forventet spenn ved ca. 12 s som KONTROLL av formelen (Unstad/Farstadsanden nær 1,0, Grøtfjord/Tromvik/Ersfjordstranda 0,5-0,7, Russelv/Steinkrøssa noe lavere, Lenangsøyra ca. 0,3), ikke fasit.
+
+Timelogg:
+- 00:42: oppstart, miljø, tester grønne. Starter oppgave I på `lokal/uferdig`: energikobling fjernet, CLAUDE.md oppdatert, måler tverrbredde langs facing-strålen for alle spots for å finne en B-definisjon der d_open ikke kansellerer.
+- 01:05: ny `shelter.py` skrevet (B = ekte tverrbredde langs strålen, f = minste W/(W+2d·tan20) langs strålen - d_open kansellerer ikke lenger), syntetisk-land-tester (rett kyst f≈1, bukt 2×10 km f=0,22, 2×20 km f=0,12) og faste-observasjoner-med-skjerming-tester grønne. `data/shelter.json` regnes på nytt mot GSHHS (kjører).
+
 ## Overlevering til skyøkt (00:36, 07.10.2026 - nattmodus stoppet av Theodor)
 
 Theodor stoppet nattmodus (startet 23:53 06.10) og flytter arbeidet til en skyøkt. Oppsummering:
