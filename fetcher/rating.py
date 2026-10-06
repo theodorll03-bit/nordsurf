@@ -144,8 +144,22 @@ def transfer_prior(spot, period=None):
     kaller denne på nytt PER TIME med den faktiske perioden når
     spot["transfer_source"] er "skjerming" (se der), siden skjermingseffekten
     ekte varierer med hver times periode, i motsetning til resten av
-    transfer-systemet (fast "lang"-antagelse, se calibrate.py)."""
+    transfer-systemet (én fast verdi per kjøring, se calibrate.py). Merk:
+    period=None gir p(T) = 1,0, altså KORTEST periode og mest skjerming -
+    det statiske tallet er det mest forsiktige, ikke et "langt svell"-tall
+    (fysikk-kontrollør 07.10.2026)."""
     return round(DEFAULT_TRANSFER * shelter_transfer_factor(spot, period), 3)
+
+
+def transfer_for_hour(hour, spot):
+    """Transfer-verdien spot_height() FAKTISK bruker for denne timen: per
+    time fra transfer_prior() med timens periode når skjermingen er
+    kilden, ellers spotens statiske tall. Til hour["transfer"] (visning og
+    breakdown) - fysikk-kontrollør 07.10.2026: feltet viste det statiske
+    tallet også for skjerming-spots, der den brukte verdien varierer."""
+    if (spot or {}).get("transfer_source") == "skjerming":
+        return transfer_prior(spot, hour.get("period"))
+    return (spot or {}).get("transfer", DEFAULT_TRANSFER)
 
 
 def directness(d, spot):
@@ -490,18 +504,18 @@ def spot_height(hour, spot=None):
        ROADMAP oppgave I: når ingenting er lært ennå (transfer_source er
        "skjerming", se calibrate.effective_transfer()), brukes
        transfer_prior() PÅ NYTT her med DENNE timens ekte periode - ikke det
-       statiske, "lang"-antatte spot["transfer"]-tallet (bare til
+       statiske spot["transfer"]-tallet (regnet med period=None, dvs. p(T)
+       = 1,0: KORTEST periode / verst tenkelig tilfelle - bare til
        calibration sin visning) - siden skjermingseffekten ekte varierer
-       time for time med perioden (se shelter_period_weight()).
+       time for time med perioden (se shelter_period_weight()). Timens
+       faktisk brukte verdi legges i hour["transfer"] av rate(), se
+       transfer_for_hour().
     3. Reserve: total bølgehøyde fra met.no på spoten, med dreiningsregelen.
     """
     if hour.get("bw_height") is not None:
         h, detail = barentswatch_height(hour, spot or {})
         return h, "barentswatch", detail
-    if (spot or {}).get("transfer_source") == "skjerming":
-        transfer = transfer_prior(spot, hour.get("period"))
-    else:
-        transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
+    transfer = transfer_for_hour(hour, spot)
     if hour.get("swell_offshore") is not None:
         h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot, hour.get("period"))
         return h, "svell_ute", None
@@ -1360,7 +1374,7 @@ def rate(hour, spot):
         "surf_height_sets": None if surf_height_sets is None else round(surf_height_sets, 2),
         "breaking_height": None if hb is None else round(hb, 2),
         "surf_factor": round(surf_factor, 3),
-        "transfer": spot.get("transfer", DEFAULT_TRANSFER),
+        "transfer": transfer_for_hour(hour, spot),
         "uncertain": uncertain,
         "breakdown": breakdown,
         # Hvor stor andel av svellet ved direkte treff som når spoten akkurat

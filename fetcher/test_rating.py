@@ -1499,17 +1499,29 @@ _DIRECTNESS_UNKNOWN = 0.7  # directness(None, spot) sin egen nøytralverdi - exp
 assert round(h_short / (2.0 * _DIRECTNESS_UNKNOWN), 4) == transfer_prior(_shelter_spot, 6)
 assert round(h_long / (2.0 * _DIRECTNESS_UNKNOWN), 4) == transfer_prior(_shelter_spot, 14)
 assert h_short < h_long  # kort periode -> mer skjermingseffekt -> lavere transfer -> lavere høyde
+# hour["transfer"] (rate() sitt utdata) skal vise verdien som FAKTISK ble
+# brukt denne timen, ikke det statiske spot["transfer"] (fysikk-kontrollør
+# 07.10.2026).
+_shelter_G = {**G, **_shelter_spot}  # rate() trenger en hel spot (offshore_wind osv.)
+_r_short = rate({"swell_offshore": 2.0, "dir_offshore": None, "period": 6, "wind_speed": 2, "wind_dir": 100}, _shelter_G)
+_r_long = rate({"swell_offshore": 2.0, "dir_offshore": None, "period": 14, "wind_speed": 2, "wind_dir": 100}, _shelter_G)
+assert _r_short["transfer"] == transfer_prior(_shelter_G, 6) and _r_long["transfer"] == transfer_prior(_shelter_G, 14)
+assert _r_short["transfer"] < _r_long["transfer"]
+assert rate({"swell_offshore": 2.0, "dir_offshore": None, "period": 6, "wind_speed": 2, "wind_dir": 100}, {**_shelter_G, "transfer_source": "standard"})["transfer"] == 0.482
 print(f"22.7: spot_height() bruker ekte periode for skjerming per time - kort {round(h_short,3)} "
-      f"< langt {round(h_long,3)} m (samme svell ute), OK")
+      f"< langt {round(h_long,3)} m (samme svell ute); hour['transfer'] viser den brukte verdien, OK")
 
 # 22.8: ekte data/shelter.json (regnet på nytt 07.10.2026 etter algebra-
 # rettelsen) - Unstad er referansen (height_factor nøyaktig 1,0), Russelv og
 # Steinkrøssa flagget UPÅLITELIG (facing peker 55-60 grader fra swell_window
-# sitt senter - se STATUS.md), de andre fem pålitelige. Rekkefølgen Theodor
-# ventet i ROADMAP (Unstad/Farstadsanden åpne, Grøtfjord/Ersfjordstranda i
-# midten, Lenangsøyra mest skjermet) låses her; Tromvik kom ut som ÅPEN
-# (over 1,0 - vid bukt, 12 km tverrbredde, ingen effekt i ratingen), avvik
-# fra forventningen, rapportert i STATUS.md - ikke skjult med en løsere test.
+# sitt senter - se STATUS.md), de andre fem pålitelige.
+# ØYEBLIKKSBILDE AV DATA, IKKE FASIT (fysikk-kontrollør 07.10.2026): tallene
+# under er hva metoden ga på dagens GSHHS-geometri, og de er IKKE bekreftet
+# av observasjoner eller BarentsWatch - BarentsWatch sine foreløpige par
+# rangerer Tromvik/Ersfjordstranda/Grøtfjord som MER dempet enn geometrien
+# (se STATUS.md). Testen låser bare at fila er den som ble regnet ut og
+# rapportert, så en stille endring av metoden eller geometrien ikke går
+# ubemerket - endres tallene med vilje, oppdater STATUS.md og denne testen.
 _shelter_path = Path(__file__).parent.parent / "data" / "shelter.json"
 if _shelter_path.exists():
     _shelter_data = json.loads(_shelter_path.read_text())
@@ -1524,7 +1536,7 @@ if _shelter_path.exists():
     _hf = {k: v["height_factor"] for k, v in _shelter_data.items()}
     assert _hf["lenangsoyra"] < _hf["grotfjord"] < _hf["ersfjordstranda"] < _hf["farstadsanden"] <= 1.0, _hf
     assert _hf["farstadsanden"] > 0.9 and _hf["lenangsoyra"] < 0.6
-    assert _hf["tromvik"] > 1.0  # se kommentaren over - endres dette, oppdater STATUS.md også
+    assert _hf["tromvik"] > 1.0  # øyeblikksbilde (vid bukt, 12 km tverrbredde) - se kommentaren over, IKKE en påstand om at Tromvik er åpen
     print("22.8: data/shelter.json - Unstad=1,0 (referanse), Russelv/Steinkrøssa upålitelig, rekkefølge "
           f"Lenangsøyra {_hf['lenangsoyra']} < Grøtfjord {_hf['grotfjord']} < Ersfjordstranda {_hf['ersfjordstranda']} "
           f"< Farstadsanden {_hf['farstadsanden']} <= Unstad 1,0; Tromvik {_hf['tromvik']} (åpen), OK")
