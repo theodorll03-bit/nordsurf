@@ -1,0 +1,7 @@
+{
+ "run": "2026-10-06 23:36 UTC",
+ "catalogs": [
+  "fou-hi/catalog.xml: FEIL 404 Client Error:  for url: https://thredds.met.no/thredds/catalog/fou-hi/catalog.xml"
+ ],
+ "datasets": []
+}
