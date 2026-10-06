@@ -1586,6 +1586,14 @@ if _have_shapely:
     assert _bay20["f"] < _bay10["f"], (_bay10["f"], _bay20["f"])  # d_open teller nå
     assert _bay20["d_open_km"] > _bay10["d_open_km"]
     assert _straight["height_factor_raw"] > _bay10["height_factor_raw"] > _bay20["height_factor_raw"]
+    # shelter.py gjentar exposure_baseline sine COAST_FUZZ/COAST_STEP/pt (se
+    # kommentaren der) - de skal være identiske når basemap finnes.
+    try:
+        import exposure_baseline as _eb
+        assert (_eb.COAST_FUZZ, _eb.COAST_STEP) == (_shelter.COAST_FUZZ, _shelter.COAST_STEP)
+        assert _eb.pt(69.0, 18.0, 123.0, 4.5) == _shelter.pt(69.0, 18.0, 123.0, 4.5)
+    except ImportError:
+        pass  # ingen basemap her (CI) - sjekkes lokalt
     # energy_fraction() selv: uendelig bred åpning eller d=0 gir 1,0, og f
     # synker med avstanden for fast bredde (det som manglet før).
     assert _shelter.energy_fraction(2.0, 0.0) == 1.0

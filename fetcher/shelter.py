@@ -124,13 +124,28 @@ def facing_window_divergence_deg(spot):
     return round(_ang_diff(spot["facing"], _window_center(spot["swell_window"])), 1)
 
 
+# Samme kysttoleranse og punktformel som exposure_baseline.py (COAST_FUZZ/
+# COAST_STEP/pt) - gjentatt her i stedet for importert, fordi
+# exposure_baseline.py laster basemap på modulnivå, og rating-testene skal
+# kunne teste denne geometrien med SYNTETISK land (bare shapely) uten
+# basemap (CI-feil 07.10.2026). test_rating.py 22.9 sjekker at verdiene er
+# like når exposure_baseline faktisk kan importeres.
+COAST_FUZZ = 0.3   # km
+COAST_STEP = 0.05  # km
+
+
+def pt(lat, lon, bearing, d):
+    return (lat + d * math.cos(math.radians(bearing)) / 110.57,
+            lon + d * math.sin(math.radians(bearing)) / (111.32 * math.cos(math.radians(lat))))
+
+
 def _land_tools():
-    """basemap/shapely lastes først her (ikke på modulnivå), så rating-
-    testene kan importere modulen og teste geometrien med SYNTETISK land
-    (en hvilken som helst `land` med .contains(Point)) uten basemap."""
-    from exposure_baseline import build_land, pt, COAST_FUZZ, COAST_STEP
+    """shapely lastes først her (ikke på modulnivå), så rating-testene kan
+    importere modulen og teste geometrien med SYNTETISK land (en hvilken som
+    helst `land` med .contains(Point)). build_land (basemap/GSHHS) lastes
+    bare når build_spot_shelter() faktisk trenger ekte land."""
     from shapely.geometry import Point
-    return build_land, pt, COAST_FUZZ, COAST_STEP, Point
+    return None, pt, COAST_FUZZ, COAST_STEP, Point
 
 
 def _is_land(land, lat, lon, bearing, d):
@@ -301,7 +316,7 @@ def build_spot_shelter(spot, land=None):
     lat, lon = spot["spot"]["lat"], spot["spot"]["lon"]
     facing = spot["facing"]
     if land is None:
-        build_land = _land_tools()[0]
+        from exposure_baseline import build_land  # basemap/GSHHS, bare for ekte kjøringer
         land = build_land(lat, lon)
     found = find_d_open(land, lat, lon, facing)
     opening_frac, width_deg = opening_frac_and_width_deg(land, lat, lon, facing)
