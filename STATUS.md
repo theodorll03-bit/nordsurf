@@ -1,5 +1,15 @@
 # Nordsurf: status
 
+## Skyøkt 07.10.2026 - timelogg (norsk tid)
+
+- 00:42: oppstart, miljø satt opp (Playwright pinnet til 1.56, Leaflet servert lokalt pga. nettverkspolicy), alle 6 tester grønne på main.
+- 00:45-02:05: oppgave I (skjerming) på `lokal/uferdig`: algebra-feilen rettet, energikobling fjernet (Theodors svar 1), konstanter på "krever ja"-lista (svar 2), tabell mot forventet spenn (svar 3), ærlig stjernetabell, fysikk-kontrollør: SPØR THEODOR. Ikke merget - se grenen sin STATUS.md.
+- 01:10-01:35: oppgave G (overvåking) bygget i egen arbeidskopi av main, pushet.
+- 01:35-01:55: oppgave H (mørketid) bygget, pushet.
+- 02:00-02:35: oppgave C+D+K (design) som plan + første versjon på `natt/design`, skjermbilder i `docs/design/` der.
+- 02:35-02:50: oppgave J (WAM800) som skript + workflow på `natt/wam800`, workflow trigget fra skyøkten (første kjøring: fant MidtNorge-regionen, variabelnavn og retningskonvensjon; andre kjøring følger alle regioner).
+- CI-fiks på `lokal/uferdig` (shelter.py importerte basemap indirekte i den syntetiske testen).
+
 ## Oppgave H: mørketid i praksis (skyøkt 07.10.2026) - FERDIG, committet til main
 
 **Lysberegningen (`sun.py`, borgerlig skumring = sola over −6°), alle spots, norsk tid:**
