@@ -33,6 +33,36 @@ Timen finnes i dagens `forecast.json`: Grøtfjord 16.10 kl. 06 UTC, svell ute 2,
 
 **Punkt 2 (periodeavhengig diffraksjonsdemping):** se avsnittet over - merget til main.
 
+## Morgenoppsummering fra skyøkten (07.10.2026, ca. 00:42-03:00 norsk tid)
+
+**Pushet til main (alle tester grønne i GitHub Actions):**
+- **Oppgave G, overvåking av henteren** (`2d2bc6f`): "Varselet er ikke oppdatert siden ..." øverst i appen etter 6 timer, ntfy-varsel fra workflowen hvis kjøringen feiler, `fetch.health_check()` med driftsvarsel (én gang per døgn per problem) når en kilde mangler for alle spots, horisonten er kort eller tall er ugyldige. Ingen rating-endring.
+- **Oppgave H, mørketid** (`cfc9eb7`): lys-tabell for 15.11/21.12/15.01 (aldri "mørkt hele dagen", 4-6 t skumring midt på dagen ved 70 N), beste vindu/dagbrikker/varsler bruker skumringstimene riktig (sjekket i nettleser med klokka låst til 21.12). Rettet: timestripa skilte ikke skumring fra mørkt visuelt (nytt `--dusk`-token). Ingen rating-endring.
+- **Workflow `wam800.yml` + `fetcher/wam800_explore.py`** (`f6f7002`): bare fordi GitHub krever at en workflow finnes på standardgrenen for å kunne startes. Kjører bare manuelt, rører ingenting.
+- **Din nye oppgave (Grøtfjord "Flatt" med 2 166 kJ), begge punkter** (`6eb8da1`, `e13ffc8`): punkt 1 - "Treffer ikke" i stedet for "Flatt" når retningen er årsaken og svellenergien ute er over spotens zero-grense (144 timer bytter ord i dagens varsel, 0 stjerner endret; Grøtfjord 25.09 får også ordet "Treffer ikke", stjernene fortsatt 0). Punkt 2 - periodeavhengig diffraksjonsdemping med samme p(T) som skjermingen: bygget på `natt/diffraksjon`, fysikk-kontrollør godkjent etter rettelser, stoppregelen slo IKKE inn (8 av 1 608 timer, alle opp, ingen 2+ innen 48 t), din time er UENDRET (0,12 m er under flat-grensa, så dempingen betyr ingenting der - 0 stjerner, "Treffer ikke"). Derfor merget til main. **Kontrollørens spørsmål til deg:** 0,6-gulvet gjør Grøtfjord mer følsom for GFS-retningsfeil i 279-284° (der eneste observasjon, 26.09, var flatt) - vil du ha et unntak der?
+- STATUS.md med timelogg og disse avsnittene.
+
+**Grener som venter på deg (ingen pull requests laget - `gh` kan ikke lage PR her; lag dem selv om du vil):**
+1. **`lokal/uferdig` - oppgave I (skjerming). Anbefaling: IKKE merge nå.** Algebra-feilen er rettet (B = ekte tverrbredde, d_open kansellerer ikke lenger), energikoblingen fjernet (ditt svar 1), konstantene på "krever ja"-lista (svar 2), alle 6 tester grønne, alle faste observasjoner holder med skjermingen satt. MEN fysikk-kontrollør ga **SPØR THEODOR**: (A) skjermingen dobbelttelles med del C (eksponeringskurven måler allerede åpningsvinkelen sett fra spoten), (B) spennet ditt (svar 3) kan ikke nås med formelen (ved 12 s er laveste mulige faktor 0,27; Grøtfjord gir 0,85, Lenangsøyra 0,68), og - viktigst - **BarentsWatch sine foreløpige par rangerer spotene MOTSATT av geometrien** (Grøtfjord 0,09, Ersfjordstranda 0,14, Tromvik 0,30, Lenangsøyra 0,55, Unstad 0,57). Kontrollørens tre valg for deg står i grenen sin STATUS.md ("Oppgave I"). Mitt syn: (ii) droppe skjermingen og la BarentsWatch-læringen ta det, eller (iii) en liten ny mekanisme som trekker transfer mot medianen av BarentsWatch-par også under 40 par - begge krever ditt ja.
+2. **`natt/design` - oppgave C + D + K (nytt design). Anbefaling: se på skjermbildene i `docs/design/` på grenen, så sier du ja/nei/endre.** Fargeskala 0-5 som tokens (kontrast i tabell), kort på forsiden med stripe/surfehøyde/kJ/vindpil/mini-graf, detaljside med 16-dagers surfehøyde-graf (egen SVG), svell/vind/tidevann-seksjoner, "Detaljer" lukket, advarsler som én linje, trykk-for-forklaring på alle tall (`docs/js/explain.js`, én fil). Alle tester grønne. Åpne valg: K.1 sin strengere liste (bare navn/rating/surfehøyde/vind) mot C.2 sin (kJ + mini-graf) - jeg valgte C; dagbrikkene er erstattet av mini-grafen; kartets ark bruker ennå ikke explain.js. Slett `docs/design/` (2 MB) før merge.
+3. **`natt/wam800` - oppgave J (WAM800). Anbefaling: les `data/wam800/report.md` på grenen.** WAM800 finnes på thredds.met.no i fem 800 m-regioner; **c1 Nord-Norge dekker alle Troms/Lofoten-spotene, c3 Vestlandet dekker Farstadsanden**, alle med vått rutepunkt innen 0,5 km fra punktet 1,5 km ut. Variablene er nøyaktig det BarentsWatch mangler: svell og vindsjø hver for seg (`hs_swell`/`tp_swell`/`thq_swell`, `hs_sea`/...), pluss tre svellpartisjoner. Retningene er "mot" (+180 for "fra"). Horisont bare 3 døgn. Forslag til bruk (a-d) står i grenen sin STATUS.md; anbefaling: svellretning/periode/svellandel fra WAM800 først, etter at konvensjonen er bevist mot én observasjonsdag. Ingenting koblet inn.
+
+**Sto fast:**
+- Skyen har ikke nett mot thredds.met.no, api.met.no eller Open-Meteo (bare GitHub/PyPI/npm) - all WAM800-utforsking gikk via GitHub Actions, og `test_disc_browser.py` måtte kjøres med Leaflet servert lokalt (ingen endring i testen).
+- Oppgave E (BarentsWatch-punktene) venter fortsatt på en svelldag i vinduene - dagens varsel hadde svell fra 242° (utenfor Unstad sitt vindu). Ikke trigget.
+- "Venter på Theodor"-punktene er ikke rørt.
+
+**Rare funn i dataene:**
+- WAM800 sine filer på thredds har tidsstempler i **2025** (07.10.2025 06:00 → 10.10.2025), mens både GitHub og denne maskinen sier 2026-10-06. Enten er met.no sine WAM800-filer et år gamle (produktet avviklet/flyttet?), eller så er kalenderen her ett år foran - sjekk hva klokka di sier. Sammenligningen per time mot forecast.json ble derfor tom.
+- BarentsWatch-parene i `data/bw_calibration.json` (for få til å læres, 3-11 par) viser 2-6 ganger sterkere demping for Grøtfjord/Ersfjordstranda/Tromvik enn geometrien, og nesten ingen for Lenangsøyra - det er det sterkeste argumentet i hele skjermingssaken.
+- Tromvik kom ut som "åpen" i skjermingsgeometrien (12 km tverrbredde i bukta) - skjermingen der er øyene utenfor, som del C allerede håndterer.
+
+**Anbefalt rekkefølge i morgen:**
+0. Sjekk at appen viser "Treffer ikke" for Grøtfjord-timen etter neste henting (første kjøring etter kl. 02:17 UTC).
+1. Svar på fysikk-kontrollørens tre spørsmål om skjerming (A/B/C i `lokal/uferdig` sin STATUS.md) - det avgjør om grenen merges, kastes eller bygges om.
+2. Se skjermbildene på `natt/design` og gi ja/nei/endringer - det er den største synlige endringen.
+3. Les WAM800-rapporten og bestem om J skal videre (region-dekning er det første spørsmålet).
+
 ## Skyøkt 07.10.2026 - timelogg (norsk tid)
 
 - 00:42: oppstart, miljø satt opp (Playwright pinnet til 1.56, Leaflet servert lokalt pga. nettverkspolicy), alle 6 tester grønne på main.
@@ -42,6 +72,7 @@ Timen finnes i dagens `forecast.json`: Grøtfjord 16.10 kl. 06 UTC, svell ute 2,
 - 02:00-02:35: oppgave C+D+K (design) som plan + første versjon på `natt/design`, skjermbilder i `docs/design/` der.
 - 02:35-02:50: oppgave J (WAM800) som skript + workflow på `natt/wam800`, workflow trigget fra skyøkten (første kjøring: fant MidtNorge-regionen, variabelnavn og retningskonvensjon; andre kjøring følger alle regioner).
 - CI-fiks på `lokal/uferdig` (shelter.py importerte basemap indirekte i den syntetiske testen).
+- 03:00-03:40: Theodors nye oppgave (Grøtfjord "Flatt"): punkt 1 på main, punkt 2 på `natt/diffraksjon` → kontrollør → merget til main. WAM800-rapporten lest og oppsummert på `natt/wam800`. Morgenoppsummering skrevet. Stopp.
 
 ## Oppgave H: mørketid i praksis (skyøkt 07.10.2026) - FERDIG, committet til main
 

@@ -55,7 +55,8 @@ Grøtfjord ligger flere km inne i en bukt med smal åpning, Unstad rett ut mot h
 
 Etter hver oppgave (A-I): oppdater STATUS.md, kjør fysikk-kontrollør (for A og B), commit og push.
 
-## J. met.no sin bølgemodell WAM800 som kilde for svell langs kysten (PLAN FØRST)
+## J. met.no sin bølgemodell WAM800 som kilde for svell langs kysten (PLAN FØRST) - J.1-J.3 UTFORSKET (skyøkt 07.10.2026), rapport og forslag på gren `natt/wam800`
+Se `data/wam800/report.md` på grenen og STATUS.md der: fem 800 m-regioner på thredds.met.no (c1 Nord-Norge dekker alle Troms/Lofoten-spotene, c3 Vestlandet dekker Farstadsanden), svell/vindsjø/partisjoner som egne variabler, retninger er "mot" (+180), horisont 3 døgn. RART: filenes tidsstempler er 2025, ett år bak kalenderen her. Ingenting koblet inn (J.6).
 Bakgrunn: BarentsWatch (ST-wave, 100 m, laget for farleder) gir bare total bølgehøyde og snittretning for svell og vindsjø sammen. I skjermede områder dominerer vindsjøen, så ekte svell forsvinner i tallet. Vi har sett det ved Lenangsøyra (vindsjø som så ut som bølger), Unstad (konsekvent for lav) og Farstadsanden (blind for Nordneset). Met.no anbefalte selv i en rapport fra 2017 å kalibrere BarentsWatch mot WAM800 og bruke WAM800 direkte der oppløsningen er god nok.
 WAM800 (MyWave WAM, 800 m) dekker kysten og deler bølgene i svell og vindsjø med egen høyde, periode og retning.
 
