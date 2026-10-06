@@ -23,7 +23,7 @@ import datetime as dt
 from pathlib import Path
 
 import sources
-from diagnose_bw_direction import raw_barentswatch, openmeteo_with_total_dir
+from diagnose_bw_direction import raw_barentswatch
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "bw_point_search"
@@ -67,7 +67,11 @@ def grid_points(spot):
 
 def search_spot(spot, now, cutoff):
     print(f"\n===== {spot['name']} (facing {spot['facing']}) =====")
-    om = openmeteo_with_total_dir(spot["offshore"]["lat"], spot["offshore"]["lon"])
+    # 06.10.2026 (fysikk-kontrollør, oppgave E): SAMME henting som produksjonen
+    # (GFS Wave med standardmodellen som reserve, time for time) - GFS alene
+    # har ingen dekning ved Russelv/Lenangsøyra sine havpunkt i Ullsfjorden og
+    # ga 0,0 på alt der i første kjøring, så prosent-metoden ble umulig.
+    om = sources.openmeteo_marine(spot["offshore"]["lat"], spot["offshore"]["lon"])
     points = grid_points(spot)
     out = {"facing": spot["facing"], "offshore_point": spot["offshore"], "points": {}}
 
@@ -97,8 +101,9 @@ def search_spot(spot, now, cutoff):
                 "source": row.get("source"),
                 "file_source": row.get("fileSource"),
                 "offshore_swell_height": omk.get("swell_height"),
-                "offshore_swell_dir": omk.get("swell_dir"),
-                "offshore_total_height": omk.get("wave_height"),
+                "offshore_swell_dir": omk.get("dir"),
+                "offshore_total_height": omk.get("height"),
+                "offshore_swell_model": omk.get("swell_model"),
             }
         print(f"     {len(hours)} timer, BarentsWatch valgte punkt: {chosen_point}")
         out["points"][label] = {
