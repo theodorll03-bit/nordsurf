@@ -50,7 +50,12 @@ def grid_points(spot):
             la, lo = pt(s["lat"], s["lon"], bearing, d)
             label = f"{round(d * 1000)}m@{bearing:.0f}"
             points[label] = {"lat": round(la, 6), "lon": round(lo, 6), "bearing": bearing, "dist_m": round(d * 1000)}
-    for key, label in (("barentswatch_point", "dagens 250m-punkt"), ("barentswatch_point_near", "dagens 150m-punkt")):
+    # 06.10.2026: IKKE "dagens 250m-punkt" - Farstadsanden sin barentswatch_point
+    # er nå valgt manuelt av Theodor i BarentsWatch sitt eget kart (se spots.json
+    # sin _barentswatch-kommentar), ikke nødvendigvis på noen av rutenett-
+    # avstandene over. Nøytral etikett, riktig for alle spots.
+    for key, label in (("barentswatch_point", "dagens barentswatch_point"),
+                        ("barentswatch_point_near", "dagens barentswatch_point_near")):
         p = spot.get(key)
         if p:
             points[label] = {"lat": p["lat"], "lon": p["lon"], "bearing": None, "dist_m": None}

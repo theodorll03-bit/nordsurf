@@ -324,33 +324,34 @@
       "area": "Hustadvika",
       "enabled": true,
       "spot": {
-        "lat": 62.98347360353177,
-        "lon": 7.152127051210469
+        "lat": 62.98515302271424,
+        "lon": 7.150838800520863
       },
       "offshore": {
-        "lat": 63.0602,
-        "lon": 6.9843
+        "lat": 63.0526,
+        "lon": 6.9402
       },
       "barentswatch_point": {
-        "lat": 62.985072,
-        "lon": 7.148631
+        "lat": 62.985464,
+        "lon": 7.149922
       },
       "barentswatch_point_near": {
-        "lat": 62.984433,
-        "lon": 7.15003
+        "lat": 62.986025,
+        "lon": 7.148566
       },
-      "swell_window": [301, 329],
-      "offshore_wind": [70, 160],
+      "swell_window": [284, 326],
+      "offshore_wind": [85, 175],
       "min_period": 8,
       "ideal_height": [1.0, 3.0],
       "max_height": 4.5,
-      "facing": 315,
+      "facing": 310,
       "_foreløpig": "05.10.2026: lagt til med foreløpige verdier (Theodors eksplisitte instruks) - swell_window, offshore_wind og facing er IKKE bekreftet av lokal surfer ennå. Se 'Venter på Theodor' i ROADMAP.md.",
-      "_vindu": "05.10.2026, rettet samme dag (Theodors rettelse): venstre kant var først satt til 285 fra surf-forecast.com sin oppgitte beste retning (vestnordvest, ca. 292), ikke fra kystdataene - begrunnet med at kystdataene var upålitelige nær land her. Det var feil: kartet viser at 285-300 grader går over en EKTE odde vest for pinnen, ikke skjær/steiner kystdataene skulle mangle. check_spot.py (300 m kysttoleranse, startvindu 280-345) bekrefter Theodors kystsjekk nøyaktig: fri linje bare 301-329 grader. Vinduet er nå satt til nøyaktig den frie sektoren, samme metode som alle andre spots - surf-forecast.com sin 'beste retning' setter ikke lenger noen kant. 330-20 grader treffer land 800-1200 m ute (en kort strekning av nærmeste nes/odde). Skal fortsatt bekreftes av lokal surfer, ikke swell_window_tegnet satt ennå.",
-      "_offshore_vind": "facing=315 er brukt som sentrum i den frie sektoren (301-329), samme metode som check_spot.py sin egen havpunkt-retning - 15 grader fra Theodors referansepunkt (300), innenfor 30-graders grensen han satte. offshore_wind [70,160] er foreløpig (oppgitt av Theodor, fra surf-forecast.com sin østsørøst-offshorevind), ikke bekreftet lokalt.",
-      "_havpunkt": "Fra check_spot.py (300 m kysttoleranse): 63,0602/6,9843, 12 km ut, retning 315 grader - ingen land innen søkeradiusen rundt punktet. Open-Meteo Marine bekreftet å gi ekte svelldata der (120 timer, GFS Wave/standardmodell).",
-      "_barentswatch": "barentswatch_point 250 m og barentswatch_point_near 150 m ut fra pinnen, retning facing (315 grader) - samme metode som de andre spotene. BarentsWatch-dekning for punktene ikke bekreftet (ingen nøkler lokalt, samme kjente begrensning som ved alle andre spots) - sjekkes i kilderapporten når boten kjører. https://www.barentswatch.no/bolgevarsel/point/7.148631_62.985072 (250 m), https://www.barentswatch.no/bolgevarsel/point/7.150030_62.984433 (150 m).",
-      "_ideal_height": "05.10.2026: eksponert strand/rev (surf-forecast.com) - satt til å tåle mer enn fjordspotene i Tromsø (ideal_height [0.8,2.0]/3.5 der), men mindre enn Unstad (tåler mest av alle, [1.2,3.5]/5.5). Ingen observasjoner ennå til å justere fra."
+      "_pinne": "06.10.2026 (Theodors rettelse): ny pinne fra Theodor, ca. 200 m nordvest (340,8 grader, egen geodesiberegning) for den opprinnelige. Mistanke: den GAMLE pinnen lå der kystlinja krummer inn i en bukt mot nordøst, så facing OG begge BarentsWatch-punktene havnet innerst i bukta - trolig forklaringen på den implausible 0,08 m BarentsWatch målte midt i en storm (6,1 m totalt ute, se STATUS.md). Alle verdiene under (spot, swell_window, facing, havpunkt, barentswatch_point_near) er regnet ut fra DENNE nye pinnen.",
+      "_vindu": "06.10.2026: regnet mot GSHHS full oppløsning, 300 m kysttoleranse. Fri linje til åpent hav 284-326 grader (check_spot.py bekrefter uavhengig: 284-327, 1 grad avvik i avrunding). Rett vest (260-270) er det land 0,4 km unna, mot nord/nordøst (330-55) land 0,5-0,9 km unna - begge nærmere enn ved den gamle pinnen, konsistent med at den nye pinnen står lenger ut mot åpent vann.",
+      "_offshore_vind": "facing=310 er kystlinjenormalen nærmest DENNE pinnen (Theodors egen beregning) - 5 grader fra vinduets midtpunkt (305), innenfor normal variasjon når stranda ikke er perfekt symmetrisk om det åpne vinduet. offshore_wind [85,175] er foreløpig (utledet fra facing), ikke bekreftet lokalt.",
+      "_havpunkt": "63,0526/6,9402 (Theodors egen beregning), 13 km ut, retning 305 grader - check_spot.py foreslår uavhengig 63,0534/6,9415 (13 km, 306 grader), praktisk talt identisk. Bekreftet utenfor land (GSHHS) og at Open-Meteo Marine gir ekte svelldata der (120 timer, GFS Wave/standardmodell).",
+      "_barentswatch": "06.10.2026: barentswatch_point VALGT MANUELT AV THEODOR direkte i BarentsWatch sitt eget kart (oppgitt som 62°59,12781′N 7°08,99530′Ø, regnet om til desimalgrader her - en tidligere oppgitt koordinat, 62°59,16027′N 7°08,82452′Ø, ble korrigert av Theodor samme dag) - ca. 58 m fra DENNE pinnen i retning 307 grader (egen geodesiberegning), nesten rett ut langs facing, IKKE beregnet med pt()-formelen som ellers brukes i dette prosjektet. barentswatch_point_near er fortsatt det beregnede 150 m-punktet (310 grader, samme metode som andre spots), beholdt til sammenligning. Et tredje kandidatpunkt, 500 m ut i retning 310 (62,988060/7,143264), tas med i workflowen 'Finn BarentsWatch-punkt' sammen med de to andre - ingen av de tre er valgt som DET endelige punktet ennå, det avgjøres når ekte BarentsWatch-tall er hentet for alle tre (se STATUS.md). Bekreftet utenfor land (GSHHS) for alle tre. https://www.barentswatch.no/bolgevarsel/point/7.149922_62.985464 (manuelt valgt), https://www.barentswatch.no/bolgevarsel/point/7.148566_62.986025 (150 m), https://www.barentswatch.no/bolgevarsel/point/7.143264_62.98806 (500 m).",
+      "_ideal_height": "05.10.2026: eksponert strand/rev (surf-forecast.com) - satt til å tåle mer enn fjordspotene i Tromsø (ideal_height [0.8,2.0]/3.5 der), men mindre enn Unstad (tåler mest av alle, [1.2,3.5]/5.5). Ingen observasjoner ennå til å justere fra. Uendret av pinneflyttingen 06.10.2026."
     }
   ]
 }
