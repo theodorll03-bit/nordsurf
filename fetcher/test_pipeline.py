@@ -597,4 +597,78 @@ assert r_1008["low_reason"] != "flat"
 assert r_1008["uncertain"] is True
 print("10.8 sanitize_hour_fields() + full rate()-kjede ok")
 
+# ---------- 11: ROADMAP oppgave G (overvåking av henteren), 07.10.2026 ----------
+# 11.1: helsesjekken på en frisk kjøring (de falske kildene over gir alle
+# spots vind fra met.no, svell ute, tidevann og 80 timer) er tom. BarentsWatch
+# sjekkes ikke uten nøkler (BW_CLIENT_ID er ikke satt her) - bare en info-rad.
+os.environ.pop("BW_CLIENT_ID", None)
+fetch.REPORT.clear()
+f11 = json.loads(fetch.OUT.read_text())
+problems_ok = fetch.health_check(f11["spots"])
+rows11 = [r for r in fetch.REPORT if r[1].startswith("Helsesjekk")]
+print("11.1 helsesjekk, frisk kjøring:", problems_ok, [(r[1], r[2]) for r in rows11])
+assert problems_ok == []
+assert any(r[1] == "Helsesjekk: BarentsWatch" and r[2] == "info" for r in rows11)
+assert any(r[1] == "Helsesjekk" and r[2] == "ok" for r in rows11)
+# 11.2: en kilde som mangler for ALLE spots gir ett problem; mangler den
+# bare for én spot, er det "delvis" i rapporten men IKKE et problem (ROADMAP:
+# "mangler for alle spots"). Kort horisont og ugyldige tall (NaN, stjerner
+# utenfor 0-5) fanges per spot.
+import copy as _copy
+sick = _copy.deepcopy(f11["spots"])
+for sp in sick:
+    for h in sp["hours"]:
+        h["tide"] = None
+fetch.REPORT.clear()
+problems_tide = fetch.health_check(sick)
+print("11.2a alle uten tidevann:", problems_tide)
+assert problems_tide == [f"Kartverket tidevann mangler for alle {len(sick)} spots"]
+partial = _copy.deepcopy(f11["spots"])
+for h in partial[0]["hours"]:
+    h["tide"] = None
+fetch.REPORT.clear()
+assert fetch.health_check(partial) == []
+assert any(r[1] == "Helsesjekk: Kartverket tidevann" and r[2] == "delvis" for r in fetch.REPORT)
+short = _copy.deepcopy(f11["spots"])
+short[0]["hours"] = short[0]["hours"][:10]
+short[1]["hours"][3]["stars"] = 7
+short[1]["hours"][5]["height"] = float("nan")
+fetch.REPORT.clear()
+problems_bad = fetch.health_check(short)
+print("11.2b kort horisont + ugyldige tall:", problems_bad)
+assert len(problems_bad) == 2
+assert problems_bad[0].startswith(f"{short[0]['name']}: bare 10 timer")
+assert problems_bad[1].startswith(f"{short[1]['name']}: 2 timer med ugyldige tall")
+assert fetch.health_check([]) == ["ingen spots bygget"]
+# 11.3: notify.alert() - sendes én gang, samme nøkkel sendes ikke igjen før
+# HEALTH_ALERT_REPEAT_HOURS har gått; uten NTFY_TOPIC sendes ingenting (bare logg).
+sent11 = []
+notify.requests.post = lambda url, json=None, timeout=None: sent11.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
+state11 = tmp / "notified_health.json"
+now11 = dt.datetime.now(dt.timezone.utc)
+assert notify.alert("Nordsurf: henteren har et problem", "Kartverket tidevann mangler for alle 8 spots", "tide", now11, state11) is True
+assert notify.alert("Nordsurf: henteren har et problem", "Kartverket tidevann mangler for alle 8 spots", "tide", now11 + dt.timedelta(hours=3), state11) is False
+assert notify.alert("Nordsurf: henteren har et problem", "Kartverket tidevann mangler for alle 8 spots", "tide", now11 + dt.timedelta(hours=25), state11) is True
+assert notify.alert("Nordsurf: henteren har et problem", "annet problem", "annet", now11, state11) is True
+assert len(sent11) == 3 and sent11[0]["priority"] == 4 and "warning" in sent11[0]["tags"] and sent11[0]["topic"] == "test-topic"
+saved_topic = os.environ.pop("NTFY_TOPIC")
+assert notify.alert("x", "y", "uten-topic", now11, state11) is False and len(sent11) == 3
+os.environ["NTFY_TOPIC"] = saved_topic
+# 11.4: hele kjeden - main() kaller health_check() og alert() for hvert
+# problem: med tidevann mokket til å feile for alle spots skal ett
+# driftsvarsel gå ut (og ikke på nytt i neste kjøring samme døgn).
+saved_tide = sources.kartverket_tide
+sources.kartverket_tide = lambda la, lo, a, b: (_ for _ in ()).throw(RuntimeError("Kartverket nede (test)"))
+sent12 = []
+notify.requests.post = lambda url, json=None, timeout=None: sent12.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
+fetch.REPORT.clear()
+fetch.main()
+health_alerts = [m for m in sent12 if m.get("title") == "Nordsurf: henteren har et problem"]
+print("11.4 driftsvarsler fra main() uten tidevann:", [m["message"] for m in health_alerts])
+assert len(health_alerts) == 1 and "Kartverket tidevann mangler for alle" in health_alerts[0]["message"]
+fetch.main()
+assert len([m for m in sent12 if m.get("title") == "Nordsurf: henteren har et problem"]) == 1  # ikke to ganger samme døgn
+sources.kartverket_tide = saved_tide
+print("11: helsesjekk og driftsvarsler ok")
+
 print("Pipeline ok")

@@ -6,6 +6,7 @@ Kjøres automatisk hver tredje time av GitHub Actions.
 
 import os
 import json
+import math
 import datetime as dt
 from pathlib import Path
 
@@ -732,6 +733,56 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "calibration": calibration, "light_days": light_days}
 
 
+HEALTH_MIN_HOURS = 48  # færre timer enn dette for en spot er et tegn på at kildene sviktet
+
+
+def health_check(spots):
+    """ROADMAP oppgave G (overvåking av henteren), 07.10.2026: enkel
+    helsesjekk av en ferdig kjøring - alle spots har data fra hver kilde,
+    ingen tomme eller ugyldige tall, horisont som forventet. Legger rader i
+    kilderapporten og returnerer en liste problemer (tom = frisk). Hvert
+    problem sendes som driftsvarsel til Theodor (notify.alert()) av main().
+
+    Kildene sjekkes på det som faktisk ender i forecast.json per time (ikke
+    på REPORT-radene) - det er det appen ser. "Mangler for alle spots" er
+    kriteriet (ROADMAP): én spot uten BarentsWatch er normalt (punktet kan
+    ligge utenfor dekningen), alle uten er et utfall eller en utgått nøkkel.
+    BarentsWatch sjekkes bare når nøkler finnes (BW_CLIENT_ID) - lokalt og
+    i testene finnes de ikke, og det er ikke et utfall."""
+    problems = []
+    n = len(spots)
+    if not n:
+        REPORT.append(("alle", "Helsesjekk", "feil", "ingen spots bygget"))
+        return ["ingen spots bygget"]
+    checks = [
+        ("met.no vind", lambda s: any(h.get("wind_source") == "metno" for h in s["hours"])),
+        ("Open-Meteo svell ute", lambda s: any(h.get("swell_offshore") is not None for h in s["hours"])),
+        ("Kartverket tidevann", lambda s: any(h.get("tide") is not None for h in s["hours"])),
+    ]
+    if os.environ.get("BW_CLIENT_ID"):
+        checks.append(("BarentsWatch", lambda s: any(h.get("bw_height") is not None for h in s["hours"])))
+    else:
+        REPORT.append(("alle", "Helsesjekk: BarentsWatch", "info", "ingen nøkler i miljøet - ikke sjekket"))
+    for label, fn in checks:
+        ok = sum(1 for s in spots if fn(s))
+        REPORT.append(("alle", f"Helsesjekk: {label}", "ok" if ok == n else ("feil" if ok == 0 else "delvis"),
+                       f"{ok} av {n} spots har data"))
+        if ok == 0:
+            problems.append(f"{label} mangler for alle {n} spots")
+    for s in spots:
+        hrs = s.get("hours") or []
+        if len(hrs) < HEALTH_MIN_HOURS:
+            problems.append(f"{s['name']}: bare {len(hrs)} timer i varselet (ventet minst {HEALTH_MIN_HOURS})")
+        bad = [h.get("t") for h in hrs
+               if not (isinstance(h.get("stars"), int) and 0 <= h["stars"] <= 5)
+               or any(isinstance(v, float) and (math.isnan(v) or math.isinf(v)) for v in h.values())]
+        if bad:
+            problems.append(f"{s['name']}: {len(bad)} timer med ugyldige tall (første {bad[0]})")
+    REPORT.append(("alle", "Helsesjekk", "ok" if not problems else "feil",
+                   "; ".join(problems) if problems else f"alle {n} spots har data, gyldige tall og minst {HEALTH_MIN_HOURS} timer"))
+    return problems
+
+
 def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
@@ -777,6 +828,10 @@ def main():
     EXPOSURE_LEARNED.parent.mkdir(parents=True, exist_ok=True)
     EXPOSURE_LEARNED.write_text(json.dumps(exposure_learned_data, ensure_ascii=False, indent=1), encoding="utf-8")
     notify.run(forecast, now)
+    # ROADMAP oppgave G: helsesjekk til slutt (alt over er skrevet uansett -
+    # et halvdårlig varsel er bedre enn ingen), ett driftsvarsel per problem.
+    for problem in health_check(spots):
+        notify.alert("Nordsurf: henteren har et problem", problem, problem, now)
     write_report()
 
 

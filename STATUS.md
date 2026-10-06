@@ -1,5 +1,14 @@
 # Nordsurf: status
 
+## Oppgave G: overvåking av henteren (skyøkt 07.10.2026) - FERDIG, committet til main
+
+Tre deler, alle testet:
+1. **Appen:** `staleBanner()` i `docs/index.html` - når `forecast.json` sin `generated` er over 6 timer gammel (henteren kjører hver tredje time, så én tapt kjøring er normalt innenfor, to er ikke), vises "Varselet er ikke oppdatert siden [dag] kl. [tid]. Henteren har trolig feilet. Tallene kan være utdaterte." øverst på BÅDE lista og detaljsiden (samme `.warn`-stil som "Kildene er uenige", med oransje kant). Skjermbilder tatt i mobilvisning. Ny Playwright-sjekk i `test_disc_browser.py`: vises når fixturen er gammel, forsvinner når `generated` settes til nå. `docs/sw.js` bumpet.
+2. **Workflowen (`forecast.yml`):** nytt steg `if: failure()` som sender ntfy-varsel ("Nordsurf: henteren feilet", høy prioritet, lenke til kjøringen) med ren `curl` - uavhengig av Python/pip, så det virker selv om det var installasjonen eller en test som feilet. Ingen nye secrets (bruker `NTFY_TOPIC` som allerede finnes). Kan ikke testes lokalt - verifiseres første gang en kjøring faktisk feiler.
+3. **Helsesjekk (`fetch.health_check()`):** kjøres til slutt i `main()`, på det som faktisk ligger i forecast.json: for hver kilde (met.no vind, Open-Meteo svell ute, Kartverket tidevann, og BarentsWatch BARE når nøkler finnes i miljøet - lokalt/i tester er "ingen BarentsWatch" ikke et utfall) telles spots med data; "mangler for alle spots" er et problem (én spot uten er bare "delvis" i rapporten - normalt for BarentsWatch-dekning). Per spot: under 48 timer i varselet, stjerner utenfor 0-5, NaN/inf i noen verdi. Hvert problem gir én rad i kilderapporten og ett driftsvarsel via ny `notify.alert()` (samme NTFY_TOPIC, prioritet 4, tag warning, dedupe per problem i `data/notified.json` - høyst én gang per døgn, så en nedetid på BarentsWatch ikke gir åtte meldinger om dagen). Tester (`test_pipeline.py` avsnitt 11): frisk kjøring = tom; alle uten tidevann = ett problem; én uten = ingen; kort horisont/ugyldige tall = ett problem per spot; dedupe-logikken; hele kjeden gjennom `main()` med Kartverket mokket til å feile (ett varsel, ikke to i neste kjøring).
+
+Ingen endring i ratingen eller i hvordan noe tall regnes ut - fysikk-kontrollør ikke relevant (samme vurdering som oppgave F). Alle 6 testfiler grønne.
+
 ## Overlevering til skyøkt (00:36, 07.10.2026 - nattmodus stoppet av Theodor)
 
 Theodor stoppet nattmodus (startet 23:53 06.10) og flytter arbeidet til en skyøkt. Oppsummering:

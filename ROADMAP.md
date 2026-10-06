@@ -27,7 +27,8 @@ Utvid workflowen "Finn BarentsWatch-punkt" til alle spots: 150, 250, 500 og 1000
 ## F. Enklere logging - FERDIG (06.10.2026 natt), committet til main
 Etter hvert gode vindu (3 stjerner eller mer i dagslys) for en favoritt: et "Var du der?"-spørsmål neste gang Theodor åpner appen, med ett trykk for flatt, dårlig, ok, bra og rått. "Logg fra bilde": velg et skjermbilde, appen foreslår tidspunkt (fra bildets metadata eller filnavn), og Theodor velger spot, stjerner og størrelse. Lagres som Observert med kilde. Bildet lagres ikke, bare loggen. Logg rett fra kartet: trykk og hold på skiva for å logge for den spoten og tiden.
 
-## G. Overvåking av henteren
+## G. Overvåking av henteren - FERDIG (skyøkt 07.10.2026), committet til main
+Appen viser "Varselet er ikke oppdatert siden ..." øverst på lista og detaljsiden når forecast.json er over 6 timer gammel. Workflowen sender ntfy-varsel (curl, uavhengig av Python) hvis kjøringen feiler, og `fetch.health_check()` sender ett driftsvarsel per problem (en kilde mangler for alle spots, for få timer, ugyldige tall), høyst én gang per døgn per problem. Helsesjekk-rader i kilderapporten. Se STATUS.md.
 Appen: vis tydelig advarsel øverst hvis forecast.json er mer enn 6 timer gammel ("Varselet er ikke oppdatert siden kl. X"). Workflowen: send ntfy-varsel til Theodor hvis henteren feiler, eller hvis en kilde (BarentsWatch, met.no, Open-Meteo, Kartverket) mangler for alle spots i en kjøring. En enkel helsesjekk i kilderapporten: alle spots har data, ingen tomme eller ugyldige tall, horisont som forventet.
 
 ## H. Mørketid i praksis

@@ -109,6 +109,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:-.01em;margin:4px 0 4px}
 .verdict{font-size:17px;margin:6px 0 0}
 .warn{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;background:var(--raised);border-radius:12px;font-size:15px}
 .warn b{font-weight:600}
+.stale{display:block;border-left:4px solid #D35400;margin:12px 0 0}
 
 /* Timestripe med lys og mørke */
 .strip-wrap{margin:20px -16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -547,6 +548,16 @@ function sampleBanner(){
   return DATA.sample ? `<p class="sample"><b>Oppdiktet vær, ikke dagens varsel.</b> Dette er bare for å vise hvordan appen ser ut. Ekte varsel kommer når henteren har kjørt.</p>` : "";
 }
 
+// ROADMAP oppgave G (overvåking av henteren): henteren kjører hver tredje
+// time - er varselet eldre enn STALE_HOURS, har en kjøring (eller to) feilet,
+// og tallene under kan være utdaterte. Vises øverst på lista OG detaljsiden.
+const STALE_HOURS = 6;
+function staleBanner(){
+  if(DATA.sample || !DATA.generated) return "";
+  const gen = new Date(DATA.generated);
+  if(!(Date.now() - gen.getTime() > STALE_HOURS*36e5)) return "";
+  return `<p class="warn stale" role="alert"><b>Varselet er ikke oppdatert siden ${relDay(gen)} kl. ${fmtTime.format(gen)}.</b> Henteren har trolig feilet. Tallene kan være utdaterte.</p>`;
+}
 function renderList(){
   const gen = new Date(DATA.generated);
   const order = DATA.spots.map((s,i)=>i).sort((a,b)=>{
@@ -577,7 +588,7 @@ function renderList(){
       ${dayChipsHtml(s, i)}
     </div>`;
   }).join("");
-  $("#app").innerHTML = `${sampleBanner()}
+  $("#app").innerHTML = `${sampleBanner()}${staleBanner()}
     <header class="top"><h1>Varsel</h1><p class="sub">${DATA.sample?"Eksempel, ikke ekte data":`Oppdatert ${relDay(gen)} kl. ${fmtTime.format(gen)}`}</p></header>
     <div class="list">${rows}</div>`;
   document.querySelectorAll(".row").forEach(b=>b.onclick=()=>{
@@ -802,7 +813,7 @@ function renderSpot(){
   const tideNow = h.tide ? `${h.tide.rising?"Stigende":"Fallende"}, ${h.tide.state}` : "–";
   const tidePref = s.tide && s.tide.length ? `Spoten liker ${s.tide.join(" og ")} vann` : "Spoten tåler alt tidevann";
 
-  $("#app").innerHTML = `${sampleBanner()}
+  $("#app").innerHTML = `${sampleBanner()}${staleBanner()}
     <header class="top">
       <button class="back" id="back"><span aria-hidden="true" style="font-size:24px">‹</span> Varsel</button>
       <div class="spot-title-row"><h1>${esc(s.name)}</h1>${favBtnHtml(s.id, false)}</div>

@@ -87,6 +87,43 @@ def describe(spot, w, now):
     return f"{spot['name']}: {w['best']} stjerner {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)
 
 
+HEALTH_ALERT_REPEAT_HOURS = 24  # samme helseproblem varsles høyst én gang per døgn
+
+
+def alert(title, body, key, now, state_path=None):
+    """ROADMAP oppgave G (overvåking av henteren): ett driftsvarsel til
+    Theodor via ntfy (samme NTFY_TOPIC som surfevarslene, høy prioritet,
+    egen tag) - f.eks. "en kilde mangler for alle spots". Dedupe: samme
+    `key` sendes ikke på nytt før HEALTH_ALERT_REPEAT_HOURS har gått
+    (lagres i samme data/notified.json som surfevarslene, under
+    "health:<key>"). Uten NTFY_TOPIC: bare skrevet til loggen. Returnerer
+    True hvis varselet faktisk ble sendt."""
+    topic = os.environ.get("NTFY_TOPIC")
+    path = state_path or STATE
+    state = json.loads(path.read_text()) if path.exists() else {}
+    skey = f"health:{key}"
+    prev = state.get(skey)
+    if prev and dt.datetime.fromisoformat(prev["sent"]) > now - dt.timedelta(hours=HEALTH_ALERT_REPEAT_HOURS):
+        print(f"Driftsvarsel (allerede sendt siste {HEALTH_ALERT_REPEAT_HOURS} t, hopper over): {title}")
+        return False
+    if not topic:
+        print(f"Driftsvarsel (NTFY_TOPIC ikke satt, bare logget): {title} - {body}")
+        return False
+    msg = {"topic": topic, "title": title, "message": body, "tags": ["warning"], "priority": 4}
+    if os.environ.get("APP_URL"):
+        msg["click"] = os.environ["APP_URL"]
+    try:
+        requests.post("https://ntfy.sh/", json=msg, timeout=20).raise_for_status()
+    except Exception as e:
+        print(f"Driftsvarsel feilet: {e}")
+        return False
+    print(f"Driftsvarsel sendt: {title}")
+    state[skey] = {"sent": now.isoformat(), "end": now.isoformat()}
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    return True
+
+
 def run(forecast, now):
     topic = os.environ.get("NTFY_TOPIC")
     cfg = load_settings()

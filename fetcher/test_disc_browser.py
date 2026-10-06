@@ -174,6 +174,20 @@ def main():
             star_words = page.evaluate("STAR_WORDS")
             low_words = page.evaluate("LOW_REASON_WORD")
 
+            # ROADMAP oppgave G (07.10.2026): fixturen er "generert" 06.10.2026
+            # kl. 15 UTC - alltid eldre enn STALE_HOURS når testen kjører - så
+            # advarselen "Varselet er ikke oppdatert siden ..." skal stå øverst
+            # både på lista og på detaljsiden, og forsvinne når varselet er ferskt.
+            page.evaluate("state.tab='varsel'; state.spot=null; render();")
+            stale_list = page.locator(".stale").inner_text()
+            assert "ikke oppdatert siden" in stale_list, stale_list
+            page.evaluate("state.tab='varsel'; state.spot=0; state.sel=0; render();")
+            assert page.locator(".stale").count() == 1, "advarselen skal også stå på detaljsiden"
+            page.evaluate("DATA.generated = new Date().toISOString(); render();")
+            assert page.locator(".stale").count() == 0, "ferskt varsel skal ikke ha advarsel"
+            page.evaluate(f"DATA.generated = {json.dumps(FIXTURE['generated'])}; render();")
+            print("G: 'Varselet er ikke oppdatert siden' vises på liste og detaljside når varselet er over 6 t gammelt, ikke ellers - OK")
+
             def check_scenario(idx, hour, label):
                 # ---------- 1. Detaljsiden: Retningstreff + lavstjerne-ordet ----------
                 page.evaluate(f"state.tab='varsel'; state.spot=0; state.sel={idx}; render();")
