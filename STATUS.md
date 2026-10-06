@@ -1,5 +1,38 @@
 # Nordsurf: status
 
+## Oppgave C + D + K: designplan og første versjon (skyøkt 07.10.2026) - PÅ GREN `natt/design`, IKKE merget, venter på Theodors ja
+
+ROADMAP C krever designplan med skjermbilder FØR bygging og Theodors ja. Nattmodus-regel 4: planen OG en første versjon er bygget på egen gren, ingenting rørt på main. **Skjermbildene ligger i `docs/design/` på grenen** (lys og mørk, iPhone 13, ekte `forecast.json` fra 06.10 kl. 18 UTC, klokka låst til kl. 19 UTC): `design_list_{light,dark}.png` (forsiden), `design_spot_{light,dark}.png` (hele detaljsiden, Unstad), `design_spot_details_*.png` ("Detaljer" åpnet), `design_explain_*.png` (forklaringsarket for surfehøyde), `design_map_*.png` (kartet).
+
+**1. Fargeskala for rating (C.1).** Nye tokens `--r0..--r5` (+ `--on-r*` for tekst oppå), brukt i stjernene (`.stars.rN`), kortstripa, mini-grafen, surfehøyde-søylene, kJ-pillen, kartmerkenes ring og skiva (`ringSegments()` setter `stroke:var(--rN)`), og det gode-dag-merket på kartet. Farge er aldri eneste bærer - tall eller stjerner står alltid ved siden av.
+
+| Rating | Lys modus | Kontrast mot bakgrunn (lys) | Mørk modus | Kontrast (mørk) |
+|---|---|---|---|---|
+| 0 grå | #7D8B92 | 3,2 | #8E9CA3 | 6,2 |
+| 1 rød-oransje | #D64F2A | 3,8 | #F2704B | 6,0 |
+| 2 gul/rav | #B98A00 | 2,9 (gul er iboende lys; ikke brukt som eneste bærer) | #F2C244 | 10,5 |
+| 3 grønn | #2E9E52 | 3,1 | #4FCB75 | 8,5 |
+| 4 turkis | #148E95 | 3,6 | #3ED0D8 | 9,4 |
+| 5 blå | #4A5BD8 | 5,0 | #8D9BFF | 6,9 |
+
+(WCAG 1.4.11 ber om 3:1 for grafiske elementer - alle over unntatt gul i lys modus, 2,9. Tekst oppå fyllfarger: hvit på 0/1/3/4/5 i lys modus, mørk ink på gul; mørk ink på alle i mørk modus.) Den gamle `--star` (rav) beholdes bare for favoritt-stjerna og fokusring.
+
+**2. Forsiden (C.2 + K.1):** ett kort per spot med fargestripe for DAGENS beste rating (ikke nåtimen - stripa svarer på "er det verdt å dra i dag?"), nå-stjerner, surfehøyde som "1,2 til 1,6 m" (surfehøyde til sett; ved 0-1 stjerne ordet med høyden i parentes: "Blåst ut (1,3 m)"), kJ, periode, vind som pil (peker dit vinden går, farget etter type: grønn offshore, gul side, rød onshore) + styrke + type, beste-vindu-linja, og en mini-graf: én søyle per dag i 16 dager, høyde = beste stjerner i lyse timer, farge = rating, langtid blekere, stiplet skille ved dag 8; trykk på en søyle går rett til den timen (erstatter de gamle dagbrikkene). **K.1 sier strengere ("bare navn, rating, surfehøyde, vind") - C.2 sier kJ og mini-graf i tillegg. Jeg valgte C sin versjon; K sin kan lages ved å fjerne to linjer. Theodor velger.**
+
+**3. Detaljsiden (C.3 + K.2/K.3):** (a) overskrift: stjerner i ratingfarge (trykk = hele regnestykket, som før), surfehøyde stort (trykk = forklaring), ett ord ("Veldig bra" / "Blåst ut"), beste vindu + periode + vind i én linje; (b) surfehøyde-graf over 16 dager (SVG, egen kode, ingen bibliotek): søyle per time dag 1-7, per dag (beste time) dag 8-16 blekere, farget etter rating, sett som tynnere, lysere søyle over, lys (dag/skumring/mørkt) som bakgrunn, nå-linje, "anslag →"-skille der BarentsWatch slutter, 0,5 m-rutenett, trykk velger time (tastatur: Enter/mellomrom, aria-pressed), vannrett rullbar; (c) Svell: hovedsvell (pil, høyde, periode) og vindsjø/sekundært hver for seg (vises bare når > 0), ellers totalhøyde med svellandel, kJ som pill i ratingfarge, retningstreff med treff/bom-prikk; (d) Vind: pil farget etter type, styrke, kast, stjerner tapt; (e) Tidevann: kurve over den valgte dagen (cosinus mellom Kartverkets flo/fjære, nivå i cm, nå/valgt time stiplet), neste flo/fjære, spotens preferanse; (f) lys som bakgrunn i grafen (ikke egen rad lenger); (g) alt annet under **"Detaljer" (lukket som standard, K.3)**: høyde på spoten (Hs, justering), svell ute med prosent, retningstreff med vindu, eksponering/transfer + skjerming, periode (+ BarentsWatch-periode), sikkerhet, brukbart lys, vann og luft, kilder, lokale regler, lenke til kalibreringen i Logger. Advarsler (K.6) er ÉN kort linje øverst (`noticeHtml()`: blåst ut / stormsjø / treffer ikke / kildene uenige / BarentsWatch-bekreftet / kant av vinduet / usikkert) med forklaring ved trykk.
+
+**4. Trykk for forklaring (D):** nytt `docs/js/explain.js` - ÉN fil med alle tekstene (`EXPLAIN`): surfehøyde, signifikant høyde, svell ute, periode, kJ, retningstreff, eksponering, vind, tidevann, sikkerhet, stjerner, kilder, skjerming. Hvert ark har (a) hva det betyr med et eksempel fra de faste observasjonene, (b) tallene for akkurat denne spoten og timen (leses rett fra samme felt rating.py skriver - "mangler", aldri 0), (c) hvordan det regnes ut og kilder. Alle merkede tall/begreper (`data-explain`, prikket understrek) åpner arket; `wireExplain()` gir ikke-knapper role=button/tabindex/Enter+mellomrom; Esc lukker; fokus går tilbake. De små ⓘ-knappene er fjernet. Kartet bruker samme bibliotek (ikke koblet inn der ennå - kartets ark er uendret i denne versjonen).
+
+**5. Kartet (C.4):** merkene og skiva har ringen i ratingfargen (0 grå ... 5 blå), god-dag-outline i samme farge. Resten av kartet urørt (skiva, vindvimpel, eksponeringskile).
+
+**6. Lys/mørk, mobil først, 44 pt, reduced-motion (C.5):** alle nye flater bruker tokens i begge moduser, trykkflater minst 44 pt (søyler i grafen er 14 px brede men 160 px høye - trykkflaten er hele kolonnen; mini-grafens søyler på kortet er 16 × 50 px - **under 44 pt i bredden, bør vurderes**), `prefers-reduced-motion` respektert (ingen nye animasjoner utover det eksisterende arket).
+
+**7. Grafbibliotek (C.6):** ingen - alt er egen SVG, ingen bundler, ingen nye CDN-avhengigheter.
+
+**Tester:** alle 6 testfiler grønne på grenen. `test_disc_browser.py` åpner nå "Detaljer" før den leser Retningstreff-cella (ellers uendret - skiva, kartmerket og lavstjerne-ordet sjekkes som før). Ingen `fetcher/`-endring, ingen tall eller stjerner regnes annerledes - fysikk-kontrollør ikke relevant (samme vurdering som F og G).
+
+**Kjente hull / neste steg hvis Theodor sier ja:** (1) kartets ark og "forklar kartet" bruker fortsatt sine egne tekster, ikke `explain.js`; (2) Logger-fanen og Innstillinger har gammelt utseende; (3) mini-grafens søyler er smalere enn 44 pt; (4) K.1-valget over; (5) dagbrikkene er borte fra lista (mini-grafen erstatter dem) - Theodor kan ønske dem tilbake; (6) `docs/design/` (2 MB skjermbilder) bør slettes fra grenen før merge, de er bare til denne planen.
+
 ## Oppgave H: mørketid i praksis (skyøkt 07.10.2026) - FERDIG, committet til main
 
 **Lysberegningen (`sun.py`, borgerlig skumring = sola over −6°), alle spots, norsk tid:**

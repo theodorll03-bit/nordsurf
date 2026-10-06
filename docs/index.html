@@ -20,6 +20,12 @@
 :root{
   --surface:#F1F3F2; --raised:#FFFFFF; --ink:#16252D; --muted:#52646C; --line:#D5DCDE;
   --star:#A86F08; --night:#C9D2D5; --dusk:#E2E7E9; --selected:#16252D; --on-selected:#FFFFFF;
+  /* ROADMAP oppgave C: fargeskala for rating 0-5, brukt overalt (stjerner,
+     ringen på skiva, kartmerker, søyler, dagbrikker). Farge er aldri eneste
+     bærer - tall eller stjerner står alltid ved siden av. Kontrast mot
+     bakgrunnen (3:1 for grafiske elementer) sjekket i STATUS.md. */
+  --r0:#7D8B92; --r1:#D64F2A; --r2:#B98A00; --r3:#2E9E52; --r4:#148E95; --r5:#4A5BD8;
+  --on-r0:#FFFFFF; --on-r1:#FFFFFF; --on-r2:#16252D; --on-r3:#FFFFFF; --on-r4:#FFFFFF; --on-r5:#FFFFFF;
   /* Kart: grønt (vindu) og blått (vind) er faste valg. Svell er lilla, ikke
      blågrønn/turøs - det ville ligget for nært vindfargen for fargeblinde
      på det gråtonede kartet. Rav-gult (--star) er forbeholdt rating. */
@@ -35,12 +41,16 @@
   :root:not([data-theme="light"]){
     --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
     --star:#F2B544; --night:#0A1418; --dusk:#1E3039; --selected:#E4EBED; --on-selected:#0F1B21;
+    --r0:#8E9CA3; --r1:#F2704B; --r2:#F2C244; --r3:#4FCB75; --r4:#3ED0D8; --r5:#8D9BFF;
+    --on-r0:#0F1B21; --on-r1:#0F1B21; --on-r2:#0F1B21; --on-r3:#0F1B21; --on-r4:#0F1B21; --on-r5:#0F1B21;
     --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
   }
 }
 :root[data-theme="dark"]{
   --surface:#0F1B21; --raised:#17262E; --ink:#E4EBED; --muted:#93A6AE; --line:#26363E;
   --star:#F2B544; --night:#0A1418; --dusk:#1E3039; --selected:#E4EBED; --on-selected:#0F1B21;
+  --r0:#8E9CA3; --r1:#F2704B; --r2:#F2C244; --r3:#4FCB75; --r4:#3ED0D8; --r5:#8D9BFF;
+  --on-r0:#0F1B21; --on-r1:#0F1B21; --on-r2:#0F1B21; --on-r3:#0F1B21; --on-r4:#0F1B21; --on-r5:#0F1B21;
   --window:#48C97C; --window-fill:rgba(72,201,124,.22); --swell:#B79CFF; --swell-miss:#7C8A92; --wind:#6FA8FF;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -237,6 +247,103 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
 .report-form-row label{font-size:14px;color:var(--muted)}
 .report-form-row input[type=number]{font:inherit;font-size:16px;width:80px;min-height:40px;padding:0 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
 .report-form-row select{width:auto;min-height:40px}
+
+/* ---------- ROADMAP oppgave C/D/K: nytt design ---------- */
+.stars.r0 .st-solid{fill:var(--r0);stroke:var(--r0)} .stars.r1 .st-solid{fill:var(--r1);stroke:var(--r1)} .stars.r2 .st-solid{fill:var(--r2);stroke:var(--r2)}
+.stars.r3 .st-solid{fill:var(--r3);stroke:var(--r3)} .stars.r4 .st-solid{fill:var(--r4);stroke:var(--r4)} .stars.r5 .st-solid{fill:var(--r5);stroke:var(--r5)}
+.stars .st-faded{stroke:var(--muted)}
+.rc0{--rc:var(--r0);--on-rc:var(--on-r0)} .rc1{--rc:var(--r1);--on-rc:var(--on-r1)} .rc2{--rc:var(--r2);--on-rc:var(--on-r2)}
+.rc3{--rc:var(--r3);--on-rc:var(--on-r3)} .rc4{--rc:var(--r4);--on-rc:var(--on-r4)} .rc5{--rc:var(--r5);--on-rc:var(--on-r5)}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:14px;background:var(--rc);color:var(--on-rc);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.pill.big{min-height:36px;padding:0 14px;font-size:17px}
+.daychip.good{background:color-mix(in srgb,var(--rc) 18%,var(--surface));outline:1.5px solid var(--rc);outline-offset:-1.5px}
+
+/* Forsiden: kort per spot */
+.cards{display:flex;flex-direction:column;gap:12px;margin:14px 0}
+.card{position:relative;background:var(--raised);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.card .stripe{position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--rc)}
+.card .card-btn{all:unset;display:block;width:100%;box-sizing:border-box;padding:14px 56px 12px 20px;cursor:pointer}
+.card .card-btn:active{background:var(--surface)}
+.card .c-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.card .name{font:700 22px/1.2 var(--display)}
+.card .area{color:var(--muted);font-size:14px}
+.card .c-now{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.card .c-h{font:700 24px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.card .c-h small{font:600 14px/1 var(--body);color:var(--muted)}
+.card .c-facts{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:center;margin-top:6px;color:var(--muted);font-size:14px}
+.card .c-facts .f{display:inline-flex;align-items:center;gap:5px}
+.card .c-best{margin-top:8px;font-size:14px}
+.card .mini{display:block;width:100%;height:50px;margin-top:8px}
+.card .fav-btn-wrap{top:8px;right:6px}
+.arrow{width:16px;height:16px;display:inline-block;vertical-align:middle;flex:0 0 auto}
+.arrow.offshore{color:var(--r3)} .arrow.side{color:var(--r2)} .arrow.sideonshore{color:var(--r1)} .arrow.onshore{color:var(--r1)}
+
+/* Detaljsiden */
+.hero{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 0}
+.hero .h-h{font:700 40px/1 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.hero .h-h small{font:600 16px/1 var(--body);color:var(--muted);margin-left:4px}
+.hero .h-word{font-size:17px;font-weight:600}
+.notice{display:block;margin:12px 0 0;padding:10px 14px;background:var(--raised);border-radius:12px;font-size:15px;border-left:4px solid var(--muted);cursor:pointer}
+.notice.bad{border-left-color:var(--r1)}
+.notice.ok{border-left-color:var(--r3)}
+.sec-card{background:var(--raised);border-radius:16px;padding:14px 16px;margin:14px 0 0}
+.sec-card h2{font:700 17px/1.2 var(--display);margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sec-card h2 .t{display:inline-flex;align-items:center;gap:6px}
+.tap{cursor:pointer;border-bottom:1px dotted var(--muted)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.kv .k{font-size:13px;color:var(--muted)}
+.kv .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:1px}
+.kv .n{font-size:13px;color:var(--muted);margin-top:1px}
+.kv .wide{grid-column:1/-1}
+.swell-row{display:flex;align-items:center;gap:14px;padding:8px 0;border-top:1px solid var(--line)}
+.swell-row:first-of-type{border-top:0}
+.swell-row .dir{width:44px;height:44px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface)}
+.swell-row .dir svg{width:26px;height:26px}
+.swell-row .lbl{font-size:13px;color:var(--muted)}
+.swell-row .val{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.swell-row .val small{font-size:14px;font-weight:500;color:var(--muted)}
+
+/* Surfehøyde-graf (16 dager) */
+.graph-wrap{margin:14px -16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative}
+.graph-wrap::-webkit-scrollbar{display:none}
+.graph{display:block;height:200px}
+.graph .g-day{fill:var(--muted);font-size:12px;font-weight:600}
+.graph .g-tick{fill:var(--muted);font-size:10px}
+.graph .g-bar{cursor:pointer}
+.graph .g-bar.sel rect.main{stroke:var(--ink);stroke-width:2}
+.graph .g-lang rect.main{opacity:.55}
+.graph .g-hl{fill:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+.graph .g-bar.sel .g-hl{fill:var(--ink);font-weight:700}
+.graph .g-bg-dusk{fill:var(--dusk)} .graph .g-bg-dark{fill:var(--night)}
+.graph .g-grid{stroke:var(--line);stroke-width:1}
+.graph .g-now{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 3}
+.graph .g-break{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3}
+.g-axis{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:6px 0 0}
+.g-axis .sw{margin:0 3px 0 8px;vertical-align:-1px}
+.tide-svg{display:block;width:100%;height:96px}
+.tide-svg .t-curve{fill:none;stroke:var(--wind);stroke-width:2}
+.tide-svg .t-fill{fill:var(--wind);opacity:.12}
+.tide-svg .t-now{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 3}
+.tide-svg text{fill:var(--muted);font-size:11px}
+
+/* "Detaljer" - lukket som standard (ROADMAP oppgave K) */
+details.more{margin:14px 0 0}
+details.more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 16px;background:var(--raised);border-radius:16px;font:700 17px/1.2 var(--display)}
+details.more > summary::-webkit-details-marker{display:none}
+details.more > summary::after{content:"›";font-size:24px;color:var(--muted);transform:rotate(90deg);transition:transform .15s}
+details.more[open] > summary::after{transform:rotate(-90deg)}
+details.more[open] > summary{border-radius:16px 16px 0 0}
+details.more .grid{margin:1px 0 0;border-radius:0 0 16px 16px}
+@media (prefers-reduced-motion: reduce){details.more > summary::after{transition:none}}
+
+/* Forklaringsark (ROADMAP oppgave D) */
+#exScrim{z-index:50} #exSheet{z-index:51}
+.ex-p{margin:8px 0 0;font-size:16px}
+.ex-h{font:700 13px/1.2 var(--display);color:var(--muted);margin:18px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.ex-rows{background:var(--surface);border-radius:12px;padding:4px 12px}
+.ex-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.ex-row:first-child{border-top:0}
+.ex-k{color:var(--muted)} .ex-v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 </style>
 </head>
 <body class="has-tabs">
@@ -306,7 +413,18 @@ h2.sec{font:700 22px/1.2 var(--display);margin:26px 0 8px}
   <p class="sub" id="witnessSub"></p>
   <div class="starpick" id="witnessPick"></div>
 </section>
+<div class="scrim" id="exScrim"></div>
+<section class="sheet" id="exSheet" role="dialog" aria-modal="true" aria-labelledby="exTitle" aria-hidden="true">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <span style="width:60px"></span>
+    <h2 id="exTitle">Forklaring</h2>
+    <button class="link" id="exClose">Lukk</button>
+  </div>
+  <div id="exBody"></div>
+</section>
 <div class="toast" id="toast" role="status"></div>
+<script src="js/explain.js"></script>
 
 <script>
 /* ---------- Oppsett ---------- */
@@ -420,7 +538,7 @@ function starsSVG(solid, faded, big){
     out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" d="${STAR_PATH}"/></svg>`;
   }
   const label = `${solid} av 5 stjerner` + (faded ? `, ${faded} tapt på vind eller tidevann` : "");
-  return `<span class="stars${big?" big":""}" role="img" aria-label="${label}">${out}</span>`;
+  return `<span class="stars r${Math.max(0,Math.min(5,solid|0))}${big?" big":""}" role="img" aria-label="${label}">${out}</span>`;
 }
 
 function favIconSvg(active){
@@ -558,6 +676,72 @@ function staleBanner(){
   if(!(Date.now() - gen.getTime() > STALE_HOURS*36e5)) return "";
   return `<p class="warn stale" role="alert"><b>Varselet er ikke oppdatert siden ${relDay(gen)} kl. ${fmtTime.format(gen)}.</b> Henteren har trolig feilet. Tallene kan være utdaterte.</p>`;
 }
+/* ---------- ROADMAP oppgave C/D/K: felles små byggeklosser ---------- */
+const ARROW_PATH = "M12 3l5 6h-3v12h-4V9H7z"; // pil som peker OPP (nord) i utgangspunktet
+function dirArrowSVG(fromDeg, cls, title){
+  // Retning er "fra"-retning (CLAUDE.md). Pila skal peke dit bølgene/vinden
+  // GÅR, altså fra+180 - samme konvensjon som pilene på skiva i kartet.
+  if(fromDeg==null) return `<svg class="arrow ${cls||""}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`;
+  const to = ((fromDeg+180)%360+360)%360;
+  return `<svg class="arrow ${cls||""}" viewBox="0 0 24 24" aria-hidden="true"${title?` aria-label="${esc(title)}"`:""}><path d="${ARROW_PATH}" fill="currentColor" transform="rotate(${to} 12 12)"/></svg>`;
+}
+function ratingClass(stars){ return `rc${Math.max(0,Math.min(5,(stars|0)))}`; }
+function surfRangeText(h){
+  // "1,2 til 1,6 m" (surfehøyde til sett) - ROADMAP oppgave C punkt 2. For
+  // 0-1 stjerne med en grunn (flatt/blåst ut/stormsjø/treffer ikke) vises
+  // ordet, med den ekte høyden i parentes der den finnes (samme regel som
+  // heightMForDisplay()).
+  if(h.low_reason){
+    const m = heightMForDisplay(h);
+    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+  }
+  if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
+  if(h.surf_height_sets!=null && h.surf_height_sets > h.surf_height + 0.05) return `${nf1.format(h.surf_height)} til ${nf1.format(h.surf_height_sets)} m`;
+  return `${nf1.format(h.surf_height)} m`;
+}
+function kjOf(h){ return h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj; }
+function windShort(h){
+  if(h.wind_speed==null) return "";
+  return `${nf0.format(h.wind_speed)} m/s ${windLabel(h)}`;
+}
+function dayBests(spot){
+  // Beste time i brukbart lys per dag (samme regel som dagbrikkene:
+  // kildene-uenige-timer bare som siste utvei). Returnerer [{key, date, h, idx, lit}].
+  const days = new Map();
+  spot.hours.forEach((h,i)=>{ const k = dayKey(new Date(h.t)); if(!days.has(k)) days.set(k,[]); days.get(k).push([h,i]); });
+  return [...days.entries()].map(([k,list])=>{
+    const lit = list.filter(([h])=>h.daylight===true);
+    if(!lit.length) return {key:k, date:new Date(list[0][0].t), h:null, idx:list[0][1], lit:false};
+    const clean = lit.filter(([h])=>!h.sources_disagree);
+    const pool = clean.length ? clean : lit;
+    let best = pool[0];
+    for(const pair of pool) if(pair[0].stars > best[0].stars) best = pair;
+    return {key:k, date:best[0] ? new Date(best[0].t) : new Date(list[0][0].t), h:best[0], idx:best[1], lit:true};
+  });
+}
+function miniGraphSVG(spot, spotIdx){
+  // Mini-graf på kortet: én søyle per dag (beste time i lyse timer), høyde =
+  // stjerner, farge = rating. Dagene etter dag 7 (langtid) blekere. Trykk på
+  // en søyle går til den timen (samme som dagbrikkene gjorde før).
+  const bests = dayBests(spot).slice(0, 16);
+  const W = 100 * bests.length / 16 * 3.6, H = 50, colW = 360 / 16, barW = colW - 6, base = 36;
+  const bars = bests.map((b,i)=>{
+    const st = b.h ? b.h.stars : 0;
+    const hgt = Math.max(3, st * 6);
+    const x = i * colW + 3;
+    const lang = b.h && b.h.zone==="langtid";
+    const lbl = fmtDayShort.format(b.date).replace(/\.$/,"");
+    const aria = b.h ? `${cap(relDay(b.date))}: ${st} av 5 stjerner${b.h.surf_height!=null?`, ${nf1.format(b.h.surf_height)} m`:""}` : `${cap(relDay(b.date))}: mørkt`;
+    return `<g class="mini-bar" data-spot="${spotIdx}" data-sel="${b.idx}" role="listitem" aria-label="${esc(aria)}">
+      <rect x="${x}" y="${base-hgt}" width="${barW}" height="${hgt}" rx="2" fill="var(--r${st})"${lang?' opacity=".5"':""}${b.lit?"":' opacity=".25"'}/>
+      <text x="${x+barW/2}" y="${H-2}" text-anchor="middle" font-size="9" fill="var(--muted)">${esc(lbl)}</text>
+    </g>`;
+  }).join("");
+  const brk = bests.findIndex(b=>b.h && b.h.zone==="langtid");
+  const brkLine = brk > 0 ? `<line x1="${brk*colW}" y1="4" x2="${brk*colW}" y2="${base}" stroke="var(--line)" stroke-dasharray="3 2"/>` : "";
+  return `<svg class="mini" viewBox="0 0 360 ${H}" preserveAspectRatio="none" role="list" aria-label="Beste rating per dag, 16 dager">${brkLine}${bars}</svg>`;
+}
+
 function renderList(){
   const gen = new Date(DATA.generated);
   const order = DATA.spots.map((s,i)=>i).sort((a,b)=>{
@@ -565,37 +749,41 @@ function renderList(){
     const fb = isFavSpot(DATA.spots[b].id) ? 0 : 1;
     return fa - fb;
   });
-  let rows = order.map(i=>{
+  const cards = order.map(i=>{
     const s = DATA.spots[i];
     const h = s.hours[currentHour(s)];
     if(!h) return "";
-    const listM = heightMForDisplay(h);
-    const listKj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
-    const facts = [
-      listM!=null ? `${nf1.format(listM)} m` : null,
-      listKj!=null ? `${nf0.format(listKj)} kJ` : null,
-      h.period!=null ? `${nf0.format(h.period)} s` : null,
-      h.wind_speed!=null ? `${WIND_WORD[h.wind_type]||""} ${nf0.format(h.wind_speed)} m/s` : null,
-    ].filter(Boolean).map(f=>`<span>${f}</span>`).join("");
-    return `<div class="spotrow">
-      <button class="row" data-spot="${i}">
-        <span><span class="name">${esc(s.name)}</span><br><span class="area">${esc(s.area||"")}</span></span>
-        <span style="display:flex;align-items:center;gap:8px">${starsSVG(h.stars,h.faded)}<span class="chev" aria-hidden="true">›</span></span>
-        <span class="facts">${facts}${h.low_reason?`<span>${esc(LOW_REASON_WORD[h.low_reason].toLowerCase())}</span>`:(h.uncertain?"<span>usikkert</span>":"")}</span>
-        <span class="best">${bestText(s)}</span>
+    // Stripa viser DAGENS beste rating (ROADMAP C punkt 2), tallene viser nå.
+    const today = dayBests(s).find(b=>b.key===dayKey(new Date()));
+    const bestToday = today && today.h ? today.h.stars : h.stars;
+    const kj = kjOf(h);
+    const windCls = h.wind_speed!=null && h.wind_speed>=3 ? (h.wind_type||"") : "";
+    return `<div class="card ${ratingClass(bestToday)}">
+      <span class="stripe" aria-hidden="true"></span>
+      <button class="card-btn" data-spot="${i}" aria-label="${esc(s.name)}, nå ${h.stars} av 5 stjerner, ${esc(surfRangeText(h))}">
+        <div class="c-head"><span class="name">${esc(s.name)}</span><span class="area">${esc(s.area||"")}</span></div>
+        <div class="c-now">${starsSVG(h.stars,h.faded)}<span class="c-h">${esc(surfRangeText(h))}</span></div>
+        <div class="c-facts">
+          ${kj!=null?`<span class="f">${nf0.format(kj)} kJ</span>`:""}
+          ${h.period!=null?`<span class="f">${nf0.format(h.period)} s</span>`:""}
+          ${h.wind_speed!=null?`<span class="f">${dirArrowSVG(h.wind_dir, windCls, "vind fra "+compass(h.wind_dir))}${esc(windShort(h))}</span>`:""}
+          ${h.uncertain && !h.low_reason ? `<span class="f">usikkert</span>` : ""}
+        </div>
+        <div class="c-best">${esc(bestText(s))}</div>
+        ${miniGraphSVG(s, i)}
       </button>
       ${favBtnHtml(s.id, true)}
-      ${dayChipsHtml(s, i)}
     </div>`;
   }).join("");
   $("#app").innerHTML = `${sampleBanner()}${staleBanner()}
     <header class="top"><h1>Varsel</h1><p class="sub">${DATA.sample?"Eksempel, ikke ekte data":`Oppdatert ${relDay(gen)} kl. ${fmtTime.format(gen)}`}</p></header>
-    <div class="list">${rows}</div>`;
-  document.querySelectorAll(".row").forEach(b=>b.onclick=()=>{
+    <div class="cards">${cards}</div>`;
+  document.querySelectorAll(".card-btn").forEach(b=>b.onclick=()=>{
     state.spot = +b.dataset.spot; state.sel = currentHour(DATA.spots[state.spot]); render(); window.scrollTo(0,0);
   });
-  document.querySelectorAll(".daychip").forEach(b=>b.onclick=()=>{
-    state.spot = +b.dataset.spot; state.sel = +b.dataset.sel; state.scrollToSel = true; render(); window.scrollTo(0,0);
+  document.querySelectorAll(".mini-bar").forEach(g=>g.onclick=(ev)=>{
+    ev.stopPropagation();
+    state.spot = +g.dataset.spot; state.sel = +g.dataset.sel; state.scrollToSel = true; render(); window.scrollTo(0,0);
   });
   wireFavButtons();
 }
@@ -736,6 +924,123 @@ function lightText(spot, t){
     n: d.sun ? "Fra skumring til skumring" : "Mørketid, bare skumring"};
 }
 
+/* ---------- Detaljsiden (ROADMAP oppgave C punkt 3, D og K) ---------- */
+function surfGraphSVG(s, selIdx){
+  // Surfehøyde over 16 dager: søyle per time de første 7 dagene, per dag
+  // etterpå (langtid, blekere), farget etter rating, sett-høyde som tynnere
+  // søyle over, lys (dag/skumring/mørkt) som bakgrunn, trykk velger time.
+  // Vannrett rullbar (samme mønster som den gamle timestripa) - 7 døgn med
+  // timesøyler får ikke plass på en telefonskjerm uten å bli uleselige.
+  const COLW = 14, DAYW = 44, H = 200, top = 22, base = 170, padL = 30;
+  const items = [];
+  const langDays = new Map();
+  s.hours.forEach((h,i)=>{
+    if(h.zone==="langtid"){
+      const k = dayKey(new Date(h.t));
+      if(!langDays.has(k)) langDays.set(k, {key:k, hours:[]});
+      langDays.get(k).hours.push([h,i]);
+    } else items.push({kind:"hour", h, i, w:COLW});
+  });
+  for(const d of langDays.values()){
+    const lit = d.hours.filter(([h])=>h.daylight!==false);
+    const pool = lit.length ? lit : d.hours;
+    let best = pool[0]; for(const p of pool) if(p[0].stars > best[0].stars) best = p;
+    items.push({kind:"day", h:best[0], i:best[1], w:DAYW, all:d.hours.map(x=>x[0])});
+  }
+  const maxM = Math.max(1.5, ...s.hours.map(h=>Math.max(h.surf_height_sets||0, h.surf_height||0, heightMForDisplay(h)||0)));
+  const scale = (base - top - 8) / maxM;
+  const W = padL + items.reduce((a,it)=>a+it.w, 0) + 10;
+  let x = padL, out = "", dayLabels = "", bgs = "", breaks = "";
+  let lastDay = null, selX = null;
+  items.forEach(it=>{
+    const h = it.h;
+    const d = new Date(h.t), k = dayKey(d);
+    if(k !== lastDay){
+      dayLabels += `<text class="g-day" x="${x+2}" y="14">${esc(it.kind==="day" ? fmtDate.format(d).replace(/\.$/,"") : relDay(d))}</text>`;
+      if(lastDay!==null) breaks += `<line class="g-grid" x1="${x-1}" y1="${top}" x2="${x-1}" y2="${base}"/>`;
+      lastDay = k;
+    }
+    // lys-bakgrunn (f)
+    const light = h.light || (h.daylight===false ? "mørkt" : "dag");
+    if(light!=="dag") bgs += `<rect class="${light==="mørkt"?"g-bg-dark":"g-bg-dusk"}" x="${x}" y="${top}" width="${it.w}" height="${base-top}"/>`;
+    const m = h.low_reason ? (h.low_reason==="blown_out"||h.low_reason==="stormsjo" ? heightMForDisplay(h) : 0) : h.surf_height;
+    const sets = h.low_reason ? null : h.surf_height_sets;
+    const hgt = m!=null ? Math.max(m>0?3:1.5, m*scale) : 1.5;
+    const sel = it.i===selIdx || (it.kind==="day" && it.all.some(a=>s.hours[selIdx]===a));
+    if(sel) selX = x;
+    const bw = it.kind==="day" ? it.w-10 : it.w-4;
+    const bx = x + (it.w-bw)/2;
+    const setsRect = sets!=null && sets > (m||0) ? `<rect x="${bx+bw*0.3}" y="${base-sets*scale}" width="${bw*0.4}" height="${(sets-(m||0))*scale}" rx="1.5" fill="var(--r${h.stars})" opacity=".45"/>` : "";
+    const lbl = it.kind==="day" ? fmtDayShort.format(d).replace(/\.$/,"") : fmtHour.format(d);
+    const aria = `${relDay(d)} kl. ${fmtHour.format(d)}: ${h.stars} av 5 stjerner, ${surfRangeText(h)}${h.zone==="langtid"?", langtid":""}${h.confidence!=null?`, ${h.confidence} % sikker`:""}`;
+    out += `<g class="g-bar${sel?" sel":""}${it.kind==="day"?" g-lang":""}" data-i="${it.i}" role="button" tabindex="0" aria-label="${esc(aria)}" aria-pressed="${sel}">
+      <rect x="${x}" y="${top}" width="${it.w}" height="${base-top+16}" fill="transparent"/>
+      ${setsRect}
+      <rect class="main" x="${bx}" y="${base-hgt}" width="${bw}" height="${hgt}" rx="2" fill="var(--r${h.stars})"${h.zone==="reserve"?' opacity=".8"':""}/>
+      ${(it.kind==="day" || (d.getUTCHours()%3===0)) ? `<text class="g-hl" x="${x+it.w/2}" y="${base+13}" text-anchor="middle">${esc(lbl)}</text>` : ""}
+    </g>`;
+    x += it.w;
+  });
+  const ticks = [];
+  for(let v=0.5; v<=maxM; v+=0.5) ticks.push(`<line class="g-grid" x1="${padL}" y1="${base-v*scale}" x2="${W}" y2="${base-v*scale}"/><text class="g-tick" x="${padL-4}" y="${base-v*scale+3}" text-anchor="end">${nf1.format(v)}</text>`);
+  const nowIdx = currentHour(s);
+  let nx = padL; for(const it of items){ if(it.i===nowIdx) break; nx += it.w; }
+  const nowLine = `<line class="g-now" x1="${nx}" y1="${top}" x2="${nx}" y2="${base}"/>`;
+  const bwUntil = s.bw_until ? items.findIndex(it=>it.h.t > s.bw_until) : -1;
+  let bx2 = padL; for(let j=0;j<bwUntil;j++) bx2 += items[j].w;
+  const bwLine = bwUntil>0 ? `<line class="g-break" x1="${bx2}" y1="${top}" x2="${bx2}" y2="${base}"/><text class="g-tick" x="${bx2+3}" y="${base-2}">anslag →</text>` : "";
+  return {svg:`<svg class="graph" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="Surfehøyde per time, 16 dager">${bgs}${ticks.join("")}${breaks}${bwLine}${nowLine}${dayLabels}${out}</svg>`, selX, width:W};
+}
+
+function tideCurveSVG(s, t, h){
+  // Tidevannskurve over den valgte dagen (lokal tid), cosinus-interpolert
+  // mellom Kartverkets flo/fjære-tidspunkt, med nå/valgt time markert.
+  const ev = (s.tide_events||[]).map(e=>({t:new Date(e.time).getTime(), cm:e.cm, type:e.type})).sort((a,b)=>a.t-b.t);
+  if(ev.length < 2) return "";
+  const dayStart = new Date(t); // lokal midnatt for valgt dag
+  const parts = new Intl.DateTimeFormat("sv-SE",{timeZone:TZ, hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).formatToParts(t);
+  const hh = +parts.find(p=>p.type==="hour").value, mm = +parts.find(p=>p.type==="minute").value;
+  const start = t.getTime() - (hh*60+mm)*60000, end = start + 864e5;
+  const level = (ms)=>{
+    let a = null, b = null;
+    for(const e of ev){ if(e.t<=ms) a = e; if(e.t>ms){ b = e; break; } }
+    if(!a || !b) return null;
+    const f = (ms - a.t) / (b.t - a.t);
+    return a.cm + (b.cm - a.cm) * (1 - Math.cos(Math.PI*f)) / 2;
+  };
+  const W = 360, H = 96, padL = 30, padR = 8, top = 10, base = 72;
+  const cms = []; for(let ms=start; ms<=end; ms+=15*60000){ const v = level(ms); if(v!=null) cms.push(v); }
+  if(!cms.length) return "";
+  const lo = Math.min(...cms, ...ev.filter(e=>e.t>=start&&e.t<=end).map(e=>e.cm)), hi = Math.max(...cms, ...ev.filter(e=>e.t>=start&&e.t<=end).map(e=>e.cm));
+  const xOf = ms => padL + (ms-start)/864e5*(W-padL-padR);
+  const yOf = cm => base - (cm-lo)/Math.max(1,hi-lo)*(base-top);
+  let d = "", first = true;
+  for(let ms=start; ms<=end; ms+=15*60000){ const v = level(ms); if(v==null) continue; d += `${first?"M":"L"}${xOf(ms).toFixed(1)},${yOf(v).toFixed(1)} `; first = false; }
+  const marks = ev.filter(e=>e.t>=start && e.t<=end).map(e=>`<circle cx="${xOf(e.t).toFixed(1)}" cy="${yOf(e.cm).toFixed(1)}" r="3" fill="var(--wind)"/><text x="${xOf(e.t).toFixed(1)}" y="${e.type==="flo"?yOf(e.cm)-7:yOf(e.cm)+13}" text-anchor="middle">${e.type} ${fmtTime.format(new Date(e.t))}</text>`).join("");
+  const nowX = xOf(Math.min(end, Math.max(start, t.getTime()+18e5)));
+  const hours = [0,6,12,18,24].map(hr=>`<text x="${xOf(start+hr*36e5).toFixed(1)}" y="${H-2}" text-anchor="${hr===0?"start":hr===24?"end":"middle"}">${String(hr).padStart(2,"0")}</text>`).join("");
+  return `<svg class="tide-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tidevann ${relDay(t)}: ${h.tide?`${h.tide.rising?"stigende":"fallende"}, ${h.tide.state}`:""}">
+    <path class="t-fill" d="${d}L${xOf(end).toFixed(1)},${base} L${padL},${base} Z"/>
+    <path class="t-curve" d="${d}"/>
+    <line class="t-now" x1="${nowX.toFixed(1)}" y1="${top}" x2="${nowX.toFixed(1)}" y2="${base}"/>
+    ${marks}${hours}
+    <text x="${padL-4}" y="${top+4}" text-anchor="end">${hi}</text><text x="${padL-4}" y="${base+2}" text-anchor="end">${lo} cm</text>
+  </svg>`;
+}
+
+function noticeHtml(h){
+  // ROADMAP oppgave K punkt 6: advarsler som ÉN kort linje øverst, med
+  // forklaring ved trykk (samme ord som ellers - low_reason/sources_disagree).
+  if(h.low_reason==="blown_out") return `<button type="button" class="notice bad" data-explain="wind"><b>Blåst ut.</b> ${h.wind_speed!=null?`${nf0.format(h.wind_speed)} m/s ${windLabel(h)}`:"Sterk vind"} tar stjernene.${h.bw_height!=null?` BarentsWatch måler ${nf1.format(h.bw_height)} m.`:""}</button>`;
+  if(h.low_reason==="stormsjo") return `<button type="button" class="notice bad" data-explain="swell"><b>Stormsjø.</b> Mest vindsjø, ikke ekte svell${h.swell_share!=null?` (${Math.round(h.swell_share*100)} % svell)`:""}.</button>`;
+  if(h.low_reason==="treffer_ikke") return `<button type="button" class="notice bad" data-explain="direction"><b>Treffer ikke.</b> Svellet fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°) kommer utenfor vinduet.</button>`;
+  if(h.sources_disagree) return `<button type="button" class="notice bad" data-explain="sources"><b>Kildene er uenige.</b> ${esc((h.sources_disagree_reason||"").replace(/^Kildene er uenige\.\s*/, "").split(". ")[0])}.</button>`;
+  if(h.height_source==="barentswatch") return `<button type="button" class="notice ok" data-explain="sources"><b>Høyden er fra BarentsWatch</b>${h.bw_interpolated?", interpolert":""}. Mest pålitelige kilde.</button>`;
+  if(h.height_source==="svell_ute" && h.directness!=null && h.directness < 1) return `<button type="button" class="notice" data-explain="direction"><b>Svell ${h.directness<0.667?"utenfor":"i kanten av"} vinduet.</b> ${nf0.format(h.directness*100)} % av høyden ved direkte treff når inn.</button>`;
+  if(h.uncertain) return `<button type="button" class="notice" data-explain="confidence"><b>Usikkert varsel, maks 3 stjerner.</b> Anslag til BarentsWatch er koblet på.</button>`;
+  return "";
+}
+
 function renderSpot(){
   const s = DATA.spots[state.spot];
   const h = s.hours[state.sel];
@@ -746,120 +1051,99 @@ function renderSpot(){
   const verdict = h.faded
     ? `${starWord}. Svellet er verdt ${h.stars+h.faded}, men ${losses.join(" og ")}.`
     : `${starWord}.`;
-
-  // Timestripe gruppert per dag
-  const days = {};
-  s.hours.forEach((x,i)=>{ const k=dayKey(new Date(x.t)); (days[k]=days[k]||[]).push([x,i]); });
-  const strip = Object.values(days).map(list=>{
-    const d = new Date(list[0][0].t);
-    const cols = list.map(([x,i])=>{
-      let pips = "";
-      for(let k=0;k<x.stars;k++) pips += `<span class="pip"></span>`;
-      for(let k=0;k<x.faded;k++) pips += `<span class="pip f"></span>`;
-      if(!x.stars && !x.faded) pips = `<span class="pip z"></span>`;
-      const isReserve = !!(s.bw_until && x.t > s.bw_until) || x.zone==="reserve" || x.zone==="langtid";
-      const isBreak = isReserve && (i===0 || !(s.bw_until && s.hours[i-1].t > s.bw_until));
-      // ROADMAP oppgave B: dag 8-16 ("langtid") har bare én rad hver 6. time -
-      // egen, svakere stil, og et skille der sonen begynner.
-      const isLang = x.zone==="langtid";
-      const isLangBreak = isLang && (i===0 || s.hours[i-1].zone!=="langtid");
-      // 06.10.2026, Theodors oppgave: kJ i timestripa - strimmelen er for
-      // smal til synlig tekst per time (dusinvis av timer i en rad), så
-      // energien legges i aria-label i stedet, samme mønster som
-      // faded/mørkt/anslag over (allerede ikke vist som egen tekst i cella).
-      const xKj = x.swell_offshore!=null ? x.energy_swell_kj : x.energy_total_kj;
-      const lbl = `${fmtHour.format(new Date(x.t))}: ${x.stars} stjerner${x.faded?`, ${x.faded} tapt på vind`:""}${x.light==="mørkt"||x.daylight===false?", mørkt":(x.light==="skumring"?", skumring":"")}${isLang?", langtid":(isReserve?", anslag":"")}${x.confidence!=null?`, ${x.confidence} prosent sikker`:""}${xKj!=null?`, ${Math.round(xKj)} kJ`:""}`;
-      return `<button class="h${lightClass(x)}${i===state.sel?" sel":""}${isReserve?" resmodel":""}${isLang?" langtid":""}${isBreak?" bw-break":""}${isLangBreak?" lang-break":""}" data-i="${i}" aria-label="${lbl}" aria-pressed="${i===state.sel}">
-        <span class="bar">${pips}</span><span class="hl">${fmtHour.format(new Date(x.t))}</span></button>`;
-    }).join("");
-    return `<div class="day"><span class="day-label">${relDay(d)}</span><div class="hours">${cols}</div></div>`;
-  }).join("");
-
-  // Advarsel om retning/dreining
-  let warn = "";
-  if(h.low_reason==="blown_out"){
-    // 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md):
-    // dekker nå BÅDE den gamle saken (flat-sperren tvang høyden til 0 PÅ
-    // TROSS AV en reell BarentsWatch-totalhøyde) OG den nye (reell
-    // surfehøyde, men vindstraffen alene tar stjernene) - se
-    // fetcher/rating.classify_low_rating(). Teksten tilpasses hvilken av de
-    // to det er, og viser høyden i stedet for å gjemme den.
-    const share = h.swell_share!=null ? Math.round(h.swell_share*100) : null;
-    const cause = share!=null && share < 50 ? "mye vindsjø og sterk vind" : "sterk vind";
-    const heightTxt = h.surf_height!=null && h.surf_height>0 ? ` Surfehøyde ${nf1.format(h.surf_height)} m, men` : "";
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Blåst ut.</b>${heightTxt} ${cause} tar stjernene, ikke surfbart.${h.bw_height!=null?` BarentsWatch måler ${nf1.format(h.bw_height)} m totalt ved punktet.`:""}</span></div>`;
-  } else if(h.low_reason==="stormsjo"){
-    const share = h.swell_share!=null ? Math.round(h.swell_share*100) : null;
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Stormsjø.</b> Mye av totalhøyden er vindsjø, ikke ekte svell${share!=null?` (bare ${share} % svell)`:""}.${h.bw_height!=null?` BarentsWatch måler ${nf1.format(h.bw_height)} m totalt ved punktet.`:""}</span></div>`;
-  } else if(h.sources_disagree){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Kildene er uenige.</b> ${esc(h.sources_disagree_reason.replace(/^Kildene er uenige\.\s*/, ""))}</span></div>`;
-  } else if(h.height_source==="barentswatch"){
-    const interp = h.bw_interpolated ? " Denne timen er interpolert mellom to BarentsWatch-punkter." : "";
-    warn = `<div class="warn"><span aria-hidden="true">✓</span><span><b>Høyden er fra BarentsWatch.</b> Finmasket modell for kysten, den mest pålitelige kilden for denne spoten.${interp}</span></div>`;
-  } else if(h.height_source==="svell_ute" && h.directness < 0.667){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${Math.round(h.dir_offshore)}°), utenfor vinduet.</b> Bare ${nf0.format(h.directness*100)} % av høyden ved direkte treff bøyer seg inn. Usikkert, maks 3 stjerner.</span></div>`;
-  } else if(h.height_source==="svell_ute" && h.directness < 1){
-    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Svellet kommer i kanten av vinduet (${compass(h.dir_offshore)}, ${Math.round(h.dir_offshore)}°).</b> ${nf0.format(h.directness*100)} % av høyden ved direkte treff når inn.</span></div>`;
-  } else if(h.height_source==="metno_korrigert" && h.likely_flat && (h.turn==null || h.turn<=25)){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet kommer fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°), utenfor vinduet til spoten.</b> Modellen kan vise bølgehøyde her, men svellet treffer ikke stranda.</span></div>`;
-  } else if(h.height_source==="metno_korrigert" && h.likely_flat){
-    warn = `<div class="warn"><span aria-hidden="true">⚠︎</span><span><b>Svellet dreier ${Math.round(h.turn)}° inn i bukta.</b> Så stor dreining betyr som regel at det er mye mindre enn modellene viser. Høyden er justert kraftig ned.</span></div>`;
-  } else if(h.uncertain){
-    warn = `<div class="warn"><span aria-hidden="true">ⓘ</span><span><b>Usikkert varsel, maks 3 stjerner.</b> ${h.turn!=null?`Svellet dreier ${Math.round(h.turn)}° og h`:"H"}øyden er et anslag fra met.no. Blir sikrere når BarentsWatch er koblet på.</span></div>`;
-  }
-
+  const g = surfGraphSVG(s, state.sel);
   const tide = nextTide(s,t);
   const lt = lightText(s,t);
   const tideNow = h.tide ? `${h.tide.rising?"Stigende":"Fallende"}, ${h.tide.state}` : "–";
   const tidePref = s.tide && s.tide.length ? `Spoten liker ${s.tide.join(" og ")} vann` : "Spoten tåler alt tidevann";
+  const kj = kjOf(h);
+  const windCls = h.wind_speed!=null && h.wind_speed>=3 ? (h.wind_type||"") : "";
+  const conf = h.confidence!=null ? `${h.confidence} %${h.confidence_source==="målt"?" målt":""}` : "–";
 
   $("#app").innerHTML = `${sampleBanner()}${staleBanner()}
     <header class="top">
       <button class="back" id="back"><span aria-hidden="true" style="font-size:24px">‹</span> Varsel</button>
       <div class="spot-title-row"><h1>${esc(s.name)}</h1>${favBtnHtml(s.id, false)}</div>
-      <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":""}</p>
+      <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":(h.light==="skumring"?", skumring":"")}${h.zone==="langtid"?" · langtid":(h.zone==="reserve"?" · anslag":"")} · <span class="tap" data-explain="confidence">${esc(conf)} sikker</span></p>
     </header>
-    <button type="button" class="now" id="bdOpen" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h.stars,h.faded,true)}</button>
+    <div class="hero ${ratingClass(h.stars)}">
+      <button type="button" class="now" id="bdOpen" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h.stars,h.faded,true)}</button>
+      <span class="h-h tap" data-explain="surf_height">${esc(surfRangeText(h))}</span>
+      ${h.low_reason ? "" : `<span class="h-word">${esc(starWord)}</span>`}
+    </div>
     <p class="verdict">${verdict}</p>
-    <p class="sub" style="margin-top:6px">${bestText(s)}</p>
-    ${warn}
-    <div class="strip-wrap" id="stripWrap"><div class="strip">${strip}</div></div>
-    <div class="legend">
-      <span><i class="sw" style="background:var(--star)"></i>Stjerner</span>
-      <span><i class="sw" style="border:1.5px dashed var(--star)"></i>Tapt på vind eller tidevann</span>
-      <span><i class="sw" style="background:var(--dusk);border:1px solid var(--line)"></i>Skumring</span>
-      <span><i class="sw" style="background:var(--night);border:1px solid var(--line)"></i>Mørkt</span>
-    </div>
-    <div class="grid">
-      <div class="cell"><div class="k">Høyde på spoten <button type="button" class="infoBtn" id="heightInfo" aria-label="Hva er surfehøyde?">ⓘ</button></div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>${surfAdjustmentLine(h)?`<div class="n">${esc(surfAdjustmentLine(h))}</div>`:""}</div>
-      <div class="cell"><div class="k">Svell ute <button type="button" class="infoBtn" id="energyInfo" aria-label="Hva er kJ?">ⓘ</button></div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}${esc(energyText(h))}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
-      <div class="cell"><div class="k">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
-      <div class="cell"><div class="k">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo</div></div>
-      <div class="cell"><div class="k">Sikkerhet</div><div class="v">${h.confidence!=null?h.confidence+" %":"–"}</div><div class="n">${h.confidence!=null?`${h.confidence_source==="målt"?"Målt treff innenfor én stjerne":"Anslag"}, ${h.day} ${h.day===1?"dag":"dager"} frem · ${h.zone==="langtid"?"langtid (GFS)":h.zone==="reserve"?"reservemodell":"BarentsWatch"}`:""}</div></div>
-      <div class="cell"><div class="k">Vind</div><div class="v">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${esc(windLabel(h))} fra ${compass(h.wind_dir)}${h.gust!=null?`, kast ${nf0.format(h.gust)}`:""}${h.wind_interpolated?" · vind jevnet ut":""}${h.wind_source==="openmeteo"?" · GFS-vind (langtid)":""}</div></div>
-      <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div><div class="n">${tide?`${tide.type} kl. ${fmtTime.format(new Date(tide.time))}. `:""}${tidePref}</div></div>
-      <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
-      <div class="cell wide"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":(h.zone==="langtid"?"ikke tilgjengelig så langt frem":"–")} i vannet, ${h.air_temp!=null?nf0.format(h.air_temp)+" °C":"–"} i lufta</div></div>
-      ${s.shelter_label ? `<div class="cell wide"><div class="k">Skjerming <button type="button" class="infoBtn" id="shelterInfo" aria-label="Hva betyr skjerming?">ⓘ</button></div><div class="v">${esc(s.shelter_label[0].toUpperCase()+s.shelter_label.slice(1))}</div><div class="n">Startverdi for reservemodellen, før noe er lært fra BarentsWatch eller loggene</div></div>` : ""}
-    </div>
-    ${localRulesHtml(h)}
+    <p class="sub" style="margin-top:4px">${esc(bestText(s))}${h.period!=null?` · <span class="tap" data-explain="period">${nf0.format(h.period)} s</span>`:""}${h.wind_speed!=null?` · <span class="tap" data-explain="wind">${esc(windShort(h))}</span>`:""}</p>
+    ${noticeHtml(h)}
+    <div class="graph-wrap" id="graphWrap">${g.svg}</div>
+    <div class="g-axis"><span>Surfehøyde (m) · <span class="tap" data-explain="surf_height">søyle = surfehøyde, lysere topp = sett</span></span><span><i class="sw" style="background:var(--dusk);border:1px solid var(--line)"></i> skumring <i class="sw" style="background:var(--night);border:1px solid var(--line)"></i> mørkt</span></div>
+
+    <section class="sec-card">
+      <h2><span class="t tap" data-explain="swell">Svell</span>${kj!=null?`<span class="pill ${ratingClass(h.stars)} tap" data-explain="energy">${nf0.format(kj)} kJ</span>`:""}</h2>
+      <div class="swell-row">
+        <span class="dir" aria-hidden="true">${dirArrowSVG(h.dir_offshore, "", "")}</span>
+        <span><div class="lbl">Hovedsvell ute, fra ${compass(h.dir_offshore)}${h.dir_offshore!=null?` (${Math.round(h.dir_offshore)}°)`:""}</div>
+        <div class="val">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")} <small>${h.period!=null?nf0.format(h.period)+" s":""}${h.swell_model==="total_fallback"?" · svell ikke skilt ut":""}</small></div></span>
+      </div>
+      ${h.secondary_swell_height!=null && h.secondary_swell_height>0 ? `<div class="swell-row">
+        <span class="dir" aria-hidden="true">${dirArrowSVG(h.secondary_swell_dir, "", "")}</span>
+        <span><div class="lbl">Vindsjø / sekundært, fra ${compass(h.secondary_swell_dir)}</div>
+        <div class="val">${nf1.format(h.secondary_swell_height)} m <small>${h.secondary_swell_period!=null?nf0.format(h.secondary_swell_period)+" s":""}</small></div></span>
+      </div>` : (h.height_offshore!=null && h.swell_offshore!=null ? `<div class="swell-row"><span class="dir" aria-hidden="true">${dirArrowSVG(null,"","")}</span><span><div class="lbl">Totalt ute (svell + vindsjø)</div><div class="val">${nf1.format(h.height_offshore)} m <small>${h.swell_share!=null?`${Math.round(h.swell_share*100)} % svell`:""}</small></div></span></div>` : "")}
+      <div class="swell-row">
+        <span class="dir" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="${h.directness!=null && h.directness>=0.667 ? "var(--r3)" : "var(--r1)"}"/></svg></span>
+        <span><div class="lbl tap" data-explain="direction">Retningstreff</div>
+        <div class="val">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"} <small>${esc(directionHitText(h))}</small></div></span>
+      </div>
+    </section>
+
+    <section class="sec-card">
+      <h2><span class="t tap" data-explain="wind">Vind</span></h2>
+      <div class="swell-row">
+        <span class="dir" aria-hidden="true">${dirArrowSVG(h.wind_dir, windCls, "")}</span>
+        <span><div class="lbl">${esc(cap(windLabel(h)||"vind"))} fra ${compass(h.wind_dir)}${h.wind_interpolated?" · jevnet ut":""}${h.wind_source==="openmeteo"?" · GFS":""}</div>
+        <div class="val">${h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"} <small>${h.gust!=null?`kast ${nf0.format(h.gust)}`:""}${fw?` · tar ${fw} stjerne${fw===1?"":"r"}`:""}</small></div></span>
+      </div>
+    </section>
+
+    <section class="sec-card">
+      <h2><span class="t tap" data-explain="tide">Tidevann</span><span class="lbl" style="font-size:13px;color:var(--muted);font-weight:500">${tideNow}${tide?` · ${tide.type} kl. ${fmtTime.format(new Date(tide.time))}`:""}</span></h2>
+      ${tideCurveSVG(s, t, h) || `<p class="sub">${tideNow}</p>`}
+      <p class="sub" style="margin-top:4px">${esc(tidePref)}${ft?` · tar ${ft} stjerne${ft===1?"":"r"}`:""}</p>
+    </section>
+
+    <details class="more">
+      <summary>Detaljer</summary>
+      <div class="grid">
+        <div class="cell"><div class="k tap" data-explain="hs">Høyde på spoten</div><div class="v">${esc(surfHeadline(h))}</div><div class="n">${esc(surfSubtext(h))}${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>${surfAdjustmentLine(h)?`<div class="n">${esc(surfAdjustmentLine(h))}</div>`:""}</div>
+        <div class="cell"><div class="k tap" data-explain="swell">Svell ute</div><div class="v">${h.swell_offshore!=null?nf1.format(h.swell_offshore)+" m":(h.height_offshore!=null?nf1.format(h.height_offshore)+" m":"–")}${esc(energyText(h))}</div><div class="n">fra ${compass(h.dir_offshore)} (${h.dir_offshore!=null?Math.round(h.dir_offshore):"–"}°)${esc(offshoreShareText(h))}</div></div>
+        <div class="cell"><div class="k tap" data-explain="direction">Retningstreff</div><div class="v">${h.directness!=null?nf0.format(h.directness*100)+" %":"–"}</div><div class="n">${h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : `${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`}</div></div>
+        <div class="cell"><div class="k tap" data-explain="exposure">Eksponering</div><div class="v">${h.transfer!=null?nf0.format(h.transfer*100)+" %":"–"}</div><div class="n">transfer ved direkte treff${s.shelter_label?` · <span class="tap" data-explain="shelter">skjerming: ${esc(s.shelter_label)}</span>`:""}</div></div>
+        <div class="cell"><div class="k tap" data-explain="period">Periode</div><div class="v">${h.period!=null?nf0.format(h.period)+" s":"–"}</div><div class="n">Open-Meteo${h.bw_period!=null?` · BarentsWatch ${nf1.format(h.bw_period)} s ved punktet`:""}</div></div>
+        <div class="cell"><div class="k tap" data-explain="confidence">Sikkerhet</div><div class="v">${h.confidence!=null?h.confidence+" %":"–"}</div><div class="n">${h.confidence!=null?`${h.confidence_source==="målt"?"Målt treff innenfor én stjerne":"Anslag"}, ${h.day} ${h.day===1?"dag":"dager"} frem · ${h.zone==="langtid"?"langtid (GFS)":h.zone==="reserve"?"reservemodell":"BarentsWatch"}`:""}</div></div>
+        <div class="cell"><div class="k">${lt.k}</div><div class="v">${lt.v}</div><div class="n">${lt.n}</div></div>
+        <div class="cell"><div class="k">Vann og luft</div><div class="v">${h.water_temp!=null?nf0.format(h.water_temp)+" °C":(h.zone==="langtid"?"–":"–")}</div><div class="n">${h.water_temp==null&&h.zone==="langtid"?"vanntemperatur ikke tilgjengelig så langt frem · ":""}${h.air_temp!=null?nf0.format(h.air_temp)+" °C i lufta":"luft mangler"}</div></div>
+        <div class="cell wide"><div class="k tap" data-explain="sources">Kilder</div><div class="v" style="font-size:16px">${h.height_source==="barentswatch"?"BarentsWatch ved spoten":h.height_source==="svell_ute"?"Reservemodell (svell ute × transfer × eksponering)":h.height_source==="metno_korrigert"?"met.no, justert":"–"}</div><div class="n">${s.bw_until?`BarentsWatch til ${esc(s.bw_until.replace("T"," kl. ").replace("Z"," UTC"))}`:"Ingen BarentsWatch for denne spoten"} · vind ${h.wind_source==="openmeteo"?"Open-Meteo GFS":"met.no"} · tidevann Kartverket</div></div>
+      </div>
+      ${localRulesHtml(h)}
+      <p class="sub" style="margin:10px 0 0">Kalibrering (transfer, surf-faktor, eksponering lært) ligger under <a href="#" id="gotoLogger">Logger</a>.</p>
+    </details>
     <h2 class="sec">Rapporter fra andre</h2>
     <div class="reports" id="reportsSection"><p style="color:var(--muted);padding:14px 0">Laster…</p></div>`;
 
   $("#back").onclick = ()=>{ state.spot=null; render(); };
   wireFavButtons();
   $("#bdOpen").onclick = ()=>openBreakdown(h);
-  $("#heightInfo").onclick = ()=>toast(SURF_HEIGHT_EXPLAINER, null, null, 9000);
-  $("#energyInfo").onclick = ()=>toast(ENERGY_EXPLAINER, null, null, 9000);
-  if($("#shelterInfo")) $("#shelterInfo").onclick = ()=>toast(SHELTER_EXPLAINER, null, null, 9000);
-  document.querySelectorAll(".h").forEach(b=>b.onclick=()=>{
-    const x = $("#stripWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#stripWrap").scrollLeft = x;
+  const gl = $("#gotoLogger"); if(gl) gl.onclick = (e)=>{ e.preventDefault(); state.tab = "logger"; render(); window.scrollTo(0,0); };
+  document.querySelectorAll(".g-bar").forEach(b=>{
+    const go = ()=>{ const x = $("#graphWrap").scrollLeft; state.sel=+b.dataset.i; renderSpot(); $("#graphWrap").scrollLeft = x; };
+    b.onclick = go;
+    b.onkeydown = (ev)=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); go(); } };
   });
-  if(state.scrollToSel){
-    state.scrollToSel = false;
-    const sel = $(".h.sel");
-    if(sel) sel.scrollIntoView({inline:"center", block:"nearest"});
+  if(state.scrollToSel || state.graphScrollInit!==state.spot){
+    state.scrollToSel = false; state.graphScrollInit = state.spot;
+    if(g.selX!=null) $("#graphWrap").scrollLeft = Math.max(0, g.selX - 120);
   }
+  wireExplain(document, h, s);
   loadReportsUI(s.id);
 }
 

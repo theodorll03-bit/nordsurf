@@ -192,6 +192,10 @@ def main():
                 # ---------- 1. Detaljsiden: Retningstreff + lavstjerne-ordet ----------
                 page.evaluate(f"state.tab='varsel'; state.spot=0; state.sel={idx}; render();")
                 verdict = page.locator(".verdict").inner_text()
+                # ROADMAP oppgave K (natt/design): Retningstreff-cella ligger nå
+                # under "Detaljer", som er lukket som standard - åpnes her
+                # (inner_text leser ikke skjult innhold).
+                page.evaluate("const d=document.querySelector('details.more'); if(d) d.open=true;")
                 retningstreff = page.locator('.cell:has-text("Retningstreff") >> .v').inner_text()
                 expected_pct = f"{round(hour['directness'] * 100)} %"
                 assert retningstreff == expected_pct, (

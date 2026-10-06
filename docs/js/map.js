@@ -46,10 +46,14 @@ function arcPath(cx, cy, r, a, b){
 function ringSegments(cx, cy, r, stars, faded, clsPrefix){
   const n = 5, gap = 7, step = 360/n;
   let out = "";
+  // ROADMAP oppgave C punkt 1/4: ringen i ratingfargen (--r0..--r5, samme
+  // tokens som stjernene i lista) - tallet/stjernene står alltid ved siden
+  // av, fargen er aldri eneste bærer.
+  const rc = `var(--r${Math.max(0,Math.min(5,stars|0))})`;
   for(let i=0;i<n;i++){
     const a = i*step + gap/2, b = (i+1)*step - gap/2;
     const cls = i < stars ? "solid" : i < stars+faded ? "faded" : "empty";
-    out += `<path class="${clsPrefix} ${cls}" d="${arcPath(cx,cy,r,a,b)}"/>`;
+    out += `<path class="${clsPrefix} ${cls}"${cls!=="empty"?` style="stroke:${rc}"`:""} d="${arcPath(cx,cy,r,a,b)}"/>`;
   }
   return out;
 }
@@ -204,7 +208,7 @@ function soloMarkerHtml(spot, h, showName){
   const r = good ? 16 : 14, size = good ? 36 : 32, cx = size/2, cy = size/2;
   const ring = `<svg class="ring" viewBox="0 0 ${size} ${size}">${ringSegments(cx,cy,r-3, stars, faded, "mm-seg")}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${stars}</text></svg>`;
   const cls = ["spot-mark", good?"good":"", night?"night":"", showName?"show-name":""].filter(Boolean).join(" ");
-  return `<button type="button" class="${cls}" aria-label="${esc(markerLabel(spot,h))}" tabindex="0">
+  return `<button type="button" class="${cls}" style="--rc:var(--r${stars})" aria-label="${esc(markerLabel(spot,h))}" tabindex="0">
     <span class="plate" style="position:relative">${night?MOON:""}${ring}<span class="mm-h">${esc(heightText(h))}</span></span>
     <span class="name">${esc(spot.name)}</span>
   </button>`;
