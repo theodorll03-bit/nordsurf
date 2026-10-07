@@ -1,5 +1,43 @@
 # Nordsurf: status
 
+## Theodors oppfølging 07.10.2026: WAVEWATCH III 4 km som mulig erstatter for oppgave J - plan og tabeller, INGENTING koblet inn
+
+Svar på de seks spørsmålene, alle bekreftet direkte mot met.no (nettleser + `requests` mot live API-er, ikke antatt):
+
+**1. Produkt og drift:** "met.no WW III 4km Regional wave forecasting system", `thredds.met.no/thredds/catalog/fou-hi/ww3_4km.html` (kataloger `ww3_4km_latest_files`/`ww3_4km_archive`). Står i met.no sin HOVEDliste (`fou-hi/fou-hi.html`), IKKE under "Discontinued" (der WAM800 nå står, se forrige avsnitt). Siste fil da dette ble sjekket: `ww3_20261007T06Z.nc`, endret kl. 09:05 SAMME morgen - i aktiv, fersk drift.
+
+**2. Oppløsning og dekning:** 4 km, rotert pol-projeksjon, 1026×624 punkter. Hentet et grovt rutenett (hvert 20. punkt) og fant: **lat 43-85 N, lon -31 til 93 Ø** - dekker hele norskekysten (Tromsø/Lyngen/Senja/Lofoten og Hustadvika) med god margin, pluss Nordsjøen, Barentshavet og store deler av Nord-Atlanteren. Fant et vått rutepunkt innen 0,1-4,9 km fra havpunktet for alle åtte spots (nærmeste VÅTE celle - noen havpunkter traff en landcelle først, se `fetcher/ww3_explore.py`). Russelv og Lenangsøyra havner i nøyaktig samme WW3-celle (som i GFS Wave, se forrige avsnitt).
+
+**3. Svell og vindsjø hver for seg:** JA. Variablene er delt i "partisjoner" - bekreftet fra `standard_name`-attributtene i datasettet, ikke gjettet: `phs0`/`ptp0`/`pdir0` er `sea_surface_WIND_WAVE_...` (vindsjø), `phs1`/`ptp1`/`pdir1` er `sea_surface_SWELL_wave_...` (svell), pluss `hs`/`dir`/`tp` for totalen. Sjekket at de henger sammen fysisk: total høyde = √(vindsjø² + svell²) (RMS-summen) stemmer med `hs` innenfor avrunding for alle stikkprøver. **Retningen er ALLEREDE "fra"** (`sea_surface_wave_from_direction`) - MOTSATT av WAM800 og BarentsWatch sin "mot"-konvensjon. Trenger IKKE +180 hvis dette kobles inn - enklere enn de andre kildene på akkurat dette punktet.
+
+**4. Horisont og oppdatering:** 66-73 timer avhengig av kjøring (litt mer enn annonserte 66 t), 4 kjøringer i døgnet (00/06/12/18Z), typisk klar 2-3 timer etter kjøretidspunktet.
+
+**5. Bruker met.no Oceanforecast (som appen allerede henter via `metno_ocean()`) denne modellen?** Ikke sikkert bekreftet - met.no sin egen dokumentasjon sier bare "basert på flere bølge- og sjømodeller" uten å navngi hvilken for et gitt punkt. Sammenlignet likevel direkte (samme klokkeslett, samme punkt): Oceanforecast sin totalhøyde var konsekvent 27-39 % HØYERE enn WW3 sin rå `hs` for alle tre test-spotene, mens retningen stemte godt for to av tre (innen 5°) og dårligere for den tredje (22°). Tyder på at Oceanforecast IKKE er en ren videreformidling av akkurat dette WW3-punktet - trolig en blanding/interpolering, eller et annet, nærmere kystpunkt enn det jeg fant. Bekreftet derimot: Oceanforecast sin 2.0-dokumentasjon bruker SAMME "fra"-konvensjon som WW3 (`sea_surface_wave_from_direction`), så det er ingen motsetning i selve retningsstandarden.
+
+**6. Sammenligning, Unstad/Grøtfjord/Farstadsanden, 07.10 kl. 06:00Z (samme time i alle tre kilder):**
+
+| Spot | Kilde | Høyde | Retning | Periode |
+|---|---|---|---|---|
+| Unstad | GFS Wave (Open-Meteo, i bruk i dag) | 1,62 m | 249° | 12,1 s |
+| Unstad | BarentsWatch (ved spoten) | 0,94 m | 308° | 8,3 s |
+| Unstad | **WW3, total** | 2,46 m | 315° | 9,1 s |
+| Unstad | **WW3, svell** | 1,96 m | 321° | 9,1 s |
+| Unstad | **WW3, vindsjø** | 1,49 m | 307° | 6,9 s |
+| Grøtfjord | GFS Wave | 0,98 m | 255° | 13,3 s |
+| Grøtfjord | BarentsWatch | 1,52 m | 298° | 7,8 s |
+| Grøtfjord | **WW3, total** | 3,23 m | 314° | 9,7 s |
+| Grøtfjord | **WW3, svell** | 2,33 m | 313° | 9,7 s |
+| Farstadsanden | GFS Wave | 1,56 m | 340° | 9,3 s |
+| Farstadsanden | BarentsWatch | 1,09 m | 304° | 8,5 s |
+| Farstadsanden | **WW3, total** | 1,81 m | 336° | 10,0 s |
+| Farstadsanden | **WW3, svell** | 1,81 m | 336° | 10,0 s (vindsjø neglisjerbar, 0,05 m) |
+
+**Ærlig lesning, ikke konkludert:** WW3 sin svellhøyde er gjennomgående HØYERE enn både GFS Wave og BarentsWatch for alle tre - ikke bare litt, 2-3 ganger BarentsWatch sin målte høyde ved spoten for Unstad/Grøtfjord. Retningen er en blandet sammenligning: for Unstad og Grøtfjord ligger WW3 sin svellretning NÆRMERE BarentsWatch (13-15° unna) enn GFS Wave er (58-66° unna) - for Farstadsanden er det omvendt (WW3 4° fra GFS Wave, 32° fra BarentsWatch). Én times data fra én kjøring beviser ingenting alene - dette er et første blikk, ikke en konklusjon om hvilken kilde som "har rett".
+
+**Konklusjon: WW3 ser egnet ut til å gå videre med** - aktiv drift, god dekning, ekte svell/vindsjø-deling, gunstig retningskonvensjon. ROADMAP oppgave J oppdatert til å bruke WW3 i stedet for WAM800, SAMME plan som før (plan og tabeller først). **Ingenting er koblet inn i ratingen.** Naturlige neste steg, ikke gjort nå: punktsøk for alle åtte spots er gjort (se `data/ww3/report.md`), men sammenligning mot de navngitte observasjonsdagene (Unstad 26.09/27.09/28.09/05.10, Grøtfjord 24.-26.09, Lenangsøyra 26.09) er IKKE gjort - WW3 sin "Latest Files"-katalog ser ut til å bare ha noen få ukers rullerende historikk (eldste fil sett: 26.09), "Archive Files" er ikke utforsket ennå og kan gå lenger tilbake.
+
+**Verktøy:** `fetcher/ww3_explore.py` (nytt, bare `requests` - henter enkeltpunkter via OPeNDAP sitt tekstbaserte `.ascii`-grensesnitt, aldri hele filen på 8,8 GB). Fant under arbeidet at tette, raske kall til thredds.met.no sitt delte API av og til ga et dårlig (men ikke krasjende) treff for enkelte punkter - løst med en kort pause mellom hvert kall og en sanity-sjekk (forkast og prøv på nytt hvis treffet er mer enn 10 km fra det forespurte punktet). Fullt 8-spot-søk tar et par minutter.
+
 ## Theodors oppgave 07.10.2026: Lyngen-spotene viste "-" i langtidssonen - FERDIG, fysikk-kontrollør fant to faktafeil (rettet) og én ting som trenger ditt valg
 
 Russelv og Lenangsøyra sine havpunkter (70.3581/20.4291 og 70.3349/20.4737) mangler svell ute i langtidssonen (dag 8+) - vises som "-". Grunnårsaken er bekreftet, men **min første forklaring var feil** (se fysikk-kontrollørens punkt 2 under) - rettet her.
