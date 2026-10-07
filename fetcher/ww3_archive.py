@@ -55,8 +55,15 @@ def list_catalog(url):
     return files, refs
 
 
+FIELD_FILE = re.compile(r"^ww3_(\d{8})T(\d{2})Z\.nc$")
+
+
 def issue_time(name):
-    m = re.search(r"(\d{8})T(\d{2})Z", name)
+    """Utstedelsestid for en RUTENETT-fil (ww3_<dato>T<time>Z.nc). Andre
+    filer i samme katalog (f.eks. ww3_POI_SPC_*.nc, punktspektra) gir
+    None - de har ikke hs/dir/tp på rutenettet og ga HTTP 400 i første
+    Actions-kjøring 07.10.2026."""
+    m = FIELD_FILE.match(name or "")
     if not m:
         return None
     return dt.datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)

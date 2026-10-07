@@ -165,6 +165,41 @@ def harvest_links():
     return lines + [""]
 
 
+DATASET_ID = "d7f12c93-d761-42fe-8370-3f5a5a747f63"   # lenket fra kystverket.no sin KystVær-side
+DATASET_GUESSES = [
+    f"https://kystdatahuset.no/ws/api/dataset/{DATASET_ID}",
+    f"https://kystdatahuset.no/ws/api/datasets/{DATASET_ID}",
+    f"https://kystdatahuset.no/ws/api/catalog/dataset/{DATASET_ID}",
+    f"https://kystdatahuset.no/ws/api/metadata/{DATASET_ID}",
+    f"https://kystdatahuset.no/api/dataset/{DATASET_ID}",
+    f"https://kystdatahuset.kystverket.no/ws/api/dataset/{DATASET_ID}",
+]
+
+
+def all_routes():
+    """Fjerde runde (07.10.2026): portalen er en ren JS-app (alle sider 3535
+    tegn), så lenkehøsting ga ingenting. Lister ALLE rutene i swaggeren
+    gruppert på tag, og prøver å slå opp KystVær-datasettet (id fra
+    kystverket.no) med noen gjettede ruter."""
+    lines = ["## Alle ruter i Open API, gruppert på tag", ""]
+    try:
+        spec = requests.get(SWAGGER, headers=UA, timeout=60).json()
+    except Exception as e:
+        return lines + [f"- FEIL: {e}"]
+    by_tag = {}
+    for path, ops in spec.get("paths", {}).items():
+        for method, op in ops.items():
+            tag = (op.get("tags") or ["?"])[0]
+            by_tag.setdefault(tag, []).append(f"{method.upper()} {path}")
+    for tag, routes in sorted(by_tag.items()):
+        lines.append(f"- **{tag}** ({len(routes)}): " + ", ".join(f"`{r}`" for r in routes))
+    lines += ["", "## Oppslag på KystVær-datasettet (gjettede ruter)", ""]
+    for u in DATASET_GUESSES:
+        r = probe(u)
+        lines.append(f"- {u}: {r.get('status')} {r.get('ctype','')} {r.get('len','')} tegn `{(r.get('snippet') or r.get('detail',''))[:200]}`")
+    return lines + [""]
+
+
 def main():
     results = [probe(u) for u in CANDIDATES]
     lines = [f"# KystVær/Kystdatahuset-sondering, {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC", ""]
@@ -178,7 +213,7 @@ def main():
                 lines.append(f"- lenker/nøkler: {r['links']}")
             lines.append(f"- utdrag: `{r['snippet'][:400]}`")
         lines.append("")
-    lines = harvest_links() + probe_swagger() + [""] + lines
+    lines = all_routes() + harvest_links() + probe_swagger() + [""] + lines
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
