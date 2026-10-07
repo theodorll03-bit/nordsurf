@@ -1,17 +1,34 @@
-# Testlab for treffsikkerhet - 2026-10-07 13:54 UTC
+# Testlab for treffsikkerhet - 2026-10-07 16:03 UTC
 
 Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-timer. Vindmålinger: 0 spot-timer.
 
-## Samlet
+## Forbehold: faste observasjoner er justeringsgrunnlag, ikke en uavhengig test
 
-| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Ikke evaluert | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |
-|---|---|---|---|---|---|---|---|---|
-| grunnlinje | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 0 | 15/15 / 0,05 / 8/8 |
-| ww3_svell | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
-| energi_tp | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 0 | 15/15 / 0,05 / 8/8 |
-| energi_ww3 | 10 | 10/10 | 0,07 (n=5) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
-| ww3_begge | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
-| vind_korr | 0 | – | – (n=0) | – | – (n=0) | – / – / – (n=0) | 15 | – / – / – |
+De 15 faste observasjonene (CLAUDE.md) er de samme sakene dagens rating er JUSTERT mot - surf_factor_prior for Unstad, offshore-sektoren, Nordneset-regelen og Unstads energiterskler ble satt for at nettopp disse skulle stemme. At grunnlinja holder alle sier derfor lite om nye dager; det sier bare at ingenting er ødelagt. Bare UAVHENGIGE saker (logger som er skrevet etter justeringene, og benchmarks) kan vise om en variant treffer bedre på nye dager. Uavhengige saker i denne kjøringen: 0 - INGEN, så tabellen 'Uavhengige saker' er tom og ingen variant kan vinne eller tape ennå.
+
+## Uavhengige saker (logger og benchmarks) - det som teller for nye dager
+
+| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |
+|---|---|---|---|---|---|---|---|
+| grunnlinje | 0 | – | – | – | – | – | – |
+| ww3_svell | 0 | – | – | – | – | – | – |
+| energi_tp | 0 | – | – | – | – | – | – |
+| energi_ww3 | 0 | – | – | – | – | – | – |
+| ww3_begge | 0 | – | – | – | – | – | – |
+| vind_korr | 0 | – | – | – | – | – | – |
+
+## Faste observasjoner (justeringsgrunnlag - skal holde, beviser ingenting nytt)
+
+| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |
+|---|---|---|---|---|---|---|---|
+| grunnlinje | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 15/15 / 0,05 / 8/8 |
+| ww3_svell | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 10/10 / 0,07 / 8/8 |
+| energi_tp | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 15/15 / 0,05 / 8/8 |
+| energi_ww3 | 10 | 10/10 | 0,07 (n=5) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 10/10 / 0,07 / 8/8 |
+| ww3_begge | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 10/10 / 0,07 / 8/8 |
+| vind_korr | 0 | – | – | – | – | – | – |
+
+Ikke evaluert per variant: grunnlinje 0, ww3_svell 5, energi_tp 0, energi_ww3 5, ww3_begge 5, vind_korr 15
 
 ## grunnlinje - Dagens rating, uendret
 

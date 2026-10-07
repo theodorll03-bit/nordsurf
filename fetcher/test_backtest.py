@@ -85,7 +85,8 @@ print("5: log_cases()/benchmark_cases() OK")
 
 # 6: rapporten er gyldig markdown med samlet tabell og én tabell per variant.
 text = backtest.report(cases, results, ctx)
-assert "## Samlet" in text and "## grunnlinje" in text and "## energi_tp" in text and "| grunnlinje |" in text and "SAMME saker" in text
+assert "## Forbehold" in text and "Uavhengige saker" in text and "Faste observasjoner (justeringsgrunnlag" in text and "## grunnlinje" in text and "## energi_tp" in text and "| grunnlinje |" in text and "SAMME saker" in text
+assert results["grunnlinje"]["summary_fixed"]["evaluated"] == 15 and results["grunnlinje"]["summary_indep"]["evaluated"] == 0
 print("6: rapport OK")
 
 # 7: WW3-arkivets verdisperre: periode 0 (kildens "0 s"-mønster) og fyllverdier

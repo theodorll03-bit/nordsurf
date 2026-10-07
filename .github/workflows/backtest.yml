@@ -7,21 +7,13 @@ name: Testlab (backtest, ukentlig)
 # kompakt bilde av dagens inndata (data/backtest/inputs/). Leser og
 # rapporterer bare - endrer aldri spots.json eller ratingen.
 #
-# Kjører også på push til grenen sky/testlab (utvikling) - fjern den
-# linja når grenen er merget, da holder ukentlig + manuell.
+# Ukentlig + manuell (push-utløseren for utviklingsgrenen sky/testlab ble
+# fjernet ved merge til main 07.10.2026).
 
 on:
   schedule:
     - cron: "41 5 * * 1"   # mandager kl. 05:41 UTC
   workflow_dispatch:
-  push:
-    branches: [sky/testlab]
-    paths:
-      - fetcher/backtest.py
-      - fetcher/backtest_inputs.py
-      - fetcher/ww3_archive.py
-      - .github/workflows/backtest.yml
-      - data/benchmarks.json
 
 permissions:
   contents: write

@@ -472,6 +472,13 @@ VARIANTS = {
 # Mål
 # ---------------------------------------------------------------------------
 
+def is_fixed(case):
+    """Fast observasjon fra CLAUDE.md - brukt til å JUSTERE ratingen
+    (surf_factor_prior, offshore-sektor, Nordneset-regelen, energiterskler),
+    altså ikke en uavhengig test av den. Logger og benchmarks er uavhengige."""
+    return case.get("source") == "fast observasjon"
+
+
 def stars_interval(v):
     """Observerte stjerner som intervall: 4 → (4, 4); [4, 5] → (4, 5). En
     Instagram-observasjon '4-5 stjerner' er et intervall, ikke 4,5 - avstand
@@ -583,7 +590,9 @@ def run(variant_names=None, logs=None):
                 skipped += 1
                 continue
             rows.append({"case": c, "r": {k: r.get(k) for k in ("stars", "faded", "surf_height", "height", "height_source", "low_reason", "energy_swell_kj", "_energy_period_factor", "_energy_ww3", "_partition", "_wind_station")}, "j": judge(c, r)})
-        results[name] = {"desc": v["desc"], "rows": rows, "skipped": skipped, "summary": summarize(rows)}
+        results[name] = {"desc": v["desc"], "rows": rows, "skipped": skipped, "summary": summarize(rows),
+                         "summary_fixed": summarize([x for x in rows if is_fixed(x["case"])]),
+                         "summary_indep": summarize([x for x in rows if not is_fixed(x["case"])])}
     # grunnlinja regnet på NØYAKTIG de sakene hver variant evaluerte - bare
     # det er en rettferdig sammenligning når variantene hopper over saker
     base_rows = {x["case"]["id"]: x for x in results["grunnlinje"]["rows"]}
@@ -601,16 +610,35 @@ def report(cases, results, ctx, now=None):
          f"Saker: {len(cases)} ({sum(1 for c in cases if c['source']=='fast observasjon')} faste observasjoner, "
          f"{sum(1 for c in cases if c['source'].startswith('logg'))} logger, {sum(1 for c in cases if c.get('benchmark'))} benchmarks). "
          f"WW3-arkiv: {sum(len(v) for v in ctx['ww3'].values())} spot-timer. Vindmålinger: {sum(len(v) for v in ctx['wind'].values())} spot-timer.", ""]
-    L += ["## Samlet", "", "| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Ikke evaluert | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |", "|---|---|---|---|---|---|---|---|---|"]
-    for name, res in results.items():
-        s, b = res["summary"], res.get("baseline_same") or {}
-        p0 = f" (partisjon 0 vant {s['partition0_wins']})" if s.get("partition0_wins") else ""
-        L.append(f"| {name} | {s['evaluated']}{p0} | {s['fixed_hold']}{' (ryker: ' + ', '.join(s['fixed_failed']) + ')' if s['fixed_failed'] else ''} | "
-                 f"{fmt(s['surf_mae'])} (n={s['surf_n']}) | {s['hit1']}{' (' + str(s['hit1_pct']) + ' %)' if s['hit1_pct'] is not None else ''} | "
-                 f"{('+' if (s['star_bias'] or 0) > 0 else '') + fmt(s['star_bias'])} (n={s['star_bias_n']}) | "
-                 f"{fmt(s['bench_stars_mae'])} / {fmt(s['bench_m_mae'])} / {fmt(s['bench_kj_mae'])} (n={s['bench_n']}) | {res['skipped']} | "
-                 f"{b.get('fixed_hold', '–')} / {fmt(b.get('surf_mae'))} / {b.get('hit1', '–')} |")
-    L.append("")
+    n_fixed = sum(1 for c in cases if is_fixed(c))
+    n_indep = len(cases) - n_fixed
+    L += ["## Forbehold: faste observasjoner er justeringsgrunnlag, ikke en uavhengig test", "",
+          f"De {n_fixed} faste observasjonene (CLAUDE.md) er de samme sakene dagens rating er JUSTERT mot - surf_factor_prior for Unstad, "
+          "offshore-sektoren, Nordneset-regelen og Unstads energiterskler ble satt for at nettopp disse skulle stemme. At grunnlinja holder "
+          "alle sier derfor lite om nye dager; det sier bare at ingenting er ødelagt. Bare UAVHENGIGE saker (logger som er skrevet etter "
+          f"justeringene, og benchmarks) kan vise om en variant treffer bedre på nye dager. Uavhengige saker i denne kjøringen: {n_indep}"
+          + (" - INGEN, så tabellen 'Uavhengige saker' er tom og ingen variant kan vinne eller tape ennå." if n_indep == 0 else "."), ""]
+
+    def summary_table(title, key):
+        L.extend([f"## {title}", "", "| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |", "|---|---|---|---|---|---|---|---|"])
+        for name, res in results.items():
+            s = res[key]
+            if s["evaluated"] == 0:
+                L.append(f"| {name} | 0 | – | – | – | – | – | – |")
+                continue
+            base_rows = {x["case"]["id"]: x for x in results.get("grunnlinje", {}).get("rows", [])}
+            b = summarize([base_rows[x["case"]["id"]] for x in res["rows"] if x["case"]["id"] in base_rows and (is_fixed(x["case"]) == (key == "summary_fixed"))])
+            p0 = f" (partisjon 0 vant {s['partition0_wins']})" if s.get("partition0_wins") else ""
+            L.append(f"| {name} | {s['evaluated']}{p0} | {s['fixed_hold']}{' (ryker: ' + ', '.join(s['fixed_failed']) + ')' if s['fixed_failed'] else ''} | "
+                     f"{fmt(s['surf_mae'])} (n={s['surf_n']}) | {s['hit1']}{' (' + str(s['hit1_pct']) + ' %)' if s['hit1_pct'] is not None else ''} | "
+                     f"{('+' if (s['star_bias'] or 0) > 0 else '') + fmt(s['star_bias'])} (n={s['star_bias_n']}) | "
+                     f"{fmt(s['bench_stars_mae'])} / {fmt(s['bench_m_mae'])} / {fmt(s['bench_kj_mae'])} (n={s['bench_n']}) | "
+                     f"{b.get('fixed_hold', '–')} / {fmt(b.get('surf_mae'))} / {b.get('hit1', '–')} |")
+        L.append("")
+
+    summary_table("Uavhengige saker (logger og benchmarks) - det som teller for nye dager", "summary_indep")
+    summary_table("Faste observasjoner (justeringsgrunnlag - skal holde, beviser ingenting nytt)", "summary_fixed")
+    L += ["Ikke evaluert per variant: " + ", ".join(f"{name} {res['skipped']}" for name, res in results.items()), ""]
     for name, res in results.items():
         L += [f"## {name} - {res['desc']}", "", "| Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |", "|---|---|---|---|---|---|---|---|"]
         for x in res["rows"]:
@@ -626,7 +654,7 @@ def report(cases, results, ctx, now=None):
                 extra = f" (partisjon {r['_partition']})"
             if r.get("_wind_station"):
                 extra = f" ({r['_wind_station']})"
-            L.append(f"| {c['label']}{' [delvis]' if c.get('partial') else ''} | {exp} | {r['stars']}{extra} | {fmt(r['surf_height'])} | {r.get('low_reason') or ''} | "
+            L.append(f"| {c['label']}{' [delvis]' if c.get('partial') else ''}{'' if is_fixed(c) else ' [uavhengig: ' + c['source'] + ']'} | {exp} | {r['stars']}{extra} | {fmt(r['surf_height'])} | {r.get('low_reason') or ''} | "
                      f"{'ja' if j.get('holds') else ('NEI' if j.get('holds') is False else '–')} | {fmt(j.get('surf_err'))} | "
                      f"{'ja' if j.get('hit1') else ('nei' if j.get('hit1') is False else '–')} |")
         L.append("")
