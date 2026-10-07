@@ -226,6 +226,10 @@
       ],
       "max_height": 3.5,
       "facing": 19,
+      "exposure_override": [
+        {"from": 225, "to": 320, "max": 0.05}
+      ],
+      "_exposure_override": "07.10.2026, Theodors ja: tak 0,05 på 225-320 grader. Lenangsøyra tar svell gjennom gapet mot NNØ (vindu 15-23). Vestlig svell må forbi Ringvassøya og inn Ullsfjorden, og 26.09.2026 med vestlig sjø var ikke surfbart (fast observasjon). Det geometriske utgangspunktet (GSHHS, del C) ga likevel glattet eksponering 0,25 ved 271 grader (rå 0,81: strålen treffer land 15,5 km unna, men kartet ser hindringen som bare 0,8 km bred), og det ga 3 stjerner 19.10.2026 for et 12,5 s svell fra 271 grader i varselet 07.10 - se STATUS.md. Fjernes ALDRI automatisk, bare foreslått i Logger-fanen hvis en bøtte i intervallet læres fra BarentsWatch og ligger under taket.",
       "_offshore_vind": "Spoten ligger ytterst på et nes som peker mot NNØ, land bak mot SSV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "_facing": "06.10.2026, Theodors rettelse (se STATUS.md): var 0 (anslått fra satellittbilde). Rettet til 19 - midtpunktet av den EKTE, helt åpne sektoren (over 150 km fri sikt fra pinnen, samme landdeteksjon som exposure_baseline.py/check_spot.py), identisk med swell_window [15,23] (satt tidligere med samme metode). Samme mønster som Unstad sin presist beregnede facing (under 1 grad fra sitt eget vindu-midtpunkt). facing+180 (199) havner nå bare 1 grad fra offshore_wind sitt eksisterende senter (200, satt uavhengig) - løser nesten hele det tidligere 20-graders avviket mellom de to.",
       "swell_window_tegnet": [

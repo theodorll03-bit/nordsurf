@@ -1,5 +1,33 @@
 # Nordsurf: status
 
+## Theodors svar 07.10.2026, runde 2: Lenangsøyra exposure_override, Unstad på svelldag, secrets senere
+
+**1. Lenangsøyra `exposure_override` {225-320 grader, tak 0,05} - GJORT (Theodors ja).** Begrunnelse i spots.json (`_exposure_override`) og CLAUDE.md (ny konvensjonslinje): svell gjennom gapet mot NNØ (vindu 15-23), vestlig svell må forbi Ringvassøya og inn Ullsfjorden, 26.09 med vestlig sjø var ikke surfbart. Sjekksummen for eksponeringen tar ikke med override, så ingen ny baseline-kjøring. Stjernetabell før/etter på varselet generert 07.10 16:00Z (alle andre spots: 0 endringer, verifisert):
+
+| Horisont | Timer | Uendret | Ned 2 | Ned 3 | Opp |
+|---|---|---|---|---|---|
+| Neste 48 t | 48 | 48 | 0 | 0 | 0 |
+| Hele horisonten (201 t) | 201 | 195 | 1 | 5 | 0 |
+
+De seks timene (svellet i varselet har flyttet seg siden 15:00Z-kjøringen, nå 17. og 19.10, samme type):
+
+| Time (UTC) | Svell ute (m / s / fra °) | Stjerner før → etter | Surfehøyde før → etter | Ord etter |
+|---|---|---|---|---|
+| 17.10 06Z | 2,87 / 15,4 / 267 | 3 → 0 | 1,00 → 0,00 | treffer_ikke |
+| 17.10 12Z | 3,02 / 14,7 / 269 | 3 → 0 | 1,01 → 0,00 | treffer_ikke |
+| 17.10 18Z | 4,70 / 13,7 / 268 | 3 → 0 | 1,41 → 0,00 | treffer_ikke |
+| 19.10 06Z | 2,56 / 12,5 / 265 | 2 → 0 | 0,84 → 0,00 | treffer_ikke |
+| 19.10 12Z | 3,10 / 12,8 / 268 | 3 → 0 | 0,99 → 0,00 | treffer_ikke |
+| 19.10 18Z | 2,65 / 12,5 / 271 | 3 → 0 | 0,81 → 0,00 | treffer_ikke |
+
+Alle seks er vestlig svell (265-271°) fra 12,5 til 15,4 s, alle går NED, ingen innen 48 t - stoppregelen slår ikke inn, og dette er nettopp det rapporterte tilfellet Theodor ba om rettet (samme spot, samme årsak, samme retning). To timer til får lavere surfehøyde uten stjerneendring. Ordet blir "treffer_ikke" (energien ute er høy), ikke "flat" - riktig. Alle faste observasjoner holder (test_rating), fysikk-kontrollør: se under.
+
+**2. Unstad:** lagt inn som ROADMAP oppgave N - venter på neste dag med ekte svell inn i vinduet (12 s eller mer), da kjøres "Finn BarentsWatch-punkt" og forslaget blir å flytte punktet til 250m@315 og fjerne `surf_factor_prior` i samme commit, med testlaben som dommer.
+
+**3. Secrets:** venter på Theodor.
+
+Fysikk-kontrollør: kjører i bakgrunnen idet dette committes (Theodors eksplisitte ja, tester grønne) - resultatet legges inn her i neste commit.
+
 ## Theodors svar 07.10.2026 på skyøktens funn - seks punkter, status
 
 1. **sky/testlab merget til main** (`033a03a`, fast-forward etter rebase, seks raske tester + nettlesertesten grønne lokalt). Push-utløseren for utviklingsgrenen er fjernet fra `backtest.yml` (ukentlig + manuell står).
