@@ -80,6 +80,49 @@ def probe(url):
             "auth_hint": "ja" if r.status_code in (401, 403) or re.search(r"api[-_ ]?key|client[-_ ]?id|unauthorized|forbidden|registrer", body[:3000], re.I) else "nei"}
 
 
+SWAGGER = "https://kystdatahuset.no/ws/swagger/v1/swagger.json"
+KEYWORDS = ("wind", "vind", "weather", "vaer", "vær", "kystv", "meteo", "sensor", "station", "stasjon", "observ", "measure", "maaling", "måling")
+
+
+def probe_swagger():
+    """Andre runde (07.10.2026): hele OpenAPI-spesifikasjonen, filtrert på
+    vær/vind - ruter, parametre, om de krever innlogging (security), og et
+    forsøk på GET uten parametre der det går."""
+    lines = ["## Swagger: vær/vind-ruter i Kystdatahuset Open API", ""]
+    try:
+        spec = requests.get(SWAGGER, headers=UA, timeout=60).json()
+    except Exception as e:
+        return lines + [f"- FEIL: {e}"]
+    servers = spec.get("servers")
+    global_sec = spec.get("security")
+    lines.append(f"- servers: {servers}, global security: {global_sec}, securitySchemes: {list((spec.get('components') or {}).get('securitySchemes', {}).keys())}")
+    lines.append(f"- antall ruter totalt: {len(spec.get('paths', {}))}")
+    hits = []
+    for path, ops in spec.get("paths", {}).items():
+        blob = (path + " " + json.dumps(ops, ensure_ascii=False)[:3000]).lower()
+        if any(k in blob for k in KEYWORDS):
+            hits.append((path, ops))
+    lines.append(f"- ruter som matcher vær/vind-nøkkelord: {len(hits)}")
+    base = "https://kystdatahuset.no/ws"
+    for path, ops in hits:
+        for method, op in ops.items():
+            if method.lower() not in ("get", "post"):
+                continue
+            params = [(p.get("name"), p.get("in"), p.get("required"), (p.get("schema") or {}).get("type")) for p in op.get("parameters", [])]
+            body = "ja" if op.get("requestBody") else "nei"
+            lines.append(f"### {method.upper()} {path}")
+            lines.append(f"- tags {op.get('tags')}, summary: {str(op.get('summary') or op.get('description') or '')[:200]}")
+            lines.append(f"- parametre: {params}, body: {body}, security: {op.get('security', 'arver global')}")
+            if method.lower() == "get" and not any(req for _, _, req, _ in params) and "{" not in path:
+                try:
+                    r = requests.get(base + path, headers=UA, timeout=30)
+                    snippet = re.sub(r"\s+", " ", (r.text or "")[:500])
+                    lines.append(f"- GET uten parametre: status {r.status_code}, {r.headers.get('content-type','')[:40]}, {len(r.text or '')} tegn: `{snippet}`")
+                except Exception as e:
+                    lines.append(f"- GET feilet: {str(e)[:120]}")
+    return lines
+
+
 def main():
     results = [probe(u) for u in CANDIDATES]
     lines = [f"# KystVær/Kystdatahuset-sondering, {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC", ""]
@@ -93,6 +136,7 @@ def main():
                 lines.append(f"- lenker/nøkler: {r['links']}")
             lines.append(f"- utdrag: `{r['snippet'][:400]}`")
         lines.append("")
+    lines = probe_swagger() + [""] + lines
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
