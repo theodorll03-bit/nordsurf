@@ -1,4 +1,4 @@
-# Testlab for treffsikkerhet - 2026-10-07 13:29 UTC
+# Testlab for treffsikkerhet - 2026-10-07 13:31 UTC
 
 Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 0 spot-timer. Vindmålinger: 0 spot-timer.
 
@@ -7,7 +7,10 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 0 spot-ti
 | Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Benchmark-avvik (stjerner / m) | Ikke evaluert |
 |---|---|---|---|---|---|---|
 | grunnlinje | 15 | 15/15 | 0,05 (n=9) | 4/8 (50 %) | – / – (n=0) | 0 |
+| ww3_svell | 0 | – | – (n=0) | – | – / – (n=0) | 15 |
 | energi_tp | 15 | 15/15 | 0,05 (n=9) | 4/8 (50 %) | – / – (n=0) | 0 |
+| ww3_begge | 0 | – | – (n=0) | – | – / – (n=0) | 15 |
+| vind_korr | 0 | – | – (n=0) | – | – / – (n=0) | 15 |
 
 ## grunnlinje - Dagens rating, uendret
 
@@ -29,6 +32,11 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 0 spot-ti
 | Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=4.5 | 3 | 1,11 |  | ja | – | nei |
 | Farstadsanden, svell fra 338° over Nordneset - treffer ikke | stars_max=1, low_reason=treffer_ikke | 0 | 1,28 | treffer_ikke | ja | – | – |
 
+## ww3_svell - WW3-svell (phs1/pdir1/ptp1) i stedet for GFS, uten surf_factor_prior for Unstad
+
+| Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |
+|---|---|---|---|---|---|---|---|
+
 ## energi_tp - Energi med toppperiode (WW3 ptp1, ellers gjennomsnitt × 1.25)
 
 | Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |
@@ -48,6 +56,16 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 0 spot-ti
 | Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=4.5 | 3 (Tp-faktor 1.25) | 1,15 |  | ja | – | nei |
 | Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=4.5 | 3 (Tp-faktor 1.25) | 1,11 |  | ja | – | nei |
 | Farstadsanden, svell fra 338° over Nordneset - treffer ikke | stars_max=1, low_reason=treffer_ikke | 0 (Tp-faktor 1.25) | 1,28 | treffer_ikke | ja | – | – |
+
+## ww3_begge - Begge WW3-svellene hver for seg mot vindu/eksponering, beste teller (uten prior)
+
+| Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |
+|---|---|---|---|---|---|---|---|
+
+## vind_korr - met.no-vind erstattet med målt vind fra nærmeste KystVær-stasjon (oppgave 2e)
+
+| Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |
+|---|---|---|---|---|---|---|---|
 
 ## Merknader
 
