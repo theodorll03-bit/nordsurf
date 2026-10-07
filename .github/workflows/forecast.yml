@@ -69,4 +69,8 @@ jobs:
           git add -A data/forecast_archive 2>/dev/null || true
           git add data/forecast_accuracy.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel"
+          # 07.10.2026: ta inn andres push under kjøringen (11 min) før push -
+          # ellers "fetch first"-avvisning (sett i praksis da STATUS.md ble
+          # pushet mens en manuell kjøring pågikk). Samme som de andre workflowene.
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push
