@@ -1,3 +1,37 @@
+## Alle ruter i Open API, gruppert på tag
+
+- **Ais** (15): `POST /api/ais_shipreg/statinfo/for-mmsis-time`, `POST /api/ais/positions/before-after`, `POST /api/ais/positions/for-mmsi-date`, `POST /api/ais/positions/for-mmsis-time`, `POST /api/ais/positions/within-bbox-time`, `POST /api/ais/positions/within-geom-time`, `POST /api/ais/sailed-distance/admin/dates`, `POST /api/ais/sailed-distance/fvpomr`, `POST /api/ais/sailed-distance/grunnlinje`, `POST /api/ais/sailed-distance/municipality`, `POST /api/ais/sailed-distance/municipality-fairway`, `POST /api/ais/sailed-distance/svoomr`, `POST /api/ais/statinfo/for-mmsis-time`, `POST /api/ais/statinfo/ships/free-text-time`, `POST /api/ais/yearly-stats/{fromYear}/{toYear}`
+- **AisRealTime** (2): `GET /api/ais/realtime/geojson`, `GET /api/ais/realtime/vessels-by-type`
+- **AisStatic** (1): `GET /api/ais/static-messages`
+- **Anchorage** (7): `POST /api/anchorage/anchorage/by-dokid-dokstatus`, `POST /api/anchorage/anchorage/for-sysid-time`, `POST /api/anchorage/area/geojson`, `POST /api/anchorage/area/geojson/by-dokid-dokstatus`, `GET /api/anchorage/areas`, `POST /api/anchorage/duration-by-year-and-id`, `POST /api/anchorage/for-location-time2`
+- **Auth** (10): `POST /api/auth/federated-login`, `POST /api/auth/identities/link`, `POST /api/auth/login`, `GET /api/auth/roles`, `POST /api/auth/roles`, `DELETE /api/auth/roles/{roleName}`, `GET /api/auth/users`, `GET /api/auth/users/{id}`, `POST /api/auth/users/{id}/roles`, `DELETE /api/auth/users/{id}/roles/{roleName}`
+- **Bunkers** (1): `POST /api/bunkers`
+- **Incident** (2): `POST /api/kystinfo/norvts-incidents`, `POST /api/kystinfo/norvts-incidents-public`
+- **Indicators** (2): `GET /api/voyage/infographics/arrivals-per-day`, `GET /api/voyage/infographics/cruises-per-day`
+- **Location** (13): `GET /api/location/all`, `POST /api/location/all`, `POST /api/location/connections/for-locations`, `GET /api/location/counties`, `POST /api/location/counties`, `POST /api/location/for-locations`, `POST /api/location/free-text`, `GET /api/location/norway/all`, `GET /api/location/norway/all/geojson`, `POST /api/location/time-in-port`, `POST /api/location/time-in-port/all`, `POST /api/location/time-in-port/osps`, `POST /api/location/time-in-port/osps-yearly`
+- **Map** (5): `GET /api/maps/fvpomr/list`, `GET /api/maps/kommune/geojson`, `GET /api/maps/kommune/list`, `GET /api/maps/kommune/wkt`, `GET /api/maps/svoomr/list`
+- **MarTraf** (2): `POST /api/martraf-tracks/intersects-line`, `POST /api/martraf-tracks/within-geom-time`
+- **MarU** (2): `GET /api/maru/sailed-distance/county-municipality/{fromYearMonth}/{toYearMonth}`, `GET /api/maru/sailed-distance/management-area/{fromYearMonth}/{toYearMonth}`
+- **MyData** (10): `GET /api/mydata`, `POST /api/mydata`, `DELETE /api/mydata/erase-all`, `GET /api/mydata/export-all`, `POST /api/mydata/files/folder`, `POST /api/mydata/files/upload`, `GET /api/mydata/files/{uuid}/download`, `DELETE /api/mydata/{uuid}`, `GET /api/mydata/{uuid}`, `PATCH /api/mydata/{uuid}/rename`
+- **Pilotage** (2): `POST /api/pilotage/aggregated/for-years`, `POST /api/pilotage/for-locations-years`
+- **RasterFrequency** (4): `GET /api/raster-frequency/ext/mapserver`, `POST /api/raster-frequency/ext/raster/statistics`, `GET /api/raster-frequency/ext/sld`, `POST /api/raster-frequency/statistics/v2`
+- **RealtimeTrack** (2): `POST /api/realtime-tracks/intersects-line`, `POST /api/realtime-tracks/within-geom-time`
+- **Ship** (20): `GET /api/ship/builtbetween/{fromYear}/{toYear}`, `GET /api/ship/combined/callsign/{callsign}`, `GET /api/ship/combined/callsign/{version}/{callsign}`, `GET /api/ship/combined/free-text`, `POST /api/ship/combined/free-text`, `GET /api/ship/combined/imo/{imo}`, `GET /api/ship/combined/imo/{version}/{imo}`, `GET /api/ship/combined/mmsi/{mmsi}`, `GET /api/ship/combined/mmsi/{version}/{mmsi}`, `POST /api/ship/combined/{version}/free-text`, `POST /api/ship/data/ais/for-mmsis-imos`, `GET /api/ship/data/ais/free-text`, `POST /api/ship/data/combined/for-mmsis-imos`, `POST /api/ship/data/fairplay/for-mmsis-imos`, `POST /api/ship/data/nsr/for-mmsis-imos`, `POST /api/ship/data/shipinfo/for-mmsis-imos`, `POST /api/ship/for-mmsis`, `POST /api/ship/free-text`, `GET /api/ship/nsr/download`, `GET /api/ship/shiptypes`
+- **ShipDimensions** (3): `GET /api/ship-dimensions`, `POST /api/ship-dimensions`, `DELETE /api/ship-dimensions/{id}`
+- **ShipType** (13): `GET /api/ship-type/statcode5/download`, `GET /api/vocabulary`, `GET /api/vocabulary/mapping`, `DELETE /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}`, `GET /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}`, `POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}`, `POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}/create`, `POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}/refresh`, `DELETE /api/vocabulary/terms/{vocabularyCode}`, `GET /api/vocabulary/terms/{vocabularyCode}`, `POST /api/vocabulary/terms/{vocabularyCode}`, `DELETE /api/vocabulary/terms/{vocabularyCode}/{term}`, `DELETE /api/vocabulary/{vocabularyCode}`
+- **Shorepower** (1): `GET /api/shorepower/geojson`
+- **Track** (17): `POST /api/tracks/async/download/by-voyage-timespan`, `POST /api/tracks/for-ships/by-mmsi`, `POST /api/tracks/for-ships/by-mmsi-mid`, `POST /api/tracks/for-ships/by-shipid`, `POST /api/tracks/frequency-counts`, `POST /api/tracks/frequency-counts/weekly`, `GET /api/tracks/get-passlines`, `POST /api/tracks/get-passlines`, `POST /api/tracks/intersects-line`, `POST /api/tracks/intersects-two-lines`, `POST /api/tracks/sailed-distance/for-ships/by-callsign`, `POST /api/tracks/sailed-distance/for-ships/by-imo`, `POST /api/tracks/sailed-distance/for-ships/by-mmsi`, `POST /api/tracks/speed/for-ships/by-callsign`, `POST /api/tracks/within-area`, `POST /api/tracks/within-area/by-mmsi`, `POST /api/tracks/within-municipality`
+- **Voyage** (21): `POST /api/voyage/aggregated/arrivals`, `POST /api/voyage/aggregated/arrivals-by-day`, `POST /api/voyage/aggregated/cruise/public`, `POST /api/voyage/aggregated/departures-by-day`, `GET /api/voyage/aggregated/{fromYear}/{toYear}`, `POST /api/voyage/aggregated/{fromYear}/{toYear}`, `GET /api/voyage/arrivals-current-month-by-departure-country`, `POST /api/voyage/arrivals-departures/for-location`, `GET /api/voyage/arrivals-previous-month-by-departure-country`, `POST /api/voyage/arrivals/for-locations`, `GET /api/voyage/between/{fromDate}/{toDate}`, `GET /api/voyage/cruise/year-on-year-difference`, `GET /api/voyage/dangerous-goods/by-voyage-segments/{fromTime}/{toTime}`, `POST /api/voyage/departures/for-locations`, `POST /api/voyage/for-ships/by-callsign`, `POST /api/voyage/for-ships/by-mmsi`, `POST /api/voyage/for-ships/by-shipid`, `GET /api/voyage/international-detail/{fromTime}/{toTime}`, `GET /api/voyage/international/{from_date}/{to_date}`, `POST /api/voyage/passengers/by-date-location`, `GET /api/voyage/passengers/by-voyage-segments/{fromTime}/{toTime}`
+
+## Oppslag på KystVær-datasettet (gjettede ruter)
+
+- https://kystdatahuset.no/ws/api/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63: 404  0 tegn ``
+- https://kystdatahuset.no/ws/api/datasets/d7f12c93-d761-42fe-8370-3f5a5a747f63: 404  0 tegn ``
+- https://kystdatahuset.no/ws/api/catalog/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63: 404  0 tegn ``
+- https://kystdatahuset.no/ws/api/metadata/d7f12c93-d761-42fe-8370-3f5a5a747f63: 404  0 tegn ``
+- https://kystdatahuset.no/api/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63: 200 text/html 3535 tegn `<!DOCTYPE html><html lang="nb"><head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta name="theme-color" content="#F9F6F3"> <meta name="description" c`
+- https://kystdatahuset.kystverket.no/ws/api/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63: 404  0 tegn ``
+
 ## Lenkehøsting fra Kystdatahuset/Kystverket-sidene
 
 - https://kystdatahuset.no/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
@@ -100,7 +134,7 @@ between two vocabularies. (Auth)
 If the term already exists, it will be updated with the new information. (Auth)
 - parametre: [('vocabularyCode', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
 
-# KystVær/Kystdatahuset-sondering, 2026-10-07 13:34 UTC
+# KystVær/Kystdatahuset-sondering, 2026-10-07 13:37 UTC
 
 ## https://kystdatahuset.no/ws/swagger/index.html
 - status 200, text/html;charset=utf-8, 6879 tegn, endte på https://kystdatahuset.kystverket.no/ws/swagger/index.html, nøkkel/innlogging antydet: nei
@@ -159,7 +193,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 ## https://kystdatahuset.no/ws/api/wind/stations
 - status 404, application/problem+json, 162 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/wind/stations, nøkkel/innlogging antydet: nei
 - lenker/nøkler: ["keys: ['type', 'title', 'status', 'traceId']"]
-- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-8bea06dc430b1592a405fa726bbfc2ef-c273f1f580aa54ea-01"}`
+- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-000c0b5ef543808022ff9f2ae038db34-356181a03c9adf87-01"}`
 
 ## https://kystdatahuset.no/ws/api/windstations
 - status 404, , 0 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/windstations, nøkkel/innlogging antydet: nei
@@ -204,7 +238,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 
 ## https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98
 - status 401, text/plain; charset=UTF-8, 454 tegn, endte på https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98, nøkkel/innlogging antydet: ja
-- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:34:38Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
+- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:37:24Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
 
 ## https://frost.met.no/api.html
 - status 200, text/html; charset=UTF-8, 7760 tegn, endte på https://frost.met.no/api.html, nøkkel/innlogging antydet: nei
