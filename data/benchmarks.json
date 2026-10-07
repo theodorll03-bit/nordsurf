@@ -1,0 +1,4 @@
+{
+ "_format": "Liste av objekter. spot = id fra spots.json, t = UTC-time (YYYY-MM-DDTHH:00Z), source = 'surf-forecast' eller 'surfline', stars = deres rating omregnet til 0-5 (valgfritt), surf_height_m = deres surfehøyde/bølgehøyde på stranda (valgfritt), energy_kj = surf-forecast sin energi (valgfritt), note = fritekst. Inndataene for timen hentes fra data/backtest/inputs/.",
+ "benchmarks": []
+}
