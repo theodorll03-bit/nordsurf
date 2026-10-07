@@ -1,8 +1,117 @@
 # Nordsurf: status
 
-## Skyøkt (dag) startet 15:40 norsk tid 07.10.2026 - gren `sky/testlab`
+## Skyøkt (dag) 07.10.2026, gren `sky/testlab` - FERDIG: testlab bygget og kjørt, KystVær hoppet over (ingen åpen kilde)
 
-Skyøkt (dag) startet 15:40. Tester kjøres ved oppstart (se timelogg under). Jobber på `sky/testlab`, rører ingen eksisterende fil i `fetcher/` (lokal økt jobber med energi/toppperiode der), tar inn main med rebase til slutt.
+Skyøkt (dag) startet 15:40 norsk tid. Alt ligger på grenen `sky/testlab` (ikke merget - Theodors valg). Ingen eksisterende fil i `fetcher/` er endret (den lokale økten jobber der), ingen endring av ratingen. main hadde ingen nye commits da økten sluttet (den lokale økten hadde ikke pushet), så "rebase mot main" var tom - **gjør `git rebase main` på `sky/testlab` når den lokale økten har pushet.**
+
+### Hva som ble bygget (oppgave 1, testlab)
+
+- `fetcher/backtest.py`: re-rater alle tidspunkter med observasjoner med en "variant" av ratingen. Saker: 15 faste observasjoner fra CLAUDE.md (samme inndata som `test_rating.py`), logger (bare når `LOGS_REPO`/`LOGS_TOKEN` finnes - se funn under), benchmarks fra `data/benchmarks.json` (mal skrevet, tom - Theodor fyller inn surf-forecast/Surfline-tall, inndataene for timen hentes fra `data/backtest/inputs/`). Mål per variant: faste observasjoner som holder, surfehøyde-feil mot observert størrelse, treff innen én stjerne, benchmark-avvik. Én tabell per variant pluss samlet tabell - `data/backtest/latest.md`, `data/backtest/<dato>.md`, `data/backtest/history.json`. Leser bare - endrer aldri spots.json eller ratingen.
+- `fetcher/ww3_archive.py`: WW3 4 km (met.no, thredds) for alle spots 48 timer frem, pluss observasjonstidspunktene, lagret i `data/ww3/archive/<utstedt>.json`. Funn: met.no har INGEN egen arkivkatalog (to gjettede URL-er ga 404) - `ww3_4km_latest_files` er selv et rullerende arkiv med 45 rutenettfiler (26.09 06Z til 07.10 06Z, ca. 11-12 døgn, fire kjøringer per døgn). Derfor hentes observasjonstidspunktene fra den, og vår egen kopi i data/ww3/archive/ vokser hver uke (workflowen). Grøtfjord 24. og 25.09 ligger FØR vinduet - borte for alltid hos met.no, "ikke evaluert" i WW3-variantene. Filer av typen `ww3_POI_SPC_*` (punktspektra) ga HTTP 400 i første kjøring - filtrert bort.
+- `fetcher/backtest_inputs.py`: kompakt bilde av inndataene (ikke resultatet) per time for de første 72 timene i forecast.json → `data/backtest/inputs/`, så benchmarks og logger kan re-rates senere.
+- `.github/workflows/backtest.yml`: ukentlig (mandag 05:41 UTC), manuelt, og på push til `sky/testlab` for utvikling (fjern push-linja når grenen merges). Første ekte kjøringer 07.10. Commit-steget bruker `git pull --rebase` før push.
+- `fetcher/test_backtest.py` (6 sjekker, med i `test.yml`): grunnlinja holder alle faste observasjoner, variantene krasjer ikke uten data, judge/summarize regner riktig, rapporten er gyldig.
+
+### Resultat (siste lokale kjøring 07.10.2026 etter kontrollørens rettelser; 15 saker: 15 faste observasjoner, 0 logger, 0 benchmarks)
+
+| Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Ikke evaluert | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |
+|---|---|---|---|---|---|---|---|
+| grunnlinje (dagens rating) | 15 | 15/15 | 0,05 (n=9) | 8/8 | −0,38 (n=8) | 0 | – |
+| ww3_svell (WW3-svell i stedet for GFS, WW3 toppperiode, uten surf_factor_prior for Unstad) | 10 | 5/10 (ryker: Unstad 26.09, Unstad 28.09 kl. 12-15) | 0,40 (n=5) | 4/8 | −0,88 (n=8) | 5 | 10/10 / 0,07 / 8/8 |
+| energi_tp (energi med Tp = GFS-gjennomsnitt × 1,25) | 15 | 15/15 | 0,05 (n=9) | 8/8 | −0,38 (n=8) | 0 | 15/15 / 0,05 / 8/8 |
+| energi_ww3 (energi av WW3 sitt eget svell phs1/ptp1, ellers som i dag) | 10 | 10/10 | 0,07 (n=5) | 8/8 | −0,38 (n=8) | 5 | 10/10 / 0,07 / 8/8 |
+| ww3_begge (begge WW3-partisjonene, beste teller, uten prior) | 10 | 5/10 (samme fem) | 0,40 (n=5) | 4/8 | −0,88 (n=8) | 5 | 10/10 / 0,07 / 8/8 |
+| vind_korr (målt vind) | 0 | – | – | – | – | 15 (ingen vindmålinger, se oppgave 2) | – |
+
+"Ikke evaluert" i WW3-variantene: Grøtfjord 24.09 (×3) og 25.09 (ingen WW3 før 26.09 06Z), pluss Farstadsanden 338° (SYNTETISK sak - tenkte inndata, ekte WW3 for det klokkeslettet beskriver et annet hav: svell fra 288° og 4,4 m vindsjø fra 267°; første kjøring telte den som "ryker", rettet samme dag etter kontrolløren). Grøtfjord 25.09 er i tillegg retningsbundet (geometriregel for "3° utenfor vinduet").
+
+Stjerneavviket (negativt = appen rater lavere enn observert, målt mot nærmeste ende av intervallet "4-5 stjerner"): grunnlinja −0,38 i snitt over de åtte Unstad-timene - 28.09 kl. 12-15 gir 3 stjerner mot observert 4-5 (én under, innenfor ±1 - første kjøring regnet mot midtpunktet 4,5 og telte dem som bom, rettet etter kontrolløren). WW3-variantene uten prior dobler avviket (−0,88). Ingen variant løfter Unstad 28.09.
+
+**Hvilken variant treffer best, og hvorfor: grunnlinja.** Men det er nesten per konstruksjon: de 15 faste observasjonene er de samme sakene grunnlinja er justert mot (surf_factor_prior 1,45 for Unstad, offshore-sektoren, Nordneset-regelen, Unstads energiterskler). Testlaben kan ikke BELØNNE en alternativ variant før den får uavhengige saker - logger (krever at `LOGS_REPO`/`LOGS_TOKEN` faktisk finnes i Actions, se funn under) og benchmarks (`data/benchmarks.json`). Det den kan nå, er å vise HVOR en variant ryker, og det er lærerikt:
+
+**Per sak, WW3 mot GFS ved de faste observasjonene (havpunktet, svellpartisjon phs1/pdir1/ptp1):**
+
+| Sak | GFS svell (m / s / fra °) | WW3 svell (m / s / fra °) | WW3 vindsjø (m) | Grunnlinje → ww3_svell | Hvorfor |
+|---|---|---|---|---|---|
+| Unstad 26.09 kl. 12Z (over hodet, 2,4 m) | 3,48 / 15 / 300 | 3,47 / 15,9 / 255 | 0,63 | surf 2,42 → 1,69 m, 4 → 4 stjerner | Samme høyde og periode i begge modellene - hele fallet er `surf_factor_prior` (1,45) som variantene fjerner. WW3 sier retning 255 (ved vinduets nedre kant 253), GFS 300 - BarentsWatch ved spoten sa 294,8. |
+| Unstad 27.09 kl. 06-08Z | 2,5-2,7 / 9,2-12,6 / 251-255 | 2,45-2,56 / 13,4-13,7 / 255 | 2,0-2,3 | surf 1,34-1,49 → 1,03-1,25 m, stjerner uendret (3-4) | Samme høyde, WW3 lengre periode. Holder fortsatt (krav minst 2). |
+| Unstad 28.09 kl. 12-15Z ("firing") | 1,28-1,40 / 11,8-12,1 / 248-250 | 2,36-2,67 / 11,0-11,2 / 250 | 0,7-1,5 | surf 1,21 → 1,05 m, 3 → 2 stjerner | WW3 ser svellet nær DOBBELT så høyt som GFS, samme retning. Likevel lavere surfehøyde i varianten - fordi surfehøyden regnes fra Hs VED SPOTEN (BarentsWatch 0,55-0,60 m), ikke fra svellet ute: WW3-inndataene alene løfter surfehøyden 25 % (periode/retning), men prior-fjerningen trekker 31 %. |
+| Grøtfjord 26.09 kl. 15Z (flatt) | 2,18 / 15,6 / 272 | 2,30 / 16,4 / 263 | 0,29 | 0 → 0 | Enige. |
+| Lenangsøyra 26.09 kl. 12Z (vindsjø) | – | 1,11 / 11,8 / 281 (ingen vindsjø-partisjon) | – | 0 → 0 | Holder, men ordet blir "treffer_ikke" i stedet for "blown_out". |
+| Farstadsanden 06.10 kl. 12Z (338°-saken) | 1,5 / 11 / 338 | 2,43 / 13,5 / 288 | 4,41 fra 267 | hoppet over (retningsbundet) | WW3 så ikke noe svell fra 338 i den timen - hovedsvell 288 og en STOR vindsjø-partisjon 4,4 m fra 267. |
+
+**Lærdom 1 (viktigst): Unstads under-rating sitter i Hs ved BarentsWatch-punktet, ikke i GFS.** Surfehøyden regnes fra Hs ved spoten (BarentsWatch, 0,55-0,9 m i alle Unstad-sakene), og svellet ute påvirker den bare via periode, retning og energi. Å bytte GFS mot WW3 ute kan derfor ALDRI erstatte `surf_factor_prior` - prioren kompenserer for at BarentsWatch sitt punkt ved Unstad viser lav Hs, og den må bli stående til Hs-kilden ved spoten endres. "WW3 i stedet for GFS uten prior" var en rimelig hypotese, og testlaben avkrefter den med tall.
+
+**Lærdom 2: energi med toppperiode endrer ingenting på disse sakene, og × 1,25 er for høyt mot WW3.** `energi_tp` (GFS-gjennomsnitt × 1,25) er identisk med grunnlinja i alle 15 saker - energifaktoren er allerede mettet ved Unstads lokale terskler. `energi_ww3` (WW3 sitt eget svell, phs1 og ptp1 fra samme modell) gir 1,5-3 × høyere svellenergi (Unstad 28.09: 2,67 m/11,2 s mot GFS 1,4 m/12 s) og holder alle 10 saker - men flytter heller ingen stjerner. På dagens 48-timers varsel (42 felles timer per spot) ligger WW3 sin toppperiode (ptp1) på 9,8-10,5 s mot GFS sin gjennomsnittsperiode 7,7-10,3 s - ca. 1,0-1,05 × gjennomsnittet for seks av åtte spots (Lyngen 1,36), og ved Unstad 28.09 LAVERE enn GFS-gjennomsnittet (11,0-11,2 mot 11,8-12,1 s). En første versjon av energi_tp blandet WW3-periode med GFS-høyde (faktor 0,92 → Unstad 28.09 kl. 15 røk) - kontrolløren fant det, og variantene er nå rene (én modell for både høyde og periode).
+
+**WW3 mot GFS på dagens varsel (07.10.2026 06Z, 42 felles timer per spot, havpunktet):**
+
+| Spot | GFS svell snitt (m) | WW3 svell phs1 snitt (m) | GFS periode (s) | WW3 ptp1 (s) | Retningsavvik snitt (°, WW3 − GFS) | WW3 vindsjø phs0 (m) |
+|---|---|---|---|---|---|---|
+| Grøtfjord | 1,11 | 1,57 | 10,3 | 10,3 | +16 | 2,32 |
+| Tromvik | 1,47 | 2,15 | 10,3 | 9,8 | −28 | 1,99 |
+| Ersfjordstranda | 1,51 | 2,62 | 9,6 | 10,0 | −11 | 1,85 |
+| Russelv / Lenangsøyra | 2,56 | 2,68 | 7,7 | 10,5 | −5 | 1,54 |
+| Steinkrøssa | 1,43 | 2,59 | 9,5 | 10,0 | 0 | 1,92 |
+| Unstad | 1,76 | 2,62 | 9,5 | 9,8 | −10 | 0,66 |
+| Farstadsanden | 1,22 | 1,97 | 9,3 | 10,0 | −35 | 0,38 |
+
+WW3 ser svellet 1,0-1,8 ganger høyere enn GFS ved de samme punktene (unntatt Lyngen, der GFS-tallet er standardmodellen via offshore_longrange). Dette er et systematisk, stort avvik - uten observasjoner kan testlaben ikke si hvem som har rett (transfer-kalibreringen mot BarentsWatch er lært mot GFS-skalaen, så et bytte ville kreve ny kalibrering).
+
+### Anbefaling: hva som bør kobles inn først
+
+1. **Ingenting i ratingen fra disse variantene nå.** Ingen av dem slår grunnlinja på de faste observasjonene (energi_tp/energi_ww3 er like, WW3-svell uten prior er dårligere), og "WW3 uten prior" ryker av en strukturell grunn (lærdom 1).
+2. **WW3 som VIST annenmening, ikke som kilde:** svellhøyde/periode/retning fra WW3 ved havpunktet i kilderapporten og på detaljsiden ("WW3: 2,6 m, 11 s fra 250°"), og en rad "kildene uenige" når WW3 og GFS avviker mer enn f.eks. 50 % i høyde eller 30° i retning. Billig (arkivet hentes allerede ukentlig; en henting per kjøring i forecast.yml er ca. 1 minutt), ingen rating-effekt, og det gir Theodor et tall å sammenligne mot egne øyne - det er sånn vi finner ut om WW3 sin 1,5× er riktig.
+3. **Gi testlaben uavhengige saker:** (a) sett `LOGS_REPO`/`LOGS_TOKEN` som repo-secrets (se funn under - de er tomme i alle Actions-kjøringer, også "Hent varsel"), så loggene blir saker; (b) fyll `data/benchmarks.json` for noen timer (format i fila). Først da kan en variant VINNE, ikke bare tape.
+4. **Deretter** er den mest lovende varianten å teste med uavhengige saker `ww3_begge` for spots med stor vindsjø-andel (Farstadsanden 06.10: vindsjø 4,4 m fra 267 - innenfor vinduet [284,326]? nei, men nær) - ikke Unstad.
+
+### Oppgave 2, KystVær/Kystdatahuset - HOPPET OVER (Theodors regel: "krever det registrering, noter det og bruk Frost hvis åpent nok, ellers hopp over")
+
+Fire sonderingsrunder i GitHub Actions (`fetcher/kystvaer_probe.py`, `.github/workflows/kystvaer_probe.yml`, resultat `data/wind_obs/probe.md`):
+- Kystdatahuset sitt Open API (`kystdatahuset.no/ws/swagger/v1/swagger.json`, 142 ruter, JWT Bearer for en del) har INGEN vær-/vindruter: taggene er Ais, Anchorage, Auth, Bunkers, Incident, Location, Map, MarTraf, MyData, Pilotage, RasterFrequency, Ship, Track, Voyage m.m. Nøkkelordsøk (wind/vind/weather/vær/kystv/sensor/station/observ/måling) ga 18 treff, alle AIS/skip/auth.
+- Portalen kystdatahuset.no er en ren JS-app (alle sider 3 535 tegn, eneste lenke `/api-access`), så lenkehøsting ga ingenting. Kystverket sin KystVær-side lenker til datasettet `kystdatahuset.no/detail/dataset/d7f12c93-…`, men seks gjettede datasett-ruter ga 404. `kystvaer.kystverket.no` finnes ikke (DNS).
+- met.no Frost (`frost.met.no`) svarer 401 uten client-id - krever registrering (ny konto = Theodors ja).
+- Konklusjon: ingen åpen kilde for vindmålinger uten registrering. Strukturen står klar: variant `vind_korr` i testlaben, filformat `data/wind_obs/obs_<tid>.json` ({spot: {t: {wind_speed, wind_dir, station}}}), og `load_wind_obs()` i backtest.py. Delspørsmålene c-e (feil per time, Unstads fem observasjonstidspunkter, korreksjonsforslag) kan ikke besvares uten data.
+
+Nærmeste met.no-stasjoner per spot (2b) - **IKKE verifisert i denne økten** (ingen nett mot met.no/Frost fra skyøkten; navn, ID, koordinater og høyde er fra hukommelsen og må sjekkes mot Frost `sources` når en client-id finnes). Avstand regnet fra BarentsWatch-punktet:
+
+| Spot | Kandidater (ID, avstand, høyde, eksponering) |
+|---|---|
+| Grøtfjord | Tromsø lufthavn Langnes (SN90490, 18 km, 8 moh, skjermet sund); Tromsø/Holt (SN90450, 21 km, 100 moh, by); Hekkingen fyr (SN88690, 33 km, 34 moh, eksponert ytterkyst) |
+| Tromvik | Tromsø lufthavn (22 km); Tromsø/Holt (24 km); Hekkingen fyr (30 km) |
+| Ersfjordstranda | Hekkingen fyr (21 km, eksponert); Tromsø (63 km) |
+| Russelv | Sørkjosen lufthavn (SN91380, 34 km, 6 moh, fjord); Torsvåg fyr (SN90800, 43 km, 21 moh, eksponert) |
+| Lenangsøyra | Sørkjosen lufthavn (38 km); Tromsø lufthavn (45 km) |
+| Steinkrøssa | Hekkingen fyr (25 km, eksponert); Tromsø (67 km) |
+| Unstad | **Eggum (SN85470, 5 km, 27 moh, eksponert Lofoten-ytterkyst)**; Leknes lufthavn (SN85450, 13 km, 27 moh, innland); Skrova fyr (SN85380, 46 km) |
+| Farstadsanden | Molde lufthavn Årø (SN62290, 27 km, 3 moh, fjord); Ona fyr (SN62480, 34 km, 13 moh, eksponert); Kristiansund lufthavn (SN64330, 37 km, 62 moh) |
+
+Eggum er den ene stasjonen som faktisk kan si noe om Unstad-dalens vind (5 km, samme kyst) - hvis Theodor registrerer en Frost-client-id, er det den som bør hentes først.
+
+### Andre funn i økten (ikke rettet - utenfor oppdraget eller krever Theodor)
+
+- **`LOGS_REPO`, `LOGS_TOKEN`, `NTFY_TOPIC` og `APP_URL` er TOMME i Actions**, også i "Hent varsel" (sjekket loggen for kjøring 125, 07.10 12:44 UTC: env-blokken viser `UA_CONTACT: ***`, `BW_CLIENT_ID: ***` osv., men `LOGS_REPO:` og de tre andre uten verdi; kilderapporten sier "Loggene dine (GitHub) | tom | 0"). Konsekvens: læring fra logger, surf_factor-kalibrering og ntfy-varsler (inkl. driftsvarslene fra oppgave G) har aldri vært aktive i Actions. Ikke en kodefeil - secrets må settes i repoet (Settings → Secrets → Actions). Testlaben får 0 logg-saker av samme grunn.
+- Kilderapporten 07.10 12:44: "Lenangsøyra | Eksponering (del C) | feil | eksponeringens sjekksum stemmer ikke med spots.json" - facing/vindu/koordinater er endret siden siste `exposure_baseline.py`-kjøring, appen bruker vindu+skyggekurve som reserve for Lenangsøyra. Kjør `python fetcher/exposure_baseline.py` på nytt (endrer eksponeringen → rating, så Theodors ja).
+- Nettlesertesten (`test_disc_browser.py`) ikke kjørt på nytt mot slutten - docs/ er urørt i denne økten (ingen endring i PWA-shellet, `test_docs_cache.py` passerer). De fem raske testene + `test_backtest.py` passerer lokalt og i Actions ("Tester" grønn på alle push til grenen).
+
+### Fysikk-kontrollør (første runde: MÅ RETTES, sju punkter - alle rettet i testlaben, ingenting i produksjonen)
+
+Kontrolløren bekreftet at ingen eksisterende fil i fetcher/ er endret, at retningene brukes riktig (WW3 pdir og GFS dir_offshore er begge "fra", BarentsWatch sendes urørt til rate() som selv legger til 180), at inndataene i `fixed_cases()` stemmer tall for tall med test_rating.py og CLAUDE.md, at energi-patchen bare treffer `energy_kj`, og at saker uten data blir "ikke evaluert" uten nuller. Sju punkter måtte rettes - alle gjort:
+1. Farstadsanden 338° er et tenkt scenario, men WW3-variantene slo opp ekte WW3 for klokkeslettet → saken er merket `synthetic`, og alle varianter som henter eksterne data for timen hopper over den (`external_ok()`).
+2. `energi_tp` blandet WW3-periode med GFS-høyde (faktor under 1) → nå ren × 1,25 på GFS; ny variant `energi_ww3` med både høyde og periode fra WW3.
+3. `judge()` regnet manglende surfehøyde som 0 → None, holdes utenfor snittet.
+4. Unstad 28.09 "4-5 stjerner" ble sammenlignet med 4,5 → intervall, avstand til nærmeste ende, pluss nytt mål "stjerneavvik med fortegn". Grunnlinja går fra 4/8 til 8/8 treff ±1 (avvik −0,38).
+5. `ww3_begge` lot partisjon 0 (vindsjø) gå inn som svellenergi og svellandel → for partisjon 0 regnes energi og `swell_share` fortsatt av phs1 (ekte svell); rapporten teller hvor ofte partisjon 0 vinner (0 av 10 i dag).
+6. Variantene ble sammenlignet på ulike utvalg → ny kolonne "Grunnlinje på SAMME saker".
+7. Bare phs1 ble sjekket → alle tre feltene (høyde, retning, periode) kreves; fyllverdier/urimelige tall (Hs over 30 m, retning over 360, periode over 40 s, NaN) blir None i `ww3_archive.py`.
+Mindre punkter, også gjort: tidsaksen i WW3-fila leses og sjekkes (`check_time_axis()`: time[k] skal være utstedelse + k timer, ellers hoppes fila over - verifiseres i neste Actions-kjøring); `prepare_spot()` har nå del B-grenen (lært eksponering/transfer_lang) som i `fetch.build_spot()`; `bench_dkj` er med i oppsummeringen; rapporten sier at ww3_svell tester tre ting samtidig (WW3 i stedet for GFS, toppperiode i stedet for gjennomsnitt, uten prior), at transfer er kalibrert mot GFS-skalaen, og at dekningen er ukentlig. Kontrollørens egne notater verdt å ta med videre: WW3 og GFS er uenige om retningen ved Unstad 26.09 (255 mot 300, facing 294,8), og Lenangsøyra 26.09 (vindsjø-saken) har ingen vindsjø-partisjon i WW3-arkivet, så `ww3_begge` er ikke testet mot den observasjonen den mest burde testes mot.
+KONTROLLØR_RUNDE2
+
+### Timelogg
+- 15:40 start, tester grønne, STATUS-linje.
+- 15:40-17:30 testlab (backtest.py, varianter, inputs, workflow, test), tre Actions-runder før WW3-arkivet var riktig (POI_SPC-filter, arkivkatalog funnet i latest_files).
+- 17:30-18:10 KystVær-sondering, fire runder i Actions.
+- Avslutning: STATUS, ROADMAP (L og M), push.
 
 ## Driftsavbrudd 07.10.2026: fysikk-kontrollør-kontroll hang i nesten 2 timer (samme som nettlesertesten natt til 07.10.) - tidsgrenser lagt til
 

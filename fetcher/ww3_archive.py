@@ -135,6 +135,44 @@ def latest_file():
     return f"{THREDDS}/dodsC/{path}", t0
 
 
+# Urimelige verdier (fyllverdier som 9,97e36, NaN) skal bli None - aldri et
+# tall som ser ut som en måling (grunnregelen). Grenser per variabeltype.
+LIMITS = {"h": (0.0, 30.0), "t": (0.0, 40.0), "d": (0.0, 360.0)}
+
+
+def sane(var, value):
+    if value is None or value != value:
+        return None
+    kind = "d" if "dir" in var else ("t" if var in ("tp", "ptp0", "ptp1") else "h")
+    lo, hi = LIMITS[kind]
+    return value if lo <= value <= hi else None
+
+
+def parse_1d(text, varname):
+    """Verdiene i en 1-D variabel (f.eks. time) fra en DAP2 .ascii-respons:
+    header-linja 'time[48]' etterfulgt av én linje med kommaseparerte tall."""
+    marker = f"\n{varname}["
+    start = text.index(marker) + 1
+    start = text.index("\n", start) + 1
+    line = text[start:].splitlines()[0]
+    return [float(x) for x in line.split(",") if x.strip()]
+
+
+def check_time_axis(base_url, t0, idx_from, idx_to):
+    """Tidsindeks k antas å være t0 + k timer. Les tidsaksen og bekreft det
+    (sekunder siden 1970 hos met.no) - ellers kunne hele arkivet vært
+    forskjøvet (kontrollørens punkt 07.10.2026). Avvik → RuntimeError."""
+    wx.BASE = base_url
+    text = wx.fetch_ascii(f"time[{idx_from}:1:{idx_to}]")
+    times = parse_1d(text, "time")
+    expected = (t0 + dt.timedelta(hours=idx_from)).timestamp()
+    if not times or abs(times[0] - expected) > 60:
+        raise RuntimeError(f"tidsaksen stemmer ikke: time[{idx_from}] = {times[:1]} mot forventet {expected:.0f} ({t0 + dt.timedelta(hours=idx_from):%Y-%m-%dT%H}Z)")
+    if len(times) > 1 and any(abs((b - a) - 3600) > 1 for a, b in zip(times, times[1:])):
+        raise RuntimeError("tidsaksen er ikke hel time per indeks")
+    return True
+
+
 def fetch_point_hours(base_url, i, j, idx_from, idx_to):
     """Rader (dict per time) for tidsindeksene idx_from..idx_to (inkl.)."""
     wx.BASE = base_url
@@ -143,7 +181,7 @@ def fetch_point_hours(base_url, i, j, idx_from, idx_to):
     cols = {}
     for v in wx.VARS:
         rows = wx.parse_grid_block(text, v)
-        cols[v] = [r[0] if r and r[0] == r[0] else None for r in rows]
+        cols[v] = [sane(v, r[0]) if r else None for r in rows]
     n = min(len(c) for c in cols.values())
     return [{v: (None if cols[v][k] is None else round(cols[v][k], 2)) for v in wx.VARS} for k in range(n)]
 
@@ -194,6 +232,7 @@ def main():
     try:
         url, t0 = latest_file()
         print("Siste fil:", url, t0)
+        check_time_axis(url, t0, 0, HOURS_AHEAD - 1)
         pts = ensure_points(spots, url)
         data = {}
         for s in spots:
@@ -237,6 +276,11 @@ def main():
             by_file.setdefault((url, t0), []).append((sid, target))
     for (url, t0), items in by_file.items():
         data = {}
+        try:
+            check_time_axis(url, t0, 0, 1)
+        except Exception as e:
+            print(f"  {url}: {e} - hopper over fila")
+            continue
         for sid, target in items:
             p = pts[sid]
             k = int((target - t0).total_seconds() // 3600)
