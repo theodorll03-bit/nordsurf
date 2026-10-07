@@ -26,7 +26,7 @@ Alle seks er vestlig svell (265-271°) fra 12,5 til 15,4 s, alle går NED, ingen
 
 **3. Secrets:** venter på Theodor.
 
-Fysikk-kontrollør: kjører i bakgrunnen idet dette committes (Theodors eksplisitte ja, tester grønne) - resultatet legges inn her i neste commit.
+Fysikk-kontrollør: **GODKJENT.** Verifisert at taket virker som tak (min(kurve, 0,05)), på både geometri og lært kurve, at 225-320 ikke overlapper vinduet/facing, at kurven er 0,0 ved 224 og 0,002 ved 321 (ingen hopp i kantene), og at hele GSHHS-buen (ca. 250-285, topp 0,27 ved 265) er dekket. Faste observasjoner holder (26.09: 0 stjerner, 0,0 m; nordlig svell fra 19°: 2 stjerner, uendret). Ordet blir "treffer_ikke" ved høy energi og "flat" ved lav - 0,05 er i praksis 0 (Hs ute måtte vært ca. 12 m for å passere flat-sperra). Tre merknader: (A) når en override dekker retningen skrus den ekstra diffraksjonsdempingen av (dobbeltdemping-regelen) - havner uansett under flat-sperra, ingen handling; (B) taket påvirker ikke BarentsWatch-timer der `bw_confirms` slår til (riktig etter sannhetshierarkiet - Ringvassøya er stor og langt unna, BarentsWatch ser den selv) - CLAUDE.md-linja presisert; (C) de seks timene bekreftet uavhengig (reservemodellen uten bw_confirms, alle utenfor 48 t, alle samme vei som 26.09).
 
 ## Theodors svar 07.10.2026 på skyøktens funn - seks punkter, status
 
