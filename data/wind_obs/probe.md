@@ -1,4 +1,74 @@
-# KystVær/Kystdatahuset-sondering, 2026-10-07 13:27 UTC
+## Swagger: vær/vind-ruter i Kystdatahuset Open API
+
+- servers: [{'url': '/ws'}], global security: None, securitySchemes: ['JWT Bearer']
+- antall ruter totalt: 142
+- ruter som matcher vær/vind-nøkkelord: 18
+### POST /api/ais/yearly-stats/{fromYear}/{toYear}
+- tags ['Ais'], summary: Load annual message statistics for Kystverkets AIS database
+- parametre: [('fromYear', 'path', True, 'integer'), ('toYear', 'path', True, 'integer')], body: nei, security: arver global
+### POST /api/auth/federated-login
+- tags ['Auth'], summary: Login with a token issued by a federated identity provider for Kystverket-internal employees
+to retrieve a JWT-token for consequtive requests.
+- parametre: [], body: ja, security: arver global
+### GET /api/auth/roles
+- tags ['Auth'], summary: List all roles. Kystverket-internal only. (Auth)
+- parametre: [], body: nei, security: [{'JWT Bearer': [None]}]
+- GET uten parametre: status 401, , 0 tegn: ``
+### POST /api/auth/roles
+- tags ['Auth'], summary: Create a role, or update its description if it already exists. Kystverket-internal only. (Auth)
+- parametre: [], body: ja, security: [{'JWT Bearer': [None]}]
+### GET /api/auth/users
+- tags ['Auth'], summary: Search users by email or display name. Kystverket-internal only. (Auth)
+- parametre: [('query', 'query', None, 'string'), ('limit', 'query', None, 'integer'), ('offset', 'query', None, 'integer')], body: nei, security: [{'JWT Bearer': [None]}]
+- GET uten parametre: status 401, , 0 tegn: ``
+### GET /api/auth/users/{id}
+- tags ['Auth'], summary: Get a single user along with their assigned roles. Kystverket-internal only. (Auth)
+- parametre: [('id', 'path', True, 'string')], body: nei, security: [{'JWT Bearer': [None]}]
+### POST /api/auth/users/{id}/roles
+- tags ['Auth'], summary: Assign a role (creating it if it doesn't already exist) to a user. Kystverket-internal only. (Auth)
+- parametre: [('id', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
+### GET /api/ship-type/statcode5/download
+- tags ['ShipType'], summary: Retrieve all Statcode5 code list with all attributes (Auth)
+- parametre: [], body: nei, security: [{'JWT Bearer': [None]}]
+- GET uten parametre: status 401, , 0 tegn: ``
+### POST /api/ship/data/fairplay/for-mmsis-imos
+- tags ['Ship'], summary: Get information about ships from Fairplay (Auth)
+- parametre: [], body: ja, security: [{'JWT Bearer': [None]}]
+### POST /api/ship/data/shipinfo/for-mmsis-imos
+- tags ['Ship'], summary: Get information about ships from Shipinfo
+- parametre: [], body: ja, security: arver global
+### GET /api/ship/nsr/download
+- tags ['Ship'], summary: This *restricted* web service allows you to download the entire NewShipRep ship registry (Auth)
+- parametre: [], body: nei, security: [{'JWT Bearer': [None]}]
+- GET uten parametre: status 401, , 0 tegn: ``
+### GET /api/vocabulary/mapping
+- tags ['ShipType'], summary: Retrieve all ship type mappings between source and target vocabularies (Auth)
+- parametre: [], body: nei, security: [{'JWT Bearer': [None]}]
+- GET uten parametre: status 401, , 0 tegn: ``
+### GET /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}
+- tags ['ShipType'], summary: Retrieve all ship type mappings between source and target vocabularies (Auth)
+- parametre: [('fromVocabularyCode', 'path', True, 'string'), ('toVocabularyCode', 'path', True, 'string')], body: nei, security: [{'JWT Bearer': [None]}]
+### POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}
+- tags ['ShipType'], summary: Upload one or more ship type mappings between two existing vocabularies
+If the mapping already exists, it will be updated with the new information.
+I.e. if the source vocabulary and source id alread
+- parametre: [('fromVocabularyCode', 'path', True, 'string'), ('toVocabularyCode', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
+### POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}/create
+- tags ['ShipType'], summary: Create (or re-create) the materialized view used to look up mappings
+between two vocabularies. (Auth)
+- parametre: [('fromVocabularyCode', 'path', True, 'string'), ('toVocabularyCode', 'path', True, 'string')], body: nei, security: [{'JWT Bearer': [None]}]
+### POST /api/vocabulary/mapping/{fromVocabularyCode}/{toVocabularyCode}/refresh
+- tags ['ShipType'], summary: Refresh the materialized view used to look up mappings between two vocabularies. (Auth)
+- parametre: [('fromVocabularyCode', 'path', True, 'string'), ('toVocabularyCode', 'path', True, 'string')], body: nei, security: [{'JWT Bearer': [None]}]
+### GET /api/vocabulary/terms/{vocabularyCode}
+- tags ['ShipType'], summary: Get the terms from a vocabulary. (Auth)
+- parametre: [('vocabularyCode', 'path', True, 'string')], body: nei, security: [{'JWT Bearer': [None]}]
+### POST /api/vocabulary/terms/{vocabularyCode}
+- tags ['ShipType'], summary: Upsert one or more terms to an existing vocabulary.
+If the term already exists, it will be updated with the new information. (Auth)
+- parametre: [('vocabularyCode', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
+
+# KystVær/Kystdatahuset-sondering, 2026-10-07 13:32 UTC
 
 ## https://kystdatahuset.no/ws/swagger/index.html
 - status 200, text/html;charset=utf-8, 6879 tegn, endte på https://kystdatahuset.kystverket.no/ws/swagger/index.html, nøkkel/innlogging antydet: nei
@@ -57,7 +127,7 @@
 ## https://kystdatahuset.no/ws/api/wind/stations
 - status 404, application/problem+json, 162 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/wind/stations, nøkkel/innlogging antydet: nei
 - lenker/nøkler: ["keys: ['type', 'title', 'status', 'traceId']"]
-- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-7736b8ea14fdc6b8680a61745447e987-c2bb4345cac2cd12-00"}`
+- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-257ac0fc54310421e6cc36f8ba9b2d11-bd4670747f3d43fd-00"}`
 
 ## https://kystdatahuset.no/ws/api/windstations
 - status 404, , 0 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/windstations, nøkkel/innlogging antydet: nei
@@ -102,7 +172,7 @@
 
 ## https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98
 - status 401, text/plain; charset=UTF-8, 454 tegn, endte på https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98, nøkkel/innlogging antydet: ja
-- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:27:04Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
+- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:32:20Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
 
 ## https://frost.met.no/api.html
 - status 200, text/html; charset=UTF-8, 7760 tegn, endte på https://frost.met.no/api.html, nøkkel/innlogging antydet: nei
