@@ -1,6 +1,6 @@
-# Testlab for treffsikkerhet - 2026-10-07 13:31 UTC
+# Testlab for treffsikkerhet - 2026-10-07 13:38 UTC
 
-Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 0 spot-timer. Vindmålinger: 0 spot-timer.
+Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 384 spot-timer. Vindmålinger: 0 spot-timer.
 
 ## Samlet
 
