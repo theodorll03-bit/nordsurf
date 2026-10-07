@@ -1,67 +1,67 @@
 {
- "last_scored_until": "2026-10-07T09:00:00+00:00",
+ "last_scored_until": "2026-10-07T12:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "tromvik": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "ersfjordstranda": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "russelv": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "lenangsoyra": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "steinkrossa": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "unstad": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "farstadsanden": {
    "1": {
-    "n": 30,
-    "hits": 30,
+    "n": 45,
+    "hits": 45,
     "n_logs": 0,
     "hits_logs": 0
    }
