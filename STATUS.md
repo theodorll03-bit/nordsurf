@@ -1,5 +1,45 @@
 # Nordsurf: status
 
+## Theodors svar 07.10.2026 på skyøktens funn - seks punkter, status
+
+1. **sky/testlab merget til main** (`033a03a`, fast-forward etter rebase, seks raske tester + nettlesertesten grønne lokalt). Push-utløseren for utviklingsgrenen er fjernet fra `backtest.yml` (ukentlig + manuell står).
+2. **WW3 som annenmening i kilderapporten** - se eget avsnitt under når det er gjort.
+3. **Lenangsøyra, `exposure_baseline.py` kjørt på nytt (Theodors ja).** Alle åtte spots regnet på nytt: SAMME tall som før for alle (rå/glattet eksponering, avstander, bredder - 0 grader endret), bare Lenangsøyra sin sjekksum er ny (`1ee7bcf3…` → `35ede7a4…`, facing 19 er med i sjekksummen men ikke i geometrien). Effekt: Lenangsøyra går fra RESERVE (vindu [15,23] + skyggekurve, brukt siden facing ble endret) tilbake til del C-kurven. Stjernetabell, varsel generert 07.10 15:00Z:
+
+| Horisont | Timer | Uendret | +2 | +3 | Ned |
+|---|---|---|---|---|---|
+| Neste 48 t | 48 | 48 | 0 | 0 | 0 |
+| Hele horisonten (201 t) | 201 | 195 | 1 | 5 | 0 |
+
+   Stoppregelen (2+ innen 48 t) slår ikke inn - 0 endringer der. De seks timene som går opp ligger 10.-19.10: surfehøyden stiger fra 0,0-0,4 m til 0,7-1,4 m i 61 timer (ordet går fra "flat" til "treffer_ikke" i 42 av dem), og 19.10 kl. 18Z går fra 0 til 3 stjerner med svell 12,5 s fra **271°**. **Spørsmål til Theodor:** del C-kurven gir Lenangsøyra glattet eksponering 0,25 ved 271° (rå 0,81: strålen treffer land 15,5 km unna, men GSHHS ser hindringen som bare 0,8 km bred, så formelen regner den som nesten åpen). Et 12,5 s svell fra vest inn Ullsfjorden til Lenangsøyra høres fysisk usannsynlig ut - vinduet er [15,23]. Dette er IKKE ny oppførsel (samme kurve lå i fila før facing-endringen, så appen gjorde det samme før 07.10), men nå vet vi om det. Hvis vest skal være 0 der, er det `exposure_override` (krever ditt ja). Ingen fysikk-kontrollør på denne commiten: ren datafil, tallene bekreftet identiske med den gamle.
+4. **Unstad, oppgave E uten surf_factor_prior** - se eget avsnitt under.
+5. **Testlab-forbehold:** rapporten (`data/backtest/latest.md`) åpner nå med "Forbehold: faste observasjoner er justeringsgrunnlag, ikke en uavhengig test", og oppsummeringen er delt i "Uavhengige saker (logger og benchmarks) - det som teller for nye dager" (tom i dag) og "Faste observasjoner (justeringsgrunnlag - skal holde, beviser ingenting nytt)". Uavhengige saker merkes `[uavhengig: logg (…)]` i varianttabellene. Med i merge (1).
+6. **Secrets:** venter på Theodors beskjed. Frost-koden ligger klar - se eget avsnitt.
+
+### Unstad, oppgave E uten surf_factor_prior (07.10.2026) - tabell og anbefaling: IKKE flytt ennå
+
+Metode: `data/bw_point_search/result.json` (kjøring 07.10 10:11Z, 16 timer 07.-09.10) gir Hs ved 14 kandidatpunkter rundt pinnen. Forholdet kandidat/dagens punkt (median over de 16 timene) ganges på BarentsWatch-høyden i hver observasjonstime, og surfehøyden regnes UTEN prior (surf_factor 1,00). 05.10-timene er hentet fra forecast.json-commiten `39ac4ef` (generert 06Z samme morgen): BarentsWatch 0,63-0,88 m, svell ute 1,8-2,6 m / 8,5-9,2 s fra 254-268°, total ute 3,9-4,1 m, vind 9-10 m/s fra 199-206°.
+
+| Kandidat (uten prior) | Forhold mot dagens punkt (median, spenn) | 26.09 (obs 2,4) | 27.09 kl. 06-08 (obs 1,55) | 28.09 kl. 12-15 (obs 4-5 stj.) | 05.10 kl. 07-10Z (obs 2,4) |
+|---|---|---|---|---|---|
+| dagens punkt MED prior 1,45 (appen i dag) | 1,00 | 2,42 | 1,34-1,49 | 1,11-1,21 | 0,99-1,13 |
+| dagens punkt / 250m@295 | 1,00 | 1,67 | 0,92-1,03 | 0,76-0,83 | 0,68-0,78 (blåst ut) |
+| 150m@275 / 150m@295 / dagens _near | 1,11 (1,00-1,15) | 1,82 | 1,00-1,12 | 0,83-0,90 | 0,74-0,84 (blåst ut) |
+| 250m@275 | 1,39 (1,28-1,56) | 2,17 | 1,20-1,34 | 0,99-1,08 | 0,88-1,01 (blåst ut) |
+| **250m@315** (68,270809, 13,576481) | **1,55 (1,11-1,81)** | **2,37** | **1,31-1,46** | **1,08-1,18** | 0,97-1,10 (blåst ut) |
+| 500m@315 | 1,80 (1,22-3,29) | 2,67 | 1,48-1,64 | 1,22-1,33 | 1,09-1,24 |
+| 1000m@315 | 2,30 (1,93-3,56) | 3,26 | 1,80-2,01 | 1,49-1,62 | 1,33-1,52 |
+| 500m@275 / 500m@295 | 2,42-2,46 (1,95-3,67) | 3,39-3,44 | 1,87-2,12 | 1,55-1,71 | 1,38-1,60 |
+| 1000m@275 / 1000m@295 | 3,08 (2,25-9,44) | 4,11 | 2,27-2,53 | 1,88-2,05 | 1,67-1,92 |
+| 150m@315 | 0,56 (0,33-0,68) | 1,06 | flat | flat | flat |
+
+Nødvendig forhold uten prior for å treffe observasjonen alene: 26.09 **1,57**, 27.09 1,67-1,92, 05.10 **4,1-4,8**.
+
+**Lesning:**
+- **250m@315 er det punktet der surfehøyden uten prior stemmer best med september-observasjonene** (2,37 mot 2,4; 1,31-1,46 mot 1,55; 28.09 1,08-1,18 - samme som appen gir i dag). Det er ingen tilfeldighet: forholdet 1,55 opphøyd i 0,8 (Komar og Gaughan) er 1,42 ≈ prioren 1,45. Punktet GJØR det samme som prioren, med en fysisk begrunnelse (punktet ligger 250 m utenfor pinnen mot NV, der BarentsWatch ikke lenger ligger i le) i stedet for en kalibreringskonstant.
+- **05.10 er ikke et punktproblem.** Ingen kandidat kommer i nærheten av 2,4 m (beste 1,9 m ved 1000 m ute - og de punktene ligger utenfor brytningssonen og er ubrukelige som spotpunkt). Alle kandidater innenfor 500 m gir "blåst ut" den dagen: svellandelen ute (0,46-0,63, vindsjø 3,9-4,1 m totalt) demper BarentsWatch-høyden uansett punkt. 05.10 hører til vind-/svellandel-saken (se STATUS 13/14 og lærdom 3 i testlaben), ikke til oppgave E.
+- **Forbehold som gjør at jeg IKKE anbefaler å flytte nå:** (a) forholdet er målt på 16 timer i én kjøring (07.-09.10, svell fra 254-345°, 8-11 s), og for 250m@315 varierer det 1,11-1,81 innenfor de timene - det er ikke en konstant, og sier lite om 15 s fra 300°; (b) å flytte punktet bytter også bw_dir, bw_period og bw_confirms-inndataene (ikke bare høyden) - effekten på de faste observasjonene må regnes med ekte tall fra det nye punktet, ikke med et forhold; (c) prioren ville måtte fjernes samtidig (ellers dobbelt), og 250m@315 sitt forhold på 26.09 kan være lavere enn 1,55 (den dagen var svellet 15 s fra 300°, det nye punktet er nær facing). **Anbefaling:** kjør "Finn BarentsWatch-punkt" på nytt på neste ekte svelldag (svell i vinduet, 12 s eller mer), og legg 250m@315 inn som fast kandidat i søket - stemmer forholdet 1,4-1,6 også da, flytt punktet OG fjern prioren i samme commit, med testlaben som dommer (faste observasjoner + alle logger). Ikke flyttet nå.
+
 ## Skyøkt (dag) 07.10.2026, gren `sky/testlab` - FERDIG: testlab bygget og kjørt, KystVær hoppet over (ingen åpen kilde)
 
 Skyøkt (dag) startet 15:40 norsk tid. Alt ligger på grenen `sky/testlab` (ikke merget - Theodors valg). Ingen eksisterende fil i `fetcher/` er endret (den lokale økten jobber der), ingen endring av ratingen. main hadde ingen nye commits da økten sluttet (den lokale økten hadde ikke pushet), så "rebase mot main" var tom - **gjør `git rebase main` på `sky/testlab` når den lokale økten har pushet.**
