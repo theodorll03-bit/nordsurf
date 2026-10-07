@@ -379,6 +379,56 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # GFS-vind til dag 16. Hver time får wind_source ("metno"/"openmeteo").
     wind_lr_raw = safe(name, "Open-Meteo GFS-vind (langtid)", sources.openmeteo_wind, s["lat"], s["lon"])
     weather = sources.merge_wind(weather, wind_lr_raw)
+    # 07.10.2026, Theodors rettelse (Lyngen-spotene viste "-" i hele
+    # langtidssonen fra fredag av): havpunktet kan ligge innenfor en GFS
+    # Wave-rutenettcelle (0,25 grader) som regnes som land fordi CELLA
+    # (ikke nødvendigvis selve punktet) har nok landareal i seg - bokstavelig
+    # 0,0 ALLE 16 dagene, ikke bare enkelttimer. RETTET 07.10.2026 av
+    # fysikk-kontrollør: Lyngen-punktene ligger selv i åpent hav (GSHHS,
+    # 11-13 km fra land) - årsaken er hvilken node GFS velger for cella, ikke
+    # et smalt sund. Kan derfor i prinsippet ramme et hvilket som helst
+    # havpunkt nær en slik rutenettgrense, se fetcher/find_longrange_point.py.
+    # Open-Meteo sin standardmodell dekker ofte de første dagene der likevel
+    # (egen, kortere horisont, ca. 7-9 dager) - resultatet blir da ekte None
+    # (aldri 0, se CLAUDE.md) bare for SELVE langtidssonen (dag 8+), der
+    # INGEN av kildene når frem.
+    # offshore_longrange (valgfritt per spot i spots.json) er et sekundært
+    # havpunkt lenger ute i samme retning - brukt BARE for de timene som
+    # uansett ville vært langtid OG der hovedpunktet ikke har noe som helst
+    # (swell_model er None - ikke når det bare mangler et utskilt svellfelt,
+    # se sources.openmeteo_marine()). Bevarer det sekundære punktet sin
+    # EGEN swell_model (gfs/standard/total_fallback) uendret, slik at all
+    # eksisterende nedstrøms-logikk (usikker-merking, svellandel-anslag for
+    # total_fallback) fortsatt virker likt - legger bare til et merke for
+    # kilderapporten.
+    #
+    # 07.10.2026, fysikk-kontrollørens presisering: dag-grensa (over
+    # RESERVE_LAST_DAY) er det som i praksis holder dette unna
+    # kalibreringsparene (calibrate.bw_pairs_for_run()/exposure_learn.py
+    # krever begge BarentsWatch som høydekilde, og BarentsWatch rekker i
+    # dag bare til ca. dag 3) - IKKE en eksplisitt sjekk mot BarentsWatch.
+    # Skulle BarentsWatch sin horisont noen gang nå dag 8+, ville retning/
+    # periode/svellandel i en slik time likevel komme fra DENNE substituerte
+    # marine-dataen (de leses derfra uavhengig av høydekilde) - koblingen er
+    # implisitt, ikke en feil i dag, men verdt å huske hvis BarentsWatch sin
+    # horisont noen gang utvides.
+    longrange_hours_used = 0
+    if spot.get("offshore_longrange"):
+        ol = spot["offshore_longrange"]
+        marine_lr = safe(name, "Open-Meteo svell (langtid-reserve)", sources.openmeteo_marine, ol["lat"], ol["lon"])
+        for t, v in marine.items():
+            if v.get("swell_model") is not None:
+                continue
+            if longrange.day_index(now, sources.parse_iso(t)) <= longrange.RESERVE_LAST_DAY:
+                continue
+            lr = marine_lr.get(t)
+            if lr and lr.get("swell_model") is not None:
+                marine[t] = lr
+                longrange_hours_used += 1
+        if longrange_hours_used:
+            REPORT.append((name, "Svell (langtid-reserve)", "ok",
+                           f"offshore_longrange brukt for {longrange_hours_used} rå timer (før 6-timers tynning) "
+                           f"der hovedpunktet ikke hadde noe i det hele tatt"))
     for label, raw_src in (("met.no hav (spot)", ocean_spot), ("met.no hav (ute)", ocean_off),
                             ("Open-Meteo svell (ute)", marine), ("met.no vind", weather_raw)):
         _, txt = _timestep_summary(raw_src, now)
@@ -595,9 +645,22 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     std_hours = sum(1 for h in hours if h.get("swell_model") == "standard")
     total_fallback_hours = sum(1 for h in hours if h.get("swell_model") == "total_fallback")
     none_hours = sum(1 for h in hours if h.get("swell_model") is None)
+    # 07.10.2026, Theodors rettelse (ROADMAP-oppfølging, Lyngen-spotene):
+    # samme telling som none_hours over, men brutt ned PER SONE - til å
+    # oppdage et nytt GFS-rutenett-hull (se offshore_longrange over) hos
+    # ANDRE spots tidlig, før noen legger merke til "-" i appen selv.
+    # 07.10.2026, fysikk-kontrollørens presisering: `hours` her er de
+    # TYNNEDE utdata-RADENE (etter longrange.keep_row(), hver 6. time i
+    # langtid-sonen) - IKKE de samme rå timetallene som "Svell
+    # (langtid-reserve)"-raden over teller. To ulike, men begge riktige,
+    # enheter - presisert i teksten under for å unngå forveksling.
+    none_by_zone = {z: sum(1 for h in hours if h.get("swell_model") is None and h.get("zone") == z)
+                     for z in ("barentswatch", "reserve", "langtid")}
     REPORT.append((name, "Svellmodell", "ok",
                    f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, "
-                   f"totalhøyde-reserve {total_fallback_hours}t, ingen svelldata {none_hours}t"))
+                   f"totalhøyde-reserve {total_fallback_hours}t, ingen svelldata {none_hours}t "
+                   f"(rader uten svelldata: BarentsWatch-sonen {none_by_zone['barentswatch']}, "
+                   f"reserve-sonen {none_by_zone['reserve']}, langtid-sonen {none_by_zone['langtid']})"))
     # 06.10.2026, Theodors rettelse (punkt 6, se CLAUDE.md): fornuftssjekk -
     # tilfeller der tallene motsier hverandre, telt per sone (ikke bare
     # totalt), til å fange nye varianter av "manglende data tolket som 0"

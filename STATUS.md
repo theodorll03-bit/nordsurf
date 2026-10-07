@@ -1,5 +1,45 @@
 # Nordsurf: status
 
+## Theodors oppgave 07.10.2026: Lyngen-spotene viste "-" i langtidssonen - FERDIG, fysikk-kontrollør fant to faktafeil (rettet) og én ting som trenger ditt valg
+
+Russelv og Lenangsøyra sine havpunkter (70.3581/20.4291 og 70.3349/20.4737) mangler svell ute i langtidssonen (dag 8+) - vises som "-". Grunnårsaken er bekreftet, men **min første forklaring var feil** (se fysikk-kontrollørens punkt 2 under) - rettet her.
+
+**1. Den EKTE årsaken (rettet 07.10.2026 av fysikk-kontrollør, som sjekket selv mot GSHHS og live mot Open-Meteo):** havpunktene ligger IKKE i et smalt sund - det var min feilaktige første hypotese. De ligger i ÅPENT HAV, 11-13 km fra land, fri sikt over 100 km i hele sektoren 330-30°. Den virkelige årsaken: Open-Meteo GFS Wave snapper ethvert spørsmål til nærmeste rutenettnode (0,25 grader), og NODEN begge punktene havner i (70,25/20,50) er landmaskert fordi den CELLA inneholder nok land (Arnøya) - selv om selve det forespurte punktet ligger langt fra land. Dette kan i prinsippet ramme et hvilket som helst åpent havpunkt nær en slik rutenettgrense, ikke bare punkter i trange sund. Rettet i spots.json og fetch.py sine kommentarer.
+
+**BarentsWatch dekker faktisk begge spotene** (rettet - jeg skrev feil at den ikke gjorde det): dag 1-3 (`bw_until`), 61 BarentsWatch-timer hver i dagens `forecast.json`, 22 og 8 kalibreringspar. Svell ute i reserve-sonen (dag 1-7, der BarentsWatch ikke dekker høyden direkte men retning/periode/svellandel fortsatt leses fra hav-dataene) kommer fra Open-Meteo sin standardmodell, som har reelle tall på hovedpunktet til og med 15.10 kl. 23Z (216 timer) - det er FØRST i langtidssonen (dag 8+, GFS-only) at hovedpunktet er helt tomt.
+
+**2. `offshore_longrange`, nytt valgfritt felt i spots.json:** et sekundært havpunkt, brukt BARE for langtidssonen og BARE for timer der hovedpunktet ikke har noe i det hele tatt. Satt direkte til **70,5/20,5** for begge spotene - NODEN Open-Meteo faktisk bruker lenger ute (bekreftet live, 384/384 timer), ikke et anslått punkt nær cellegrensa. `fetcher/find_longrange_point.py` er rettet til å lese og bruke selve noden fra Open-Meteo sitt svar (`latitude`/`longitude` i JSON-toppnivået), ikke bare spørre-koordinaten - unngår Lenangsøyra sin opprinnelige sårbarhet (det første forslaget lå bare 0,31 km fra grensa mellom land- og sjønode).
+
+Koblet inn i `fetch.py` sin `build_spot()`: erstatter timer som (a) uansett ville vært langtid-sonen OG (b) har `swell_model is None` hos hovedpunktet, med `offshore_longrange` sin EGEN data - `swell_model` sin opprinnelige verdi bevares uendret. Ny kilderapport-rad "Svell (langtid-reserve)" viser antall rå timer erstattet.
+
+**3. Sjekket alle åtte spots:** kun Russelv og Lenangsøyra rammet. Ny per-sone-nedbryting i "Svellmodell"-raden i kilderapporten for alle spots (presisert: det er RADER etter 6-timers tynning, ikke rå timer - "Svell (langtid-reserve)" sin egen linje teller rå timer, et annet tall, se kommentarene i fetch.py).
+
+**4. Russelv og Lenangsøyra deler modellrute for svell ute** - bekreftet, både på hoved- og det nye punktet. Greit så lenge andre ting skiller dem: ulikt `swell_window`, `facing`, `barentswatch_point` (BarentsWatch skiller dem fortsatt når den har data).
+
+**5. VIKTIG, nytt funn fra fysikk-kontrollør - en systematisk forskjell ved skjøten, ikke bare et hull fylt igjen:** reviewen sammenlignet standardmodellen (hovedpunktet, dag 1-7) mot GFS (det nye punktet, dag 8+) over 210 overlappende timer og kjørte `build_spot()` live med og uten feltet:
+
+| Mål (GFS nytt punkt mot standardmodell hovedpunkt) | Median | Spredning |
+|---|---|---|
+| Totalhøyde | ×1,25 | p10 1,08, p90 1,68 |
+| Periode | +2,3 s | opp til +4,2 s |
+| Retning | −9,5° | p10 −95° (store avvik i noen timer) |
+| Svellhøyde | ×1,02 | p10 0,30, p90 3,15 (modellene deler opp sjø/svell ulikt) |
+
+Live, uten BarentsWatch, 198 felles langtidsrader: **Russelv 38 rader endret (+1: 25, +2: 2, −1: 11), Lenangsøyra 26 rader endret (+1: 15, +2: 11)**. Langtidssonen blir altså systematisk LITT mer optimistisk for disse to spotene enn den ville vært om standardmodellen hadde dekket hele horisonten selv. Eksempel (Lenangsøyra 09.10, reviewens egen sjekk): standardmodellen ville gitt 5-7°/7,3 s (0 stjerner), GFS gir 20°/10,2 s (2 stjerner) - vinduet [15,23] er bare 8° bredt, så selv en liten retningsforskjell mellom modellene flytter mye her.
+
+**Stoppregelen er IKKE utløst** (reviewen kjørte selv, live): 0 stjerneendringer i de neste 48 timene (Lyngen sin langtidssone starter 9+ døgn frem), og "mangler data blir et ekte tall" telles ikke som en stjerneflytting siden det ikke fantes noen rating å flytte.
+
+**Ditt valg - tre alternativer, ingen av dem forhastet uten ditt ja:**
+- **(a) Behold som nå** - hullet er tettet, skjøten mellom kildene er en kjent, dokumentert, liten bias langt frem i tid (9+ dager), ikke verre enn andre kilders kjente begrensninger.
+- **(b) Bruk GFS fra det nye punktet for HELE langtidssonen** (dag 8+), ikke bare der hovedpunktet mangler data - flytter skjøten til dag 7/8, der sikkerheten uansett faller fra 55 til 40 % (mindre å tape på en skjøt der usikkerheten allerede er stor).
+- **(c) Flytt selve havpunktet** (til eller nær 70,5/20,5) - fjerner skjøten helt, men krever ditt ja (havpunkter står på "krever ja"-lista) og utløser trolig stoppregelen siden det ville endre reserve-sonen (dag 1-7) også, ikke bare langtid.
+
+Ikke endret noe her - venter på hva du vil.
+
+**6. Tester:** `test_pipeline.py` avsnitt 13, styrket etter fysikk-kontrollørens funn (opprinnelig versjon ga hovedpunkt og offshore_longrange IDENTISKE verdier og testet aldri en dag≤7-time som mangler data hos begge - dag-grensa kunne vært fjernet uten at testen oppdaget det). Nå: 13.1 - langtid-sonen får offshore_longrange sine TYDELIG ANDRE tall, en dag 5-time som mangler hos begge forblir ekte None, en allerede-`total_fallback`-time på dag 9 byttes IKKE ut; 13.2 - uten `offshore_longrange`, ekte None (unntatt hovedpunktets egen fallback-time); 13.3 - selv offshore_longrange uten data gir ekte None. Alle 6 testfiler grønne.
+
+**Ikke gjort, egen sak, utenfor denne commiten (fra reviewen, funnet ved et uhell):** arkiverte kjøringer (`data/forecast_archive/`) har `[0, 0.0]` (06.10) og `[0, None]` (07.10, 168 rader) for Lyngen dag 9-16 - `score_runs()` vil fra ca. 15.10 telle disse som ekte 0-stjerners treff i treffsikkerhetsmålingen, i strid med grunnregelen om manglende data. Kan blåse opp "målt"-prosenten med data som egentlig mangler. Forslag fra reviewen: hopp over arkivrader med `surf_height is None` i scoringen. De eldre `[0, 0.0]`-radene kan ikke skilles fra ekte flatt uten å slette dem - sletting av data krever ditt ja, så ikke gjort.
+
 ## Theodors ja 07.10.2026: Grøtfjord 276-285 grader, unntak lagt til - FERDIG, committet
 
 Svar på fysikk-kontrollørens spørsmål (se "periodeavhengig diffraksjonsdemping" under): "ja til unntak". Nytt `exposure_override` for Grøtfjord: `{"from": 276, "to": 285, "max": 0.2}` (i tillegg til det gamle 311-330), med kommentar i spots.json (`_exposure_override_279`) om at eneste observasjon i sektoren (26.09.2026, svell ute fra ca. 272°, helt flatt) er grunnlaget, og at taket skal fjernes hvis loggene noen gang viser noe annet.

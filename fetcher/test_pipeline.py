@@ -699,4 +699,149 @@ _ws = notify.windows({"id": "x", "name": "X", "hours": _dusk_hours, "bw_until": 
 assert len(_ws) == 1 and len(_ws[0]["hours"]) == 5 and all(h["light"] == "skumring" for h in _ws[0]["hours"]), _ws
 print("12.2 notify.windows(): fem skumringstimer gir ett varselvindu, mørke timer ikke, OK")
 
+# ---------- 13: ROADMAP-oppfølging 07.10.2026 (Lyngen-spotene, Theodors
+# rettelse) - offshore_longrange ----------
+# Russelv sitt havpunkt (i ekte spots.json) har nå et offshore_longrange-felt
+# (se spots.json og fetcher/find_longrange_point.py). Mokker
+# sources.openmeteo_marine() til å skille på (lat, lon): hovedpunktet har
+# data bare de første RESERVE_LAST_DAY (7) dagene (som om GFS Wave sitt
+# rutenett regner punktet som land i akkurat denne testen), det sekundære
+# punktet har data for HELE horisonten.
+#
+# 07.10.2026, fysikk-kontrollørens presisering: forrige versjon ga
+# hovedpunktet og offshore_longrange IDENTISKE verdier for dag <= 7, og
+# hadde ALDRI en time på dag <= 7 som manglet data hos hovedpunktet - dag>7-
+# grensa (longrange.RESERVE_LAST_DAY) ble dermed aldri reelt satt på prøve
+# (testen ville bestått selv om grensa ble fjernet). Rettet med tre ting:
+# (a) offshore_longrange sine verdier er nå TYDELIG forskjellige fra
+# hovedpunktets (annen retning/periode), så man kan se HVOR tallene kom
+# fra; (b) én time midt i dag <= 7 (DAG5_TIME) mangler data hos BEGGE
+# punktene og skal forbli ekte None (viser at grensa faktisk hindrer
+# substitusjon der); (c) én time på dag 9 er allerede total_fallback hos
+# hovedpunktet (ikke None) og skal IKKE byttes ut (viser at substitusjonen
+# bare griper inn når swell_model faktisk ER None, ikke bare "usikker").
+import longrange as _lr
+now13 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+russelv_spot = next(x for x in json.loads((Path(__file__).parent.parent / "spots.json").read_text())["spots"] if x["id"] == "russelv")
+OL = russelv_spot["offshore_longrange"]
+O = russelv_spot["offshore"]
+DAG5_TIME = now13 + dt.timedelta(hours=4 * 24 + 6)  # midt i dag 5 - skal forbli None
+# Dag 9, men justert til en time som OVERLEVER 6-timers tynningen
+# (longrange.keep_row() krever t.hour % 6 == 0 i langtid-sonen) - uten
+# dette ville FALLBACK_TIME i ca. 5 av 6 tilfeldige kjøringer aldri vist
+# seg i built13["hours"] i det hele tatt, og testen ville sett ut til å
+# bestå uansett om substitusjonen faktisk respekterte swell_model.
+_fallback_base = now13 + dt.timedelta(hours=8 * 24 + 3)
+FALLBACK_TIME = _fallback_base + dt.timedelta(hours=(-_fallback_base.hour) % 6)
+
+def _marine13(la, lo):
+    is_longrange = round(la, 3) == round(OL["lat"], 3) and round(lo, 3) == round(OL["lon"], 3)
+    out = {}
+    for i in range(_lr.HOURS):
+        t = now13 + dt.timedelta(hours=i)
+        key = sources.hour_key(t)
+        day = _lr.day_index(now13, t)
+        if t == DAG5_TIME:
+            has_data = False  # mangler hos BEGGE punktene - skal forbli None uansett
+        elif not is_longrange and t == FALLBACK_TIME:
+            out[key] = {"height": 3.5, "swell_height": 3.5, "dir": 123, "period": 6.5,
+                        "swell_model": "total_fallback", "secondary_swell_height": None,
+                        "secondary_swell_dir": None, "secondary_swell_period": None}
+            continue
+        else:
+            has_data = is_longrange or day <= _lr.RESERVE_LAST_DAY
+        if has_data and is_longrange:
+            # Tydelig ANDRE verdier enn hovedpunktet, så man kan se i testen
+            # at en langtid-time faktisk fikk offshore_longrange sine tall.
+            out[key] = {"height": 2.4, "swell_height": 2.1, "dir": 55, "period": 7.5,
+                        "swell_model": "gfs", "secondary_swell_height": None,
+                        "secondary_swell_dir": None, "secondary_swell_period": None}
+        elif has_data:
+            out[key] = {"height": 1.2, "swell_height": 1.0, "dir": 280, "period": 11,
+                        "swell_model": "gfs", "secondary_swell_height": None,
+                        "secondary_swell_dir": None, "secondary_swell_period": None}
+        else:
+            out[key] = {"height": None, "swell_height": None, "dir": None, "period": None,
+                        "swell_model": None, "secondary_swell_height": None,
+                        "secondary_swell_dir": None, "secondary_swell_period": None}
+    return out
+
+# sources.openmeteo_wind er mokket tomt lenger oppe i fila ("ingen
+# langtidsvind i de gamle testene - met.no (80 t) dekker alt") - det holder
+# ikke her, siden langtid-sonen (dag 8+) aldri nås uten vinddata som rekker
+# dit (horizon = min(..., _hours_available(weather,...))). Egen, lokal
+# 16-dagers vindmock, bare for denne testen.
+saved_wind13 = sources.openmeteo_wind
+sources.openmeteo_wind = lambda la, lo: {
+    sources.hour_key(now13 + dt.timedelta(hours=i)): {"wind_speed": 4, "wind_dir": 200, "gust": 6}
+    for i in range(_lr.HOURS)
+}
+saved_marine13 = sources.openmeteo_marine
+sources.openmeteo_marine = _marine13
+fetch.REPORT.clear()
+built13 = fetch.build_spot(russelv_spot, now13, {}, {}, "test-run-13", {}, {})
+hours13 = {h["t"]: h for h in built13["hours"]}
+langtid13 = [h for h in built13["hours"] if h.get("zone") == "langtid"]
+reserve13 = [h for h in built13["hours"] if h.get("zone") == "reserve"]
+dag5_key13 = sources.hour_key(DAG5_TIME)
+fallback_key13 = sources.hour_key(FALLBACK_TIME)
+reserve_ok13 = [h for h in reserve13 if h["t"] != dag5_key13]
+assert reserve_ok13 and all(h.get("swell_offshore") is not None for h in reserve_ok13), "reserve-sonen skal ha data fra hovedpunktet som før"
+assert hours13[dag5_key13]["swell_offshore"] is None and hours13[dag5_key13]["swell_model"] is None, \
+    "dag 5 mangler hos BEGGE punktene - skal forbli ekte None, ikke bli fylt fra offshore_longrange (den dekker bare dag 8+)"
+assert langtid13 and all(h.get("swell_offshore") is not None for h in langtid13), \
+    "langtid-sonen skal få data fra offshore_longrange når hovedpunktet mangler alt"
+# FALLBACK_TIME (dag 9) var ALLEREDE total_fallback hos hovedpunktet (ikke
+# None) - skal IKKE byttes ut, og skal beholde SINE EGNE tall (123 grader/
+# 6,5 s), ikke offshore_longrange sine (55 grader/7,5 s).
+fb13 = hours13[fallback_key13]
+assert fb13["swell_model"] == "total_fallback" and fb13["dir_offshore"] == 123 and fb13["period"] == 6.5, fb13
+# En annen langtid-time (IKKE fallback-timen) skal derimot ha
+# offshore_longrange sine tydelig ANDRE verdier (55/7,5), ikke hovedpunktets.
+other_langtid13 = next(h for h in langtid13 if h["t"] != fallback_key13)
+assert other_langtid13["dir_offshore"] == 55 and other_langtid13["period"] == 7.5, other_langtid13
+# kilderapporten teller RÅ timer (215 = dag 8-16 minus selve fallback-timen,
+# som aldri telles siden swell_model der ikke er None) før 6-timers tynning
+# til radene langtid13 selv inneholder - ulike, men begge riktige, tall.
+lr_report = [r for r in fetch.REPORT if r[0] == russelv_spot["name"] and r[1] == "Svell (langtid-reserve)"]
+assert lr_report and "215" in lr_report[0][3], lr_report
+print(f"13.1 offshore_longrange: {len(reserve13)} reserve-timer ({dag5_key13} ekte None), "
+      f"{len(langtid13)} langtid-timer (offshore_longrange sine tall), fallback-timen {fallback_key13} uendret, "
+      f"kilderapport: {lr_report[0][3]}")
+
+# Uten offshore_longrange i det hele tatt (fjernet fra en kopi): langtid-
+# sonen skal falle tilbake til ekte None (ikke 0, se CLAUDE.md), aldri late
+# som den har data den ikke har - UNNTATT fallback-timen, som hovedpunktet
+# allerede hadde total_fallback-data for helt uavhengig av offshore_longrange
+# (samme _marine13-mock, bare uten at den noen gang spørres med OL sine
+# koordinater nå).
+russelv_uten_lr = {k: v for k, v in russelv_spot.items() if k != "offshore_longrange"}
+fetch.REPORT.clear()
+built13b = fetch.build_spot(russelv_uten_lr, now13, {}, {}, "test-run-13b", {}, {})
+hours13b = {h["t"]: h for h in built13b["hours"]}
+langtid13b = [h for h in built13b["hours"] if h.get("zone") == "langtid"]
+langtid13b_ok = [h for h in langtid13b if h["t"] != fallback_key13]
+assert langtid13b_ok and all(h.get("swell_offshore") is None and h.get("swell_model") is None for h in langtid13b_ok)
+assert hours13b[fallback_key13]["swell_model"] == "total_fallback"
+assert not [r for r in fetch.REPORT if r[1] == "Svell (langtid-reserve)"]
+print(f"13.2 uten offshore_longrange: langtid-sonen ({len(langtid13b)} timer) forblir ekte None "
+      f"(unntatt hovedpunktets egen fallback-time), ingen falsk kilderapport-rad, OK")
+
+# Heller ikke offshore_longrange har noe: fortsatt ekte None, ikke en tredje
+# slags utfylling.
+def _marine13c(la, lo):
+    return {sources.hour_key(now13 + dt.timedelta(hours=i)): {
+        "height": None, "swell_height": None, "dir": None, "period": None, "swell_model": None,
+        "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
+    } for i in range(_lr.HOURS)}
+sources.openmeteo_marine = _marine13c
+fetch.REPORT.clear()
+built13c = fetch.build_spot(russelv_spot, now13, {}, {}, "test-run-13c", {}, {})
+langtid13c = [h for h in built13c["hours"] if h.get("zone") == "langtid"]
+assert langtid13c and all(h.get("swell_offshore") is None for h in langtid13c)
+assert not [r for r in fetch.REPORT if r[1] == "Svell (langtid-reserve)"]
+print(f"13.3 offshore_longrange uten data heller: fortsatt ekte None ({len(langtid13c)} timer), OK")
+sources.openmeteo_marine = saved_marine13
+sources.openmeteo_wind = saved_wind13
+
 print("Pipeline ok")

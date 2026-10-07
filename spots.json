@@ -146,6 +146,11 @@
         "lat": 70.3581,
         "lon": 20.4291
       },
+      "offshore_longrange": {
+        "lat": 70.5,
+        "lon": 20.5
+      },
+      "_offshore_longrange": "07.10.2026, Theodors rettelse (langtidsdagene viste '-' fra fredag av). RETTET 07.10.2026 av fysikk-kontrollør: havpunktet ligger IKKE i et smalt sund (det var min første, FEILAKTIGE hypotese) - GSHHS viser åpent hav, 11,7 km fra land, fri sikt over 100 km i hele sektoren 330-30°. Den EKTE årsaken: Open-Meteo GFS Wave velger nærmeste rutenettnode (0,25 grader) for ethvert punkt innenfor cella, og noden begge havpunktene havner i (70,25/20,50) er landmaskert fordi CELLA er ca. 30 % land (Arnøya) - selv om spotens eget havpunkt ligger langt fra land. Dette kan ramme ethvert havpunkt i åpent hav nær en slik rutenettgrense, ikke bare smale sund. offshore_longrange er satt direkte til 70,5/20,5 - noden Open-Meteo FAKTISK bruker for et punkt lenger ute (bekreftet live, 384/384 timer), ikke et anslått punkt nær cellegrensa (unngår Lenangsøyra sin opprinnelige sårbarhet - bare 0,31 km fra grensa mellom land- og sjønoden). Brukes BARE for langtidssonen (dag 8+) når hovedpunktet ikke har noe i det hele tatt - se fetch.py sin build_spot() og STATUS.md for tallene på skjøten mellom kildene (systematisk forskjell, ikke bare et hull fylt igjen).",
       "barentswatch_point": {
         "lat": 69.949979,
         "lon": 20.215157
@@ -194,6 +199,11 @@
         "lat": 70.3349,
         "lon": 20.4737
       },
+      "offshore_longrange": {
+        "lat": 70.5,
+        "lon": 20.5
+      },
+      "_offshore_longrange": "07.10.2026, Theodors rettelse. RETTET 07.10.2026 av fysikk-kontrollør: samme ekte årsak som Russelv (se dens _offshore_longrange) - bekreftet live at BEGGE spotenes havpunkt havner i nøyaktig samme landmaskerte GFS-node (70,25/20,50, cella er ca. 30 % land/Arnøya), IKKE et smalt sund. offshore_longrange satt direkte til 70,5/20,5 - noden begge faktisk havner i lenger ute (384/384 timer bekreftet). Brukes bare for langtidssonen. Se STATUS.md for tallene på skjøten mellom kildene (systematisk forskjell, ikke bare et hull fylt igjen).",
       "barentswatch_point": {
         "lat": 69.849744,
         "lon": 19.989858
