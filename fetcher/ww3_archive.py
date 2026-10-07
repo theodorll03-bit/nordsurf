@@ -69,32 +69,57 @@ def issue_time(name):
     return dt.datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
 
 
-def find_archive_file(target):
-    """URL (dodsC) til en arkivfil som dekker `target` (UTC), eller None.
-    Prøver kjøringene samme dag og dagen før, nyeste først - en fil dekker
-    normalt ~3 døgn fra utstedelsen."""
-    candidates = []
-    for cat in ARCHIVE_CATALOGS:
-        try:
-            files, refs = list_catalog(cat)
-        except Exception as e:
-            print(f"  katalog {cat}: {e}")
+ROOT_CATALOG = f"{THREDDS}/catalog.xml"
+_ARCHIVE_FILES = None   # [(t0, urlPath)], fylles én gang per kjøring
+
+
+def discover_archive_files(max_requests=25):
+    """Alle WW3 4 km-rutenettfiler THREDDS har, funnet fra rotkatalogen:
+    følger catalogRef-er som nevner 'ww3' (og under dem år/måned-mapper),
+    høyst `max_requests` katalogoppslag. De to gjettede arkiv-URL-ene fra
+    første versjon (ww3_4km_archive, fou-hi/ww3_4km_archive) ga begge 404
+    07.10.2026 - derfor oppdagelse i stedet for gjetting. Skriver hvilke
+    kataloger som ble funnet, så loggen viser hvor arkivet faktisk ligger."""
+    global _ARCHIVE_FILES
+    if _ARCHIVE_FILES is not None:
+        return _ARCHIVE_FILES
+    found, seen, queue, requests_left = [], set(), [], max_requests
+    for cat in ARCHIVE_CATALOGS + [ROOT_CATALOG, LATEST_CATALOG]:
+        queue.append((cat, 0))
+    while queue and requests_left > 0:
+        url, depth = queue.pop(0)
+        if url in seen:
             continue
-        # underkataloger per år/måned?
+        seen.add(url)
+        requests_left -= 1
+        try:
+            files, refs = list_catalog(url)
+        except Exception as e:
+            print(f"  katalog {url}: {str(e)[:80]}")
+            continue
+        dated = [(issue_time(n), p) for n, p in files if issue_time(n)]
+        if dated:
+            print(f"  katalog {url}: {len(dated)} rutenettfiler, {min(dated)[0]:%Y-%m-%dT%H} - {max(dated)[0]:%Y-%m-%dT%H}")
+            found += dated
         for title, href in refs:
-            sub = href if href.startswith("http") else cat.rsplit("/", 1)[0] + "/" + href
-            if target.strftime("%Y") in (title or "") or target.strftime("%Y%m") in (title or "") or "archive" in (title or "").lower():
-                try:
-                    f2, _ = list_catalog(sub)
-                    files += f2
-                except Exception:
-                    pass
-        for name, path in files:
-            t0 = issue_time(name)
-            if t0 and 0 <= (target - t0).total_seconds() / 3600 < 72:
-                candidates.append((t0, path))
-        if candidates:
-            break
+            sub = href if href.startswith("http") else url.rsplit("/", 1)[0] + "/" + href
+            blob = f"{title} {href}".lower()
+            is_ww3 = "ww3" in blob
+            is_folder = re.search(r"\b(19|20)\d{2}\b|^\d{2}$|^\d{4}$|^\d{6}$", (title or "").strip()) is not None
+            if depth == 0 and is_ww3 or depth >= 1 and (is_ww3 or is_folder):
+                if depth < 3:
+                    queue.append((sub, depth + 1))
+    _ARCHIVE_FILES = sorted(set(found))
+    if not _ARCHIVE_FILES:
+        print("  ingen WW3-rutenettfiler funnet i noen katalog")
+    return _ARCHIVE_FILES
+
+
+def find_archive_file(target):
+    """URL (dodsC) til en fil som dekker `target` (UTC), eller None. Velger
+    den nyeste utstedelsen som ligger før tidspunktet (en fil dekker
+    normalt ~3 døgn fra utstedelsen)."""
+    candidates = [(t0, path) for t0, path in discover_archive_files() if 0 <= (target - t0).total_seconds() / 3600 < 72]
     if not candidates:
         return None
     t0, path = max(candidates, key=lambda x: x[0])
