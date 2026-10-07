@@ -244,6 +244,8 @@ def load_inputs_archive():
             d = json.loads(Path(f).read_text(encoding="utf-8"))
         except Exception:
             continue
+        if not d.get("time_axis_verified"):
+            continue   # fra før tidsakse-oppslaget (07.10.2026): lå seks timer feil - ikke brukbar
         for sid, hours in d.get("spots", {}).items():
             out.setdefault(sid, {}).update(hours)
     return out
@@ -276,6 +278,8 @@ def load_ww3_archive():
             d = json.loads(Path(f).read_text(encoding="utf-8"))
         except Exception:
             continue
+        if not d.get("time_axis_verified"):
+            continue   # fra før tidsakse-oppslaget (07.10.2026): lå seks timer feil - ikke brukbar
         for sid, hours in d.get("spots", {}).items():
             out.setdefault(sid, {}).update(hours)
     return out
@@ -289,6 +293,8 @@ def load_wind_obs():
             d = json.loads(Path(f).read_text(encoding="utf-8"))
         except Exception:
             continue
+        if not d.get("time_axis_verified"):
+            continue   # fra før tidsakse-oppslaget (07.10.2026): lå seks timer feil - ikke brukbar
         for sid, hours in d.get("spots", {}).items():
             out.setdefault(sid, {}).update(hours)
     return out

@@ -17,7 +17,9 @@ To jobber per kjøring:
    bakover), noteres det - aldri 0.
 
 Filformat (data/ww3/archive/<issued>.json):
-  {"issued": "...", "file": "<url>", "spots": {spot_id: {"<t UTC>": {hs,dir,tp,phs0,pdir0,ptp0,phs1,pdir1,ptp1, "point": [lat,lon], "dist_km": ..}}}}
+  {"issued": "...", "file": "<url>", "time_axis_verified": true, "spots": {spot_id: {"<t UTC>": {hs,dir,tp,phs0,pdir0,ptp0,phs1,pdir1,ptp1, "point": [lat,lon], "dist_km": ..}}}}
+Filer uten "time_axis_verified" er fra før tidsakse-oppslaget og lå seks
+timer feil - testlaben ignorerer dem, og neste kjøring overskriver dem.
 Retningene er allerede "fra" (sea_surface_wave_from_direction, se
 ww3_explore.py) - ingen omregning."""
 import datetime as dt
@@ -137,7 +139,7 @@ def latest_file():
 
 # Urimelige verdier (fyllverdier som 9,97e36, NaN) skal bli None - aldri et
 # tall som ser ut som en måling (grunnregelen). Grenser per variabeltype.
-LIMITS = {"h": (0.0, 30.0), "t": (0.0, 40.0), "d": (0.0, 360.0)}
+LIMITS = {"h": (0.0, 30.0), "t": (1.0, 40.0), "d": (0.0, 360.0)}   # periode under 1 s = "0 s"-mønsteret, aldri gyldig
 
 
 def sane(var, value):
@@ -146,6 +148,19 @@ def sane(var, value):
     kind = "d" if "dir" in var else ("t" if var in ("tp", "ptp0", "ptp1") else "h")
     lo, hi = LIMITS[kind]
     return value if lo <= value <= hi else None
+
+
+def drop_empty_partitions(row):
+    """En partisjon med periode None (eller 0, gjort til None i sane()) er
+    FRAVÆRENDE, ikke et svell på 0 m: da blir høyde og retning også None
+    (kontrollørens oppfølging 07.10.2026 - samme grunnregel som Unstad
+    'svell 0,0 m, periode 0 s')."""
+    for p in ("0", "1"):
+        if row.get("ptp" + p) is None:
+            row["phs" + p] = row["pdir" + p] = row["ptp" + p] = None
+    if row.get("tp") is None:
+        row["hs"] = row["dir"] = None
+    return row
 
 
 def parse_1d(text, varname):
@@ -158,19 +173,26 @@ def parse_1d(text, varname):
     return [float(x) for x in line.split(",") if x.strip()]
 
 
-def check_time_axis(base_url, t0, idx_from, idx_to):
-    """Tidsindeks k antas å være t0 + k timer. Les tidsaksen og bekreft det
-    (sekunder siden 1970 hos met.no) - ellers kunne hele arkivet vært
-    forskjøvet (kontrollørens punkt 07.10.2026). Avvik → RuntimeError."""
+def time_axis(base_url):
+    """Hele tidsaksen i fila som UTC-datetimes (sekunder siden 1970 hos
+    met.no). Første versjon ANTOK at indeks k = utstedelse + k timer - den
+    tidsakse-sjekken kontrolløren ba om (07.10.2026) viste at fila utstedt
+    06Z begynner kl. 00Z (seks analysetimer først), så alt hentet før
+    sjekken lå seks timer feil. Nå slås indeksen alltid opp i aksen."""
     wx.BASE = base_url
-    text = wx.fetch_ascii(f"time[{idx_from}:1:{idx_to}]")
-    times = parse_1d(text, "time")
-    expected = (t0 + dt.timedelta(hours=idx_from)).timestamp()
-    if not times or abs(times[0] - expected) > 60:
-        raise RuntimeError(f"tidsaksen stemmer ikke: time[{idx_from}] = {times[:1]} mot forventet {expected:.0f} ({t0 + dt.timedelta(hours=idx_from):%Y-%m-%dT%H}Z)")
-    if len(times) > 1 and any(abs((b - a) - 3600) > 1 for a, b in zip(times, times[1:])):
-        raise RuntimeError("tidsaksen er ikke hel time per indeks")
-    return True
+    times = parse_1d(wx.fetch_ascii("time"), "time")
+    axis = [dt.datetime.fromtimestamp(x, dt.timezone.utc) for x in times]
+    if not axis or any(abs((b - a).total_seconds() - 3600) > 1 for a, b in zip(axis, axis[1:])):
+        raise RuntimeError("tidsaksen er tom eller ikke hel time per indeks")
+    return axis
+
+
+def index_of(axis, target):
+    """Indeksen i tidsaksen for et helt klokkeslett, eller None."""
+    for k, t in enumerate(axis):
+        if abs((t - target).total_seconds()) < 60:
+            return k
+    return None
 
 
 def fetch_point_hours(base_url, i, j, idx_from, idx_to):
@@ -183,7 +205,7 @@ def fetch_point_hours(base_url, i, j, idx_from, idx_to):
         rows = wx.parse_grid_block(text, v)
         cols[v] = [sane(v, r[0]) if r else None for r in rows]
     n = min(len(c) for c in cols.values())
-    return [{v: (None if cols[v][k] is None else round(cols[v][k], 2)) for v in wx.VARS} for k in range(n)]
+    return [drop_empty_partitions({v: (None if cols[v][k] is None else round(cols[v][k], 2)) for v in wx.VARS}) for k in range(n)]
 
 
 def load_points():
@@ -220,6 +242,11 @@ def write_archive(issued, file_url, spots_data):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / f"{issued:%Y-%m-%dT%H}.json"
     existing = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"issued": issued.isoformat(), "file": file_url, "spots": {}}
+    if not existing.get("time_axis_verified"):
+        # fila er fra før tidsakse-oppslaget (07.10.2026): alt i den lå seks
+        # timer feil - kast innholdet, behold bare det som hentes nå
+        existing = {"issued": issued.isoformat(), "file": file_url, "spots": {}}
+    existing["time_axis_verified"] = True
     for sid, hours in spots_data.items():
         existing["spots"].setdefault(sid, {}).update(hours)
     path.write_text(json.dumps(existing, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -232,15 +259,20 @@ def main():
     try:
         url, t0 = latest_file()
         print("Siste fil:", url, t0)
-        check_time_axis(url, t0, 0, HOURS_AHEAD - 1)
+        axis = time_axis(url)
+        k0 = index_of(axis, t0)
+        if k0 is None:
+            raise RuntimeError(f"utstedelsestiden {t0:%Y-%m-%dT%H}Z finnes ikke i tidsaksen ({axis[0]:%Y-%m-%dT%H}Z - {axis[-1]:%Y-%m-%dT%H}Z)")
+        print(f"  tidsakse: {len(axis)} timer fra {axis[0]:%Y-%m-%dT%H}Z, utstedelsen er indeks {k0}")
         pts = ensure_points(spots, url)
         data = {}
         for s in spots:
             p = pts.get(s["id"])
             if not p:
                 continue
-            rows = fetch_point_hours(url, p["i"], p["j"], 0, HOURS_AHEAD - 1)
-            data[s["id"]] = {hour_key(t0 + dt.timedelta(hours=k)): {**rows[k], "point": [p["lat"], p["lon"]], "dist_km": p["dist_km"]} for k in range(len(rows))}
+            k1 = min(k0 + HOURS_AHEAD - 1, len(axis) - 1)
+            rows = fetch_point_hours(url, p["i"], p["j"], k0, k1)
+            data[s["id"]] = {hour_key(axis[k0 + k]): {**rows[k], "point": [p["lat"], p["lon"]], "dist_km": p["dist_km"]} for k in range(len(rows))}
             print(f"  {s['name']}: {len(rows)} timer")
             time.sleep(1.0)
         print("Skrev", write_archive(t0, url, data))
@@ -259,7 +291,7 @@ def main():
                 targets.setdefault(c["spot"], set()).add(c["t"])
         except Exception as e:
             print("Logger kunne ikke hentes:", e)
-    have = backtest.load_ww3_archive()
+    have = backtest.load_ww3_archive()   # bare filer med verifisert tidsakse - resten hentes på nytt og overskrives
     missing = {sid: sorted(t for t in ts if t not in have.get(sid, {})) for sid, ts in targets.items()}
     by_file = {}
     for sid, ts in missing.items():
@@ -277,13 +309,16 @@ def main():
     for (url, t0), items in by_file.items():
         data = {}
         try:
-            check_time_axis(url, t0, 0, 1)
+            axis = time_axis(url)
         except Exception as e:
             print(f"  {url}: {e} - hopper over fila")
             continue
         for sid, target in items:
             p = pts[sid]
-            k = int((target - t0).total_seconds() // 3600)
+            k = index_of(axis, target)
+            if k is None:
+                print(f"  {sid} {hour_key(target)}: ikke i tidsaksen til {url}")
+                continue
             try:
                 rows = fetch_point_hours(url, p["i"], p["j"], k, k)
             except Exception as e:

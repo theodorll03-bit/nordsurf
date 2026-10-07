@@ -87,4 +87,15 @@ print("5: log_cases()/benchmark_cases() OK")
 text = backtest.report(cases, results, ctx)
 assert "## Samlet" in text and "## grunnlinje" in text and "## energi_tp" in text and "| grunnlinje |" in text and "SAMME saker" in text
 print("6: rapport OK")
+
+# 7: WW3-arkivets verdisperre: periode 0 (kildens "0 s"-mønster) og fyllverdier
+# blir None, og en partisjon uten periode er fraværende - aldri "0 m svell".
+import ww3_archive  # noqa: E402
+assert ww3_archive.sane("ptp1", 0.0) is None and ww3_archive.sane("ptp1", 0.5) is None and ww3_archive.sane("ptp1", 11.2) == 11.2
+assert ww3_archive.sane("phs1", 9.97e36) is None and ww3_archive.sane("pdir0", 361) is None and ww3_archive.sane("hs", float("nan")) is None
+row = ww3_archive.drop_empty_partitions({"hs": 2.0, "dir": 250.0, "tp": 11.0, "phs0": 0.0, "pdir0": 180.0, "ptp0": None, "phs1": 2.0, "pdir1": 250.0, "ptp1": 11.0})
+assert row["phs0"] is None and row["pdir0"] is None and row["phs1"] == 2.0
+assert ww3_archive.index_of([__import__("datetime").datetime(2026, 10, 7, h, tzinfo=__import__("datetime").timezone.utc) for h in range(0, 12)],
+                            __import__("datetime").datetime(2026, 10, 7, 6, tzinfo=__import__("datetime").timezone.utc)) == 6
+print("7: WW3-verdisperre, tomme partisjoner og tidsakse-oppslag OK")
 print("Alle tester ok")
