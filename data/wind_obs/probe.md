@@ -134,7 +134,7 @@ between two vocabularies. (Auth)
 If the term already exists, it will be updated with the new information. (Auth)
 - parametre: [('vocabularyCode', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
 
-# KystVær/Kystdatahuset-sondering, 2026-10-07 13:37 UTC
+# KystVær/Kystdatahuset-sondering, 2026-10-07 16:04 UTC
 
 ## https://kystdatahuset.no/ws/swagger/index.html
 - status 200, text/html;charset=utf-8, 6879 tegn, endte på https://kystdatahuset.kystverket.no/ws/swagger/index.html, nøkkel/innlogging antydet: nei
@@ -193,7 +193,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 ## https://kystdatahuset.no/ws/api/wind/stations
 - status 404, application/problem+json, 162 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/wind/stations, nøkkel/innlogging antydet: nei
 - lenker/nøkler: ["keys: ['type', 'title', 'status', 'traceId']"]
-- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-000c0b5ef543808022ff9f2ae038db34-356181a03c9adf87-01"}`
+- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-ba76b2adf7eef612ec20c0c4e6968b66-7308489d42846b6e-00"}`
 
 ## https://kystdatahuset.no/ws/api/windstations
 - status 404, , 0 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/windstations, nøkkel/innlogging antydet: nei
@@ -238,7 +238,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 
 ## https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98
 - status 401, text/plain; charset=UTF-8, 454 tegn, endte på https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98, nøkkel/innlogging antydet: ja
-- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:37:24Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
+- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T16:04:53Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
 
 ## https://frost.met.no/api.html
 - status 200, text/html; charset=UTF-8, 7760 tegn, endte på https://frost.met.no/api.html, nøkkel/innlogging antydet: nei
