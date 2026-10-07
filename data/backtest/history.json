@@ -423,5 +423,117 @@
    "bench_m_mae": null,
    "bench_n": 0
   }
+ },
+ {
+  "run": "2026-10-07T13:50:46.861171+00:00",
+  "cases": 15,
+  "grunnlinje": {
+   "evaluated": 15,
+   "fixed_hold": "15/15",
+   "fixed_failed": [],
+   "surf_mae": 0.05,
+   "surf_n": 9,
+   "hit1": "8/8",
+   "hit1_pct": 100,
+   "star_bias": -0.38,
+   "star_bias_n": 8,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  },
+  "ww3_svell": {
+   "evaluated": 10,
+   "fixed_hold": "5/10",
+   "fixed_failed": [
+    "unstad_2609",
+    "unstad_2809_12",
+    "unstad_2809_13",
+    "unstad_2809_14",
+    "unstad_2809_15"
+   ],
+   "surf_mae": 0.4,
+   "surf_n": 5,
+   "hit1": "4/8",
+   "hit1_pct": 50,
+   "star_bias": -0.88,
+   "star_bias_n": 8,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  },
+  "energi_tp": {
+   "evaluated": 15,
+   "fixed_hold": "15/15",
+   "fixed_failed": [],
+   "surf_mae": 0.05,
+   "surf_n": 9,
+   "hit1": "8/8",
+   "hit1_pct": 100,
+   "star_bias": -0.38,
+   "star_bias_n": 8,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  },
+  "energi_ww3": {
+   "evaluated": 10,
+   "fixed_hold": "10/10",
+   "fixed_failed": [],
+   "surf_mae": 0.07,
+   "surf_n": 5,
+   "hit1": "8/8",
+   "hit1_pct": 100,
+   "star_bias": -0.38,
+   "star_bias_n": 8,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  },
+  "ww3_begge": {
+   "evaluated": 10,
+   "fixed_hold": "5/10",
+   "fixed_failed": [
+    "unstad_2609",
+    "unstad_2809_12",
+    "unstad_2809_13",
+    "unstad_2809_14",
+    "unstad_2809_15"
+   ],
+   "surf_mae": 0.4,
+   "surf_n": 5,
+   "hit1": "4/8",
+   "hit1_pct": 50,
+   "star_bias": -0.88,
+   "star_bias_n": 8,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  },
+  "vind_korr": {
+   "evaluated": 0,
+   "fixed_hold": "–",
+   "fixed_failed": [],
+   "surf_mae": null,
+   "surf_n": 0,
+   "hit1": "–",
+   "hit1_pct": null,
+   "star_bias": null,
+   "star_bias_n": 0,
+   "partition0_wins": 0,
+   "bench_kj_mae": null,
+   "bench_stars_mae": null,
+   "bench_m_mae": null,
+   "bench_n": 0
+  }
  }
 ]
