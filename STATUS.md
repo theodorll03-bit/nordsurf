@@ -1,5 +1,63 @@
 # Nordsurf: status
 
+## Driftsavbrudd 07.10.2026: fysikk-kontrollør-kontroll hang i nesten 2 timer (samme som nettlesertesten natt til 07.10.) - tidsgrenser lagt til
+
+To netter på rad har et skript hengt uten tidsgrense og blokkert økten: natt til 07.10. en nettleser-automatisering (over en time), og 07.10. på dagtid en fysikk-kontrollør-kontroll startet synkront (`run_in_background: false`) som trolig hang i `test_disc_browser.py` (ekte nettleser-test, Playwright) - nesten 2 timer før Theodor avbrøt manuelt. Ingen hengende prosesser funnet igjen etterpå (sjekket `ps`/`lsof` for python/chromium/testserver - ingenting å avslutte).
+
+**Rettet:**
+- `fetcher/test_disc_browser.py`: hvert Playwright-steg (goto/wait_for_selector/wait_for_function/click/screenshot) har nå en EKSPLISITT grense på 15 s (`page.set_default_timeout()`), i stedet for Playwright sin egen, lengre standard (30 s - eller ingen grense for enkelte kall). I tillegg en hardkill-vaktpost (`_watchdog()`, egen tråd, `os._exit(124)` - ikke en exception noe kan fange/skjule) som dreper HELE prosessen etter 5 minutter uansett hvor den sitter fast. Testserveren stoppes i `finally` som før (uendret - var allerede riktig), og dør uansett med prosessen (daemon-tråd) hvis vaktposten løser ut. Verifisert: kjører fortsatt korrekt og raskt (under 5 sekunder reelt), ingen falske tidsavbrudd.
+- CLAUDE.md, ny regel under "Arbeidsmåte": ingen kommando, test eller agent får kjøre uten tidsgrense. Subagenter (fysikk-kontrollør inkludert) skal startes i bakgrunnen, ikke blokkere økten synkront - sjekkes inn etter 20 minutter, avbrytes (TaskStop) med notis her hvis ikke ferdig.
+- Denne oppgaven selv: fysikk-kontrollør-oppfølgingen (verifisering av rettelsene under "GFS/standardmodell"-saken rett under) ble relansert i bakgrunnen (`run_in_background: true`, ikke synkront), med instruks om å IKKE kjøre test_disc_browser.py (allerede verifisert direkte, se over) og et eget 15-minutters budsjett, pluss en 20-minutters engangs-cron som ville avbrutt den (TaskStop) og notert det her hvis fristen ble sprengt. Tidsbudsjettet virket: svarte GODKJENT på under 12 minutter, alle dens egne kommandoer hadde tidsgrense. Engangs-crontimeren ble derfor avbestilt (unødvendig, trengte ikke utløses) - se "GFS/standardmodell"-saken under for selve utfallet (to tekstrettelser, ingen kodefeil).
+
+## Theodors instruks 07.10.2026 (del 1 av 2): forhold+glidning mellom GFS og standardmodellen i langtid - LYNGEN-DELEN KLAR, IKKE committet ennå (venter på fysikk-kontrollørens oppfølgingskontroll, se driftsavbruddet over), SAMME-PUNKT-DELEN SATT PÅ VENT (fysikk-kontrollør fant at premisset ikke stemmer for de fleste spots - se "Spør Theodor" under)
+
+**Oppgaven:** når langtidsvarselet "hopper" mellom standardmodellen og GFS (ulik skala mellom kildene), skal forholdet mellom dem i det overlappende tidsrommet brukes til å skalere GFS etter at standardmodellen sin egen dekning tar slutt, med en glidende overgang (ikke et hopp) - for ALLE spots, ikke bare Lyngen. Del 2 (WW3 mot observasjonene) er en egen sak, ikke startet - se STATUS.md videre nedover for alt det andre som ligger foran i køen.
+
+**Implementert som `sources.ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS=12)`** (`fetcher/sources.py`): generisk funksjon. Fysikk-kontrollørens gjennomgang (full, se avsnittet lenger ned) fant at selve matematikken i denne funksjonen er riktig, men avdekket at den ene av to bruksområder bygget på et feil premiss, pluss to reelle feil i hvordan den ble brukt. Rettet og delt i to:
+
+**1. Lyngen: hovedpunktet mot `offshore_longrange` - FERDIG, klar for commit.** Egen kobling i `fetch.py` sin `build_spot()`, erstatter forrige versjons RÅ substitusjon. `primary` er hovedpunktet sin EGEN svellhøyde (uansett modell, så lenge den er ekte), `fill` er `offshore_longrange` sin EGEN svellhøyde. Live målt 07.10.2026: forholdet for Russelv/Lenangsøyra = **0,932** (offshore_longrange ligger ca. 7 % LAVERE enn hovedpunktet i de 216 overlappende timene). Eksempel (2026-10-16T11:00Z): rå offshore_longrange-verdi 2,92 m, korrigert til 2,92/0,932 = 3,13 m.
+
+Kontrolløren fant en reell feil her: `openmeteo_marine()` korrigerer INTERNT hvert punkt sin egen GFS mot sin egen standardmodell (se punkt 2 under) - `offshore_longrange` sin EGEN serie hadde derfor allerede blitt skalert med SIN EGEN ratio (0,902) FØR Lyngen-koblingen i tillegg delte med krysspunkt-forholdet (0,932), en dobbel korreksjon (GFS/(0,902×0,932) i stedet for GFS/0,932 - ca. 11 % for høyt, bekreftet live). Rettet ved at punkt 2 under er satt på vent (se der) - `offshore_longrange` sin serie er dermed rå igjen, og Lyngen-koblingen er den ENESTE korreksjonen som virker på den.
+
+Oppfølgingskontrollen (samme dag, se driftsavbrudd-notisen øverst i fila) bekreftet rettelsen GODKJENT (384/384 timer hos offshore_longrange uendret mot kildens rå verdi, ratio drevet til 0,915 i en senere kjøring - forventet, modellene endrer seg mellom kjøringer, ikke en feil) og fant én ikke-blokkerende ting verdt å notere: `ratio_blend_correction()` korrigerer bare `fill` ETTER skjøten - skulle hovedpunktet en dag få et enkelt hull (swell_model=None) FØR sin egen siste ekte time (altså omsluttet av ekte data på begge sider, ikke en hale), ville DET hullet bli fylt med offshore_longrange sin RÅ, ukorrigerte verdi (eksisterende substitusjonslogikk ser bare på swell_model, ikke på hvor i tidsrekka hullet ligger). Skjer ikke i dag (Russelv/Lenangsøyra sine 216 ekte timer er sammenhengende, ingen indre hull) - bare noe å huske hvis det en gang skulle endre seg.
+
+**2. Samme punkt, GFS mot standardmodellen (inni `openmeteo_marine()` selv) - SATT PÅ VENT, ikke rullet ut.** Forholdet beregnes fortsatt og vises i kilderapporten ("Svell (GFS/standard-forhold)"), slik Theodor ba om - men ruller IKKE ut til `swell_height` ennå. Se "Spør Theodor" under for hvorfor og hvilket valg som trengs.
+
+Live tall likevel, til orientering (07.10.2026, alle 8 spots, samme kjøring - IKKE brukt i dagens tall):
+
+| Spot | GFS/standard-forhold | Skjøt (standardmodellens horisont) |
+|---|---|---|
+| Grøtfjord | 0,800 | 2026-10-15T23:00Z |
+| Tromvik | 1,137 | 2026-10-15T23:00Z |
+| Ersfjordstranda | 0,931 | 2026-10-15T23:00Z |
+| Steinkrøssa | 0,833 | 2026-10-15T23:00Z |
+| Unstad | 1,143 | 2026-10-15T23:00Z |
+| Farstadsanden | 0,957 | 2026-10-15T23:00Z |
+| Russelv / Lenangsøyra | ingen (GFS har 0 ekte timer der i det hele tatt) | - |
+
+**Spør Theodor: samme-punkt-delen bygger på et premiss fysikk-kontrolløren fant ikke stemmer for 6 av 8 spots.** Instruksen forutsetter at standardmodellen vises FØRST og GFS tar over ETTERPÅ. Live sjekket: GFS vises faktisk i 86-99 % av timene FØR skjøten også, for Grøtfjord/Tromvik/Ersfjordstranda/Steinkrøssa/Unstad/Farstadsanden - standardmodellen fyller bare spredte, enkeltstående hull i GFS sin egen dekning, ikke en egen, sammenhengende sone som GFS tar over fra. De faktiske "hoppene" i langtidsvarselet er sannsynligvis disse spredte hullene (eksempel, Tromvik 15.10: kl. 06Z GFS 1,66 m, kl. 12Z standard 1,14 m, kl. 18Z standard 0,96 m) - noe korreksjonen som er bygget IKKE rører, siden den bare virker ETTER skjøten.
+
+Hadde korreksjonen blitt rullet ut som den stod: snittet av svellhøyden etter skjøten ville endret seg systematisk - Grøtfjord +22 %, Steinkrøssa +18 %, Ersfjordstranda +5 %, Farstadsanden +4 %, Unstad −13 %, Tromvik −15 % (live målt). Kontrolløren fant også en egen blandingsfeil i selve glidningen (ville gitt et kunstig dykk i tallene ved skjøten for de fire spotene der GFS vises helt til og med skjøtetimen - glidningen startet fra standardmodellens skjulte verdi i stedet for GFS sin verdi som faktisk vises der): Grøtfjord 2,58→2,18→**1,42** m (−45 % i stedet for −16 %) i timene rundt 15.-16.10. Denne feilen må rettes uansett hvilket alternativ som velges under.
+
+**Tre alternativer (ingen valgt, ingen forhastet uten ditt ja):**
+- **(a) La GFS bestemme skalaen hele veien.** Skaler standardmodellens hull-fyllende timer (FØR skjøten) til GFS sin skala, i stedet for omvendt. Fjerner de hoppene som faktisk observeres, og følger CLAUDE.md sin konvensjon ("Svell ute: GFS Wave"). Disse hullene kan ligge innenfor 48 timer - stoppregelen må sjekkes med tall før commit.
+- **(b) La standardmodellen bestemme skalaen så lenge den finnes**, slik instruksen opprinnelig beskrev - da byttes svellkilden for dag 1-9 for alle spots fra GFS til standardmodellen, en konvensjonsendring som også treffer BarentsWatch-sonen (svellandel og retning ute leses fra samme kilde). Krever eget ja og en ny stoppregel-sjekk.
+- **(c) Behold dagens mekanisme (skaler GFS etter skjøten), med glidningsfeilen rettet** - minst endring fra det som allerede er bygget og testet, men løser ikke problemet med de spredte hullene FØR skjøten (de forblir uendret, siden mekanismen ikke rører dem).
+
+**Tester (`fetcher/test_pipeline.py`):**
+- **7f** - ren funksjonstest av `ratio_blend_correction()`: forhold, skjøt (primær sin siste ekte verdi), glidningen time for time (1, 6 og 12 timer etter skjøten), og at `primary` aldri røres. Egen sjekk for for lite overlapp (0 og 1 par) - skal gi `None`/`None` og `fill` uendret.
+- **7g** - bekrefter at samme-punkt-forholdet BEREGNES og VISES i kilderapporten gjennom den virkelige `openmeteo_marine()`, men at `swell_height` forblir UENDRET (satt på vent) - en vaktpost mot at mekanismen slås på igjen ved et uhell før punktene over er avklart. Bekrefter også fysikk-kontrollørens `safe()`-funn (se "Mindre rettelser" under): `_meta` telles ikke som en time i kilderapporten.
+- **13.4** - Lyngen sin cross-point-variant: at den FØRSTE langtid-timen som overlever 6-timers tynning ligger nøyaktig på den beregnede glidningen (klokketid-uavhengig forventningsformel, rundet til samme 3 desimaler som fetch.py selv bruker), og at den siste (dag 16) er fullt korrigert til målverdien.
+
+Alle 6 testfiler grønne (`test_rating.py`, `test_pipeline.py`, `test_exposure_learn.py`, `test_docs_cache.py`, `test_map_disc.py`, `test_disc_browser.py`).
+
+**Mindre rettelser fra samme gjennomgang:**
+- `fetch.py` sin `safe()` talte `_meta` som en ekstra "time" i kilderapporten for "Open-Meteo svell"-radene (av med én, kosmetisk) - rettet generisk (hopper over alle `_`-prefikserte nøkler, ikke bare "_meta" spesifikt).
+- Test 13.4 sammenlignet en urundet forventningsverdi mot fetch.py sin avrundede (3 desimaler) verdi med 1e-6 toleranse - bestod bare i 2 av 6 mulige klokkefaser, ville stoppet "Hent varsel" (test.yml kjører FØR hver henting) så å si hver kjøring. Rettet til å runde begge sider likt.
+- CLAUDE.md sin konvensjon ("høyde, retning og periode for svellet skal alltid komme fra samme modell") brytes bevisst, delvis, for Lyngen i glidningsvinduet (høyden blandes/skaleres mot en annen kildes forhold, retning/periode er fortsatt uendret fra offshore_longrange) - lagt til som et eksplisitt unntak i CLAUDE.md i stedet for en stille avvik.
+
+**Stoppregelen (2+ stjerne de neste 48 timene) - Lyngen-delen, den som faktisk kjører:** substitusjonen virker BARE for timer der `longrange.day_index(...) > RESERVE_LAST_DAY` (dag 8+, en eksplisitt, ubetinget sjekk i koden - ikke avhengig av hvor skjøten faller) - minst 7 døgn frem, uansett. Stoppregelen sitt 48-timers vindu kan derfor aldri treffes av denne delen, strukturelt, ikke bare observert denne kjøringen. Samme-punkt-delen er satt på vent og rører ingenting ennå.
+
 ## Theodors oppfølging 07.10.2026: WAVEWATCH III 4 km som mulig erstatter for oppgave J - plan og tabeller, INGENTING koblet inn
 
 Svar på de seks spørsmålene, alle bekreftet direkte mot met.no (nettleser + `requests` mot live API-er, ikke antatt):
@@ -38,7 +96,7 @@ Svar på de seks spørsmålene, alle bekreftet direkte mot met.no (nettleser + `
 
 **Verktøy:** `fetcher/ww3_explore.py` (nytt, bare `requests` - henter enkeltpunkter via OPeNDAP sitt tekstbaserte `.ascii`-grensesnitt, aldri hele filen på 8,8 GB). Fant under arbeidet at tette, raske kall til thredds.met.no sitt delte API av og til ga et dårlig (men ikke krasjende) treff for enkelte punkter - løst med en kort pause mellom hvert kall og en sanity-sjekk (forkast og prøv på nytt hvis treffet er mer enn 10 km fra det forespurte punktet). Fullt 8-spot-søk tar et par minutter.
 
-## Theodors oppgave 07.10.2026: Lyngen-spotene viste "-" i langtidssonen - FERDIG, fysikk-kontrollør fant to faktafeil (rettet) og én ting som trenger ditt valg
+## Theodors oppgave 07.10.2026: Lyngen-spotene viste "-" i langtidssonen - FERDIG, fysikk-kontrollør fant to faktafeil (rettet), og Theodors valg om skjøten er implementert (se "forhold+glidning"-seksjonen over)
 
 Russelv og Lenangsøyra sine havpunkter (70.3581/20.4291 og 70.3349/20.4737) mangler svell ute i langtidssonen (dag 8+) - vises som "-". Grunnårsaken er bekreftet, men **min første forklaring var feil** (se fysikk-kontrollørens punkt 2 under) - rettet her.
 
@@ -67,14 +125,16 @@ Live, uten BarentsWatch, 198 felles langtidsrader: **Russelv 38 rader endret (+1
 
 **Stoppregelen er IKKE utløst** (reviewen kjørte selv, live): 0 stjerneendringer i de neste 48 timene (Lyngen sin langtidssone starter 9+ døgn frem), og "mangler data blir et ekte tall" telles ikke som en stjerneflytting siden det ikke fantes noen rating å flytte.
 
-**Ditt valg - tre alternativer, ingen av dem forhastet uten ditt ja:**
-- **(a) Behold som nå** - hullet er tettet, skjøten mellom kildene er en kjent, dokumentert, liten bias langt frem i tid (9+ dager), ikke verre enn andre kilders kjente begrensninger.
-- **(b) Bruk GFS fra det nye punktet for HELE langtidssonen** (dag 8+), ikke bare der hovedpunktet mangler data - flytter skjøten til dag 7/8, der sikkerheten uansett faller fra 55 til 40 % (mindre å tape på en skjøt der usikkerheten allerede er stor).
-- **(c) Flytt selve havpunktet** (til eller nær 70,5/20,5) - fjerner skjøten helt, men krever ditt ja (havpunkter står på "krever ja"-lista) og utløser trolig stoppregelen siden det ville endre reserve-sonen (dag 1-7) også, ikke bare langtid.
+**Theodors svar (07.10.2026): et fjerde alternativ, valgt i stedet for (a)/(b)/(c) under (historikk, ikke lenger aktuelle):**
+- ~~(a) Behold som nå (rått skifte, kjent liten bias)~~
+- ~~(b) Bruk GFS for HELE langtidssonen, flytt skjøten til dag 7/8~~
+- ~~(c) Flytt selve havpunktet, krever eget ja, trolig stoppregel~~
 
-Ikke endret noe her - venter på hva du vil.
+I stedet: samme forholds- og glidningsmekanisme (`sources.ratio_blend_correction()`) som Theodor samtidig ba om for ALLE spots sin GFS/standard-skjøte - se den nye, egne seksjonen øverst i fila for full forklaring, tall og tester. Koblet inn i `fetch.py` sin `build_spot()`: `offshore_longrange` sin svellhøyde skaleres til hovedpunktet sin skala (forholdet beregnet live fra det faktiske overlappet - målt 07.10.2026 til **0,932**, offshore_longrange ca. 7 % lavere enn hovedpunktet i de 216 overlappende timene), med en 12-timers glidende overgang fra hovedpunktet sin siste ekte verdi - ikke et hopp. Retning/periode/`swell_model` fra `offshore_longrange` er FORTSATT uendret, akkurat som før (bare selve svellhøyden korrigeres). Kilderapporten sin "Svell (langtid-reserve)"-rad viser nå forholdet også, ikke bare antall timer.
 
-**6. Tester:** `test_pipeline.py` avsnitt 13, styrket etter fysikk-kontrollørens funn (opprinnelig versjon ga hovedpunkt og offshore_longrange IDENTISKE verdier og testet aldri en dag≤7-time som mangler data hos begge - dag-grensa kunne vært fjernet uten at testen oppdaget det). Nå: 13.1 - langtid-sonen får offshore_longrange sine TYDELIG ANDRE tall, en dag 5-time som mangler hos begge forblir ekte None, en allerede-`total_fallback`-time på dag 9 byttes IKKE ut; 13.2 - uten `offshore_longrange`, ekte None (unntatt hovedpunktets egen fallback-time); 13.3 - selv offshore_longrange uten data gir ekte None. Alle 6 testfiler grønne.
+**Rettet etter en ANDRE fysikk-kontrollør-gjennomgang samme dag:** `offshore_longrange` sin egen serie ble i en mellomliggende versjon dobbelt-korrigert (sin egen interne GFS/standard-skala-retting, se seksjonen øverst i fila, PLUSS krysspunkt-forholdet på toppen - ca. 11 % for høyt, bekreftet live). Rettet ved at den interne rettingen er satt på vent (se øverst i fila) - denne koblingen er nå den ENESTE korreksjonen som virker på `offshore_longrange` sin serie.
+
+**6. Tester:** `test_pipeline.py` avsnitt 13, styrket etter fysikk-kontrollørens funn (opprinnelig versjon ga hovedpunkt og offshore_longrange IDENTISKE verdier og testet aldri en dag≤7-time som mangler data hos begge - dag-grensa kunne vært fjernet uten at testen oppdaget det). Nå: 13.1 - langtid-sonen får offshore_longrange sine TYDELIG ANDRE tall, en dag 5-time som mangler hos begge forblir ekte None, en allerede-`total_fallback`-time på dag 9 byttes IKKE ut; 13.2 - uten `offshore_longrange`, ekte None (unntatt hovedpunktets egen fallback-time); 13.3 - selv offshore_longrange uten data gir ekte None; **13.4 (ny, 07.10.2026) - forholds- og glidningskorreksjonen**: egen mock med en rå offshore_longrange-verdi i langtid som er tydelig forskjellig fra overlappets, så korreksjonen faktisk er synlig. Første langtid-time som overlever 6-timers tynning sjekkes mot en eksakt, klokketid-uavhengig forventet verdi (samme glidningsformel som koden selv, ingen antakelse om hvilken time det blir), siste langtid-time (dag 16) mot det fullt korrigerte målet. Se også 7f/7g (under, egen seksjon) for selve mekanismen isolert. Alle 6 testfiler grønne.
 
 **Ikke gjort, egen sak, utenfor denne commiten (fra reviewen, funnet ved et uhell):** arkiverte kjøringer (`data/forecast_archive/`) har `[0, 0.0]` (06.10) og `[0, None]` (07.10, 168 rader) for Lyngen dag 9-16 - `score_runs()` vil fra ca. 15.10 telle disse som ekte 0-stjerners treff i treffsikkerhetsmålingen, i strid med grunnregelen om manglende data. Kan blåse opp "målt"-prosenten med data som egentlig mangler. Forslag fra reviewen: hopp over arkivrader med `surf_height is None` i scoringen. De eldre `[0, 0.0]`-radene kan ikke skilles fra ekte flatt uten å slette dem - sletting av data krever ditt ja, så ikke gjort.
 

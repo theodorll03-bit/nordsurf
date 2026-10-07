@@ -344,7 +344,14 @@ def low_adjustment_warning(hours, name):
 def safe(spot, label, fn, *args, default=None):
     try:
         res = fn(*args)
-        n = len(res) if hasattr(res, "__len__") else 1
+        if isinstance(res, dict):
+            # "_"-prefikserte nøkler er sidekanaler, ikke tidssteg (sett i
+            # praksis: sources.openmeteo_marine() sin "_meta") - telt med her
+            # ville gitt kilderapporten ett tidssteg for mye, fysikk-
+            # kontrollørens funn 07.10.2026.
+            n = sum(1 for k in res if not (isinstance(k, str) and k.startswith("_")))
+        else:
+            n = len(res) if hasattr(res, "__len__") else 1
         REPORT.append((spot, label, "ok" if n else "tom", n))
         return res
     except Exception as e:
@@ -366,6 +373,20 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     ocean_spot = safe(name, "met.no hav (spot)", sources.metno_ocean, s["lat"], s["lon"])
     ocean_off = safe(name, "met.no hav (ute)", sources.metno_ocean, o["lat"], o["lon"])
     marine = safe(name, "Open-Meteo svell (ute)", sources.openmeteo_marine, o["lat"], o["lon"])
+    # "_meta" er en sidekanal, ikke en time (se sources.openmeteo_marine() sin
+    # docstring) - må plukkes ut FØR noe annet rører denne dicten, ellers
+    # sorterer strengen "_meta" seg inn blant tidsstempel-nøklene (f.eks.
+    # _hours_available() under sin max(source_dict), eller kilderapporten sin
+    # min(marine)/max(marine)) og gir feil horisont/feil rapport.
+    marine_meta = marine.pop("_meta", {}) if marine else {}
+    gfs_standard_ratio = marine_meta.get("gfs_standard_ratio")
+    if gfs_standard_ratio is not None:
+        # Vises - men IKKE brukt til å endre swell_height ennå, se
+        # sources.openmeteo_marine() sin docstring og STATUS.md (Theodors
+        # valg mellom tre alternativer, satt på vent av fysikk-kontrolløren).
+        REPORT.append((name, "Svell (GFS/standard-forhold)", "ok",
+                       f"GFS/standard = {gfs_standard_ratio:.3f} i overlappet, skjøt ved standardmodellens "
+                       f"siste ekte time ({marine_meta.get('ratio_seam')}) - IKKE brukt i tallene ennå, venter på Theodor"))
     weather_raw = safe(name, "met.no vind", sources.metno_weather, s["lat"], s["lon"])
     # 27.09.2026, ROADMAP oppgave 1: Locationforecast (vind) går fra time- til
     # 6-timerssteg etter ca. 51 timer - interpolert her (se
@@ -416,6 +437,37 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if spot.get("offshore_longrange"):
         ol = spot["offshore_longrange"]
         marine_lr = safe(name, "Open-Meteo svell (langtid-reserve)", sources.openmeteo_marine, ol["lat"], ol["lon"])
+        marine_lr.pop("_meta", None)  # eget GFS/standard-forhold for DETTE punktet - ikke brukt her
+        # 07.10.2026, Theodors rettelse: samme forholds- og glidningsmekanisme
+        # som GFS/standardmodell-skjøten over (sources.ratio_blend_correction()),
+        # men her mellom hovedpunktet sin EGEN svellhøyde (primary - det
+        # punktet faktisk når, uansett hvilken modell) og offshore_longrange
+        # sin EGEN svellhøyde (fill). De to punktene ligger et stykke fra
+        # hverandre og kan derfor ligge på systematisk ulik skala (se
+        # STATUS.md for dagens målte forhold) - rettes her i stedet for et
+        # rått skifte midt i tallrekka. ANNEN skjøt enn GFS/standard-saken
+        # over (som er satt på vent) - her er premisset (hovedpunktet viser
+        # faktisk standardmodellen helt til standardmodellens egen horisont
+        # tar slutt - live sett ca. dag 7-10, varierer noe mellom kjøringer -
+        # offshore_longrange sin GFS tar over etterpå) bekreftet riktig av
+        # fysikk-kontrolløren 07.10.2026, så denne delen er IKKE satt på vent.
+        #
+        # marine_lr sin EGEN GFS/standard-korreksjon (over, i
+        # openmeteo_marine() selv) er satt på vent (se der) - marine_lr sin
+        # swell_height er derfor GFS sin RÅ verdi, ikke dobbelt-korrigert.
+        # Skulle den samme-punkt-mekanismen bli slått på igjen senere: pass
+        # på at den ikke også korrigerer offshore_longrange sin EGEN serie
+        # FØR denne cross-point-korreksjonen bruker den - ville gitt en
+        # dobbel korreksjon (fysikk-kontrollørens funn, se STATUS.md).
+        # Bare "gfs"/"standard" (ekte, utskilt svellmål) teller i selve
+        # forholdstallet - IKKE "total_fallback" (vindsjø-forurenset reserve,
+        # satt til totalhøyden, se sources.openmeteo_marine()) - det ville
+        # blandet inn vindsjø og gjort forholdet mindre representativt for
+        # selve svellet.
+        REAL_MODELS = ("gfs", "standard")
+        primary_series = {t: v["swell_height"] for t, v in marine.items() if v.get("swell_model") in REAL_MODELS}
+        fill_series = {t: v["swell_height"] for t, v in marine_lr.items() if v.get("swell_model") in REAL_MODELS}
+        corrected_lr, cross_ratio, cross_seam = sources.ratio_blend_correction(primary_series, fill_series)
         for t, v in marine.items():
             if v.get("swell_model") is not None:
                 continue
@@ -423,12 +475,18 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
                 continue
             lr = marine_lr.get(t)
             if lr and lr.get("swell_model") is not None:
+                lr = dict(lr)
+                if t in corrected_lr:
+                    lr["swell_height"] = round(corrected_lr[t], 3)
                 marine[t] = lr
                 longrange_hours_used += 1
         if longrange_hours_used:
-            REPORT.append((name, "Svell (langtid-reserve)", "ok",
-                           f"offshore_longrange brukt for {longrange_hours_used} rå timer (før 6-timers tynning) "
-                           f"der hovedpunktet ikke hadde noe i det hele tatt"))
+            detail = (f"offshore_longrange brukt for {longrange_hours_used} rå timer (før 6-timers tynning) "
+                       f"der hovedpunktet ikke hadde noe i det hele tatt")
+            if cross_ratio is not None:
+                detail += (f", svellhøyde skalert med forholdet {cross_ratio:.3f} "
+                            f"(offshore_longrange/hovedpunkt i overlappet, skjøt {cross_seam})")
+            REPORT.append((name, "Svell (langtid-reserve)", "ok", detail))
     for label, raw_src in (("met.no hav (spot)", ocean_spot), ("met.no hav (ute)", ocean_off),
                             ("Open-Meteo svell (ute)", marine), ("met.no vind", weather_raw)):
         _, txt = _timestep_summary(raw_src, now)
