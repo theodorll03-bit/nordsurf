@@ -16,10 +16,25 @@ se DATA = window.__FORECAST__ || fetch(...) i docs/index.html), og sjekker:
    .gitignore - ikke committet, regenereres hver kjøring).
 
 Trenger: pip install playwright && playwright install chromium (kjørt én
-gang, se README). Kjør: python fetcher/test_disc_browser.py"""
+gang, se README). Kjør: python fetcher/test_disc_browser.py
+
+07.10.2026, Theodors rettelse (denne testen hang i over en time, to netter
+på rad - se CLAUDE.md sin regel "ingen kommando, test eller agent får kjøre
+uten tidsgrense"): ALLE Playwright-ventinger har nå en EKSPLISITT, kort
+tidsgrense (ELEMENT_TIMEOUT_MS, satt via page.set_default_timeout() rett
+etter at siden opprettes - gjelder goto/wait_for_selector/wait_for_function/
+click osv. automatisk) i stedet for Playwright sin egen, lengre standard
+(30 s, og enkelte kall uten noen grense i det hele tatt). I TILLEGG en global
+"hardkill"-vaktpost (_watchdog()) som dreper PROSESSEN (os._exit, ikke bare
+en exception - fanger opp hvis noe internt i Playwright/Chromium selv skulle
+ignorere sin egen tidsgrense) hvis HELE testen ikke er ferdig innen
+FILE_TIMEOUT_S - siste skanse, skal normalt aldri utløses siden hvert
+enkelt steg allerede er begrenset til ELEMENT_TIMEOUT_MS."""
 import http.server
 import json
+import os
 import socket
+import sys
 import threading
 from functools import partial
 from pathlib import Path
@@ -30,6 +45,23 @@ ROOT = Path(__file__).parent.parent
 DOCS = ROOT / "docs"
 SHOT_DIR = Path(__file__).parent / "test_screenshots"
 SHOT_DIR.mkdir(exist_ok=True)
+
+ELEMENT_TIMEOUT_MS = 15_000  # maks pr. enkelt venting (goto/wait_for_*/click)
+FILE_TIMEOUT_S = 300  # maks for HELE testfilen - siste skanse, se docstring
+
+
+def _watchdog(seconds):
+    """Dreper prosessen hardt hvis testen ikke er ferdig innen `seconds` -
+    ikke en exception noe try/except kan fange/skjule, med vilje (en test
+    som henger skal synlig FEILE, ikke bli ventet ut)."""
+    def _kill():
+        print(f"TIDSAVBRUDD: test_disc_browser.py brukte over {seconds}s - avbrutt (se CLAUDE.md).",
+              file=sys.stderr, flush=True)
+        os._exit(124)  # samme konvensjon som unix sin `timeout`-kommando
+    timer = threading.Timer(seconds, _kill)
+    timer.daemon = True
+    timer.start()
+    return timer
 
 # ---------- Fast testfil for forecast.json ----------
 # Begge timer er basert på et EKTE hour-objekt fra rate()/fetch.py (samme
@@ -148,13 +180,18 @@ def crests_class(markup):
 
 
 def main():
+    watchdog = _watchdog(FILE_TIMEOUT_S)
     server, port = _start_server()
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch()
+            browser = p.chromium.launch(timeout=ELEMENT_TIMEOUT_MS)
             device = p.devices["iPhone 13"]
             context = browser.new_context(**device)
+            context.set_default_timeout(ELEMENT_TIMEOUT_MS)
+            context.set_default_navigation_timeout(ELEMENT_TIMEOUT_MS)
             page = context.new_page()
+            page.set_default_timeout(ELEMENT_TIMEOUT_MS)  # samme grense direkte på siden også, ikke bare context
+            page.set_default_navigation_timeout(ELEMENT_TIMEOUT_MS)
             page.add_init_script(f"window.__FORECAST__ = {json.dumps(FIXTURE)};")
             # Undertrykk "forklar kartet"-boblen (map.js sin
             # maybeShowExplainAuto()) - den dekker skiva på skjermbildet
@@ -263,6 +300,7 @@ def main():
             browser.close()
     finally:
         server.shutdown()
+        watchdog.cancel()
 
     print(f"Skjermbilder lagret i {SHOT_DIR}")
     print("Alle tester ok")
