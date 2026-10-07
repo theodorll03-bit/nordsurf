@@ -23,6 +23,8 @@ jobs:
         run: python fetcher/test_pipeline.py
       - name: Test eksponering lært fra BarentsWatch (del B)
         run: python fetcher/test_exposure_learn.py
+      - name: Test testlaben (backtest, uten nett)
+        run: timeout 300 python fetcher/test_backtest.py
       - name: Sjekk at docs/sw.js sin cache-versjon stemmer med docs/
         run: python fetcher/test_docs_cache.py
       - name: Sjekk skivas kildetekst (treff/bom leser bare directness)
