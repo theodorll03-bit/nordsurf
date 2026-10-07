@@ -172,7 +172,7 @@ def _has_real_swell(v):
 RATIO_BLEND_HOURS = 12  # Theodors instruks 07.10.2026: glidende overgang, ikke et hopp
 
 
-def ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS):
+def ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS, blend_from_series=None):
     """07.10.2026, Theodors rettelse (generalisert fra Lyngen-saken, se
     STATUS.md): når en serie (`fill` - f.eks. GFS langt frem, eller et
     sekundært havpunkt sin egen GFS-serie) skal FORTSETTE etter at en annen,
@@ -193,8 +193,25 @@ def ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS):
     3. "Skjøten" er SISTE tidspunkt (kronologisk) der `primary` har en ekte
        verdi - der `primary` sin egen dekning faktisk tar slutt for godt.
     4. Etter skjøten: `fill` sin verdi korrigeres til `primary` sin skala
-       (delt på `ratio`), og GLIR LINEÆRT inn fra `primary` sin siste ekte
-       verdi over `blend_hours` timer - ingen brå hopp i tallet som vises.
+       (delt på `ratio`), og GLIR LINEÆRT inn fra en startverdi over
+       `blend_hours` timer - ingen brå hopp i tallet som vises.
+
+    07.10.2026, fysikk-kontrollørens funn (andre runde): startverdien for
+    glidningen skal være det som FAKTISK ble vist i skjøtetimen - IKKE
+    nødvendigvis `primary[seam]`. Når `fill` også er ekte og VELGES i
+    skjøtetimen (f.eks. GFS vinner over standardmodellen når begge er ekte,
+    se openmeteo_marine()), er `primary[seam]` en skjult verdi ingen så -
+    glidning fra den ga et kunstig dykk/hopp (verdien falt til
+    `primary[seam]` et øyeblikk, før den gled videre mot målet). `fill`
+    sin EGEN urørte verdi i skjøtetimen IGJEN (`fill[seam]`, siden `fill`
+    aldri endres på/før skjøten, se punkt 4) er alltid identisk med det som
+    faktisk vises der når `fill` er den valgte kilden - men når `primary`
+    heller er den viste kilden i skjøtetimen, er ikke `fill[seam]` riktig
+    heller. `blend_from_series` (valgfri, f.eks. den faktisk VISTE serien,
+    uavhengig av hvilken av `primary`/`fill` som vant hver time) løser dette
+    generelt - standardverdi (ingen gitt) er `primary[seam]`, som er riktig
+    for Lyngen sin krysspunkt-bruk (der `primary` ALLTID er den viste verdien
+    ved hovedpunktet, se fetch.py).
 
     Rører ALDRI `primary` sine egne verdier, og `fill` bare for tidspunkt
     ETTER skjøten. Returnerer (korrigert_fill_dict, ratio_eller_None,
@@ -213,6 +230,7 @@ def ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS):
         return dict(fill), None, None
     seam = max(primary_real_times)
     seam_dt = parse_iso(seam)
+    blend_start = (blend_from_series or primary).get(seam, primary[seam])
     corrected = dict(fill)
     for t, v in fill.items():
         if v in (None, 0) or t <= seam:
@@ -221,13 +239,13 @@ def ratio_blend_correction(primary, fill, blend_hours=RATIO_BLEND_HOURS):
         target = v / ratio
         if hours_after < blend_hours:
             w = hours_after / blend_hours
-            corrected[t] = primary[seam] * (1 - w) + target * w
+            corrected[t] = blend_start * (1 - w) + target * w
         else:
             corrected[t] = target
     return corrected, ratio, seam
 
 
-def openmeteo_marine(lat, lon):
+def openmeteo_marine(lat, lon, apply_ratio_correction=True):
     """Hovedsvellet (retning, høyde, periode), fra GFS Wave. Faller tilbake til
     Open-Meteo sin standardmodell for en time der GFS ikke har svelldata for
     punktet. Totalhøyden (inkl. vindsjø) og sekundærsvellet følger med, men
@@ -241,13 +259,26 @@ def openmeteo_marine(lat, lon):
     swell_model er "gfs", "standard", "total_fallback" (se under) eller None
     (ingen av kildene har NOE, verken svell eller totalhøyde, for punktet).
 
-    07.10.2026: "_meta" sitt forhold mellom GFS og standardmodellen BEREGNES
-    og rapporteres (Theodor ba om å "vise forholdet per spot i
-    kilderapporten"), men ER IKKE BRUKT til å endre "swell_height" - satt på
-    vent etter at fysikk-kontrolløren fant at premisset (standardmodellen
-    vises først, GFS tar over etterpå) ikke stemmer for de fleste spots, se
-    STATUS.md. Lyngen sin EGEN bruk av ratio_blend_correction() (hovedpunktet
-    mot offshore_longrange, i fetch.py) er en annen, upåvirket skjøt.
+    07.10.2026, Theodors instruks (etter å ha sett fysikk-kontrollørens funn
+    at premisset - standardmodellen vises først, GFS tar over etterpå - ikke
+    stemmer for de fleste spots): korriger likevel, SAMME metode som Lyngen
+    sin krysspunkt-bruk (fetch.py), for alle spots - "så alt følger én
+    regel". "_meta" sitt forhold mellom GFS og standardmodellen vises i
+    kilderapporten OG brukes til å skalere "swell_height" etter skjøten (se
+    ratio_blend_correction()). Se STATUS.md.
+
+    07.10.2026, fysikk-kontrollørens funn (tredje runde): Lyngen sin
+    `offshore_longrange` er OGSÅ bare et havpunkt, kalt via DENNE funksjonen
+    (fetch.py) - uten en sperre ville den få sin EGEN samme-punkt-korreksjon
+    her (f.eks. forhold 0,88), FØR fetch.py sin krysspunkt-korreksjon deler
+    på SITT forhold (f.eks. 0,915) en gang til - dobbel korreksjon, opptil
+    +53 % i glidningsvinduet, samme type feil som ble funnet og rettet for
+    Lyngen tidligere (se STATUS.md). `apply_ratio_correction=False`
+    (fetch.py sender dette BARE for offshore_longrange-kallet) hopper over
+    MUTASJONEN av "swell_height" (og selve "_meta"-beregningen, siden ingen
+    bruker den der uansett - fetch.py kastet den allerede) - resten av
+    funksjonen er identisk, punktet sin egen rå GFS/standard-seleksjon
+    (modell-valg per time) er fortsatt uendret og korrekt.
 
     Henter GFS- og standardmodell-kallene hver for seg: timer det ene ut
     (sett i praksis - Open-Meteo kan svare tregt), skal ikke det andre
@@ -334,34 +365,39 @@ def openmeteo_marine(lat, lon):
             "secondary_swell_dir": src.get("secondary_swell_dir"),
             "secondary_swell_period": src.get("secondary_swell_period"),
         }
-    # 07.10.2026, Theodors instruks: korriger GFS sin svellhøyde etter at
-    # standardmodellen sin EGEN dekning tar slutt for godt, til samme skala
-    # som standardmodellen viste der de to overlappet (ratio_blend_correction()).
+    # 07.10.2026, Theodors instruks (bekreftet etter fysikk-kontrollørens
+    # funn samme dag): korriger GFS sin svellhøyde etter at standardmodellen
+    # sin EGEN dekning tar slutt for godt, til samme skala som standardmodellen
+    # viste der de to overlappet (ratio_blend_correction()) - SAMME metode
+    # som Lyngen sin krysspunkt-bruk (fetch.py), for ALLE spots, "så alt
+    # følger én regel" (Theodors ord). Kontrollørens funn (at GFS i praksis
+    # vises 86-99 % av tiden FØR skjøten også, så de faktiske hoppene
+    # Theodor så trolig er spredte standardmodell-hull FØR skjøten, ikke noe
+    # denne mekanismen dekker) endrer ikke selve valget - Theodor har sett
+    # det og valgt likevel. Se STATUS.md.
     #
-    # IKKE SLÅTT PÅ ENNÅ - fysikk-kontrollørens gjennomgang samme dag fant at
-    # premisset ikke stemmer for 6 av 8 spots: GFS vises faktisk i 86-99 % av
-    # timene FØR skjøten også (standardmodellen fyller bare spredte,
-    # enkeltstående hull - ikke en egen, sammenhengende sone som tar over
-    # ETTERPÅ). Å skalere GFS til standardmodellen sin skala etter skjøten
-    # endrer da hele langtidssonen systematisk (+22 % til -15 % målt live,
-    # se STATUS.md) uten å røre de faktiske hoppene Theodor så (de spredte
-    # standardmodell-hullene FØR skjøten, som denne mekanismen ikke dekker).
-    # Kontrolløren fant også en reell blandingsfeil her (glidningen startet
-    # fra `standard_swell_series[seam]`, IKKE den verdien som faktisk vises i
-    # skjøtetimen - oftest GFS sin egen, siden GFS vinner når den er ekte -
-    # ga et kunstig dykk i tallene). Denne feilen må rettes FØR mekanismen
-    # eventuelt slås på igjen, uansett hvilket av Theodors tre alternativer
-    # han velger (se STATUS.md) - den er ikke spesifikk for ett alternativ.
-    #
-    # Beregner og rapporterer forholdet likevel (Theodor ba uttrykkelig om å
-    # "vise forholdet per spot i kilderapporten", uavhengig av valget under) -
-    # men ruller IKKE ut til "swell_height". Lyngen sin egen, SEPARATE bruk av
-    # samme funksjon (hovedpunktet mot offshore_longrange, i fetch.py) er
-    # IKKE påvirket av dette - det er en annen skjøt (to ulike punkt, ikke
-    # GFS mot standardmodell ved samme punkt) der premisset faktisk stemmer.
-    _, ratio, seam = ratio_blend_correction(standard_swell_series, gfs_swell_series)
-    if ratio is not None:
-        out["_meta"] = {"gfs_standard_ratio": round(ratio, 3), "ratio_seam": seam}
+    # `blend_from_series` = den FAKTISK VISTE serien (ikke nødvendigvis
+    # standardmodellens egen, skjulte verdi) i skjøtetimen - fysikk-
+    # kontrollørens andre funn (glidningen startet fra feil verdi, ga et
+    # kunstig dykk når GFS vant selv i skjøtetimen). Bygget fra `out` (det
+    # som faktisk endte opp i resultatet) rett før denne korreksjonen, derfor
+    # alltid den EGENTLIG viste verdien uansett hvilken modell som vant hver
+    # time.
+    # 07.10.2026, fysikk-kontrollørens funn (tredje runde): hopp over HELE
+    # dette for offshore_longrange-punktet (fetch.py sender
+    # apply_ratio_correction=False DIT) - uten dette ville punktet fått sin
+    # EGEN samme-punkt-korreksjon her, FØR fetch.py sin krysspunkt-korreksjon
+    # (samme mekanisme, mot hovedpunktet) deler på et ANNET forhold en gang
+    # til - dobbel korreksjon (opptil +53 % i glidningsvinduet, målt live).
+    if apply_ratio_correction:
+        displayed_swell_series = {k: v["swell_height"] for k, v in out.items() if v.get("swell_model") is not None}
+        corrected_gfs, ratio, seam = ratio_blend_correction(
+            standard_swell_series, gfs_swell_series, blend_from_series=displayed_swell_series)
+        if ratio is not None:
+            for k, v in corrected_gfs.items():
+                if k > seam and out.get(k, {}).get("swell_model") == "gfs":
+                    out[k]["swell_height"] = round(v, 3)
+            out["_meta"] = {"gfs_standard_ratio": round(ratio, 3), "ratio_seam": seam}
     return out
 
 

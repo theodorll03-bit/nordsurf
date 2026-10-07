@@ -381,12 +381,24 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     marine_meta = marine.pop("_meta", {}) if marine else {}
     gfs_standard_ratio = marine_meta.get("gfs_standard_ratio")
     if gfs_standard_ratio is not None:
-        # Vises - men IKKE brukt til å endre swell_height ennå, se
-        # sources.openmeteo_marine() sin docstring og STATUS.md (Theodors
-        # valg mellom tre alternativer, satt på vent av fysikk-kontrolløren).
-        REPORT.append((name, "Svell (GFS/standard-forhold)", "ok",
-                       f"GFS/standard = {gfs_standard_ratio:.3f} i overlappet, skjøt ved standardmodellens "
-                       f"siste ekte time ({marine_meta.get('ratio_seam')}) - IKKE brukt i tallene ennå, venter på Theodor"))
+        # 07.10.2026, Theodors instruks: samme metode for alle spots, "så
+        # alt følger én regel" - forholdet er nå BRUKT (ikke bare vist), se
+        # sources.openmeteo_marine(). Koden DELER på forholdet (ikke ganger) -
+        # presisert i teksten (fysikk-kontrollørens funn, tredje runde:
+        # "skalert med 0,744" kan lese som ×0,744, koden gir faktisk ×1,34).
+        ratio_seam = marine_meta.get("ratio_seam")
+        detail = (f"GFS sin svellhøyde delt på {gfs_standard_ratio:.3f} (×{1/gfs_standard_ratio:.3f}) "
+                  f"(GFS/standard i overlappet) etter at standardmodellen sin egen dekning tok slutt ({ratio_seam})")
+        # Stoppregelen sitt 48-timersvindu: INGEN hardkodet sperre her (i
+        # motsetning til Lyngen sin krysspunkt-korreksjon, som har en
+        # ubetinget day_index-sjekk) - skjøten er alltid standardmodellens
+        # EGEN horisont, som i praksis har ligget langt utenfor 48 timer
+        # (se STATUS.md), men IKKE en strukturell garanti. Varsler synlig i
+        # kilderapporten hvis det en dag skulle endre seg, i stedet for å
+        # stille anta det fortsatt er trygt (fysikk-kontrollørens forslag).
+        if ratio_seam and sources.parse_iso(ratio_seam) - now < dt.timedelta(hours=48):
+            detail += " - ADVARSEL: skjøten er innenfor 48-timersvinduet, sjekk stoppregelen før commit"
+        REPORT.append((name, "Svell (GFS/standard-forhold)", "ok", detail))
     weather_raw = safe(name, "met.no vind", sources.metno_weather, s["lat"], s["lon"])
     # 27.09.2026, ROADMAP oppgave 1: Locationforecast (vind) går fra time- til
     # 6-timerssteg etter ca. 51 timer - interpolert her (se
@@ -436,8 +448,13 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     longrange_hours_used = 0
     if spot.get("offshore_longrange"):
         ol = spot["offshore_longrange"]
-        marine_lr = safe(name, "Open-Meteo svell (langtid-reserve)", sources.openmeteo_marine, ol["lat"], ol["lon"])
-        marine_lr.pop("_meta", None)  # eget GFS/standard-forhold for DETTE punktet - ikke brukt her
+        # apply_ratio_correction=False (siste, positional - safe() støtter ikke
+        # keyword-argumenter): fysikk-kontrollørens funn (tredje runde) - uten
+        # dette ville offshore_longrange fått SIN EGEN samme-punkt-korreksjon
+        # her, FØR krysspunkt-korreksjonen under deler på et ANNET forhold en
+        # gang til (dobbel korreksjon, opptil +53 % målt live, se STATUS.md).
+        marine_lr = safe(name, "Open-Meteo svell (langtid-reserve)", sources.openmeteo_marine, ol["lat"], ol["lon"], False)
+        marine_lr.pop("_meta", None)  # ingen _meta når apply_ratio_correction=False - ingenting å kaste, men trygt uansett
         # 07.10.2026, Theodors rettelse: samme forholds- og glidningsmekanisme
         # som GFS/standardmodell-skjøten over (sources.ratio_blend_correction()),
         # men her mellom hovedpunktet sin EGEN svellhøyde (primary - det
@@ -446,19 +463,22 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         # hverandre og kan derfor ligge på systematisk ulik skala (se
         # STATUS.md for dagens målte forhold) - rettes her i stedet for et
         # rått skifte midt i tallrekka. ANNEN skjøt enn GFS/standard-saken
-        # over (som er satt på vent) - her er premisset (hovedpunktet viser
-        # faktisk standardmodellen helt til standardmodellens egen horisont
-        # tar slutt - live sett ca. dag 7-10, varierer noe mellom kjøringer -
-        # offshore_longrange sin GFS tar over etterpå) bekreftet riktig av
-        # fysikk-kontrolløren 07.10.2026, så denne delen er IKKE satt på vent.
+        # over (som nå kjører for alle spots, Theodors valg) - her er
+        # premisset (hovedpunktet viser faktisk standardmodellen helt til
+        # standardmodellens egen horisont tar slutt - live sett ca. dag
+        # 7-10, varierer noe mellom kjøringer - offshore_longrange sin GFS
+        # tar over etterpå) bekreftet riktig av fysikk-kontrolløren
+        # 07.10.2026 - denne delen kjører derfor uendret.
         #
-        # marine_lr sin EGEN GFS/standard-korreksjon (over, i
-        # openmeteo_marine() selv) er satt på vent (se der) - marine_lr sin
-        # swell_height er derfor GFS sin RÅ verdi, ikke dobbelt-korrigert.
-        # Skulle den samme-punkt-mekanismen bli slått på igjen senere: pass
-        # på at den ikke også korrigerer offshore_longrange sin EGEN serie
-        # FØR denne cross-point-korreksjonen bruker den - ville gitt en
-        # dobbel korreksjon (fysikk-kontrollørens funn, se STATUS.md).
+        # marine_lr sin EGEN GFS/standard-korreksjon (inni openmeteo_marine()
+        # selv) er BEVISST AVSLÅTT for akkurat dette kallet
+        # (apply_ratio_correction=False, se der) - marine_lr sin swell_height
+        # er derfor GFS sin RÅ verdi her, IKKE dobbelt-korrigert. Fysikk-
+        # kontrollørens funn (tredje runde, 07.10.2026): da samme-punkt-
+        # mekanismen ble slått PÅ for alle spots, kom nettopp denne doble
+        # korreksjonen tilbake (opptil +53 % målt live) FØR denne sperren ble
+        # lagt til - se STATUS.md. IKKE fjern apply_ratio_correction=False
+        # over uten å lese den saken.
         # Bare "gfs"/"standard" (ekte, utskilt svellmål) teller i selve
         # forholdstallet - IKKE "total_fallback" (vindsjø-forurenset reserve,
         # satt til totalhøyden, se sources.openmeteo_marine()) - det ville
@@ -484,7 +504,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             detail = (f"offshore_longrange brukt for {longrange_hours_used} rå timer (før 6-timers tynning) "
                        f"der hovedpunktet ikke hadde noe i det hele tatt")
             if cross_ratio is not None:
-                detail += (f", svellhøyde skalert med forholdet {cross_ratio:.3f} "
+                detail += (f", svellhøyde delt på {cross_ratio:.3f} (×{1/cross_ratio:.3f}) "
                             f"(offshore_longrange/hovedpunkt i overlappet, skjøt {cross_seam})")
             REPORT.append((name, "Svell (langtid-reserve)", "ok", detail))
     for label, raw_src in (("met.no hav (spot)", ocean_spot), ("met.no hav (ute)", ocean_off),

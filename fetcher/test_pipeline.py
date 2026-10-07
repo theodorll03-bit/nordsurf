@@ -27,7 +27,7 @@ def hourly(fn):
     return {sources.hour_key(now + dt.timedelta(hours=i)): fn(i) for i in range(80)}
 
 sources.metno_ocean = lambda la, lo: hourly(lambda i: {"height": 1.8, "dir": 300 + (4 if la < 69.8 else 0), "water_temp": 8})
-sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 300, "period": 13})
+sources.openmeteo_marine = lambda la, lo, apply_ratio_correction=True: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 300, "period": 13})
 sources.metno_weather = lambda la, lo: hourly(lambda i: {"wind_speed": 2, "wind_dir": 120, "gust": 4, "air_temp": 6})
 now = dt.datetime.now(dt.timezone.utc)
 sources.kartverket_tide = lambda la, lo, a, b: [
@@ -208,7 +208,7 @@ assert covered_no_bw == 20
 spots_cfg = json.loads((Path(__file__).parent.parent / "spots.json").read_text())
 grot_spot = next(s for s in spots_cfg["spots"] if s["id"] == "grotfjord")
 lat250, lat150 = grot_spot["barentswatch_point"]["lat"], grot_spot["barentswatch_point_near"]["lat"]
-sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 1.8, "swell_height": 1.8, "dir": grot_spot["facing"], "period": 13})
+sources.openmeteo_marine = lambda la, lo, apply_ratio_correction=True: hourly(lambda i: {"height": 1.8, "swell_height": 1.8, "dir": grot_spot["facing"], "period": 13})
 
 def bw_two_points_mock(la, lo):
     now4 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
@@ -252,7 +252,7 @@ assert h6i2["bw_height"] == 1.1 and h6i2["bw_height_near"] == 1.1  # begge er 15
 
 # ---------- 7a: svellretning skal ALDRI komme fra met.no sin samlede sjøtilstand ----------
 sources.metno_ocean = lambda la, lo: hourly(lambda i: {"height": 1.8, "dir": 325, "water_temp": 8})
-sources.openmeteo_marine = lambda la, lo: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 266, "period": 13, "swell_model": "gfs"})
+sources.openmeteo_marine = lambda la, lo, apply_ratio_correction=True: hourly(lambda i: {"height": 2.0, "swell_height": 1.6, "dir": 266, "period": 13, "swell_model": "gfs"})
 tmp3 = Path(tempfile.mkdtemp())
 fetch.OUT = tmp3 / "forecast.json"
 fetch.BW_CALIB = tmp3 / "bw_calibration.json"
@@ -447,14 +447,16 @@ assert r_one_7f is None and s_one_7f is None, "ett par er for lite grunnlag for 
 assert one_pair_7f == {_k7f(0): 2.0, _k7f(1): 9.0}
 print("7f for lite overlapp (0/1 par) -> ingen korreksjon, fill returneres uendret, OK")
 
-# ---------- 7g: openmeteo_marine() - GFS/standard-forholdet BEREGNES og
-# rapporteres i "_meta" (Theodors instruks: "vis forholdet per spot i
-# kilderapporten"), men ruller IKKE ut til swell_height - satt på vent
-# 07.10.2026 etter at fysikk-kontrolløren fant at premisset (standardmodellen
-# vises først, GFS tar over etterpå) ikke stemmer for de fleste spots, og at
-# glidningen startet fra feil verdi (se STATUS.md og sources.py sin
-# docstring). Denne testen sikrer at IKKE noen senere endring ved et uhell
-# slår korreksjonen på igjen før begge er rettet. ----------
+# ---------- 7g: openmeteo_marine() - GFS/standard-forholdet BEREGNES,
+# rapporteres i "_meta" OG brukes til å korrigere swell_height etter skjøten
+# (Theodors instruks 07.10.2026: samme metode som Lyngen, for alle spots,
+# "så alt følger én regel" - valgt etter å ha sett fysikk-kontrollørens funn
+# at premisset ikke stemmer for de fleste spots). Mocket slik at GFS er ekte
+# OGSÅ i skjøtetimen (vinner derfor der også, se openmeteo_marine()) -
+# nøyaktig scenariet fysikk-kontrollørens andre runde fant en feil i
+# (glidningen startet fra standardmodellens SKJULTE verdi i stedet for GFS
+# sin VISTE verdi, ga et kunstig dykk). Sjekker eksplisitt at sekvensen er
+# MONOTONT AVTAGENDE fra skjøten til målet - et dykk ville brutt det. ----------
 BASE_7G = dt.datetime(2026, 2, 1, tzinfo=dt.timezone.utc)
 def _k7g(i):
     return sources.hour_key(BASE_7G + dt.timedelta(hours=i))
@@ -474,20 +476,115 @@ meta_7g = result_7g.pop("_meta")
 assert meta_7g["gfs_standard_ratio"] == 3.0, meta_7g
 assert meta_7g["ratio_seam"] == _k7g(14), meta_7g
 # GFS er ekte for hver time her, og vinner da alltid over standardmodellen -
-# t14 (skjøten) viser derfor GFS sin EGEN verdi (3,0), ikke standardmodellens
-# (1,0) - nettopp det kontrolløren påpekte at en evt. glidning må starte fra.
+# t14 (skjøten) viser derfor GFS sin EGEN, URØRTE verdi (3,0, se
+# ratio_blend_correction() sin punkt 4 - "fill" endres aldri på/før skjøten),
+# ikke standardmodellens skjulte 1,0.
 assert result_7g[_k7g(14)]["swell_model"] == "gfs" and result_7g[_k7g(14)]["swell_height"] == 3.0
-# IKKE korrigert: timene etter skjøten skal fortsatt vise GFS sin RÅ verdi
-# (6,0), ikke noe skalert mot forholdet (3,0) eller glidd mot et mål (2,0).
-h15_7g, h29_7g = result_7g[_k7g(15)]["swell_height"], result_7g[_k7g(29)]["swell_height"]
-assert h15_7g == 6.0 and h29_7g == 6.0, (h15_7g, h29_7g)
+# Målet etter skjøten er 6,0/3,0 = 2,0 - LAVERE enn skjøtens 3,0. En korrekt
+# glidning fra DET som faktisk vises (3,0) ned mot 2,0 er derfor MONOTONT
+# AVTAGENDE hele veien - bugen (glidning fra standardmodellens skjulte 1,0)
+# ville gitt et dykk UNDER 2,0 først (se 7f/7g sine tidligere, nå rettede
+# tall: 1,083 ved t+1), altså IKKE monotont.
+seq_7g = [result_7g[_k7g(14 + h)]["swell_height"] for h in range(0, 13)]  # t14 (skjøt) .. t26 (fullt korrigert)
+assert all(seq_7g[k] >= seq_7g[k + 1] - 1e-9 for k in range(len(seq_7g) - 1)), seq_7g
+assert seq_7g[0] == 3.0 and abs(seq_7g[-1] - 2.0) < 1e-6, seq_7g
+# Rett etter skjøten: nær 3,0 (skjøtens egen viste verdi) - ikke et hopp mot
+# målet (2,0), og ikke den rå GFS-verdien (6,0). Eksakt verdi også (fysikk-
+# kontrollørens forslag, tredje runde) - en kvalitativ "nærmest"-sjekk alene
+# kunne i prinsippet bestått med en annen glidningslengde eller en ikke-
+# lineær kurve, se punkt under.
+h15_7g = result_7g[_k7g(15)]["swell_height"]
+assert abs(h15_7g - 3.0) < abs(h15_7g - 2.0) and abs(h15_7g - 3.0) < abs(h15_7g - 6.0), h15_7g
+assert h15_7g == round(3.0 * 11 / 12 + 2.0 * 1 / 12, 3), h15_7g  # eksakt: 12-timers lineær glidning, ikke bare "i riktig retning"
+# Lenge etter skjøten: fullt korrigert til målet.
+h29_7g = result_7g[_k7g(29)]["swell_height"]
+assert abs(h29_7g - 2.0) < 1e-6, h29_7g
+# Speilvendt tilfelle (fysikk-kontrollørens forslag): standardmodellen
+# vinner I SKJØTETIMEN (ikke GFS) hos et ANNET punkt - da ER
+# standardmodellens verdi den faktisk viste, og glidningen skal (fortsatt
+# riktig) starte DERFRA, ikke fra GFS. Samme GFS-serie, men GFS mangler
+# nøyaktig i skjøtetimen (t14) denne gangen.
+def _fetch7g_mirror(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:
+        return {_k7g(i): {"height": 10.0, "swell_height": (None if i == 14 else (3.0 if i < 15 else 6.0)),
+                           "swell_dir": (None if i == 14 else 300), "swell_period": 12,
+                           "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+                for i in range(30)}
+    return {_k7g(i): {"height": 10.0, "swell_height": 1.0, "swell_dir": 300, "swell_period": 12,
+                       "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+            for i in range(15)}
+sources._openmeteo_fetch = _fetch7g_mirror
+result_7g_mirror = real_openmeteo_marine(70.0, 20.0)
+sources._openmeteo_fetch = real_openmeteo_fetch
+h15_7g_mirror = result_7g_mirror[_k7g(15)]["swell_height"]
+assert result_7g_mirror[_k7g(14)]["swell_model"] == "standard" and result_7g_mirror[_k7g(14)]["swell_height"] == 1.0
+assert h15_7g_mirror == round(1.0 * 11 / 12 + 2.0 * 1 / 12, 3), h15_7g_mirror  # samme glidning som FØR blend_from_series-fiksen fantes
 # safe() sin fysikk-kontrollør-rettede timetelling (07.10.2026): "_meta" skal
 # IKKE telles som en time i kilderapporten (30 reelle timer her, ikke 31).
 marine_report_7g = [r for r in fetch.REPORT if r[1] == "Open-Meteo svell (ute)"]
 assert marine_report_7g and marine_report_7g[0][3] == 30, marine_report_7g
 print(f"7g openmeteo_marine(): GFS/standard-forhold {meta_7g['gfs_standard_ratio']} fra skjøt {meta_7g['ratio_seam']} "
-      f"beregnet og rapportert (kilderapport-telling {marine_report_7g[0][3]}, _meta ikke medregnet), "
-      f"men swell_height UENDRET (t+1={h15_7g}, t+15={h29_7g}) - venter på Theodor, OK")
+      f"brukt (kilderapport-telling {marine_report_7g[0][3]}, _meta ikke medregnet) - sekvens {seq_7g[0]}->{seq_7g[-1]} "
+      f"monotont avtagende (intet dykk), t+1={h15_7g:.4f} nær 3,0, t+15={h29_7g} m (mål 2,0), OK")
+
+# ---------- 7h: fjerde fysikk-kontrollørs funn - ingen test gikk gjennom
+# DEN VIRKELIGE fetch.py sitt HOVEDPUNKT-kall (linje ~375: `sources.safe(...,
+# sources.openmeteo_marine, o["lat"], o["lon"])`, UTEN noe ekstra argument -
+# skal bruke standardverdien apply_ratio_correction=True) - en feilaktig
+# `False` lagt til DER ville bestått alle andre tester (13.5 sitt hovedpunkt
+# har ingen GFS i det hele tatt, og 7f/7g kaller openmeteo_marine() direkte,
+# ikke via fetch.py). Bruker Grøtfjord (INGEN offshore_longrange - renest
+# mulig, ingen Lyngen-kode involvert) gjennom DEN VIRKELIGE fetch.build_spot(),
+# med en GFS/standard-uenighet ved hovedpunktet selv. ----------
+import longrange as _lr7h
+# ÉKTE "nå" (IKKE en fri valgt fast dato) - met.no sine globale mock (lenger
+# oppe i fila, hourly()-helperen) genererer sine egne nøkler fra
+# datetime.now() internt, uansett hvilken `now` som sendes til build_spot().
+# En fri valgt BASE-dato her ville gitt to kilder med helt usammenhengende
+# tidsstempler - "0 timer bygget" (feilen dette rettet, sett direkte).
+NOW_7H = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+def _fetch7h(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:  # GFS - dekker alt, endrer seg etter dag 7 (time 168)
+        return {sources.hour_key(NOW_7H + dt.timedelta(hours=i)): {
+            "height": 10.0, "swell_height": (3.0 if i < 168 else 6.0), "swell_dir": 300, "swell_period": 12,
+            "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+            for i in range(_lr7h.HOURS)}
+    return {sources.hour_key(NOW_7H + dt.timedelta(hours=i)): {  # standardmodellen - bare dag 1-7
+        "height": 10.0, "swell_height": 1.0, "swell_dir": 300, "swell_period": 12,
+        "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+        for i in range(168)}
+saved_fetch7h = sources._openmeteo_fetch
+saved_wind7h = sources.openmeteo_wind
+saved_marine7h = sources.openmeteo_marine
+# `sources.openmeteo_marine` er fortsatt den GLOBALE lambda-mokken fra toppen
+# av fila her (ignorerer _openmeteo_fetch helt) - samme feil som 13.5 fant
+# først. Må settes til den VIRKELIGE funksjonen for at _fetch7h under
+# faktisk skal bli brukt.
+sources.openmeteo_marine = real_openmeteo_marine
+sources._openmeteo_fetch = _fetch7h
+sources.openmeteo_wind = lambda la, lo: {
+    sources.hour_key(NOW_7H + dt.timedelta(hours=i)): {"wind_speed": 4, "wind_dir": 200, "gust": 6}
+    for i in range(_lr7h.HOURS)}
+fetch.REPORT.clear()
+built_7h = fetch.build_spot(json.loads(json.dumps(grot_spot)), NOW_7H, {}, {}, "test-run-7h", {}, {})
+sources._openmeteo_fetch = saved_fetch7h
+sources.openmeteo_wind = saved_wind7h
+sources.openmeteo_marine = saved_marine7h
+# Siste langtid-time (dag 16) i stedet for en bestemt rå time-indeks - som
+# 13.4/13.5 (se der): hvilke timer som overlever 6-timers tynning avhenger
+# av klokketimen NOW_7H faktisk har, så en fast indeks (f.eks. +300t) kan i
+# prinsippet IKKE overleve tynningen for noen klokkefaser. Den SISTE
+# langtid-timen er alltid langt forbi både skjøten (time 167) og
+# glidningen (+12t), uansett klokkefase.
+langtid_7h = sorted((h for h in built_7h["hours"] if h.get("zone") == "langtid"), key=lambda h: h["t"])
+assert langtid_7h, "forventet minst en langtid-time"
+last_7h = langtid_7h[-1]
+# Riktig (standardverdien True brukt): rå 6,0 delt på forholdet 3,0 (1,0 mot
+# 3,0 i overlappet) = 2,0. En feilaktig False ville latt den rå GFS-verdien
+# (6,0) stå urørt.
+assert abs(last_7h["swell_offshore"] - 2.0) < 1e-6, last_7h["swell_offshore"]
+print(f"7h fetch.py sitt hovedpunkt-kall bruker standardverdien (apply_ratio_correction=True) - "
+      f"siste langtid-time ({last_7h['t']}) korrigert til {last_7h['swell_offshore']} m (riktig 2,0, ikke rå 6,0), OK")
 
 # ---------- 8.8: SIZE_M-tabellen i docs/index.html og fetcher/calibrate.py
 # skal være identisk (ingen felles import mulig - statisk nettside uten
@@ -816,7 +913,7 @@ DAG5_TIME = now13 + dt.timedelta(hours=4 * 24 + 6)  # midt i dag 5 - skal forbli
 _fallback_base = now13 + dt.timedelta(hours=8 * 24 + 3)
 FALLBACK_TIME = _fallback_base + dt.timedelta(hours=(-_fallback_base.hour) % 6)
 
-def _marine13(la, lo):
+def _marine13(la, lo, apply_ratio_correction=True):
     is_longrange = round(la, 3) == round(OL["lat"], 3) and round(lo, 3) == round(OL["lon"], 3)
     out = {}
     for i in range(_lr.HOURS):
@@ -911,7 +1008,7 @@ print(f"13.2 uten offshore_longrange: langtid-sonen ({len(langtid13b)} timer) fo
 
 # Heller ikke offshore_longrange har noe: fortsatt ekte None, ikke en tredje
 # slags utfylling.
-def _marine13c(la, lo):
+def _marine13c(la, lo, apply_ratio_correction=True):
     return {sources.hour_key(now13 + dt.timedelta(hours=i)): {
         "height": None, "swell_height": None, "dir": None, "period": None, "swell_model": None,
         "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
@@ -939,7 +1036,7 @@ sources.openmeteo_wind = saved_wind13
 sources.openmeteo_wind = lambda la, lo: {
     sources.hour_key(now13 + dt.timedelta(hours=i)): {"wind_speed": 4, "wind_dir": 200, "gust": 6}
     for i in range(_lr.HOURS)}
-def _marine13d(la, lo):
+def _marine13d(la, lo, apply_ratio_correction=True):
     is_longrange = round(la, 3) == round(OL["lat"], 3) and round(lo, 3) == round(OL["lon"], 3)
     out = {}
     for i in range(_lr.HOURS):
@@ -1003,6 +1100,89 @@ assert lr_report13d, "forventet en kilderapport-rad for offshore_longrange"
 assert "4.000" in lr_report13d[0][3], lr_report13d[0][3]  # forholdstallet (4,0 = 4,0/1,0), ikke målverdien (5,0)
 print(f"13.4 offshore_longrange rettes med forhold+glidning: første langtid-time {first13d:.4f} m "
       f"(nær hovedpunktets siste 1,0 m, ikke et hopp mot 20,0/5,0), siste {last13d:.3f} m (mål 5,0), OK")
+
+# ---------- 13.5: offshore_longrange sin EGEN samme-punkt-korreksjon
+# (GFS mot standardmodellen VED DET punktet) skal IKKE kjøre -
+# fysikk-kontrollørens funn (tredje runde, 07.10.2026) etter at samme-punkt-
+# mekanismen ble slått på for alle spots (se STATUS.md): uten en sperre
+# ville offshore_longrange fått SIN EGEN korreksjon FØR krysspunkt-
+# korreksjonen under (mot hovedpunktet) deler på et ANNET forhold en gang
+# til - dobbel korreksjon. 13.1-13.4 mokker openmeteo_marine() DIREKTE og
+# kan derfor ALDRI oppdage dette - bugen sitter i samspillet mellom TO
+# ekte kall til funksjonen (ett for hovedpunktet, ett for
+# offshore_longrange). Mokker derfor _openmeteo_fetch (det rå nettverkslaget
+# openmeteo_marine() selv kaller) i stedet. ----------
+def _fetch13_5(lat, lon, model=None):
+    is_lr = round(lat, 3) == round(OL["lat"], 3) and round(lon, 3) == round(OL["lon"], 3)
+    out = {}
+    for i in range(_lr.HOURS):
+        t = now13 + dt.timedelta(hours=i)
+        key = sources.hour_key(t)
+        day = _lr.day_index(now13, t)
+        if is_lr:
+            # offshore_longrange: GFS ekte ALLE dager (selve poenget med
+            # punktet), men en ANNEN rå verdi i langtid (dag>7, 8,0) enn i
+            # overlappet (dag<=7, 4,0) - et eget, internt forhold (4,0/2,0=2,0
+            # mot SIN EGEN standardmodell) som - hvis det fikk kjøre - ville
+            # presset dag>7 sin rå 8,0 ned til 4,0 FØR krysspunkt-korreksjonen
+            # under i det hele tatt ser tallet.
+            if model == sources.OPENMETEO_SWELL_MODEL:
+                out[key] = {"height": 10.0, "swell_height": (4.0 if day <= _lr.RESERVE_LAST_DAY else 8.0),
+                            "swell_dir": 55, "swell_period": 7.5, "secondary_swell_height": None,
+                            "secondary_swell_dir": None, "secondary_swell_period": None}
+            elif day <= _lr.RESERVE_LAST_DAY:
+                out[key] = {"height": 10.0, "swell_height": 2.0, "swell_dir": 55, "swell_period": 7.5,
+                            "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+        elif model != sources.OPENMETEO_SWELL_MODEL:
+            # Hovedpunktet: ingen GFS i det hele tatt (som i den ekte
+            # Lyngen-saken, GFS-kallet returnerer ingenting uansett time -
+            # ikke håndtert her, se under). Standardmodellen dekker HELE
+            # horisonten som NØKLER (ellers får marine() aldri noen dag>7-
+            # nøkkel å substituere inn i, se feilen dette rettet), men bare
+            # dag<=7 har en EKTE verdi - dag>7 er ekte None (ikke 0, se
+            # CLAUDE.md), nøyaktig som when GFS Wave ikke dekker et punkt.
+            if day <= _lr.RESERVE_LAST_DAY:
+                out[key] = {"height": 10.0, "swell_height": 1.0, "swell_dir": 280, "swell_period": 11,
+                            "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+            else:
+                out[key] = {"height": None, "swell_height": None, "swell_dir": None, "swell_period": None,
+                            "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+        # (model == OPENMETEO_SWELL_MODEL ved hovedpunktet: ingen nøkler i
+        # det hele tatt - GFS mangler fullstendig, som i den ekte saken.)
+    return out
+saved_fetch13_5 = sources._openmeteo_fetch
+sources._openmeteo_fetch = _fetch13_5
+# `saved_marine13` (brukt til "restore" i 13.1-13.4) er bare den GLOBALE
+# lambda-mokken fra lenger oppe i fila (den ignorerer _openmeteo_fetch helt),
+# IKKE den virkelige funksjonen - denne testen trenger den VIRKELIGE
+# openmeteo_marine() (module-nivå real_openmeteo_marine, satt FØR noe i
+# fila mokker den ut) for at _openmeteo_fetch-mokken over faktisk skal bli
+# kalt. Uten dette ga testen 80 "timer" fra den globale mokken og aldri
+# noen langtid-sone i det hele tatt (feilen dette rettet).
+sources.openmeteo_marine = real_openmeteo_marine
+sources.openmeteo_wind = lambda la, lo: {
+    sources.hour_key(now13 + dt.timedelta(hours=i)): {"wind_speed": 4, "wind_dir": 200, "gust": 6}
+    for i in range(_lr.HOURS)}
+fetch.REPORT.clear()
+built13_5 = fetch.build_spot(russelv_spot, now13, {}, {}, "test-run-13-5", {}, {})
+sources._openmeteo_fetch = saved_fetch13_5
+sources.openmeteo_marine = saved_marine13
+sources.openmeteo_wind = saved_wind13
+langtid13_5 = sorted((h for h in built13_5["hours"] if h.get("zone") == "langtid"), key=lambda h: h["t"])
+assert langtid13_5, "forventet minst en langtid-time"
+last13_5 = langtid13_5[-1]["swell_offshore"]
+# Siste langtid-time (dag 16) er godt utenfor BÅDE offshore_longrange sin
+# egen glidning og krysspunkt-glidningen (begge 12 timer) - fullt korrigert
+# begge steder. Riktig (bugen fikset, bare ÉN korreksjon): 8,0 (rå) delt på
+# krysspunkt-forholdet 4,0 (1,0 hovedpunkt mot 4,0 offshore_longrange sin
+# EGEN viste - GFS - verdi i overlappet) = 2,0. Feil (dobbel korreksjon,
+# bugen): 8,0 delt på offshore_longrange sitt EGET forhold (2,0) OG SÅ på
+# krysspunkt-forholdet (4,0) = 1,0.
+assert abs(last13_5 - 2.0) < 1e-6, (
+    f"forventet 2,0 (kun krysspunkt-korrigert) - fikk {last13_5}. 1,0 ville betydd dobbel "
+    f"korreksjon (offshore_longrange sin egen samme-punkt-korreksjon kjørte IGJEN)")
+print(f"13.5 offshore_longrange sin EGEN samme-punkt-korreksjon korrekt avslått "
+      f"(apply_ratio_correction=False) - siste langtid-time {last13_5} m (riktig 2,0, IKKE 1,0 fra dobbel korreksjon), OK")
 
 print("Pipeline ok")
 
