@@ -1457,14 +1457,27 @@ assert g["stars"] == 0 and w["stars"] == 0 and just_outside["stars"] == 0 and g2
 # "Treffer ikke".
 r_271b = rate(h_271, G23)
 assert r_271b["stars"] == 0 and r_271b["height"] == r_271["height"] and r_271b["low_reason"] == "treffer_ikke"
-# Der det slår inn: samme svell fra 280° (6° utenfor, eksponering 0,33, h
-# 0,45 m over flat-grensa): demping 1-(1-0,33)×0,6 = 0,60 i stedet for 0,33
-# ved 15 s - surfehøyde 0,31 -> 0,57 m, 0 -> 2 stjerner. Ved 8 s er den som før.
+# 07.10.2026, Theodors ja (se spots.json sin _exposure_override_279): 280°
+# (6° utenfor) fikk FØR denne rettelsen en 0→2-stjerners effekt fra
+# diffraksjonsdempingen alene (0,6-gulvet ved 15 s), nøyaktig det
+# fysikk-kontrolløren advarte om - eneste observasjon i 276-285 grader
+# (26.09) var helt flatt. Nytt exposure_override (tak 0,2) på nøyaktig
+# denne sektoren slår AV den ekstra dempingen helt (needs_extra_damping
+# krever exposure_override_cap() is None, se rate()) - 280° gir nå samme,
+# lave resultat ved 8 og 15 s, uansett periode.
 r_280_15 = rate({**h_271, "dir_offshore": 280}, G23)
 r_280_8 = rate({**h_271, "dir_offshore": 280, "period": 8}, G23)
-assert r_280_15["surf_height"] > 0.5 and r_280_15["stars"] >= 2, (r_280_15["surf_height"], r_280_15["stars"])
-assert r_280_8["surf_height"] < r_280_15["surf_height"]
+assert r_280_15["stars"] == 0 and r_280_15["low_reason"] == "treffer_ikke", (r_280_15["surf_height"], r_280_15["stars"])
+assert r_280_8["surf_height"] == r_280_15["surf_height"]  # overridet gjør perioden irrelevant her
+# Overridet er smalt (276-285), ikke en generell bremse på diffraksjons-
+# dempingen - diffraction_damping() sin egen periodeavhengighet (testet
+# isolert over) er urørt, og 271/272 grader (rett utenfor overridet) har
+# fortsatt exposure_override_cap() None, bare dempet av exposure()-kurven.
+from rating import exposure_override_cap as _cap23
+assert _cap23(271, G23) is None and _cap23(272, G23) is None
+assert _cap23(280, G23) == 0.2 and _cap23(285, G23) == 0.2 and _cap23(286, G23) is None
 print(f"24: diffraksjonsdemping p(T) - Grøtfjord 24-26.09 fortsatt 0, Theodors time uendret (0 stjerner, {r_271b['height']} m, "
-      f"treffer ikke), 280°/15 s: surf {r_280_15['surf_height']} m, {r_280_15['stars']} stjerner (8 s: {r_280_8['surf_height']} m), OK")
+      f"treffer ikke), 280° (nytt override 276-285) uendret ved 8/15 s ({r_280_15['surf_height']} m begge), "
+      f"overridet sin grense (271/286 upåvirket) OK")
 
 print("Alle tester ok")

@@ -1,5 +1,32 @@
 # Nordsurf: status
 
+## Theodors ja 07.10.2026: Grøtfjord 276-285 grader, unntak lagt til - FERDIG, committet
+
+Svar på fysikk-kontrollørens spørsmål (se "periodeavhengig diffraksjonsdemping" under): "ja til unntak". Nytt `exposure_override` for Grøtfjord: `{"from": 276, "to": 285, "max": 0.2}` (i tillegg til det gamle 311-330), med kommentar i spots.json (`_exposure_override_279`) om at eneste observasjon i sektoren (26.09.2026, svell ute fra ca. 272°, helt flatt) er grunnlaget, og at taket skal fjernes hvis loggene noen gang viser noe annet.
+
+**Mekanismen, viktig å vite:** overridet er et TAK (maks 0,2) på selve eksponeringsverdien - IKKE en generell demper. Det gjør to ting samtidig: (1) kapper eksponeringen hvis den glattede kurven ligger over 0,2 i sektoren, OG (2) slår AV den periodeavhengige diffraksjonsdempingen helt for retninger overridet dekker (`needs_extra_damping` i `rate()` krever `exposure_override_cap() is None`) - den dempingen var ellers en EKSTRA multiplikator (alltid under 1,0, mildere ved lang periode) oppå den glattede eksponeringen. For en retning der den glattede eksponeringen i utgangspunktet er UNDER 0,2 (overridet kapper da ingenting), betyr (2) at resultatet faktisk kan bli HØYERE enn før - multiplikatoren under 1,0 forsvinner uten at noe kappes.
+
+**Stjernetabell, ekte 48+ dagers varsel (frakoblet re-rating, 203 timer for Grøtfjord):**
+
+| Tidspunkt | Retning | Periode | Glattet eksponering | Før | Etter | Hvorfor |
+|---|---|---|---|---|---|---|
+| 16.10 kl. 06 | 277° | 14,95 s | 0,20 (akkurat på taket) | 1 | 3 | Dempingen (under 1,0) forsvinner, kappingen gjør ingenting her |
+| 16.10 kl. 12 | 276° | 14,4 s | 0,167 (under taket) | 0 | 3 | Samme - dempingen forsvinner, ingen kapping |
+| 17.10 kl. 00 | 279° | 14,2 s | 0,267 (over taket) | 1 | 0 | Kappingen vinner - eksponeringen reelt redusert |
+| 17.10 kl. 06 | 285° | 13,95 s | 0,6 (godt over taket) | 3 | 0 | Kappingen vinner klart |
+
+4 av 203 timer endret, 2 opp og 2 ned - **ikke ensrettet**, men alle fire ligger 9-10 døgn frem (langtidssonen, GFS-retning, ikke BarentsWatch) og ingen er i de neste 48 timene av dagens varsel, så CLAUDE.md sin 2-stjerners stoppregel er ikke i spill her uansett. Nevner det likevel fordi tabellen ikke er den rene, ensidige demping-effekten man skulle tro av et "tak" - verdt å huske hvis flere overrides vurderes senere. Alle faste observasjoner og alle 6 testfiler fortsatt grønne (test 24 i `test_rating.py` oppdatert til å speile at 280° nå er periodeuavhengig, ikke lenger `>0,5 m og 2+ stjerner` ved 15 s).
+
+## Theodors oppfølging 07.10.2026: WAM800 er lagt ned - oppgave J avsluttet
+
+Sjekket direkte mot thredds.met.no (nettleser, ikke bare skyøktens Python-utforsking - skyen hadde ikke nett dit). met.no sin egen hovedkatalog (`fou-hi/fou-hi.html`) har en egen "Discontinued" → "Waves"-seksjon med teksten: **"met.no MyWaveWAM800m Norwegian Coastal wave forecasting system (Production ends Oct. 1. 2025)"**. Dette er en eksplisitt, offisiell nedleggelsesdato fra met.no selv, ikke en gjetning fra filtidsstempler alene.
+
+Bekreftet mot selve katalogen (THREDDS sin egen "Last Modified"-kolonne, server-side - ikke NetCDF-fila sin interne `history`-attributt, som skyøkten brukte): siste filer for alle fem regionene er fra **2025-10-07/08** - altså nøyaktig rundt nedleggelsesdatoen, ikke en tilfeldig gammel snapshot og ikke en kalender/tidssone-feil på denne maskinen. "RART"-funnet fra skyøkten sin natt-logg er dermed forklart.
+
+**Konklusjon: oppgave J avsluttes her.** Ingen data er koblet inn i ratingen (skyøkten rørte ikke det heller). Gren `natt/wam800` (utforskingsskriptet, workflowen og rapporten) ligger urørt - verdt å beholde som referanse hvis spørsmålet kommer opp igjen, men ikke noe å bygge videre på.
+
+**Ett mulig spor til en senere anledning, ikke fulgt opp nå:** met.no har en AKTIV erstatning i samme katalog, **WAVEWATCH III 4 km regional** ("latest and archive", 4 ganger i døgnet, 66 timers horisont, dekker hele norskekysten inkl. Lofoten og Møre). Oppløsningen er grovere enn WAM800 sine 800 m (nærmere Open-Meteo sin GFS Wave, som allerede brukes), og det er ikke sjekket om den skiller svell og vindsjø slik WAM800 gjorde - det var selve poenget med WAM800-sporet. Interessant bare hvis BarentsWatch sitt mangel på svell/vindsjø-skille fortsatt er et problem etter at oppgave I (skjerming) er avklart (se eget avsnitt) - ikke verdt en ny utforskingsrunde nå.
+
 ## Theodors rettelse 07.10.2026, punkt 2: periodeavhengig diffraksjonsdemping - FERDIG, fysikk-kontrollør GODKJENT etter rettelser, merget til main (stoppregelen slo ikke inn)
 
 `rating.diffraction_damping(dir_hit, period) = 1 − (1 − dir_hit) × p(T)`, med p(T) fra `diffraction_period_weight()` (1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre, lineært imellom - samme kurve som skjermingen i oppgave I; holdes som egne konstanter til `lokal/uferdig` eventuelt merges, da skal de deles). Brukes bare der den gamle dempingen ble brukt: reservemodellen (svell_ute), rå eksponering 0, ingen exposure_override. Ved 8 s er resultatet identisk med før (dir_hit). Kurven står på CLAUDE.md sin "krever ja"-liste.
