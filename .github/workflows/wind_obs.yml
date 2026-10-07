@@ -1,0 +1,43 @@
+name: Vindmålinger (Frost, skyggemodus)
+
+# Theodors svar 07.10.2026, punkt 6: vindmålinger fra met.no Frost (Eggum for
+# Unstad først), i skyggemodus - sammenlignes med met.no-varselet og lagres
+# for testlaben (variant vind_korr), aldri inn i ratingen. Daglig + manuelt.
+# Krever secret FROST_CLIENT_ID; uten den skriver scriptet ingenting.
+
+on:
+  schedule:
+    - cron: "23 3 * * *"   # daglig kl. 03:23 UTC, de siste to døgnene
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "Ekstra døgn, kommaseparert (f.eks. 2026-09-26,2026-09-27,2026-09-28,2026-10-05)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  wind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Hent målinger og sammenlign med varselet
+        run: timeout 300 python fetcher/wind_obs.py --days 2 --dates "${{ github.event.inputs.dates }}"
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+          FROST_CLIENT_ID: ${{ secrets.FROST_CLIENT_ID }}
+      - name: Lagre
+        run: |
+          git config user.name "nordsurf-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data/wind_obs
+          git diff --cached --quiet || git commit -m "Vindmålinger (Frost): ny henting"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git push
