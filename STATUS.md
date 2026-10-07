@@ -1,5 +1,9 @@
 # Nordsurf: status
 
+## Skyøkt (dag) startet 15:40 norsk tid 07.10.2026 - gren `sky/testlab`
+
+Skyøkt (dag) startet 15:40. Tester kjøres ved oppstart (se timelogg under). Jobber på `sky/testlab`, rører ingen eksisterende fil i `fetcher/` (lokal økt jobber med energi/toppperiode der), tar inn main med rebase til slutt.
+
 ## Driftsavbrudd 07.10.2026: fysikk-kontrollør-kontroll hang i nesten 2 timer (samme som nettlesertesten natt til 07.10.) - tidsgrenser lagt til
 
 To netter på rad har et skript hengt uten tidsgrense og blokkert økten: natt til 07.10. en nettleser-automatisering (over en time), og 07.10. på dagtid en fysikk-kontrollør-kontroll startet synkront (`run_in_background: false`) som trolig hang i `test_disc_browser.py` (ekte nettleser-test, Playwright) - nesten 2 timer før Theodor avbrøt manuelt. Ingen hengende prosesser funnet igjen etterpå (sjekket `ps`/`lsof` for python/chromium/testserver - ingenting å avslutte).

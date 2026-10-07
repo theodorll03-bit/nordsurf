@@ -1,0 +1,40 @@
+name: KystVær-sondering (oppgave 2a)
+
+# Skyøkten har ikke nett mot kystdatahuset.no - sonderingen av API-et kjøres
+# her i stedet, på push til grenen (workflow_dispatch krever at fila ligger
+# på main, og dette skal ikke på main før Theodor har sett resultatet).
+# Leser bare, skriver data/wind_obs/probe.md til grenen.
+
+on:
+  push:
+    branches: [sky/testlab]
+    paths:
+      - fetcher/kystvaer_probe.py
+      - .github/workflows/kystvaer_probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Sonder API-et
+        run: timeout 300 python fetcher/kystvaer_probe.py
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+      - name: Lagre resultatet
+        run: |
+          git config user.name "nordsurf-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data/wind_obs
+          git diff --cached --quiet || git commit -m "KystVær-sondering: resultat"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git push
