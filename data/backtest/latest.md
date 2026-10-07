@@ -1,4 +1,4 @@
-# Testlab for treffsikkerhet - 2026-10-07 13:51 UTC
+# Testlab for treffsikkerhet - 2026-10-07 13:54 UTC
 
 Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-timer. Vindmålinger: 0 spot-timer.
 
@@ -7,10 +7,10 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-
 | Variant | Evaluert | Faste obs. holder | Surfehøyde-feil (m, snitt) | Treff ±1 stjerne | Stjerneavvik (snitt, fortegn) | Benchmark-avvik (stjerner / m / kJ) | Ikke evaluert | Grunnlinje på SAMME saker (holder / feil m / treff ±1) |
 |---|---|---|---|---|---|---|---|---|
 | grunnlinje | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 0 | 15/15 / 0,05 / 8/8 |
-| ww3_svell | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,40 (n=5) | 4/8 (50 %) | -0,88 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
+| ww3_svell | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
 | energi_tp | 15 | 15/15 | 0,05 (n=9) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 0 | 15/15 / 0,05 / 8/8 |
 | energi_ww3 | 10 | 10/10 | 0,07 (n=5) | 8/8 (100 %) | -0,38 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
-| ww3_begge | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,40 (n=5) | 4/8 (50 %) | -0,88 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
+| ww3_begge | 10 | 5/10 (ryker: unstad_2609, unstad_2809_12, unstad_2809_13, unstad_2809_14, unstad_2809_15) | 0,34 (n=5) | 4/8 (50 %) | -1,50 (n=8) | – / – / – (n=0) | 5 | 10/10 / 0,07 / 8/8 |
 | vind_korr | 0 | – | – (n=0) | – | – (n=0) | – / – / – (n=0) | 15 | – / – / – |
 
 ## grunnlinje - Dagens rating, uendret
@@ -39,14 +39,14 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-
 |---|---|---|---|---|---|---|---|
 | Grøtfjord 26.09 (BarentsWatch 0,33 m) - helt flatt | stars_max=0, size_m=0.0 | 0 | 0,00 | flat | ja | 0,00 | – |
 | Lenangsøyra 26.09 - ikke surfbart (vindsjø på tvers) | stars_max=1 | 0 | 0,00 | treffer_ikke | ja | – | – |
-| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 | 1,69 |  | NEI | 0,71 | ja |
-| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 | 1,25 |  | ja | 0,30 | ja |
-| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 | 1,08 |  | ja | 0,47 | ja |
-| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 | 1,03 |  | ja | 0,52 | ja |
-| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 | 1,05 |  | NEI | – | nei |
-| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 | 1,00 |  | NEI | – | nei |
-| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 | 0,97 |  | NEI | – | nei |
-| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 | 0,88 |  | NEI | – | nei |
+| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 | 1,67 |  | NEI | 0,73 | ja |
+| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 | 1,36 |  | ja | 0,19 | ja |
+| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 | 1,23 |  | ja | 0,32 | ja |
+| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 | 1,09 |  | ja | 0,46 | ja |
+| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 0 | 0,00 |  | NEI | – | nei |
+| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 0 | 0,00 |  | NEI | – | nei |
+| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 1 | 0,75 |  | NEI | – | nei |
+| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 | 0,83 |  | NEI | – | nei |
 
 ## energi_tp - Energi med toppperiode anslått som gjennomsnitt × 1.25 (GFS for alt)
 
@@ -72,16 +72,16 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-
 
 | Sak | Forventet | Stjerner | Surfehøyde | Ord | Holder | Feil (m) | ±1 |
 |---|---|---|---|---|---|---|---|
-| Grøtfjord 26.09 (BarentsWatch 0,33 m) - helt flatt | stars_max=0, size_m=0.0 | 0 (WW3-energi av 2.3 m/16.38 s) | 0,00 | flat | ja | 0,00 | – |
-| Lenangsøyra 26.09 - ikke surfbart (vindsjø på tvers) | stars_max=1 | 0 (WW3-energi av 1.11 m/11.78 s) | 0,00 | blown_out | ja | – | – |
-| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 (WW3-energi av 3.47 m/15.89 s) | 2,42 |  | ja | 0,02 | ja |
-| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (WW3-energi av 2.55 m/13.7 s) | 1,48 |  | ja | 0,07 | ja |
-| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (WW3-energi av 2.45 m/13.51 s) | 1,34 |  | ja | 0,21 | ja |
-| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 (WW3-energi av 2.56 m/13.39 s) | 1,49 |  | ja | 0,06 | ja |
-| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.67 m/11.17 s) | 1,21 |  | ja | – | ja |
-| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.56 m/11.12 s) | 1,17 |  | ja | – | ja |
-| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.47 m/11.08 s) | 1,15 |  | ja | – | ja |
-| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.36 m/11.03 s) | 1,11 |  | ja | – | ja |
+| Grøtfjord 26.09 (BarentsWatch 0,33 m) - helt flatt | stars_max=0, size_m=0.0 | 0 (WW3-energi av 2.69 m/15.91 s) | 0,00 | flat | ja | 0,00 | – |
+| Lenangsøyra 26.09 - ikke surfbart (vindsjø på tvers) | stars_max=1 | 0 (WW3-energi av 1.48 m/17.51 s) | 0,00 | blown_out | ja | – | – |
+| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 (WW3-energi av 3.43 m/15.65 s) | 2,42 |  | ja | 0,02 | ja |
+| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (WW3-energi av 2.7 m/13.13 s) | 1,48 |  | ja | 0,07 | ja |
+| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (WW3-energi av 2.61 m/13.05 s) | 1,34 |  | ja | 0,21 | ja |
+| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 (WW3-energi av 2.5 m/12.94 s) | 1,49 |  | ja | 0,06 | ja |
+| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.54 m/11.42 s) | 1,21 |  | ja | – | ja |
+| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 2.58 m/12.15 s) | 1,17 |  | ja | – | ja |
+| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 3.15 m/12.02 s) | 1,15 |  | ja | – | ja |
+| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 3 (WW3-energi av 3.65 m/11.9 s) | 1,11 |  | ja | – | ja |
 
 ## ww3_begge - Begge WW3-svellene hver for seg mot vindu/eksponering, beste teller (uten prior)
 
@@ -89,14 +89,14 @@ Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 395 spot-
 |---|---|---|---|---|---|---|---|
 | Grøtfjord 26.09 (BarentsWatch 0,33 m) - helt flatt | stars_max=0, size_m=0.0 | 0 (partisjon 1) | 0,00 | flat | ja | 0,00 | – |
 | Lenangsøyra 26.09 - ikke surfbart (vindsjø på tvers) | stars_max=1 | 0 (partisjon 1) | 0,00 | treffer_ikke | ja | – | – |
-| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 (partisjon 1) | 1,69 |  | NEI | 0,71 | ja |
-| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 (partisjon 1) | 1,25 |  | ja | 0,30 | ja |
-| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (partisjon 1) | 1,08 |  | ja | 0,47 | ja |
-| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (partisjon 1) | 1,03 |  | ja | 0,52 | ja |
-| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 (partisjon 1) | 1,05 |  | NEI | – | nei |
-| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 (partisjon 1) | 1,00 |  | NEI | – | nei |
-| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 (partisjon 1) | 0,97 |  | NEI | – | nei |
-| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 (partisjon 1) | 0,88 |  | NEI | – | nei |
+| Unstad 26.09 kl. 14:45 - over hodet, 4 stjerner | stars_min=3, surf_m=2.4, size_m=2.4, stars_obs=4 | 4 (partisjon 1) | 1,67 |  | NEI | 0,73 | ja |
+| Unstad 27.09 kl. 06 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 4 (partisjon 1) | 1,36 |  | ja | 0,19 | ja |
+| Unstad 27.09 kl. 07 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (partisjon 1) | 1,23 |  | ja | 0,32 | ja |
+| Unstad 27.09 kl. 08 - brysthøyt til hodehøyt, ca. 3 stjerner | stars_min=2, size_m=1.55, stars_obs=3 | 3 (partisjon 1) | 1,09 |  | ja | 0,46 | ja |
+| Unstad 28.09 kl. 12 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 0 (partisjon 1) | 0,00 |  | NEI | – | nei |
+| Unstad 28.09 kl. 13 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 0 (partisjon 1) | 0,00 |  | NEI | – | nei |
+| Unstad 28.09 kl. 14 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 1 (partisjon 1) | 0,75 |  | NEI | – | nei |
+| Unstad 28.09 kl. 15 - 'firing', 4-5 stjerner | stars_min=3, stars_obs=[4, 5] | 2 (partisjon 1) | 0,83 |  | NEI | – | nei |
 
 ## vind_korr - met.no-vind erstattet med målt vind fra nærmeste KystVær-stasjon (oppgave 2e)
 
