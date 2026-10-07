@@ -2,7 +2,9 @@
 import json, math, datetime as dt, tempfile
 from pathlib import Path
 import requests
+import os; os.environ["NORDSURF_WW3"] = "0"  # annenmeningen henter fra thredds.met.no - ikke i tester
 import sources, fetch, notify, calibrate
+fetch.WW3_ENABLED = False
 from rating import DEFAULT_TRANSFER, breaking_height
 
 real_openmeteo_marine = sources.openmeteo_marine  # før noe under mokker den ut
@@ -1003,3 +1005,35 @@ print(f"13.4 offshore_longrange rettes med forhold+glidning: første langtid-tim
       f"(nær hovedpunktets siste 1,0 m, ikke et hopp mot 20,0/5,0), siste {last13d:.3f} m (mål 5,0), OK")
 
 print("Pipeline ok")
+
+
+# 14 (07.10.2026): WW3 som annenmening i kilderapporten - ren sammenligning,
+# aldri i tallene. Bare GFS-timer sammenlignes (total_fallback/standard hoppes
+# over og telles), enige timer gir "ok", flertall uenige gir "uenig", ingen
+# felles timer gir None (raden blir "tom"), manglende WW3-verdier teller ikke,
+# små høyder (begge under 0,5 m) regnes ikke som uenige i høyde.
+hours = [{"t": "2026-10-08T00:00Z", "swell_model": "gfs", "swell_offshore": 1.0, "period": 10.0, "dir_offshore": 300},
+         {"t": "2026-10-08T01:00Z", "swell_model": "gfs", "swell_offshore": 1.0, "period": 10.0, "dir_offshore": 300},
+         {"t": "2026-10-08T02:00Z", "swell_model": "gfs", "swell_offshore": None, "period": 10.0, "dir_offshore": 300},
+         {"t": "2026-10-08T03:00Z", "swell_model": "total_fallback", "swell_offshore": 0.5, "period": 6.0, "dir_offshore": 100}]
+ww3 = {"2026-10-08T00:00Z": {"phs1": 1.1, "ptp1": 11.0, "pdir1": 305},
+       "2026-10-08T01:00Z": {"phs1": 1.2, "ptp1": 11.0, "pdir1": 290},
+       "2026-10-08T02:00Z": {"phs1": 3.0, "ptp1": 11.0, "pdir1": 200},
+       "2026-10-08T03:00Z": {"phs1": 3.0, "ptp1": 11.0, "pdir1": 200}}
+status, details = fetch.ww3_compare(hours, ww3)
+assert status == "ok" and "uenig i 0 av 2 timer" in details and "1,15×" in details and "1 timer uten GFS-svell hoppet over" in details and "ikke brukt i tallene" in details, (status, details)
+assert "retning WW3 − GFS -2° i snitt, 8° i absolutt snitt" in details, details   # +5 og −10 grader
+ww3["2026-10-08T01:00Z"] = {"phs1": 2.0, "ptp1": 11.0, "pdir1": 250}   # 2× og 50° fra
+status, details = fetch.ww3_compare(hours, ww3)
+assert status == "ok" and "uenig i 1 av 2 timer (høyde over 1,5× i 1, retning over 30° i 1)" in details, (status, details)
+ww3["2026-10-08T00:00Z"] = {"phs1": 1.0, "ptp1": 11.0, "pdir1": 340}   # 40° fra
+status, details = fetch.ww3_compare(hours, ww3)
+assert status == "uenig" and "uenig i 2 av 2 timer (høyde over 1,5× i 1, retning over 30° i 2)" in details, (status, details)
+small = [{"t": "2026-10-08T00:00Z", "swell_model": "gfs", "swell_offshore": 0.2, "period": 10.0, "dir_offshore": 300}]
+assert fetch.ww3_compare(small, {"2026-10-08T00:00Z": {"phs1": 0.4, "ptp1": 11.0, "pdir1": 300}})[1].startswith("svell snitt WW3 0,40 m mot GFS 0,20 m (2,00×); ") and "uenig i 0 av 1" in fetch.ww3_compare(small, {"2026-10-08T00:00Z": {"phs1": 0.4, "ptp1": 11.0, "pdir1": 300}})[1]
+assert fetch.ww3_compare(hours, {"2026-10-09T00:00Z": {"phs1": 1.0, "ptp1": 10.0, "pdir1": 300}}) is None
+assert fetch.ww3_compare(hours, {"2026-10-08T00:00Z": {"phs1": None, "ptp1": None, "pdir1": None}}) is None
+assert fetch.ww3_compare([hours[3]], ww3) is None   # bare en total_fallback-time: ingen sammenligning
+fetch.REPORT.clear(); fetch.ww3_second_opinion([])   # avslått i tester: ingen rad, ingen nett
+assert fetch.REPORT == []
+print("14: WW3 annenmening - bare GFS-timer, ok/uenig/tom regnes riktig, aldri i tallene, av i tester")

@@ -29,6 +29,7 @@ jobs:
         run: python fetcher/test_map_disc.py
       - name: Hent varsel, lær av logger og send varsler
         run: python fetcher/fetch.py
+        timeout-minutes: 25
         env:
           UA_CONTACT: ${{ secrets.UA_CONTACT }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}

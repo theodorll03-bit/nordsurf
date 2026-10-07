@@ -904,6 +904,105 @@ def health_check(spots):
     return problems
 
 
+# WW3 4 km (met.no) som ANNENMENING i kilderapporten - Theodors ja
+# 07.10.2026 etter testlaben (se STATUS.md): WW3 så svellet 1,1-1,8 ganger
+# høyere enn GFS ved alle havpunkter, og uenig om retningen ved Unstad 26.09.
+# Vises bare - ALDRI brukt i tallene. Tidsstyrt av WW3_ENABLED (tester slår
+# den av; thredds.met.no nås ikke fra alle miljøer).
+WW3_ENABLED = os.environ.get("NORDSURF_WW3", "1") != "0"
+WW3_DISAGREE_RATIO = 1.5   # høyde: mer enn 1,5× den ene eller andre veien ...
+WW3_MIN_HEIGHT = 0.5       # ... og bare når minst én av høydene er over 0,5 m (ellers støy)
+WW3_DISAGREE_DEG = 30      # retning: mer enn 30 grader
+WW3_BUDGET_S = 120         # samlet frist for hele annenmeningen (CLAUDE.md: ingenting uten tidsgrense)
+WW3_LABEL = "WW3 4 km (annenmening, ikke kilde)"
+
+
+def ww3_compare(hours, ww3_hours):
+    """Sammenligner GFS-svellet ute (timer med swell_model "gfs" - standard-
+    modellen og total_fallback er ikke GFS-svell og hoppes over, fysikk-
+    kontrollørens punkt 07.10.2026) time for time med WW3 sin svellpartisjon
+    (phs1/ptp1/pdir1, allerede "fra"-retning). Returnerer (status, detaljer)
+    for kilderapporten, eller None uten felles timer. Snitt over felles timer
+    (periode og retning bare der begge har tall), pluss antall timer uenige
+    i HØYDE (over WW3_DISAGREE_RATIO fra hverandre, og minst én over
+    WW3_MIN_HEIGHT) og i RETNING (over WW3_DISAGREE_DEG) hver for seg. Status
+    "uenig" når over halvparten av timene er uenige i minst én av delene -
+    en pekepinn for Theodor, ingen effekt på ratingen."""
+    pairs, skipped = [], 0
+    for h in hours:
+        w = ww3_hours.get(h.get("t"))
+        if not w or w.get("phs1") is None or h.get("swell_offshore") is None:
+            continue
+        if h.get("swell_model") != "gfs":
+            skipped += 1
+            continue
+        pairs.append((h, w))
+    if not pairs:
+        return None
+    n = len(pairs)
+    g_h = sum(h["swell_offshore"] for h, _ in pairs) / n
+    w_h = sum(w["phs1"] for _, w in pairs) / n
+    per = [(h["period"], w["ptp1"]) for h, w in pairs if h.get("period") and w.get("ptp1")]
+    dirs = [((w["pdir1"] - h["dir_offshore"] + 180) % 360) - 180 for h, w in pairs if h.get("dir_offshore") is not None and w.get("pdir1") is not None]
+    bad_h = bad_d = bad_any = 0
+    for h, w in pairs:
+        a, b = h["swell_offshore"], w["phs1"]
+        dh = max(a, b) > WW3_MIN_HEIGHT and ((min(a, b) <= 0) or max(a, b) / min(a, b) > WW3_DISAGREE_RATIO)
+        dd = h.get("dir_offshore") is not None and w.get("pdir1") is not None and angle_diff(h["dir_offshore"], w["pdir1"]) > WW3_DISAGREE_DEG
+        bad_h += dh
+        bad_d += dd
+        bad_any += dh or dd
+    ratio = f"{w_h / g_h:.2f}×" if g_h > 0 else "–"
+    parts = [f"svell snitt WW3 {w_h:.2f} m mot GFS {g_h:.2f} m ({ratio})"]
+    if per:
+        parts.append(f"toppperiode Tp (WW3) {sum(b for _, b in per) / len(per):.1f} s mot middelperiode (GFS) {sum(a for a, _ in per) / len(per):.1f} s i {len(per)} felles timer (Tp ligger normalt 10-30 % over)")
+    if dirs:
+        parts.append(f"retning WW3 − GFS {sum(dirs) / len(dirs):+.0f}° i snitt, {sum(abs(x) for x in dirs) / len(dirs):.0f}° i absolutt snitt")
+    parts.append(f"uenig i {bad_any} av {n} timer (høyde over {WW3_DISAGREE_RATIO}× i {bad_h}, retning over {WW3_DISAGREE_DEG}° i {bad_d})")
+    if skipped:
+        parts.append(f"{skipped} timer uten GFS-svell hoppet over")
+    parts.append("vises bare, ikke brukt i tallene")
+    return ("uenig" if bad_any > n / 2 else "ok"), "; ".join(parts).replace(".", ",")
+
+
+def ww3_second_opinion(spots, budget_s=WW3_BUDGET_S):
+    """Henter WW3 ved hvert havpunkt for de neste 48 timene (siste fil i
+    ww3_4km_latest_files, indeks slått opp i tidsaksen - se ww3_archive.py)
+    og legger én rad per spot i kilderapporten. Samlet frist budget_s:
+    spots som ikke rekkes får raden "tom"/"tidsgrense nådd". Feiler stille
+    med en feil-rad - varselet er allerede skrevet når dette kjører."""
+    if not WW3_ENABLED:
+        return
+    import time as _time
+    t_start = _time.monotonic()
+    try:
+        import ww3_archive as wa
+        url, t0 = wa.latest_file()
+        axis = wa.time_axis(url)
+        k0 = wa.index_of(axis, t0)
+        if k0 is None:
+            raise RuntimeError("utstedelsestiden finnes ikke i tidsaksen")
+        pts = wa.load_points()   # bare mellomlagrede punkter her - nye spots søkes i backtest-workflowen (ensure_points), ikke i varselkjøringen
+        for s in spots:
+            if _time.monotonic() - t_start > budget_s:
+                REPORT.append((s["name"], WW3_LABEL, "tom", f"tidsgrense nådd ({budget_s} s samlet)"))
+                continue
+            p = pts.get(s["id"])
+            if not p:
+                REPORT.append((s["name"], WW3_LABEL, "tom", "ingen WW3-punkt i data/ww3/points.json (kjør testlab-workflowen)"))
+                continue
+            try:
+                k1 = min(k0 + wa.HOURS_AHEAD - 1, len(axis) - 1)
+                rows = wa.fetch_point_hours(url, p["i"], p["j"], k0, k1)
+                ww3_hours = {wa.hour_key(axis[k0 + k]): rows[k] for k in range(len(rows))}
+                res = ww3_compare(s["hours"], ww3_hours)
+                REPORT.append((s["name"], WW3_LABEL, *res) if res else (s["name"], WW3_LABEL, "tom", "ingen felles timer med GFS-svell"))
+            except Exception as e:
+                REPORT.append((s["name"], WW3_LABEL, "feil", str(e)[:120]))
+    except Exception as e:
+        REPORT.append(("alle", WW3_LABEL, "feil", str(e)[:120]))
+
+
 def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
@@ -949,6 +1048,7 @@ def main():
     EXPOSURE_LEARNED.parent.mkdir(parents=True, exist_ok=True)
     EXPOSURE_LEARNED.write_text(json.dumps(exposure_learned_data, ensure_ascii=False, indent=1), encoding="utf-8")
     notify.run(forecast, now)
+    ww3_second_opinion(spots)   # annenmening i kilderapporten, aldri i tallene
     # ROADMAP oppgave G: helsesjekk til slutt (alt over er skrevet uansett -
     # et halvdårlig varsel er bedre enn ingen), ett driftsvarsel per problem.
     for problem in health_check(spots):
