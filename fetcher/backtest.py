@@ -368,7 +368,11 @@ def ww3_energy_patch(hour, w):
     """rating.energy_kj byttet ut så svellenergien regnes av WW3 sitt EGNE
     svell (phs1, ptp1 - toppperiode) og totalenergien av WW3 sin totale
     (hs, tp), begge fra samme modell. Alt annet i ratingen (surfehøyde,
-    retning, eksponering) er urørt."""
+    retning, eksponering) er urørt. Kallene skilles på argumentverdiene
+    (rating sender hour sine egne tall): er svell- og totalhøyden ute
+    IDENTISKE i inndataene (f.eks. Unstad 26.09, 3,48/3,48), får begge
+    svellenergien - ufarlig, totalenergien vises bare og brukes aldri i
+    ratingen."""
     real = rating.energy_kj
     swell_h, swell_t = hour.get("swell_offshore"), hour.get("period")
     total_h = hour.get("height_offshore")
