@@ -1,3 +1,35 @@
+## Lenkehøsting fra Kystdatahuset/Kystverket-sidene
+
+- https://kystdatahuset.no/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/artikkel/api-tilgang: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/datasett: status 200, 3374 tegn, 2 relevante lenker: ['/api-access', 'https://kystdatahuset.no/datasett']
+- https://kystdatahuset.no/data: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/api: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/artikkel: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://www.kystverket.no/sjovegen/vartjenester/kystvar/: status 200, 48933 tegn, 28 relevante lenker: ['/klima-og-barekraft/kystverkets-klimaregnskap/', '/kystkultur/fyrstasjoner/', '/kystkultur/kystverkets-historie/', '/kystkultur/kystverkmusea/', '/nyheter/2024/kystverket-setter-kurs-og-kutter-egne-klimagassutslipp/', '/om-kystverket/', '/om-kystverket/arrangementer/', '/om-kystverket/barentswatch/', '/om-kystverket/hva-gjor-kystverket/', '/om-kystverket/jobb-i-kystverket/', '/om-kystverket/kunnskapsdatabasen/', '/om-kystverket/kystverket-samfunnsoppdrag/', '/om-kystverket/kystverkets-personvernerklaring/', '/om-kystverket/nasjonal-transportplan/', '/om-kystverket/profilhandbok/', '/sjovegen/kystverkets-fartoyer/', '/sjovegen/vartjenester/kystvar/', '/varsle-oss/defekte-ais--og-dgps-stasjoner/', 'https://apps.apple.com/no/app/kystv%C3%A6r-kystverket/id698101935?l=nb', 'https://kystdatahuset.no/detail/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63', 'https://nais.kystverket.no/', 'https://play.google.com/store/apps/details?id=no.scanmatic.kystverketapp&amp;hl=no&amp;gl=US', 'https://selvbetjening.kystverket.no/nb-NO', 'https://www.facebook.com/Kystverket/', 'https://www.instagram.com/kystverket/', 'https://www.kystverket.no/sjovegen/vartjenester/kystvar/', 'mailto:harald.aasheim@kystverket.no', 'mailto:post@kystverket.no']
+- https://www.kystverket.no/nyheter/2024/kystvar-varsensor-malinger-for-sjofarende/: status 200, 48358 tegn, 26 relevante lenker: ['/klima-og-barekraft/kystverkets-klimaregnskap/', '/kystkultur/fyrstasjoner/', '/kystkultur/kystverkets-historie/', '/kystkultur/kystverkmusea/', '/nyheter/2024/kystvar-varsensor-malinger-for-sjofarende/', '/nyheter/2024/kystverket-setter-kurs-og-kutter-egne-klimagassutslipp/', '/om-kystverket/', '/om-kystverket/arrangementer/', '/om-kystverket/barentswatch/', '/om-kystverket/hva-gjor-kystverket/', '/om-kystverket/jobb-i-kystverket/', '/om-kystverket/kunnskapsdatabasen/', '/om-kystverket/kystverket-samfunnsoppdrag/', '/om-kystverket/kystverkets-personvernerklaring/', '/om-kystverket/nasjonal-transportplan/', '/om-kystverket/profilhandbok/', '/sjovegen/kystverkets-fartoyer/', '/sjovegen/vartjenester/kystvar/', '/varsle-oss/defekte-ais--og-dgps-stasjoner/', 'https://nais.kystverket.no/', 'https://selvbetjening.kystverket.no/nb-NO', 'https://www.facebook.com/Kystverket/', 'https://www.instagram.com/kystverket/', 'https://www.kystverket.no/navigasjonstjenester/kystvar/', 'https://www.kystverket.no/nyheter/2024/kystvar-varsensor-malinger-for-sjofarende/', 'mailto:post@kystverket.no']
+- https://kystdatahuset.no/api-access: status 200, 3440 tegn, 2 relevante lenker: ['/api-access', 'https://kystdatahuset.no/api-access']
+- https://kystdatahuset.no/klima-og-barekraft/kystverkets-klimaregnskap/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/kystkultur/fyrstasjoner/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/kystkultur/kystverkets-historie/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/kystkultur/kystverkmusea/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/nyheter/2024/kystverket-setter-kurs-og-kutter-egne-klimagassutslipp/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/arrangementer/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/barentswatch/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/hva-gjor-kystverket/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/jobb-i-kystverket/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/kunnskapsdatabasen/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/kystverket-samfunnsoppdrag/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/kystverkets-personvernerklaring/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/nasjonal-transportplan/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/om-kystverket/profilhandbok/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/sjovegen/kystverkets-fartoyer/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/sjovegen/vartjenester/kystvar/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/varsle-oss/defekte-ais--og-dgps-stasjoner/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/detail/dataset/d7f12c93-d761-42fe-8370-3f5a5a747f63: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+- https://kystdatahuset.no/nyheter/2024/kystvar-varsensor-malinger-for-sjofarende/: status 200, 3535 tegn, 1 relevante lenker: ['/api-access']
+
 ## Swagger: vær/vind-ruter i Kystdatahuset Open API
 
 - servers: [{'url': '/ws'}], global security: None, securitySchemes: ['JWT Bearer']
@@ -68,7 +100,7 @@ between two vocabularies. (Auth)
 If the term already exists, it will be updated with the new information. (Auth)
 - parametre: [('vocabularyCode', 'path', True, 'string')], body: ja, security: [{'JWT Bearer': [None]}]
 
-# KystVær/Kystdatahuset-sondering, 2026-10-07 13:32 UTC
+# KystVær/Kystdatahuset-sondering, 2026-10-07 13:34 UTC
 
 ## https://kystdatahuset.no/ws/swagger/index.html
 - status 200, text/html;charset=utf-8, 6879 tegn, endte på https://kystdatahuset.kystverket.no/ws/swagger/index.html, nøkkel/innlogging antydet: nei
@@ -127,7 +159,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 ## https://kystdatahuset.no/ws/api/wind/stations
 - status 404, application/problem+json, 162 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/wind/stations, nøkkel/innlogging antydet: nei
 - lenker/nøkler: ["keys: ['type', 'title', 'status', 'traceId']"]
-- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-257ac0fc54310421e6cc36f8ba9b2d11-bd4670747f3d43fd-00"}`
+- utdrag: `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-8bea06dc430b1592a405fa726bbfc2ef-c273f1f580aa54ea-01"}`
 
 ## https://kystdatahuset.no/ws/api/windstations
 - status 404, , 0 tegn, endte på https://kystdatahuset.kystverket.no/ws/api/windstations, nøkkel/innlogging antydet: nei
@@ -172,7 +204,7 @@ If the term already exists, it will be updated with the new information. (Auth)
 
 ## https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98
 - status 401, text/plain; charset=UTF-8, 454 tegn, endte på https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98, nøkkel/innlogging antydet: ja
-- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:32:20Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
+- utdrag: `{ "@context" : "https://frost.met.no/schema", "@type" : "ErrorResponse", "apiVersion" : "v0", "license" : "https://creativecommons.org/licenses/by/3.0/no/", "createdAt" : "2026-10-07T13:34:38Z", "queryTime" : 0, "currentLink" : "https://frost.met.no/sources/v0.jsonld?types=SensorSystem&country=NO&municipality=TROMS%C3%98", "error" : { "code" : 401, "message" : "Unauthorized", "reason" : "Missing a`
 
 ## https://frost.met.no/api.html
 - status 200, text/html; charset=UTF-8, 7760 tegn, endte på https://frost.met.no/api.html, nøkkel/innlogging antydet: nei
