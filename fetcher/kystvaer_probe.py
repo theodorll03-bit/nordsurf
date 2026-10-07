@@ -123,6 +123,48 @@ def probe_swagger():
     return lines
 
 
+PAGES = [
+    "https://kystdatahuset.no/",
+    "https://kystdatahuset.no/artikkel/api-tilgang",
+    "https://kystdatahuset.no/datasett",
+    "https://kystdatahuset.no/data",
+    "https://kystdatahuset.no/api",
+    "https://kystdatahuset.no/artikkel",
+    "https://www.kystverket.no/sjovegen/vartjenester/kystvar/",
+    "https://www.kystverket.no/nyheter/2024/kystvar-varsensor-malinger-for-sjofarende/",
+]
+
+
+def harvest_links():
+    """Tredje runde (07.10.2026): Open API-swaggeren har ingen vær/vind-ruter
+    - KystVær-API-et må ligge et annet sted i Kystdatahuset. Høster alle
+    lenker på portalsidene som nevner vind/vær/kystvær/api/datasett, og
+    følger dem ett nivå ned."""
+    lines = ["## Lenkehøsting fra Kystdatahuset/Kystverket-sidene", ""]
+    seen, queue = set(), list(PAGES)
+    depth = {u: 0 for u in PAGES}
+    while queue:
+        url = queue.pop(0)
+        if url in seen or len(seen) > 40:
+            continue
+        seen.add(url)
+        try:
+            r = requests.get(url, headers={**UA, "Accept": "text/html,application/json"}, timeout=25)
+        except Exception as e:
+            lines.append(f"- {url}: FEIL {str(e)[:100]}")
+            continue
+        body = r.text or ""
+        hrefs = set(re.findall(r'href="([^"#]+)"', body)) | set(re.findall(r"'(https?://[^']+)'", body)) | set(re.findall(r'"(https?://[^"]+)"', body))
+        hits = sorted({h for h in hrefs if any(k in h.lower() for k in ("vind", "vaer", "vær", "kystv", "weather", "wind", "api", "datasett", "dataset", "swagger", "stasjon", "station", "sensor"))})
+        lines.append(f"- {url}: status {r.status_code}, {len(body)} tegn, {len(hits)} relevante lenker: {hits[:40]}")
+        if depth.get(url, 0) < 1:
+            for h in hits:
+                full = h if h.startswith("http") else ("https://kystdatahuset.no" + h if h.startswith("/") else None)
+                if full and full not in seen and "kystdatahuset" in full:
+                    queue.append(full); depth[full] = depth.get(url, 0) + 1
+    return lines + [""]
+
+
 def main():
     results = [probe(u) for u in CANDIDATES]
     lines = [f"# KystVær/Kystdatahuset-sondering, {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC", ""]
@@ -136,7 +178,7 @@ def main():
                 lines.append(f"- lenker/nøkler: {r['links']}")
             lines.append(f"- utdrag: `{r['snippet'][:400]}`")
         lines.append("")
-    lines = probe_swagger() + [""] + lines
+    lines = harvest_links() + probe_swagger() + [""] + lines
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
