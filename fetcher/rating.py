@@ -495,6 +495,40 @@ def breaking_height(h, period):
 WATER_RHO = 1025  # kg/m3, sjøvann
 ENERGY_COEF = WATER_RHO * SURF_G ** 2 / (16 * math.pi)  # se energy_kj()
 
+# 07.10.2026, Theodors oppgave (surf-forecast-sammenligning, Farstadsanden
+# 15.10 - se STATUS.md): surf-forecast bruker TOPPERIODEN (Tp) i sin egen
+# kJ-utregning, ikke middelperioden (Tm) GFS Wave/Open-Meteo sin
+# "swell_wave_period" er. Periode i ANDRE potens i energy_kj() (E ∝ T²) gjør
+# selv en moderat Tp/Tm-forskjell stor - Theodors eget eksempel (12 s mot
+# 16 s) gir (16/12)² ≈ 1,78× i energi av periodevalget ALENE, før selve
+# høydeforskjellen. START-faktor, IKKE kalibrert ennå (se energy_period()).
+PEAK_PERIOD_FACTOR_DEFAULT = 1.25
+
+
+def energy_period(period, peak_period):
+    """Hvilken periode energy_kj() skal bruke, og hvor den kom fra - ALDRI
+    brukt til surfehøyde-formelen (breaking_height()) eller selve
+    "Periode"-visningen i appen, som begge fortsatt bruker middelperioden
+    (`period`) uendret, slik de alltid har gjort (Theodors eksplisitte
+    instruks - bare ENERGIEN skal endres nå).
+
+    1. Topperiode direkte, når kilden faktisk har den (`peak_period`, se
+       sources.openmeteo_marine() - i praksis bare noen ganger, når
+       standardmodellen er den valgte kilden for timen; GFS Wave har aldri
+       dette feltet).
+    2. Ellers: middelperioden ganget med PEAK_PERIOD_FACTOR_DEFAULT (1,25,
+       en START-verdi - Theodors instruks: kalibrer den mot
+       benchmark-sammenligninger fra surf-forecast når det er minst 10 - se
+       data/benchmark/).
+
+    Returnerer (periode_til_energi, "topp"/"omregnet"/None) - periode er
+    `None` hvis ingen periode i det hele tatt finnes å regne fra."""
+    if peak_period is not None and peak_period > 0:
+        return peak_period, "topp"
+    if period is None or period <= 0:
+        return None, None
+    return period * PEAK_PERIOD_FACTOR_DEFAULT, "omregnet"
+
 
 def energy_kj(height, period):
     """06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md sin
@@ -787,7 +821,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
                      potential, solid, lost_wind, lost_tide, uncertain,
                      sources_disagree, capped_from, disagree_cap,
-                     energy_swell_kj=None, energy_factor_value=1.0):
+                     energy_swell_kj=None, energy_factor_value=1.0,
+                     energy_period_value=None, energy_period_source=None):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -838,11 +873,21 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         # regelen faktisk bruker, se rate()), IKKE totalhøyde-energien
         # ("Svell ute"-cella over viser den, som energy_total_kj).
         if energy_swell_kj is not None:
+            # 07.10.2026, Theodors oppgave: vis HVILKEN periode energien ble
+            # regnet med, og om den er omregnet - "Periode"-cella (period,
+            # over) viser uansett alltid den ekte middelperioden, uendret.
+            if energy_period_source == "topp":
+                period_note = f" (topperiode {energy_period_value:.1f} s)".replace(".", ",")
+            elif energy_period_source == "omregnet":
+                period_note = (f" (periode omregnet til {energy_period_value:.1f} s, "
+                                f"×{PEAK_PERIOD_FACTOR_DEFAULT})").replace(".", ",")
+            else:
+                period_note = ""
             if energy_factor_value < 0.999:
-                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ: faktor {energy_factor_value:.2f} "
+                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: faktor {energy_factor_value:.2f} "
                               f"(potensial ganget ned)")
             else:
-                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ: over terskelen, ingen effekt")
+                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: over terskelen, ingen effekt")
         if blown_out:
             items.append(f"Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
@@ -1287,8 +1332,14 @@ def rate(hour, spot):
     # feilaktig lav faktor (0,65) og falt 2 stjerner, over Theodors egen
     # 1-stjernes toleranse. energifaktoren er nå UNIVERSELL (alle spots,
     # ikke bare Farstadsanden) - se energy_factor() sine standardgrenser.
-    energy_swell = energy_kj(hour.get("swell_offshore"), period)
-    energy_total = energy_kj(hour.get("height_offshore"), period)
+    #
+    # 07.10.2026, Theodors oppgave (surf-forecast-sammenligning): ENERGIEN
+    # alene (ikke surfehøyden, se breaking_height() over - uendret, bruker
+    # fortsatt `period`) regnes med topperiode når den finnes, ellers
+    # middelperioden omregnet - se energy_period()/PEAK_PERIOD_FACTOR_DEFAULT.
+    energy_period_value, energy_period_source = energy_period(period, hour.get("swell_peak_period"))
+    energy_swell = energy_kj(hour.get("swell_offshore"), energy_period_value)
+    energy_total = energy_kj(hour.get("height_offshore"), energy_period_value)
     energy_factor_value = energy_factor(spot, energy_swell)
     if energy_factor_value < 0.999:
         potential = int(potential * energy_factor_value + 1e-9)
@@ -1318,6 +1369,7 @@ def rate(hour, spot):
         wind_speed, wind_dir, gust, wt, wp, hour.get("tide"), tide_pen,
         potential, solid, lost_wind, lost_tide, uncertain,
         sources_disagree, capped_from, disagree_cap, energy_swell, energy_factor_value,
+        energy_period_value, energy_period_source,
     )
 
     return {
@@ -1399,6 +1451,12 @@ def rate(hour, spot):
         # ved siden av, ikke brukt i reglene.
         "energy_swell_kj": None if energy_swell is None else round(energy_swell),
         "energy_total_kj": None if energy_total is None else round(energy_total),
+        # 07.10.2026, Theodors oppgave: hvilken periode energien over faktisk
+        # ble regnet med ("topp" = ekte topperiode, "omregnet" = middelperiode
+        # × PEAK_PERIOD_FACTOR_DEFAULT, None = ingen periode i det hele
+        # tatt) - til fremtidig kalibrering (data/benchmark/), ikke bare
+        # synlig i breakdown-teksten.
+        "energy_period_source": energy_period_source,
         # Myke lokale regler (Magnus, se CLAUDE.md "Lokalkunnskap") - None
         # når spoten ikke har local_rules. "stars_lost" er ETT tall (allerede
         # avrundet, summert på tvers av tidevann/vind-delreglene) - energi

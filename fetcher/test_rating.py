@@ -1026,7 +1026,9 @@ assert U16["exposure_distance_km"] is not None and U16["exposure_width_km"] is n
 # (surf_factor_prior-saken, 30.09.2026) - bare bw_height/bw_dir/surf_factor
 # betydde noe DA. Energifaktoren (ny, se rate()) leser disse to feltene -
 # rettet til EKTE svell ute (3,48 m/15 s, Theodors egen rekonstruksjon,
-# ca. 5300 kJ). height_offshore satt likt (ikke en egen vindsjø-andel kjent)
+# ca. 8350 kJ - 07.10.2026: perioden her er omregnet til 18,75 s, se
+# energy_period(), derfor høyere enn den opprinnelige ca. 5300 kJ).
+# height_offshore satt likt (ikke en egen vindsjø-andel kjent)
 # - gir samme swell_share=1,0 som 1,0/1,0 ga, så selve høyde-/stjernekjeden
 # (bw_height, surf_factor_prior) er UENDRET av dette, bare energifaktoren er.
 r_2609 = rate({"bw_height": 0.9, "bw_dir": U16["facing"], "bw_period": 15.0, "dir_offshore": 300,
@@ -1167,9 +1169,13 @@ assert F19.get("local_rules") is not None  # sjekker at feltet faktisk er satt f
 F19_no_rules = dict(F19)
 del F19_no_rules["local_rules"]
 
-# 19.3: Farstadsanden med 1,6 m svell ute og 10 s (ca. 500 kJ, under Magnus
-# sin "zero"-grense 1500 kJ) skal gi klart færre stjerner MED reglene enn
-# UTEN - energifaktoren ganger potensialet kraftig ned før vind/tidevann.
+# 19.3: Farstadsanden med 1,6 m svell ute og 10 s (ca. 785 kJ - 07.10.2026,
+# Theodors oppgave: energien regnes nå med topperiode når den finnes, ellers
+# middelperioden × PEAK_PERIOD_FACTOR_DEFAULT (1,25) - testens hour-mock har
+# ingen swell_peak_period, så 10 s × 1,25 = 12,5 s brukes her, se
+# energy_period(). Fortsatt godt under Magnus sin "zero"-grense 1500 kJ) skal
+# gi klart færre stjerner MED reglene enn UTEN - energifaktoren ganger
+# potensialet kraftig ned før vind/tidevann.
 # 06.10.2026, Theodors rettelse (andre runde): energifaktoren er nå
 # UNIVERSELL - "UTEN lokale regler" (F19_no_rules) får nå OGSÅ en viss
 # demping (standardgrensene 2000/500/0,5, ikke lenger nøytral 1,0), bare
@@ -1186,7 +1192,8 @@ r_with_rules = rate(h_lowenergy, F19)
 r_without_rules = rate(h_lowenergy, F19_no_rules)
 show("19.3: Farstadsanden 1,6 m/10 s MED lokale regler", r_with_rules)
 show("19.3: Farstadsanden 1,6 m/10 s UTEN lokale regler", r_without_rules)
-assert abs(r_with_rules["energy_swell_kj"] - 500) < 50  # "ca. 500 kJ"
+assert abs(r_with_rules["energy_swell_kj"] - 785) < 50  # "ca. 785 kJ", se oppdatert merknad over
+assert r_with_rules["energy_period_source"] == "omregnet"  # ingen swell_peak_period i denne mocken
 assert (_energy_factor(F19, r_with_rules["energy_swell_kj"])
         < _energy_factor(F19_no_rules, r_without_rules["energy_swell_kj"]))
 assert r_with_rules["stars"] <= r_without_rules["stars"]
@@ -1410,8 +1417,12 @@ print("21.3: Unstad - 100 grader offshore; 294,8 (facing/verstefall), 300 og 335
 
 # ---------- 23: 07.10.2026, Theodors rettelse: "Treffer ikke", ikke "Flatt",
 # når retningen er årsaken og energien ute er høy ----------
-# Grøtfjord om ca. 10 dager: svell ute 2,3 m/15 s (ca. 2 300 kJ) fra 271°, 15°
-# utenfor vinduet [286,310], offshore 5 m/s. Appen viste "Flatt, 0,1 m".
+# Grøtfjord om ca. 10 dager: svell ute 2,3 m/15 s fra 271°, 15° utenfor
+# vinduet [286,310], offshore 5 m/s. Appen viste "Flatt, 0,1 m". Energien
+# (ca. 3650 kJ - 07.10.2026, Theodors oppgave: perioden her er omregnet til
+# 18,75 s, ×PEAK_PERIOD_FACTOR_DEFAULT, ingen swell_peak_period i mocken)
+# er godt over "treffer ikke"-grensa uansett - bare selve TALLET endret seg,
+# ikke klassifiseringen.
 import fetch as _fetch23
 _expo23 = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())
 G23 = dict(G)
@@ -1425,7 +1436,8 @@ show("23.1: Grøtfjord 2,3 m/15 s fra 271° (15° utenfor)", r_271)
 assert r_271["stars"] == 0 and r_271["height"] < 0.35
 assert r_271["energy_swell_kj"] > 2000
 assert r_271["low_reason"] == "treffer_ikke", r_271["low_reason"]
-# Samme retning, men LITE energi ute (0,8 m/7 s = ca. 61 kJ): da ER det flatt.
+# Samme retning, men LITE energi ute (0,8 m/7 s = ca. 96 kJ, omregnet
+# periode 8,75 s): da ER det flatt.
 r_271_low = rate({**h_271, "swell_offshore": 0.8, "height_offshore": 1.0, "period": 7}, G23)
 assert r_271_low["stars"] == 0 and r_271_low["low_reason"] == "flat", r_271_low["low_reason"]
 # Energi ukjent (ingen svellfelt - met.no-reserven): fortsatt "flat" (w, toppen av fila).
@@ -1479,5 +1491,57 @@ assert _cap23(280, G23) == 0.2 and _cap23(285, G23) == 0.2 and _cap23(286, G23) 
 print(f"24: diffraksjonsdemping p(T) - Grøtfjord 24-26.09 fortsatt 0, Theodors time uendret (0 stjerner, {r_271b['height']} m, "
       f"treffer ikke), 280° (nytt override 276-285) uendret ved 8/15 s ({r_280_15['surf_height']} m begge), "
       f"overridet sin grense (271/286 upåvirket) OK")
+
+# ---------- 25: 07.10.2026, Theodors oppgave: energien skal måles i samme
+# periode-type (topperiode) som surf-forecast, uten å røre surfehøyde-
+# formelen eller selve "Periode"-visningen ----------
+from rating import energy_period as _energy_period, PEAK_PERIOD_FACTOR_DEFAULT as _PPFD
+
+# 25.1: ren funksjonstest av energy_period() - fire grener.
+assert _energy_period(12, 16) == (16, "topp")  # ekte topperiode finnes - brukes RÅTT, ingen omregning
+assert _energy_period(12, None) == (12 * _PPFD, "omregnet")  # ingen topperiode - middelperiode × faktor
+assert _energy_period(12, 0) == (12 * _PPFD, "omregnet")  # topperiode 0 (ugyldig) - samme som manglende
+assert _energy_period(12, -1) == (12 * _PPFD, "omregnet")  # negativ - samme
+assert _energy_period(None, 16) == (16, "topp")  # topperiode finnes selv om middelperioden mangler
+assert _energy_period(None, None) == (None, None)  # ingen periode i det hele tatt
+assert _energy_period(0, None) == (None, None)  # middelperiode 0 uten topperiode - ingen gyldig periode
+print(f"25.1: energy_period() sine fire grener (topp/omregnet/begge mangler/ugyldig topp) - OK")
+
+# 25.2: rate() bruker FAKTISK topperioden når den finnes (swell_peak_period),
+# IKKE middelperioden × faktor - og surfehøyden/"Periode"-visningen er
+# UENDRET av dette (bare energien skal endre seg, Theodors eksplisitte punkt
+# 2). Samme spot/vind/retning/høyde begge ganger, bare swell_peak_period
+# forskjellig - skiller ALENE om energien endres eller ikke.
+h_peak_base = {"swell_offshore": 2.0, "height_offshore": 2.0, "dir_offshore": 10,  # midt i Russelv sitt vindu [5,15]
+               "period": 12, "wind_speed": 3, "wind_dir": 135}  # midt i offshore_wind [90,180]
+r_with_peak = rate({**h_peak_base, "swell_peak_period": 16}, R)
+r_without_peak = rate({**h_peak_base, "swell_peak_period": None}, R)
+show("25.2: med topperiode (16 s)", r_with_peak)
+show("25.2: uten topperiode (omregnet fra 12 s)", r_without_peak)
+assert r_with_peak["energy_period_source"] == "topp"
+assert r_without_peak["energy_period_source"] == "omregnet"
+# Surfehøyden (og alt den avhenger av) er HELT uendret - energien er det
+# ENESTE som skiller de to kjøringene.
+assert r_with_peak["surf_height"] == r_without_peak["surf_height"]
+assert r_with_peak["height"] == r_without_peak["height"]
+assert r_with_peak["breaking_height"] == r_without_peak["breaking_height"]
+# rate() returnerer aldri noen "period"-nøkkel (sjekket: grep "period":
+# i rating.py gir ingen treff) - "Periode" i appen er derfor STRUKTURELT
+# uendret av dette (leses fra hour["period"], satt av fetch.py FØR rate()
+# kalles, aldri overskrevet av resultatet).
+#
+# Energien MED topperiode skal være HØYERE enn uten (16 s > 12×1,25=15 s).
+assert r_with_peak["energy_swell_kj"] > r_without_peak["energy_swell_kj"]
+assert abs(r_without_peak["energy_swell_kj"] - _energy_kj(2.0, 12 * _PPFD)) < 0.5
+assert abs(r_with_peak["energy_swell_kj"] - _energy_kj(2.0, 16)) < 0.5
+# Breakdown-teksten nevner hvilken periode som faktisk ble brukt (Theodors
+# punkt 1c - "vis i forklaringen hvilken periode som er brukt").
+energy_line_with = next(line for line in r_with_peak["breakdown"] if line.startswith("Energi (svell)"))
+energy_line_without = next(line for line in r_without_peak["breakdown"] if line.startswith("Energi (svell)"))
+assert "topperiode 16,0 s" in energy_line_with, energy_line_with
+assert "omregnet til 15,0 s" in energy_line_without, energy_line_without
+print(f"25.2: energy_period_source 'topp'/'omregnet' riktig valgt, surfehøyde/breaking_height UENDRET "
+      f"({r_with_peak['surf_height']} m begge), energi {r_without_peak['energy_swell_kj']} kJ (omregnet) "
+      f"vs {r_with_peak['energy_swell_kj']} kJ (topp) - breakdown viser begge periodene, OK")
 
 print("Alle tester ok")

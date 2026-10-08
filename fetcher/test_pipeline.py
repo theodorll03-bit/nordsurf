@@ -586,6 +586,60 @@ assert abs(last_7h["swell_offshore"] - 2.0) < 1e-6, last_7h["swell_offshore"]
 print(f"7h fetch.py sitt hovedpunkt-kall bruker standardverdien (apply_ratio_correction=True) - "
       f"siste langtid-time ({last_7h['t']}) korrigert til {last_7h['swell_offshore']} m (riktig 2,0, ikke rå 6,0), OK")
 
+# ---------- 7i: 07.10.2026, femte kontrollrunde sitt funn - INGEN test gikk
+# gjennom DEN VIRKELIGE Open-Meteo-feltet "swell_wave_peak_period" sin vei
+# helt fra _openmeteo_fetch() til energy_period() sin "topp"-grein, via
+# DEN VIRKELIGE fetch.build_spot() (bare rate() direkte, test_rating.py sin
+# 25.2, har testet selve energy_period()-logikken - IKKE at feltet faktisk
+# NÅR fram dit gjennom sources.py/fetch.py). Treffer i praksis 0 av 1600
+# ekte timer i dag (se STATUS.md) - denne testen beviser derfor at
+# KODEVEIEN virker, ikke at den brukes live akkurat nå. ----------
+NOW_7I = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+def _fetch7i(lat, lon, model=None):
+    if model == sources.OPENMETEO_SWELL_MODEL:  # GFS - ALDRI ekte svell her, skal ALDRI vinne
+        return {sources.hour_key(NOW_7I + dt.timedelta(hours=i)): {
+            "height": None, "swell_height": None, "swell_dir": None, "swell_period": None,
+            "swell_peak_period": None,
+            "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+            for i in range(_lr7h.HOURS)}
+    # standardmodellen - ekte svell MED ekte topperiode (16 s), Tp/Tm = 16/12
+    # ~= 1,33 - samme størrelsesorden som Theodors eget surf-forecast-
+    # eksempel (1,333, se data/benchmark/comparisons.json).
+    return {sources.hour_key(NOW_7I + dt.timedelta(hours=i)): {
+        "height": 2.5, "swell_height": 2.0, "swell_dir": 300, "swell_period": 12,
+        "swell_peak_period": 16,
+        "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+        for i in range(_lr7h.HOURS)}
+saved_fetch7i = sources._openmeteo_fetch
+saved_wind7i = sources.openmeteo_wind
+saved_marine7i = sources.openmeteo_marine
+sources.openmeteo_marine = real_openmeteo_marine
+sources._openmeteo_fetch = _fetch7i
+sources.openmeteo_wind = lambda la, lo: {
+    sources.hour_key(NOW_7I + dt.timedelta(hours=i)): {"wind_speed": 4, "wind_dir": 200, "gust": 6}
+    for i in range(_lr7h.HOURS)}
+fetch.REPORT.clear()
+built_7i = fetch.build_spot(json.loads(json.dumps(grot_spot)), NOW_7I, {}, {}, "test-run-7i", {}, {})
+sources._openmeteo_fetch = saved_fetch7i
+sources.openmeteo_wind = saved_wind7i
+sources.openmeteo_marine = saved_marine7i
+first_7i = sorted(built_7i["hours"], key=lambda h: h["t"])[0]
+assert first_7i["swell_model"] == "standard", (
+    f"forventet standardmodellen (GFS har ingen ekte svell i denne mokken) - fikk {first_7i['swell_model']}")
+assert first_7i["swell_peak_period"] == 16, (
+    f"feltet nådde ikke frem fra _openmeteo_fetch() til hour['swell_peak_period'] - fikk {first_7i['swell_peak_period']}")
+assert first_7i["energy_period_source"] == "topp", (
+    f"energy_period() valgte ikke 'topp'-greinen selv med en ekte topperiode til stede - fikk {first_7i['energy_period_source']}")
+import rating as _rating7i
+expected_kj_7i = round(_rating7i.energy_kj(first_7i["swell_offshore"], 16))
+assert round(first_7i["energy_swell_kj"]) == expected_kj_7i, (
+    f"energien brukte ikke topperioden (16 s) direkte - forventet {expected_kj_7i} kJ, fikk {first_7i['energy_swell_kj']}")
+energy_line_7i = next(line for line in first_7i["breakdown"] if line.startswith("Energi (svell)"))
+assert "topperiode 16,0 s" in energy_line_7i, energy_line_7i
+print(f"7i Open-Meteo sin swell_wave_peak_period når frem helt til energy_period() sin 'topp'-grein via "
+      f"DEN VIRKELIGE fetch.build_spot() ({first_7i['energy_swell_kj']} kJ, breakdown viser '{energy_line_7i.split(':')[0]}'), OK "
+      f"(0 av 1600 ekte timer bruker denne greinen i dag, se STATUS.md - denne testen beviser bare at veien virker)")
+
 # ---------- 8.8: SIZE_M-tabellen i docs/index.html og fetcher/calibrate.py
 # skal være identisk (ingen felles import mulig - statisk nettside uten
 # bundler, se README) ----------

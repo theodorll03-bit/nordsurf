@@ -113,8 +113,8 @@ OPENMETEO_SWELL_MODEL = "ncep_gfswave025"
 def _openmeteo_fetch(lat, lon, model=None):
     """Rådata fra Open-Meteo Marine, ev. med en bestemt modell valgt eksplisitt
     via `models`. {time: {height, swell_height, swell_dir, swell_period,
-    total_dir, total_period, secondary_swell_height, secondary_swell_dir,
-    secondary_swell_period}}
+    swell_peak_period, total_dir, total_period, secondary_swell_height,
+    secondary_swell_dir, secondary_swell_period}}
 
     06.10.2026, Theodors rettelse (manglende data ble tolket som 0, se
     CLAUDE.md og STATUS.md): total_dir/total_period (wave_direction/
@@ -122,13 +122,26 @@ def _openmeteo_fetch(lat, lon, model=None):
     fra API-et (sto allerede i "hourly"-parameteren over) men ALDRI lagret -
     trengs nå som reserve i openmeteo_marine() når ingen av kildene har et
     ekte, utskilt svellfelt for punktet (vanlig langt frem i tid, der GFS
-    Wave sitt rutenett ikke dekker alle punkt for hver time)."""
+    Wave sitt rutenett ikke dekker alle punkt for hver time).
+
+    07.10.2026, Theodors oppgave (energien skal måles likt som surf-forecast,
+    se CLAUDE.md "Lokalkunnskap"/Magnus): `swell_wave_peak_period`
+    (topperiode, IKKE middelperioden `swell_wave_period` over - samme
+    forskjell som Tp/Tm i oseanografien) - bare til energy_kj(), ALDRI til
+    surfehøyde-formelen eller selve "Periode"-visningen (uendret, se
+    rating.py). Bekreftet live 07.10.2026: standardmodellen (models=None) gir
+    ekte verdier her for de punktene sjekket; GFS Wave (ncep_gfswave025) gir
+    bokstavelig None for ALLE timer her (feltet finnes i svaret, men er
+    alltid tomt for akkurat denne modellen) - treffer derfor i praksis bare
+    unntaksvis (når standardmodellen er den valgte kilden for timen, se
+    openmeteo_marine()), ikke "vanligvis"."""
     params = {
         "latitude": lat,
         "longitude": lon,
         "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,"
-        "swell_wave_direction,swell_wave_period,secondary_swell_wave_height,"
-        "secondary_swell_wave_direction,secondary_swell_wave_period",
+        "swell_wave_direction,swell_wave_period,swell_wave_peak_period,"
+        "secondary_swell_wave_height,secondary_swell_wave_direction,"
+        "secondary_swell_wave_period",
         "timezone": "GMT",
         # 06.10.2026, ROADMAP oppgave B: 16 dager. Live sjekket samme dag:
         # GFS Wave (ncep_gfswave025) gir svelldata alle 384 timer, mens
@@ -152,6 +165,7 @@ def _openmeteo_fetch(lat, lon, model=None):
             "swell_height": h["swell_wave_height"][i],
             "swell_dir": h["swell_wave_direction"][i],
             "swell_period": h["swell_wave_period"][i],
+            "swell_peak_period": h.get("swell_wave_peak_period", missing)[i],
             "total_dir": h["wave_direction"][i],
             "total_period": h["wave_period"][i],
             "secondary_swell_height": h.get("secondary_swell_wave_height", missing)[i],
@@ -250,8 +264,11 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
     Open-Meteo sin standardmodell for en time der GFS ikke har svelldata for
     punktet. Totalhøyden (inkl. vindsjø) og sekundærsvellet følger med, men
     sekundærsvellet lagres bare - det skal ikke vises eller brukes i ratingen.
-    {time: {height, swell_height, dir, period, swell_model,
+    {time: {height, swell_height, dir, period, peak_period, swell_model,
     secondary_swell_height, secondary_swell_dir, secondary_swell_period}},
+    peak_period er svellets TOPPERIODE (bare til energy_kj(), se
+    rating.energy_period()) - ofte None (se _openmeteo_fetch() sin
+    docstring: GFS Wave har aldri dette feltet, bare standardmodellen).
     PLUSS en spesialnøkkel "_meta" ({gfs_standard_ratio, ratio_seam} eller
     fraværende hvis ikke nok overlapp til å regne ut - se
     ratio_blend_correction()) - IKKE en time, må plukkes ut før resten av
@@ -346,12 +363,14 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
             if height:  # har i det minste en totalhøyde å bruke som reserve
                 out[k] = {
                     "height": height, "swell_height": height, "dir": total_dir, "period": total_period,
+                    "peak_period": None,  # ingen topperiode for en TOTALHØYDE-reserve - se energy_period()
                     "swell_model": "total_fallback",
                     "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
                 }
             else:  # ingenting i det hele tatt for dette punktet/timen - ekte None, ikke 0
                 out[k] = {
-                    "height": None, "swell_height": None, "dir": None, "period": None, "swell_model": None,
+                    "height": None, "swell_height": None, "dir": None, "period": None, "peak_period": None,
+                    "swell_model": None,
                     "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
                 }
             continue
@@ -360,6 +379,10 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
             "swell_height": src.get("swell_height"),
             "dir": src.get("swell_dir"),
             "period": src.get("swell_period"),
+            # 07.10.2026, Theodors oppgave: topperiode, BARE til energy_kj()
+            # (se rating.energy_period()) - ALDRI til surfehøyde-formelen
+            # eller selve "Periode"-visningen (period, over, uendret).
+            "peak_period": src.get("swell_peak_period"),
             "swell_model": model,
             "secondary_swell_height": src.get("secondary_swell_height"),
             "secondary_swell_dir": src.get("secondary_swell_dir"),

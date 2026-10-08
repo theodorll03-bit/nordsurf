@@ -1,0 +1,24 @@
+{
+  "_comment": "07.10.2026, Theodors oppgave: sammenligninger mot surf-forecast/Surfline, til å kalibrere PEAK_PERIOD_FACTOR_DEFAULT (rating.py) når det er minst 10. Hver rad er ETT tidspunkt, EN spot. 'app' er det appen faktisk viste/beregnet (fra forecast.json eller direkte lest fra skjermbilde av appen); 'benchmark' er det den eksterne kilden viste. 'tp_tm_ratio' (topperiode/middelperiode) regnes ut direkte fra radens egne tall NÅR begge periodene er kjent og antas å gjelde samme svell - IKKE brukt automatisk, bare til manuell kalibrering senere (se fetcher/benchmark.py).",
+  "comparisons": [
+    {
+      "date": "2026-10-15",
+      "time_local": "08:00",
+      "spot": "farstadsanden",
+      "source": "tekst fra Theodor (07.10.2026) - ikke et bilde, se data/benchmark/inbox/ for fremtidige skjermbilder",
+      "app": {
+        "swell_height_m": 2.7, "period_s": 12.0, "period_type": "middel",
+        "energy_kj": 1901, "dir_deg": 282, "wind_speed_ms": 9, "wind_dir": "SSV",
+        "rating_word": "Blåst ut"
+      },
+      "benchmark_source": "surf-forecast",
+      "benchmark": {
+        "height_m": 4.0, "period_s": 16.0, "period_type": "topp",
+        "energy_kj": 8055, "dir": "WNW", "wind_speed_ms": 4, "wind_dir": "S cross-off",
+        "rating_10": 8
+      },
+      "tp_tm_ratio": 1.333,
+      "note": "Theodors egen diagnose: periodevalget (12s middel mot 16s topp) forklarer ca. (16/12)^2 = 1,78x av energiforskjellen alene, resten er høydeforskjellen (2,7 mot 4,0 m)."
+    }
+  ]
+}

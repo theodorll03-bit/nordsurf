@@ -691,6 +691,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "dir_spot": dir_spot,
             "turn": turn,
             "period": (mar or {}).get("period"),
+            # 07.10.2026, Theodors oppgave (energien skal måles likt som
+            # surf-forecast): svellets TOPPERIODE, bare til energy_kj() (se
+            # rating.energy_period()) - "period" over er fortsatt
+            # middelperioden, uendret, brukt i surfehøyde-formelen som før.
+            "swell_peak_period": (mar or {}).get("peak_period"),
             "water_temp": (sp or {}).get("water_temp"),
             **(w or {}),
             "light": light,
