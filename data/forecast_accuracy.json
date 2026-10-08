@@ -1,115 +1,115 @@
 {
- "last_scored_until": "2026-10-08T06:00:00+00:00",
+ "last_scored_until": "2026-10-08T09:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "tromvik": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 35,
+    "n": 51,
+    "hits": 50,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "ersfjordstranda": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "russelv": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 35,
+    "n": 51,
+    "hits": 50,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "lenangsoyra": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 32,
+    "n": 51,
+    "hits": 47,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "steinkrossa": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 49,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "unstad": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 196,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 35,
+    "n": 51,
+    "hits": 48,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "farstadsanden": {
    "1": {
-    "n": 173,
-    "hits": 173,
+    "n": 197,
+    "hits": 197,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
