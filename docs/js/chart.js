@@ -17,10 +17,22 @@
   // Den valgte timen er fortsatt markert. Trykk på en søyle lenger ut (med
   // stjerner) velger den timen, og grafen vokser igjen.
   function flatStretch(hours, sel){
-    // antall sammenhengende 0-stjernestimer fra valgt time og framover
-    let n = 0;
-    for(let i = Math.max(0, sel); i < hours.length; i++){ if((hours[i].stars||0) > 0) break; n++; }
-    return n;
+    // Antall sammenhengende 0-stjernestimer fra valgt time og framover.
+    // En time der tallet MANGLER (ingen surfehøyde og ingen low_reason)
+    // bryter strekket - den er ikke "flat", den er ukjent (grunnregelen).
+    // allFlat: alle timene er EKTE flate (low_reason "flat", eller ingen
+    // low_reason og surfehøyde 0) - ellers er det "ingen surf" av andre
+    // grunner (blåst ut, treffer ikke, stormsjø, eller 0 stjerner med reell
+    // høyde), og teksten skal ikke si "Flatt" (fysikk-kontrollør 09.10.2026).
+    let n = 0, allFlat = true;
+    for(let i = Math.max(0, sel); i < hours.length; i++){
+      const h = hours[i];
+      if((h.stars||0) > 0) break;
+      if(h.surf_height==null && !h.low_reason) break;
+      if(!(h.low_reason==="flat" || (!h.low_reason && h.surf_height<=0))) allFlat = false;
+      n++;
+    }
+    return {n, allFlat};
   }
   const MAX_H = 3.5;        // meter som fyller hele høyden (over dette klippes søylen)
   const FLAT_PX = 3;
@@ -32,7 +44,7 @@
     const hours = spot.hours;
     const n = hours.length;
     const width = PAD_L + n*COL + PAD_R;
-    const flatN = flatStretch(hours, sel);
+    const {n: flatN, allFlat} = flatStretch(hours, sel);
     const compact = flatN >= 24 || (flatN > 0 && sel + flatN >= hours.length);
     const H = compact ? H_FLAT : H_FULL;
     const total = TOP + H + BOTTOM;
@@ -97,7 +109,7 @@
       // teksten følger det synlige utsnittet: plasseres ved valgt time (den
       // det scrolles til), i dempet farge, uten å dekke markøren
       const tx = PAD_L + (sel+1)*COL + 10;
-      flatText = `<text class="flat-lbl" x="${tx}" y="${TOP + H/2 + 4}">${esc(opts.flatText(flatN, sel))}</text>`;
+      flatText = `<text class="flat-lbl" x="${tx}" y="${TOP + H/2 + 4}">${esc(opts.flatText(flatN, sel, allFlat))}</text>`;
     }
     const svg = `<svg class="chart${compact?" compact":""}" width="${width}" height="${total}" viewBox="0 0 ${width} ${total}" role="img" aria-label="${esc(opts.aria)}">
       <g>${bands}</g><g>${breaks}</g><g>${bars}</g><g>${selMark}</g><g>${labels}</g><g>${flatText}</g></svg>`;

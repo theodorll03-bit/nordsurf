@@ -38,6 +38,11 @@
 7. Lista på mobil: kompakte kort (området i faktalinja i stedet for egen linje, mindre luft, navn 20 px), dagsprikker 8 px (12-28 px strek for 1-5 stjerner). Testen krever at det femte kortet er helt synlig over tabbaren på 390×844 og at prikkene er minst 8 px.
 Alle tester grønne, sw.js-hash oppdatert, skjermbildene tatt på nytt.
 
+**Fysikk-kontrollør, runde 2 (09.10.2026, «MÅ RETTES» - alle tre rettet, pushet som oppfølging):**
+- `h.bw_lee` finnes ikke (verken i forecast.json eller rating.py) - «BarentsWatch-punktet ligger i le» finnes bare i henterens kilderapport (`fetch.bw_point_in_lee_warning()`, per spot og kjøring). Grenen er fjernet fra `noticeFor()`; skal advarselen inn i appen, må henteren først eksportere et spot-felt (eget delsteg i fetch.py, egen fysikk-kontroll - ikke i en visningsrunde).
+- «Flatt de neste X timene» ble brukt om timer som ikke er flate (Farstadsanden: 3 blåst ut-timer opptil 1,7 m; Russelv: 77 «Treffer ikke»-timer; Steinkrøssa: 0 stjerner med 0,6-0,7 m). Nå: «Flatt …» BARE når alle timene i strekket er ekte flate (low_reason «flat», eller ingen low_reason og surfehøyde 0), ellers «Ingen surf hele døgnet / de neste X timene / resten av varselet». En time der tallet mangler (ingen høyde, ingen low_reason) bryter strekket - den er ukjent, ikke flat. Testen sjekker riktig variant mot forecast.json.
+- Tidsteksten under datofeltet oppdateres nå også når tiden endres for hånd (`oninput`), og formateres i enhetens tidssone - samme som feltet og lagringen tolker verdien i (teksten brukte Europe/Oslo, feltet enhetens). Kontrolløren peker på at selve lagringen (`new Date(v)` på enhetens tidssone) er en eldre sak som kan påvirke hvilken varseltime en logg kobles til utenfor norsk tid - ikke rørt nå (eldre kode, utenfor visningsrunden), notert.
+
 **Ikke gjort / kjent:** skjermbildene av kartet er uten karttiler (Kartverket er blokkert fra testmiljøet); ingen spotbilder lagt inn (mappa har bare en README - Theodor legger inn egne bilder). Secrets-saken (APP_URL, NTFY_TOPIC, LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID) er fortsatt åpen og uavhengig av denne grenen.
 
 ## Theodors oppgave 07.10.2026: energien skal måles i samme periode-type som surf-forecast - FERDIG, fysikk-kontrollør GODKJENT (se eget avsnitt nederst), committet

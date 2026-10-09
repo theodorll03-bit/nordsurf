@@ -204,8 +204,11 @@ def main():
             if all((hh.get("stars") or 0) == 0 for hh in fh[:24]):
                 svg_box = page.locator("#chartWrap svg").bounding_box()
                 assert svg_box and svg_box["height"] <= 80, f"grafen skal være kompakt på en flat dag (var {svg_box and svg_box['height']} px)"
-                assert page.locator("#chartWrap svg .flat-lbl").count() == 1, "kompakt graf skal si 'Flatt ...'"
-                assert "Flatt" in (page.locator("#chartWrap svg .flat-lbl").text_content() or "")
+                assert page.locator("#chartWrap svg .flat-lbl").count() == 1, "kompakt graf skal si 'Flatt ...' eller 'Ingen surf ...'"
+                lbl = page.locator("#chartWrap svg .flat-lbl").text_content() or ""
+                # "Flatt" bare når alle timene i strekket er ekte flate, ellers "Ingen surf"
+                all_flat = all(hh.get("low_reason") == "flat" or (not hh.get("low_reason") and (hh.get("surf_height") or 0) <= 0) for hh in fh[:24])
+                assert lbl.startswith("Flatt" if all_flat else "Ingen surf"), f"kompakt graf-tekst '{lbl}' passer ikke timene (alle ekte flate: {all_flat})"
                 assert page.locator("#chartWrap svg .sel-mark").count() == 1, "valgt time skal være markert også i kompakt graf"
             shot("detalj_flat"); axe_check("detalj_flat")
 

@@ -331,7 +331,10 @@ function noticeFor(h){
   // ordet, og "kanten av vinduet" ligger i Retningstreff-cellen.
   if(isStale()) return {key:"notice", text: STR.notice.stale, warn:true};
   if(h.sources_disagree) return {key:"notice", text: STR.notice.disagree, warn:true};
-  if(h.bw_lee) return {key:"notice", text: STR.notice.bwLee, warn:true};
+  // "BarentsWatch-punktet ligger i le" finnes i dag BARE i henterens
+  // kilderapport (fetch.bw_point_in_lee_warning(), per spot og kjøring),
+  // ikke i forecast.json - ingen time/spot-felt å lese. Legges til her når
+  // henteren eksporterer det (eget delsteg, krever egen fysikk-kontroll).
   if(h.uncertain) return {key:"notice", text: STR.notice.uncertain, warn:true};
   if(h.zone==="langtid") return {key:"notice", text: STR.notice.farAhead, warn:true};
   return null;
@@ -430,14 +433,18 @@ function renderSpot(){
   $("#bdOpen").onclick = ()=>openBreakdown(h);
   $("#chartHelp").onclick = ()=>toast(STR.chartHelpText, null, null, 12000);
   const barTitle = (hh)=>{ const tt = new Date(hh.t); const r = hh.stars ? STR.starsAria(hh.stars, hh.faded) : ratingWord(hh); const ht = heightRangeText(hh); return `${cap(relDay(tt))} kl. ${fmtHour.format(tt)}: ${r}${ht?`, ${ht}`:""}`; };
-  const flatText = (n, selIdx)=>{
-    // "Flatt hele døgnet" når hele den valgte dagen er flat og det ikke er
-    // mer enn et døgn - ellers "Flatt de neste X timene". Siste time i
-    // varselet: "Flatt resten av varselet".
-    if(selIdx + n >= s.hours.length) return STR.flatRest;
+  const flatText = (n, selIdx, allFlat)=>{
+    // "Flatt ..." bare når ALLE timene i strekket er ekte flate; ellers
+    // "Ingen surf ..." (blåst ut, treffer ikke, stormsjø eller 0 stjerner
+    // med reell høyde er ikke flatt - fysikk-kontrollør 09.10.2026).
+    // "... hele døgnet" når hele den valgte dagen er uten surf og strekket
+    // ikke er mer enn et døgn, ellers "... de neste X timene"; når strekket
+    // når slutten av varselet: "... resten av varselet".
+    const T = allFlat ? STR.flat : STR.noSurf;
+    if(selIdx + n >= s.hours.length) return T.rest;
     const dayK = dayKey(new Date(s.hours[selIdx].t));
     const wholeDay = s.hours.every(hh => dayKey(new Date(hh.t)) !== dayK || !(hh.stars||0));
-    return (wholeDay && n <= 36) ? STR.flatAllDay : STR.flatNext(n);
+    return (wholeDay && n <= 36) ? T.allDay : T.next(n);
   };
   Chart.render($("#chartWrap"), s, state.sel, {tz:TZ, fmtHour, relDay, nf1, aria: chartAria, scrollToSel: !!state.scrollToSel, focus:false, heightOf: heightMForDisplay, barTitle, flatText},
     (i, fromKey)=>{ state.sel = i; state.scrollToSel = !!fromKey; renderSpot(); if(fromKey){ const svg = $("#chartWrap svg"); if(svg) svg.focus({preventScroll:true}); } },
@@ -1105,9 +1112,12 @@ function updateLogTimeText(){
   // Norsk, 24-timers visning av valgt tidspunkt under feltet - selve
   // <input type="datetime-local"> følger nettleserens språk, ikke sidens
   // lang="nb", så dette er garantien for norsk format (punkt 6, 09.10.2026).
+  // Formateres i ENHETENS tidssone (samme som feltet og som lagringen
+  // tolker verdien i), ikke Europe/Oslo - ellers viser teksten en annen
+  // time enn feltet utenfor norsk tid (fysikk-kontrollør 09.10.2026).
   const el = $("#logTimeText"); if(!el) return;
   const v = $("#logTime").value; const d = v ? new Date(v) : null;
-  el.textContent = d && !isNaN(d) ? cap(new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hour12:false,timeZone:TZ}).format(d)) : "";
+  el.textContent = d && !isNaN(d) ? cap(new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(d)) : "";
 }
 function localInputValue(d){
   const p = new Intl.DateTimeFormat("sv-SE",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
@@ -1120,6 +1130,7 @@ function openSheet(spotId, time){
   logDraft = {spot: spotId || DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
   $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
   $("#logTime").value = localInputValue(time || new Date());
+  $("#logTime").oninput = updateLogTimeText;  // følger også tid endret for hånd
   updateLogTimeText();
   $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
   document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
