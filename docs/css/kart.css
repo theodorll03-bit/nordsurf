@@ -74,6 +74,10 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .mk.lit .mk-pill{border-color:color-mix(in srgb,var(--mc) 40%,transparent)}
 .mk.sel .mk-pill{border-color:rgba(242,247,248,.55)}
 .mk:hover .mk-pill{transform:translateY(var(--ly,0px)) scale(1.07);background:rgba(16,34,46,.92)}
+/* lapp rett over/under prikken (siste utvei når to prikker ligger inntil hverandre): fra prikkens senter (11px,22px i .mk) */
+.mk.vert{width:44px;margin-left:-22px;justify-content:center}  /* trykkflate 44 px også uten lappen i rekka; prikken midt i (22px,22px) */
+.mk.vert .mk-pill{position:absolute;left:22px;top:22px;transform:translate(var(--lx,0px),var(--ly,0px))}
+.mk.vert:hover .mk-pill{transform:translate(var(--lx,0px),var(--ly,0px)) scale(1.07)}
 .mk-name{font-weight:600;font-size:13px;letter-spacing:-.01em;color:var(--ink)}
 .mk-label{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted)}
 .mk.lit .mk-label,.mk-edge.lit .mk-label{color:var(--mc)}

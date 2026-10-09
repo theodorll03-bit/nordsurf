@@ -26,7 +26,7 @@
     if(!h) return "–";
     if(h.low_reason){ const m = heightMForDisplay(h); return m!=null ? `${nf1.format(m)} m` : ratingWord(h); }
     if(h.surf_height==null) return "–";
-    if(h.surf_height<=0) return STR.starWords[0];
+    if(h.surf_height<=0) return STR.starWords[0];   // 0 → «Flatt» (ratingWord gir «Smått» fra 0,3 m, men da står tallet her)
     const a = nf1.format(h.surf_height), b = h.surf_height_sets!=null ? nf1.format(h.surf_height_sets) : null;
     return b!=null && b!==a ? `${a}–${b} m` : `${a} m`;
   };
@@ -304,9 +304,18 @@
     // X timene» (bare når alle er EKTE flate) eller «Ingen surf ...» - samme
     // regel som grafen i designrunde 1 (manglende tall er ikke flatt).
     if(!win.length || win.some(x=>(x.stars||0) > 0)) return null;
-    let allFlat = true;
-    for(const x of win){ if(x.surf_height==null && !x.low_reason) return null; if(!(x.low_reason==="flat" || (!x.low_reason && x.surf_height<=0))) allFlat = false; }
-    const T = allFlat ? STR.flat : STR.noSurf;
+    // «Flatt» når alle er ekte flate, «Smått» når alle er flate eller smått
+    // (minst én smått, dvs. surfehøyde ≥ 0,3 m - Theodors ja 09.10.2026),
+    // ellers «Ingen surf» (blåst ut, treffer ikke, stormsjø).
+    // Én regel: ordet fra ratingWord() (samme som klyngepila i kart.js).
+    let allFlat = true, anySmall = false;
+    for(const x of win){
+      if(x.surf_height==null && !x.low_reason) return null;
+      const w = ratingWord(x);
+      if(w===STR.wordSmall) anySmall = true;
+      else if(w!==STR.starWords[0]) allFlat = false;
+    }
+    const T = !allFlat ? STR.noSurf : anySmall ? STR.small : STR.flat;
     const n = win.length;
     if(start + n >= total) return T.rest;
     return n >= 48 ? T.next(n) : T.allDay;
@@ -316,10 +325,10 @@
     const win = s.hours.slice(start, start + 48);
     const flat = flatInfo(win, start, s.hours.length);
     if(flat){
-      let lastDay = null;
+      // kompakt: ingen dagnavn (de kolliderte med teksten - Theodor 09.10.2026)
       return `<span class="flat-lbl">${esc(flat)}</span>` + win.map((x,k)=>{
-        const i = start + k, d = new Date(x.t), dk = dayKey(d), newDay = dk!==lastDay; lastDay = dk;
-        return `<button type="button" class="hbar flat${i===S.idx?" sel":""}" data-i="${i}" aria-label="${esc(cap(relDay(d)))} ${fmtHour.format(d)}:00, ${esc(ratingWord(x))}"><span class="b" style="height:3px;--rc:rgba(234,242,244,.22)"></span>${newDay ? `<span class="d">${esc(relDay(d))}</span>` : ""}</button>`;
+        const i = start + k, d = new Date(x.t);
+        return `<button type="button" class="hbar flat${i===S.idx?" sel":""}" data-i="${i}" aria-label="${esc(cap(relDay(d)))} ${fmtHour.format(d)}:00, ${esc(ratingWord(x))}"><span class="b" style="height:3px;--rc:rgba(234,242,244,.22)"></span></button>`;
       }).join("");
     }
     const maxS = Math.max(2, ...win.map(x=>x.surf_height_sets || x.surf_height || 0));

@@ -248,9 +248,19 @@
     const a = state.area;
     const mks = [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside).sort((m1,m2)=>m1._sy-m2._sy);
     const dots = mks.map(m=>({x: m._sx-6, y: m._sy-6, w: 12, h: 12}));
-    const cands = mks.map(mk=>{
+    // Avstand fra et punkt (en prikk) til nærmeste kant av et rektangel (en lapp)
+    const distRP = (r, x, y)=> Math.hypot(Math.max(r.x - x, 0, x - (r.x + r.w)), Math.max(r.y - y, 0, y - (r.y + r.h)));
+    const cands = mks.map((mk, i)=>{
       const w = pillWidth(mk);
-      const preferLeft = mk._sx > a.x + a.w*0.62;
+      let preferLeft = mk._sx > a.x + a.w*0.62;
+      // Prikker som ligger tett (Grøtfjord/Tromvik, Theodor 09.10.2026): den
+      // vestligste får lappen på venstre side, den østligste på høyre - lappen
+      // peker bort fra naboen.
+      const near = dots.filter((d, j)=> j!==i && Math.abs(d.y + 6 - mk._sy) < PH + 12 && Math.abs(d.x + 6 - mk._sx) < w + 2*GAP + 12);
+      if(near.length){
+        const east = near.some(d=>d.x + 6 > mk._sx), west = near.some(d=>d.x + 6 < mk._sx);
+        if(east && !west) preferLeft = true; else if(west && !east) preferLeft = false;
+      }
       const sides = preferLeft ? ["left","right"] : ["right","left"];
       const out = [];
       for(const dy of [0, -14, 14, -24, 24]) for(const side of sides){
@@ -258,15 +268,42 @@
         if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
         out.push({side, dy, lead: Math.abs(dy) >= 24, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
       }
+      // Siste utvei (to prikker helt inntil hverandre ved kartkanten, f.eks.
+      // Steinkrøssa/Ersfjordstranda 12 px fra hverandre): lappen rett over
+      // eller under sin egen prikk, midtstilt, med en tynn strek.
+      for(const dy of [-(PH/2 + 12), PH/2 + 12]){
+        const x = Math.max(a.x + 4, Math.min(a.x + a.w - 4 - w, mk._sx - w/2));
+        out.push({side:"vert", dy, lead:true, vert:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+      }
+      // Aller siste utvei (bare når ingen konfliktfri løsning finnes ellers,
+      // f.eks. «Alle» på mobil der seks Troms-spots ligger innenfor 110×50 px):
+      // lengre unna prikken, alltid med strek.
+      for(const dy of [-36, 36, -48, 48]) for(const side of sides){
+        const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w;
+        if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
+        out.push({side, dy, lead:true, far:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+      }
+      for(const dy of [-(PH/2 + 42), PH/2 + 42]){
+        const x = Math.max(a.x + 4, Math.min(a.x + a.w - 4 - w, mk._sx - w/2));
+        out.push({side:"vert", dy, lead:true, vert:true, far:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+      }
       if(!out.length){ const side = sides[0]; const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w; out.push({side, dy:0, lead:false, r:{x, y: mk._sy - PH/2, w, h: PH}}); }
       return out;
     });
     // dybde-først-søk med tak på antall forsøk; ellers beste greske løsning
     const chosen = new Array(mks.length).fill(null);
-    let nodes = 0;
+    let nodes = 0, strict = true, allowFar = false;
     const ok = (i, c)=>{
+      if(c.far && !allowFar) return false;
       const others = dots.filter((_,j)=>j!==i);
       if(hitRect(c.r, others)) return false;
+      // lappen skal ligge nærmere sin egen prikk enn noen annen prikk
+      // (Theodor 09.10.2026) - i strengt pass; i det løse passet (bare når det
+      // strenge ikke går opp) holder det at den ikke dekker noen prikk/lapp.
+      if(strict){
+        const own = distRP(c.r, mks[i]._sx, mks[i]._sy);
+        if(others.some(d=> distRP(c.r, d.x + 6, d.y + 6) <= own)) return false;
+      }
       for(let j=0;j<i;j++) if(chosen[j] && hitRect(c.r, [chosen[j].r])) return false;
       return true;
     };
@@ -281,7 +318,14 @@
       }
       return false;
     };
-    if(!dfs(0)){
+    // tre pass: strengt nært, strengt med lange streker, løst med lange streker
+    let solved = false;
+    for(const [st, far, name] of [[true,false,"strict"],[true,true,"far"],[false,true,"loose"]]){
+      strict = st; allowFar = far; nodes = 0; chosen.fill(null);
+      if(dfs(0)){ solved = true; markersEl.dataset.pills = name; break; }
+    }
+    if(!solved){
+      markersEl.dataset.pills = "none";
       // ingen konfliktfri løsning (svært tett) - ta den første som ikke
       // krasjer med allerede valgte, ellers den første kandidaten
       for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i,c)) || cands[i][0];
@@ -289,10 +333,22 @@
     mks.forEach((mk, i)=>{
       const c = chosen[i];
       mk.classList.toggle("left", c.side==="left");
-      mk.style.setProperty("--ly", c.dy+"px");
+      mk.classList.toggle("vert", !!c.vert);
+      if(c.vert){
+        // lappen posisjoneres fra prikkens senter (--lx/--ly = lappens øvre venstre hjørne)
+        mk.style.setProperty("--lx", (c.r.x - mk._sx).toFixed(1)+"px");
+        mk.style.setProperty("--ly", (c.r.y - mk._sy).toFixed(1)+"px");
+      } else {
+        mk.style.removeProperty("--lx");
+        mk.style.setProperty("--ly", c.dy+"px");
+      }
       const lead = mk.querySelector(".lead");
       if(c.lead){
-        const px = c.side==="right" ? GAP - 2 : -(GAP - 2), py = c.dy;
+        let px, py;
+        if(c.vert){
+          px = mk._sx < c.r.x ? c.r.x - mk._sx + 4 : mk._sx > c.r.x + c.r.w ? c.r.x + c.r.w - mk._sx - 4 : 0;
+          py = c.dy < 0 ? (c.r.y + c.r.h - mk._sy) + 2 : (c.r.y - mk._sy) - 2;
+        } else { px = c.side==="right" ? GAP - 2 : -(GAP - 2); py = c.dy; }
         const L = Math.hypot(px, py), ang = Math.atan2(py, px)*180/Math.PI;
         lead.hidden = false; lead.style.width = L.toFixed(1)+"px"; lead.style.transform = `rotate(${ang.toFixed(1)}deg)`;
       } else lead.hidden = true;
@@ -380,16 +436,19 @@
   // flatInfo i front.js), ellers «ingen surf» - og «–» hvis noen mangler
   // (manglende tall er aldri flatt).
   function clusterInfo(items){
-    let best = 0, allFlat = true, missing = false;
+    // Ordene kommer fra ratingWord() i app.js (samme ord overalt, «Smått» inkludert).
+    let best = 0, allFlat = true, anySmall = false, missing = false;
     items.forEach(it=>{
       const h = hourOf(it.p.s, state.idx);
       if(!h || (h.surf_height==null && !h.low_reason)){ missing = true; return; }
       best = Math.max(best, h.stars||0);
-      if(!(h.low_reason==="flat" || (!h.low_reason && h.surf_height<=0))) allFlat = false;
+      const w = ratingWord(h);
+      if(w===STR.wordSmall) anySmall = true;
+      else if(w!==STR.starWords[0]) allFlat = false;
     });
-    const label = best ? `beste ${best}★` : missing ? "–" : allFlat ? "flatt" : "ingen surf";
-    const words = ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"];
-    const aria = best ? `beste: ${best} ${best===1?"stjerne":"stjerner"} (${words[Math.min(5,best)]})` : missing ? "noen timer mangler data" : allFlat ? "flatt" : "ingen surf";
+    const zeroWord = !allFlat ? "ingen surf" : anySmall ? STR.wordSmall.toLowerCase() : STR.starWords[0].toLowerCase();
+    const label = best ? `beste ${best}★` : missing ? "–" : zeroWord;
+    const aria = best ? `beste: ${best} ${best===1?"stjerne":"stjerner"} (${STR.starWords[Math.min(5,best)]})` : missing ? "noen timer mangler data" : zeroWord;
     return {best, label, aria};
   }
   function colorCluster(c){

@@ -113,8 +113,19 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 // alltid der. Tallene kommer fra forecast.json (rating.py) - aldri regnet her.
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
 function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; return `r-${n}`; }
+// «Smått» (Theodors ja 09.10.2026): der ordet ellers ville vært «Flatt»
+// (low_reason flat, eller 0 stjerner uten annen grunn) men surfehøyden er
+// minst 0,3 m. «Flatt» bare under 0,3 m eller 0. Bare visningsordet -
+// stjernene, low_reason og tallene er uendret. Blåst ut/Treffer ikke/
+// Stormsjø uendret.
+const SMALL_SURF_MIN_M = 0.3;
+function isSmall(h){ return !!h && !(h.stars) && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= SMALL_SURF_MIN_M; }
 function ratingWord(h){
   if(!h) return "–";
+  // 0 stjerner uten grunn OG uten surfehøyde: tallet mangler - aldri «Flatt»
+  // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
+  if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";
+  if(isSmall(h)) return STR.wordSmall;
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }
@@ -297,7 +308,7 @@ function surfHeadline(h){
   // "Trolig flatt" som før.
   if(h.low_reason){
     const m = heightMForDisplay(h);
-    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+    return m!=null ? `${ratingWord(h)} (${nf1.format(m)} m)` : ratingWord(h);
   }
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";

@@ -81,6 +81,15 @@ def main():
     srv, port = serve()
     forecast = json.loads((DOCS / "data" / "forecast.json").read_text(encoding="utf-8"))
     spots = forecast["spots"]
+    LOW = {"flat": "Flatt", "blown_out": "Blåst ut", "stormsjo": "Stormsjø", "treffer_ikke": "Treffer ikke"}
+    STARW = ["Flatt", "Dårlig", "Ok", "Bra", "Veldig bra", "Rått"]
+    def word_of(h):
+        # speiler ratingWord() i docs/js/app.js, «Smått» inkludert (Theodors ja 09.10.2026)
+        if not h: return "–"
+        if not (h.get("stars") or 0) and not h.get("low_reason") and h.get("surf_height") is None: return "–"
+        if not (h.get("stars") or 0) and (h.get("low_reason") in ("flat", None)) and h.get("surf_height") is not None and h["surf_height"] >= 0.3: return "Smått"
+        if h.get("low_reason"): return LOW.get(h["low_reason"], STARW[0])
+        return STARW[min(5, h.get("stars") or 0)]
     # spot med stjerner (høyest de første 72 t) og en flat spot
     bi, bidx = max(((si, i) for si, s in enumerate(spots) for i in range(min(72, len(s["hours"])))), key=lambda p: spots[p[0]]["hours"][p[1]]["stars"])
     fi = next((i for i, s in enumerate(spots) if s["hours"][0]["stars"] == 0), 0)
@@ -140,7 +149,7 @@ def main():
                     if exp is not None:
                         assert lab == exp, f"merket for {s['id']} sier '{lab}', forecast.json sier '{exp}'"
                     else:
-                        assert lab and "m" not in lab.split()[-1] or lab, f"merket for {s['id']} skal vise ordet, viste '{lab}'"
+                        assert lab == word_of(h), f"merket for {s['id']} skal vise ordet «{word_of(h)}», viste '{lab}'"
                 # Theodors punkt 1 og 2 (09.10.2026): i alle tre utsnitt skal lappen sitte
                 # rett ved prikken (under 12 px mellom prikk og lapp) på mobil, og ingen
                 # kantpil skal overlappe en knapp i toppen eller fargeforklaringen.
@@ -151,9 +160,31 @@ def main():
                         const dx = Math.max(0, d.left - (p.left + p.width), p.left - (d.left + d.width));
                         const dy = Math.max(0, d.top - (p.top + p.height), p.top - (d.top + d.height));
                         return {id: m.dataset.id, gap: Math.hypot(dx, dy), lead: !m.querySelector('.lead').hidden}; })""")
+                    # «Alle» på mobil: seks Troms-spots innenfor ca. 110×50 px - der går
+                    # ikke «under 12 px» og «nærmere egen prikk enn noen annen» opp
+                    # samtidig, så lappene vifter ut med streker (det løse passet i
+                    # layoutPills). Alle andre utsnitt skal løses strengt.
+                    loose_ok = mobile and view == "alle"
+                    pills_pass = page.evaluate("document.getElementById('markersLayer').dataset.pills")
+                    assert pills_pass in (("strict", "far", "loose") if loose_ok else ("strict", "far")), f"lappene i utsnitt {view} ble lagt {pills_pass}, ikke strengt"
                     if mobile:
-                        far = [g for g in gaps if g["gap"] >= 12]
+                        far = [g for g in gaps if g["gap"] >= 12 and not (loose_ok and g["lead"])]
                         assert not far, f"lapp langt fra prikken i utsnitt {view}: {far}"
+                    # ingen lapp dekker en annen lapp eller en annen prikk (alle utsnitt)
+                    ovl = page.evaluate("""() => { const mks = [...document.querySelectorAll('.mk')].filter(m => !m.hidden);
+                        const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+                        const out = []; mks.forEach((m, i) => { const p = m.querySelector('.mk-pill').getBoundingClientRect();
+                          mks.forEach((n, j) => { if(i === j) return; if(hit(p, n.querySelector('.mk-pill').getBoundingClientRect())) out.push([m.dataset.id, 'lapp', n.dataset.id]);
+                            if(hit(p, n.querySelector('.mk-dot').getBoundingClientRect())) out.push([m.dataset.id, 'prikk', n.dataset.id]); }); }); return out; }""")
+                    assert not ovl, f"lapper som dekker hverandre/prikker i utsnitt {view}: {ovl}"
+                    # Theodor 09.10.2026 (Grøtfjord/Tromvik): hver lapp ligger nærmere sin
+                    # egen prikk enn noen annen prikk
+                    wrong = page.evaluate("""() => { const mks = [...document.querySelectorAll('.mk')].filter(m => !m.hidden);
+                        const dots = mks.map(m => { const d = m.querySelector('.mk-dot').getBoundingClientRect(); return {id: m.dataset.id, x: d.left + d.width/2, y: d.top + d.height/2}; });
+                        const dist = (r, p) => Math.hypot(Math.max(r.left - p.x, 0, p.x - r.right), Math.max(r.top - p.y, 0, p.y - r.bottom));
+                        return mks.map(m => { const r = m.querySelector('.mk-pill').getBoundingClientRect(); const own = dist(r, dots.find(d => d.id === m.dataset.id));
+                            const near = dots.filter(d => d.id !== m.dataset.id && dist(r, d) <= own).map(d => d.id); return near.length ? {id: m.dataset.id, own, near} : null; }).filter(Boolean); }""")
+                    assert loose_ok or not wrong, f"lapp nærmere en annen prikk enn sin egen i utsnitt {view}: {wrong}"
                     overl = page.evaluate("""() => { const obs = [...document.querySelectorAll('.top-bar .icon-btn, .top-bar .seg, .legend')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.getBoundingClientRect());
                         return [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).map(e => e.getBoundingClientRect()).filter(r => obs.some(o => r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top)).length; }""")
                     assert overl == 0, f"{overl} kantpil(er) overlapper en knapp eller forklaringen i utsnitt {view}"
@@ -167,14 +198,15 @@ def main():
                             page.evaluate(f"Front.setIdx({ti})"); page.wait_for_timeout(150)
                             info = page.evaluate("""() => { const c = document.querySelector('.mk-edge.cluster'); const ids = c.getAttribute('aria-label').split(':')[1].split('.')[0].split(',').map(x => x.trim());
                                 return {label: c.querySelector('.mk-label').textContent, cls: c.className, names: ids}; }""")
-                            best, all_flat, miss = 0, True, False
+                            best, all_flat, any_small, miss = 0, True, False, False
                             for sp in spots:
                                 if sp["name"] not in info["names"]: continue
                                 h = sp["hours"][ti] if ti < len(sp["hours"]) else None
                                 if not h or (h.get("surf_height") is None and not h.get("low_reason")): miss = True; continue
                                 best = max(best, h.get("stars") or 0)
-                                if not (h.get("low_reason") == "flat" or (not h.get("low_reason") and (h.get("surf_height") or 0) <= 0)): all_flat = False
-                            exp = f"beste {best}★" if best else "–" if miss else "flatt" if all_flat else "ingen surf"
+                                if word_of(h) == "Smått": any_small = True
+                                elif word_of(h) != "Flatt": all_flat = False
+                            exp = f"beste {best}★" if best else "–" if miss else "ingen surf" if not all_flat else "smått" if any_small else "flatt"
                             assert info["label"] == exp and f"r-{min(5,best)}" in info["cls"].split(), f"klyngepil i time {ti}: viste '{info['label']}' ({info['cls']}), forecast.json gir '{exp}'"
                 page.locator(".seg button[data-view='nord']").click(); page.wait_for_timeout(1200)
                 # 3: «Nå»-merket er lite og på linje med klokkeslettet
@@ -271,14 +303,32 @@ def main():
                     # 6: surfehøyde-flisa sier ordet («Flatt»), aldri «–» (som betyr at tallet mangler)
                     hv = page.locator("#tHeight .v").text_content().strip()
                     if fh.get("low_reason") == "flat" or (fh.get("surf_height") is not None and fh["surf_height"] <= 0 and not fh.get("low_reason")):
-                        assert hv == "Flatt", f"flat spot skal vise «Flatt» i høydeflisa, viste '{hv}'"
+                        assert hv == word_of(fh), f"flat spot skal vise «{word_of(fh)}» i høydeflisa, viste '{hv}'"
                     assert hv != "–" or fh.get("surf_height") is None, "«–» skal bare bety at tallet mangler"
                     i0 = page.evaluate("Front.state.w0")
                     if all((x.get("stars") or 0) == 0 for x in spots[fi]["hours"][i0:i0+48]):
                         assert page.locator("#bars.compact").count() == 1 and page.locator("#bars .flat-lbl").count() == 1, "alle 48 timer 0 stjerner: kompakt visning med tekst"
                         lbl = page.locator("#bars .flat-lbl").text_content()
-                        assert lbl.startswith("Flatt") or lbl.startswith("Ingen surf"), lbl
+                        assert lbl.startswith("Flatt") or lbl.startswith("Smått") or lbl.startswith("Ingen surf"), lbl
+                        # 2: kompakt graf uten dagnavn (de kolliderte med teksten)
+                        assert page.locator("#bars.compact .d").count() == 0, "kompakt graf skal ikke ha dagnavn"
                 shot("spot_flat"); axe_check("spot_flat")
+                # 3: «Smått» (Theodors ja 09.10.2026): 0 stjerner, grunn flat, surfehøyde ≥ 0,3 m
+                # gir ordet «Smått» i rating, lapp og liste; under 0,3 m fortsatt «Flatt».
+                i0 = page.evaluate("Front.state.w0")
+                for sh, word in ((0.5, "Smått"), (0.2, "Flatt"), (0.0, "Flatt")):
+                    page.evaluate(f"""() => {{ const h = DATA.spots[0].hours[{i0}]; window.__bak2 = {{...h}};
+                        Object.assign(h, {{surf_height: {sh}, surf_height_sets: null, stars: 0, faded: 0, low_reason: "flat"}}); Front.openSpot(DATA.spots[0].id, {i0}); }}""")
+                    page.wait_for_timeout(500)
+                    rw = page.locator("#spot .rating-line .word").text_content().strip()
+                    assert rw == word, f"surfehøyde {sh} m med grunn flat: ratingordet skal være «{word}», var '{rw}'"
+                    ml = page.locator(f"[data-id='{spots[0]['id']}'] .mk-label").first.text_content().strip()
+                    assert ml == word, f"lappen på kartet skal si «{word}», sa '{ml}'"
+                    page.evaluate("Front.go('list')"); page.wait_for_timeout(500)
+                    lw = page.locator(f"#list .row[data-spot='{spots[0]['id']}'] .rt .lb").text_content().strip()
+                    assert lw == word, f"lista skal si «{word}», sa '{lw}'"
+                    page.evaluate(f"() => {{ Object.assign(DATA.spots[0].hours[{i0}], window.__bak2); }}")
+                page.evaluate(f"Front.openSpot('{spots[fi]['id']}', 0)"); page.wait_for_timeout(600)
 
                 # ---- loggark og forklaring ----
                 page.evaluate(f"Front.openSpot('{s['id']}', {bidx}); openSheet('{s['id']}', new Date())"); page.wait_for_timeout(700)
