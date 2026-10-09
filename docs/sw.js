@@ -4,8 +4,12 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-2d6c28228a3f";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "js/map.js", "css/map.css", "js/auth.js"];
+const CACHE = "nordsurf-093a618970d3";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg",
+  "css/app.css", "css/map.css",
+  "js/strings.js", "js/wordmark.js", "js/explain.js", "js/chart.js", "js/app.js", "js/map.js", "js/auth.js",
+  "fonts/bricolage-grotesque-latin-wght.woff2", "fonts/inter-latin-wght.woff2",
+  "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon-180.png", "icons/icon-maskable-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
   self.skipWaiting();  // ikke vent på at alle gamle faner lukkes før oppdateringen tas i bruk

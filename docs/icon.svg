@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0F1B21"/><path d="M256 96l38 78 86 12-62 61 15 86-77-41-77 41 15-86-62-61 86-12z" fill="#F2B544"/><path d="M64 400c32 0 32-22 64-22s32 22 64 22 32-22 64-22 32 22 64 22 32-22 64-22 32 22 64 22" fill="none" stroke="#E4EBED" stroke-width="22" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nordsurf">
+  <title>Nordsurf</title>
+  <!-- Råhvit flate, én tykk håndlaget bølgeform i blekk. Ingen gradienter, ingen glød. -->
+  <rect width="512" height="512" rx="112" fill="#F6F1E8"/>
+  <path d="M74 318c38-6 56-30 70-56 16-30 34-70 86-70 46 0 68 32 86 64 14 24 30 46 64 50 26 3 44-6 58-16" fill="none" stroke="#1E1B16" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M74 402c38-6 56-26 70-44 10-13 22-28 40-28" fill="none" stroke="#1E1B16" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+  <circle cx="392" cy="150" r="30" fill="#1E1B16"/>
+</svg>

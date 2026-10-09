@@ -125,7 +125,7 @@ function initMap(){
 
   // Vanlig Leaflet har ingen kompassretning å rotere - nord er alltid opp uten noe eget oppsett.
   map = L.map($("#mapEl"), {
-    zoomControl: true,
+    zoomControl: false,   // egne, diskrete knapper i appens stil (designrunde 1, punkt 9)
     attributionControl: true,
     worldCopyJump: true,
   });
@@ -137,8 +137,7 @@ function initMap(){
   markersLayer = L.layerGroup().addTo(map);
   discLayer = L.layerGroup().addTo(map);
 
-  const bounds = L.latLngBounds(DATA.spots.map(s=>[s.spot.lat, s.spot.lon]));
-  map.fitBounds(bounds, {padding:[56,56]});
+  fitAll(false);
 
   map.on("moveend zoomend", renderMarkers);
   map.on("click", onMapBackgroundClick);
@@ -148,6 +147,11 @@ function initMap(){
   maybeShowExplainAuto();
 }
 
+function fitAll(animate){
+  // Alle spots, også Unstad og Farstadsanden, når kartet åpnes.
+  const bounds = L.latLngBounds(DATA.spots.map(s=>[s.spot.lat, s.spot.lon]));
+  map.fitBounds(bounds, {padding:[56,56], animate: !!animate && !reduceMotion()});
+}
 function onMapBackgroundClick(){
   // Leaflet-markører har bubblingMouseEvents:false som standard, så klikk
   // på et merke/skive når aldri hit - bare et faktisk tomt kart gjør det.
@@ -180,10 +184,12 @@ function computeGroups(){
 }
 
 function heightText(h){
+  // Bare høyden (ordet står i merket ved siden av, se markRatingHtml) -
+  // tom for flatt/treffer ikke, ekte høyde for blåst ut/stormsjø.
   if(!h) return "–";
   if(h.low_reason){
     const m = heightMForDisplay(h);
-    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+    return m!=null ? `${nf1.format(m)} m` : "";
   }
   if(h.surf_height==null) return "–";
   return nf1.format(h.surf_height)+" m";
@@ -191,30 +197,38 @@ function heightText(h){
 
 function markerLabel(spot, h){
   const stars = h ? h.stars : 0;
-  const heightTxt = h ? heightText(h) : "ingen data";
+  const heightTxt = h ? (heightText(h) || ratingWord(h)) : "ingen data";
   return `${spot.name}, ${stars} av 5 stjerner, ${heightTxt}`;
 }
 
 const MOON = `<svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--muted)" d="M12 2a10 10 0 1 0 9.8 12A8 8 0 0 1 12 2z"/></svg>`;
 
+function markRatingHtml(h){
+  // Samme regel som lista: 0 stjerner = ordet, ellers stjernene (små).
+  if(!h) return `<span class="word">–</span>`;
+  if(!h.stars) return `<span class="word">${esc(ratingWord(h))}</span>`;
+  // 1 stjerne med low_reason: ordet under stjernen, som i lista (Theodors regel 05.10.2026).
+  if(h.low_reason) return `<span class="lr">${starsSVG(h.stars, h.faded)}<span class="word lrw" aria-hidden="true">${esc(ratingWord(h))}</span></span>`;
+  return starsSVG(h.stars, h.faded);
+}
 function soloMarkerHtml(spot, h, showName){
-  const stars = h ? h.stars : 0, faded = h ? h.faded : 0;
+  const stars = h ? h.stars : 0;
   const night = h && (h.light==="mørkt" || h.daylight===false);
   const good = stars >= 3;
-  const r = good ? 16 : 14, size = good ? 36 : 32, cx = size/2, cy = size/2;
-  const ring = `<svg class="ring" viewBox="0 0 ${size} ${size}">${ringSegments(cx,cy,r-3, stars, faded, "mm-seg")}<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${stars}</text></svg>`;
-  const cls = ["spot-mark", good?"good":"", night?"night":"", showName?"show-name":""].filter(Boolean).join(" ");
+  const cls = ["spot-mark", `r-${Math.min(5,stars)}`, good?"good":"", night?"night":"", showName?"show-name":""].filter(Boolean).join(" ");
   return `<button type="button" class="${cls}" aria-label="${esc(markerLabel(spot,h))}" tabindex="0">
-    <span class="plate" style="position:relative">${night?MOON:""}${ring}<span class="mm-h">${esc(heightText(h))}</span></span>
+    <span class="plate">${night?MOON:""}<span class="mk-r">${markRatingHtml(h)}</span>${heightText(h)?`<span class="mm-h">${esc(heightText(h))}</span>`:""}</span>
     <span class="name">${esc(spot.name)}</span>
   </button>`;
 }
 function clusterMarkerHtml(group){
   const hs = group.map(g=>hourAt(g.s, mapState.idx));
   const best = Math.max(0, ...hs.map(h=>h?h.stars:0));
+  const bestH = hs.find(h=>h && h.stars===best) || hs[0];
   const n = group.length;
-  return `<button type="button" class="cluster-mark" aria-label="${n} spots, beste ${best} av 5 stjerner. Trykk for å zoome inn." tabindex="0">
-    <span class="plate"><svg class="ring" viewBox="0 0 26 26">${ringSegments(13,13,10,best,0,"mm-seg")}</svg>${n} spots</span>
+  const word = best ? `${best}` : (bestH ? ratingWord(bestH) : "–");
+  return `<button type="button" class="cluster-mark r-${Math.min(5,best)}" aria-label="${n} spots, beste ${best} av 5 stjerner. Trykk for å zoome inn." tabindex="0">
+    <span class="plate"><span class="dot"></span>${n} spots<span class="best">${esc(best ? `best ${word}` : word.toLowerCase())}</span></span>
   </button>`;
 }
 
@@ -443,26 +457,15 @@ function discSvgMarkup(spot, h){
 }
 
 function discPlateMarkup(spot, h){
-  // 05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17 - se STATUS.md):
-  // sjekket bare likely_flat før, ikke blown_out - kartets høydeplate kunne
-  // derfor vise "Trolig flatt" for en time appens detaljside alt viste som
-  // "Blåst ut". Bruker nå low_reason (samlende felt), som dekker begge og
-  // viser høyden i stedet for å gjemme den (punkt c).
-  const reason = h && h.low_reason;
-  const m = h ? heightMForDisplay(h) : null;
-  const big = h ? (reason ? (m!=null ? `${LOW_REASON_WORD[reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[reason]) : (h.surf_height!=null?nf1.format(h.surf_height)+" m":"–")) : "–";
-  const sets = h && h.surf_height>0 && h.surf_height_sets!=null ? `sett ${nf1.format(h.surf_height_sets)} m` : "";
-  // 06.10.2026, Theodors oppgave: kJ også på kartets høydeplate - samme
-  // svell/total-valg som energyText() på detaljsiden (global, delt).
-  const kjVal = h ? (h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj) : null;
-  const kj = kjVal!=null ? `${nf0.format(kjVal)} kJ` : "";
-  const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
+  // Samme ord som lista og detaljsiden (0 stjerner = ordet, ellers
+  // stjernene), så surfehøyde/sett og periode under. Tallene bak ligger på
+  // detaljsiden - ikke kJ og kilde her (designrunde 1, punkt 2 og 9).
   const night = h && (h.light==="mørkt" || h.daylight===false);
-  const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : (h.zone==="langtid" ? "langtid" : "anslag")) + (h.confidence!=null ? ` · ${h.confidence} %` : "") : "";
-  const max = h && h.bw_height_max!=null ? `<div class="max">BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m</div>` : "";
-  return `<div class="big">${esc(big)}</div>
-    <div class="mid">${[sets, period, kj, night?"Mørkt":""].filter(Boolean).join(" · ")}</div>
-    ${max}
+  const range = h ? heightRangeText(h) : "–";
+  const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
+  const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : (h.zone==="langtid" ? "langtid" : "anslag")) : "";
+  return `<div class="big ${h?`r-${Math.min(5,h.stars||0)}`:"r-0"}">${markRatingHtml(h)}</div>
+    <div class="mid">${[range, period, night?"Mørkt":""].filter(Boolean).map(esc).join(" · ")}</div>
     <div class="src">${esc(src)} <span class="chev" aria-hidden="true">›</span></div>`;
 }
 
@@ -472,6 +475,7 @@ function selectSpot(spotId){
     if(discMarker){ discLayer.removeLayer(discMarker); discMarker = null; }
     closeMapSheet();
     renderMarkers();
+    if(window.onMapSelect) onMapSelect(null);
     return;
   }
   const spot = DATA.spots.find(s=>s.id===spotId);
@@ -479,7 +483,7 @@ function selectSpot(spotId){
   const t = new Date(TIMELINE[mapState.idx]);
 
   const html = `<div style="position:relative;pointer-events:none">
-      <div class="disc-wrap hit disc-enter" tabindex="0" role="button" aria-label="${esc(discAriaLabel(spot,h,t))}">${discSvgMarkup(spot,h)}</div>
+      <div class="disc-wrap hit disc-enter r-${Math.min(5,h?h.stars||0:0)}" tabindex="0" role="button" aria-label="${esc(discAriaLabel(spot,h,t))}">${discSvgMarkup(spot,h)}</div>
       <div class="disc-plate" style="top:126px">${discPlateMarkup(spot,h)}</div>
     </div>`;
 
@@ -510,6 +514,7 @@ function selectSpot(spotId){
   renderMarkers();
   maybeShowExplainAuto();
   if(mapState.sheetOpen) fillMapSheet(spot, h);
+  if(window.onMapSelect) onMapSelect(spotId);
 }
 
 function updateDiscForTime(){
@@ -526,6 +531,7 @@ function updateDiscForTime(){
   const oldWindBearing = oldWind ? parseFloat(oldWind.dataset.bearing) : null;
   const oldWindArrowBearing = oldWindArrow ? parseFloat(oldWindArrow.dataset.bearing) : null;
   wrap.innerHTML = discSvgMarkup(spot, h);
+  wrap.className = `disc-wrap hit r-${Math.min(5,h?h.stars||0:0)}`;
   wrap.setAttribute("aria-label", discAriaLabel(spot,h,t));
   if(!reduceMotion()){
     const spin = (sel, oldBearing) => {
@@ -560,6 +566,18 @@ function buildTimeSlider(){
     return `<span class="${cls.filter(Boolean).join(" ")}"></span>`;
   }).join("");
   $("#mapTimeTrack").innerHTML = track;
+  // dagnavn under sporet, ved hver dags første time
+  let days = "", lastKey = null, lastPx = -1e9;
+  const trackW = $("#mapTimeTrack").getBoundingClientRect().width || 300;
+  TIMELINE.forEach((t,i)=>{
+    const k = dayKey(new Date(t));
+    if(k!==lastKey){
+      lastKey = k;
+      const px = (i/Math.max(1,TIMELINE.length-1))*trackW;
+      if(px - lastPx >= 40){ lastPx = px; days += `<span style="left:${(px/trackW)*100}%">${esc(relDayShort(new Date(t)))}</span>`; }
+    }
+  });
+  $("#mapTimeDays").innerHTML = days;
   const slider = $("#mapSlider");
   slider.min = 0; slider.max = TIMELINE.length-1; slider.value = mapState.idx;
   updateTimeLabel();
@@ -587,10 +605,10 @@ function fillMapSheet(spot, h){
   $("#mSheetTitle").textContent = spot.name;
   const tideNow = h && h.tide ? `${h.tide.rising?"Stigende":"Fallende"}, ${h.tide.state}` : "–";
   $("#mSheetBody").innerHTML = `
-    <button type="button" class="now" id="mSheetStars" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${starsSVG(h?h.stars:0, h?h.faded:0, true)}</button>
+    <button type="button" class="now" id="mSheetStars" aria-label="Hvorfor denne ratingen? Trykk for forklaring">${ratingHtml(h, true)}</button>
     <p class="sub">${relDay(t)} kl. ${fmtHour.format(t)}</p>
     <div class="grid">
-      <div class="cell"><div class="k">Høyde</div><div class="v">${heightText(h)}</div>${h&&h.surf_height>0&&h.surf_height_sets!=null?`<div class="n">Sett ${nf1.format(h.surf_height_sets)} m${h.bw_height_max!=null?` · BarentsWatch venter opp til ${nf1.format(h.bw_height_max)} m`:""}</div>`:""}</div>
+      <div class="cell"><div class="k">Surfehøyde og sett</div><div class="v">${h?esc(heightRangeText(h))||"–":"–"}</div></div>
       <div class="cell"><div class="k">Periode</div><div class="v">${h&&h.period!=null?nf0.format(h.period)+" s":"–"}</div></div>
       <div class="cell"><div class="k">Vind</div><div class="v">${h&&h.wind_speed!=null?nf0.format(h.wind_speed)+" m/s":"–"}</div><div class="n">${h?windLabel(h):""}</div></div>
       <div class="cell"><div class="k">Tidevann</div><div class="v">${tideNow}</div></div>
@@ -629,7 +647,7 @@ function explainHtml(){
     <div class="erow"><i class="sw" style="background:var(--window-fill);border:1.5px solid var(--window)"></i>Grønt: hvor svellet må komme fra</div>
     <div class="erow"><i class="sw" style="background:var(--swell)"></i>Linja med bølger: hvor svellet kommer fra</div>
     <div class="erow"><i class="sw" style="background:var(--wind)"></i>Blå pil: vind</div>
-    <div class="erow"><i class="sw" style="background:var(--star)"></i>Ringen: rating</div>`;
+    <div class="erow"><i class="sw" style="background:var(--r3)"></i>Ringen og merkene: farge etter rating (grå flatt, rød dårlig, gul ok, grønn bra, turkis veldig bra, blå rått)</div>`;
 }
 function showExplain(){
   mapState.explainOpen = true;
@@ -681,6 +699,8 @@ function buildRoot(){
       <button class="map-round" id="mapLocate" aria-label="Min posisjon" aria-pressed="false">
         <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a1 1 0 0 1 1 1v1.06A8.01 8.01 0 0 1 19.94 11H21a1 1 0 1 1 0 2h-1.06A8.01 8.01 0 0 1 13 19.94V21a1 1 0 1 1-2 0v-1.06A8.01 8.01 0 0 1 4.06 13H3a1 1 0 1 1 0-2h1.06A8.01 8.01 0 0 1 11 4.06V3a1 1 0 0 1 1-1zm0 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm0 3.5A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5z"/></svg>
       </button>
+      <button class="map-round zoom" id="mapZoomIn" aria-label="Zoom inn"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
+      <button class="map-round zoom" id="mapZoomOut" aria-label="Zoom ut"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 11h14v2H5z"/></svg></button>
       <button class="map-round" id="mapHelp" aria-label="Vis forklaring">
         <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 15.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zm1.6-6.2c-.7.5-.9.8-.9 1.5v.4h-2v-.5c0-1.2.5-1.9 1.4-2.6.7-.5 1.1-.9 1.1-1.5 0-.7-.6-1.2-1.4-1.2-.8 0-1.4.4-1.9 1.1L8.4 7.4C9.1 6.2 10.3 5.3 12 5.3c2 0 3.4 1.2 3.4 2.9 0 1.2-.6 1.9-1.8 2.7z"/></svg>
       </button>
@@ -692,6 +712,7 @@ function buildRoot(){
         <div class="map-slider-thumb" id="mapThumb"></div>
         <input type="range" class="map-slider" id="mapSlider" aria-label="Velg tidspunkt">
       </div>
+      <div class="map-time-days" id="mapTimeDays" aria-hidden="true"></div>
     </div>
     <div class="map-explain" id="mapExplain" hidden></div>
     <div class="scrim" id="mScrim"></div>
@@ -702,6 +723,8 @@ function buildRoot(){
       <div id="mSheetBody"></div>
     </section>`);
   $("#mapLocate").onclick = locate;
+  $("#mapZoomIn").onclick = ()=>map && map.zoomIn();
+  $("#mapZoomOut").onclick = ()=>map && map.zoomOut();
   $("#mapHelp").onclick = ()=> mapState.explainOpen ? hideExplain() : showExplain();
   $("#mapSlider").addEventListener("input", onSliderInput);
   $("#mapNowBtn").onclick = ()=>{ mapState.idx = defaultIdx(); $("#mapSlider").value = mapState.idx; updateTimeLabel(); updateThumb(); renderMarkers(); updateDiscForTime(); };
@@ -716,11 +739,18 @@ const SurfMap = {
       return;
     }
     buildRoot();
+    const first = !mapState.inited;
     initMap();
     $("#mapTop").hidden = false;
     $("#mapTimeEl").hidden = false;
-    setTimeout(()=>{ if(map) map.invalidateSize(); }, 0);
+    setTimeout(()=>{ if(map){ map.invalidateSize(); if(!first && mapState.spotId==null) fitAll(false); } }, 0);
   },
+  select(spotId){
+    // fra lista på PC: marker spoten på kartet (skiva), uten ark
+    if(!map) return;
+    selectSpot(spotId);
+  },
+  selected(){ return mapState.spotId; },
   hide(){
     // Animasjoner (CSS) stopper naturlig når elementet får display:none, men
     // map-top/map-time/ark/forklaring ligger nå utenfor #mapRoot og må
