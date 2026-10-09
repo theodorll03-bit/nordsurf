@@ -62,7 +62,11 @@
       bands += `<rect class="band ${cls}" x="${x}" y="${TOP-4}" width="${COL}" height="${H+4}"/>`;
       if(k!==lastDay){
         lastDay = k;
-        labels += `<text class="day-lbl" x="${x+4}" y="14">${esc(cap(relDay(t)))}</text>`;
+        // data-x0: der dagen starter. Etiketten "klistres" til venstre kant
+        // av synlig utsnitt når dagen er scrollet delvis forbi (se
+        // stickDayLabels i render) - så dagsnavnet alltid vises helt.
+        let end = n; for(let j=i+1;j<n;j++){ if(dayKey(new Date(hours[j].t), tz)!==k){ end=j; break; } }
+        labels += `<text class="day-lbl" data-x0="${x+4}" data-x1="${PAD_L + end*COL - 4}" x="${x+4}" y="14">${esc(cap(relDay(t)))}</text>`;
         if(i>0) breaks += `<line class="brk" x1="${x}" y1="${TOP-4}" x2="${x}" y2="${y0}"/>`;
       }
       // timetall hver tredje time
@@ -101,7 +105,11 @@
         bars += `<line class="set r-${stars}" x1="${bx}" y1="${sy}" x2="${bx+bwid}" y2="${sy}"/>`;
       }
       if(i===sel){
-        selMark = `<rect class="sel-mark" x="${x+1.5}" y="${TOP-2}" width="${COL-3}" height="${H+1}"/><circle class="sel-top" cx="${x+COL/2}" cy="${TOP-9}" r="3"/>`;
+        // Kompakt (flat) graf: en tynn vertikal strek, ikke en tom ramme
+        // som ligner en avkrysningsboks (Theodor 09.10.2026, småfiks 3).
+        selMark = compact
+          ? `<line class="sel-line" x1="${x+COL/2}" y1="${TOP-6}" x2="${x+COL/2}" y2="${y0+2}"/><circle class="sel-top" cx="${x+COL/2}" cy="${TOP-9}" r="3"/>`
+          : `<rect class="sel-mark" x="${x+1.5}" y="${TOP-2}" width="${COL-3}" height="${H+1}"/><circle class="sel-top" cx="${x+COL/2}" cy="${TOP-9}" r="3"/>`;
       }
     });
     let flatText = "";
@@ -155,11 +163,24 @@
         if(next!==sel) onSelect(next, true);
       }
     });
+    // Dagsnavn: hold hele navnet synlig når dagen er scrollet delvis forbi
+    // (flyttes til venstre kant av utsnittet, men aldri forbi dagens slutt).
+    const dayLabels = [...svg.querySelectorAll(".day-lbl")];
+    const stickDayLabels = ()=>{
+      const left = scroll.scrollLeft;
+      dayLabels.forEach(el=>{
+        const x0 = +el.dataset.x0, x1 = +el.dataset.x1;
+        const w = el.getComputedTextLength ? el.getComputedTextLength() : 60;
+        el.setAttribute("x", Math.min(Math.max(x0, left + 4), Math.max(x0, x1 - w)));
+      });
+    };
+    scroll.onscroll = stickDayLabels;
     if(keepX!=null && !opts.scrollToSel) scroll.scrollLeft = keepX;
     if(opts.scrollToSel){
       const target = built.colX(sel) - scroll.clientWidth/2;
       scroll.scrollLeft = Math.max(0, target);
     }
+    stickDayLabels();
     if(opts.focus) svg.focus({preventScroll:true});
     return built;
   }

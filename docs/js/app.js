@@ -148,6 +148,15 @@ function windShort(h){
   const type = windLabel(h);
   return `${nf0.format(h.wind_speed)} m/s${type?` ${type}`:""}`;
 }
+function windShorter(h){
+  // Kortversjon til kortene i lista (Theodor 09.10.2026, småfiks 2): "3 m/s
+  // blankt", "4 m/s side-on" - så vind og kJ alltid får plass på én linje og
+  // alle kort er like høye. Full tekst står i aria-label og på detaljsiden.
+  if(!h || h.wind_speed==null) return "";
+  const type = windLabel(h);
+  const short = STR.windShort[type] || type;
+  return `${nf0.format(h.wind_speed)} m/s${short?` ${short}`:""}`;
+}
 function kjText(h){
   // Energien ute, samme tall som Energi-cellen i Detaljer: svellenergien når
   // svellfeltet finnes, ellers energien med totalhøyde (reserve). Mangler
@@ -290,7 +299,7 @@ function renderList(){
     if(s.area) facts.push(`<span class="f m">${esc(s.area)}</span>`);  // området lite, først i faktalinja (kompakt kort, punkt 7)
     const range = heightRangeText(h);
     if(range) facts.push(`<span class="f">${esc(range)}</span>`);
-    if(h.wind_speed!=null) facts.push(`<span class="f">${windArrowHtml(h)}${esc(windShort(h))}</span>`);
+    if(h.wind_speed!=null) facts.push(`<span class="f">${windArrowHtml(h)}${esc(windShorter(h))}</span>`);
     if(kjText(h)) facts.push(`<span class="f kj">${esc(kjText(h))}</span>`); // vises bare på PC (CSS), Theodors svar på PR #2
     const aria = `${s.name}, ${h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h)}${h.stars && h.low_reason ? `, ${ratingWord(h)}` : ""}${range?`, ${range}`:""}${isDesktop() && kjText(h) ? `, ${kjText(h)}` : ""}${h.wind_speed!=null?`, ${STR.windAria(nf0.format(h.wind_speed), compass(h.wind_dir), windLabel(h))}`:""}`;
     return `<div class="card ${ratingClass(h)}${sel?" sel":""}" data-card="${i}">
@@ -1341,7 +1350,6 @@ matchMedia("(min-width: 900px)").addEventListener("change", ()=>{ if(DATA) rende
 
 /* ---------- Oppstart ---------- */
 async function start(){
-  const nav = $("#navWordmark"); if(nav) nav.innerHTML = wordmarkSvg();  // sidemenyen på PC (punkt 1, 09.10.2026)
   $("#listPane").innerHTML = `<header class="top"><h1 class="wordmark" aria-label="${STR.app}">${wordmarkSvg()}</h1><p class="sub">${esc(STR.loading)}</p></header>`;
   try{
     DATA = window.__FORECAST__ || await (await fetch("data/forecast.json",{cache:"no-cache"})).json();

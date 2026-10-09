@@ -37,6 +37,7 @@
     noHeight: "–",
     wind: {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"},
     windCalm: "blankt", windNearCalm: "nesten blankt",
+    windShort: {"nesten blankt":"blankt", "side-onshore":"side-on", "sidevind":"side"},  // kortene i lista
     windAria: (speed, dir, type) => `vind ${speed} meter per sekund fra ${dir}, ${type}`,
 
     /* dagbrikker */

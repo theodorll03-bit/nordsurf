@@ -147,6 +147,10 @@ def main():
             else:
                 assert kj_visible > 0, "kJ skal vises (liten skrift) i lista på PC"
             assert page.locator(".day-chip").filter(has_text="kJ").count() == 0, "dagbrikkene skal ikke ha kJ"
+            if not mobile:
+                # småfiks 2 (09.10.2026): kJ på samme linje som vinden - alle kort like høye
+                hs = [round(b["height"]) for b in [page.locator(".card").nth(i).bounding_box() for i in range(len(spots))] if b]
+                assert len(set(hs)) == 1, f"kortene i PC-lista skal være like høye, var {hs}"
             if mobile and len(spots) >= 5:
                 # punkt 7 (09.10.2026): minst fem spots synlige uten å scrolle på 390x844
                 box5 = page.locator(".card").nth(4).bounding_box()
@@ -209,7 +213,11 @@ def main():
                 # "Flatt" bare når alle timene i strekket er ekte flate, ellers "Ingen surf"
                 all_flat = all(hh.get("low_reason") == "flat" or (not hh.get("low_reason") and (hh.get("surf_height") or 0) <= 0) for hh in fh[:24])
                 assert lbl.startswith("Flatt" if all_flat else "Ingen surf"), f"kompakt graf-tekst '{lbl}' passer ikke timene (alle ekte flate: {all_flat})"
-                assert page.locator("#chartWrap svg .sel-mark").count() == 1, "valgt time skal være markert også i kompakt graf"
+                assert page.locator("#chartWrap svg .sel-line").count() == 1, "valgt time skal være markert med en tynn strek i kompakt graf"
+            # småfiks 3 (09.10.2026): første dagsnavn skal være helt synlig selv om dagen starter utenfor utsnittet
+            first_lbl = page.locator("#chartWrap svg .day-lbl").first
+            lb, sb = first_lbl.bounding_box(), page.locator("#chartWrap .chart-scroll").bounding_box()
+            assert lb and sb and lb["x"] >= sb["x"] - 0.5, f"første dagsnavn er kuttet til venstre ({lb and lb['x']} < {sb and sb['x']})"
             shot("detalj_flat"); axe_check("detalj_flat")
 
             # loggark (med "Fra bilde" inni) og forklaringsark
