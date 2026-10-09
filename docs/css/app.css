@@ -135,14 +135,14 @@ header.top{padding:16px 0 8px}
 .fav-sep{height:1px;background:var(--line);margin:4px 0}
 .card{position:relative;background:var(--raised);border-radius:var(--radius);box-shadow:0 1px 0 var(--line);overflow:hidden}
 .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--rc)}
-.card .main{all:unset;display:grid;grid-template-columns:1fr auto;grid-template-areas:"name rating" "area rating" "facts facts";gap:2px 12px;width:100%;padding:14px 56px 10px 20px;min-height:44px;cursor:pointer;box-sizing:border-box}
+.card .main{all:unset;display:grid;grid-template-columns:1fr auto;grid-template-areas:"name rating" "facts facts";align-items:start;gap:0 12px;width:100%;padding:10px 56px 4px 18px;min-height:44px;cursor:pointer;box-sizing:border-box}
 .card .main:hover{background:color-mix(in srgb,var(--sunken) 50%,var(--raised))}
 .card .main:active{background:var(--sunken)}
-.card .name{grid-area:name;font:800 22px/1.15 var(--display);letter-spacing:-.01em}
+.card .name{grid-area:name;font:800 20px/1.15 var(--display);letter-spacing:-.01em}
 .card .area{grid-area:area;color:var(--muted);font-size:var(--fs-secondary)}
 .card .rate{grid-area:rating;align-self:start;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
 .card .rate .word{font-size:18px;line-height:1.2}
-.card .facts{grid-area:facts;display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:var(--fs-secondary);color:var(--ink)}
+.card .facts{grid-area:facts;display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:var(--fs-secondary);color:var(--ink)}
 .card .facts .f{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .card .facts .f.m{color:var(--muted)}
 .card .facts .f.kj{display:none} /* kJ bare på PC, se PC-blokken */
@@ -160,15 +160,15 @@ header.top{padding:16px 0 8px}
 .fav-btn:active svg{transform:scale(.85)}
 
 /* Dagbrikker: ukedag + farget prikk/strek, ingen tall */
-.days{display:flex;gap:4px;padding:0 12px 10px 20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.days{display:flex;gap:4px;padding:0 12px 4px 18px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .days::-webkit-scrollbar{display:none}
-.day-chip{all:unset;flex:1 0 44px;min-width:44px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius-sm);cursor:pointer;box-sizing:border-box;padding:4px 0}
+.day-chip{all:unset;flex:1 0 44px;min-width:44px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:var(--radius-sm);cursor:pointer;box-sizing:border-box;padding:2px 0}
 .day-chip:hover{background:var(--sunken)}
 .day-chip .d{font-size:var(--fs-caption);font-weight:600;color:var(--muted);text-transform:none}
 /* streken: lengde OG farge etter beste rating den dagen (0 = liten prikk),
    så fargen aldri er eneste informasjon; ordet ligger i aria-label/title */
-.day-chip .dot{height:6px;border-radius:3px;background:var(--rc);width:6px}
-.day-chip.r-1 .dot{width:10px}.day-chip.r-2 .dot{width:14px}.day-chip.r-3 .dot{width:18px}.day-chip.r-4 .dot{width:22px}.day-chip.r-5 .dot{width:26px}
+.day-chip .dot{height:8px;border-radius:4px;background:var(--rc);width:8px}
+.day-chip.r-1 .dot{width:12px}.day-chip.r-2 .dot{width:16px}.day-chip.r-3 .dot{width:20px}.day-chip.r-4 .dot{width:24px}.day-chip.r-5 .dot{width:28px}
 .day-chip.r-0 .dot{background:var(--line-strong)}
 .day-chip.dark .dot{background:var(--line-strong);opacity:.5}
 .day-chip.sel .d{color:var(--ink)}
@@ -215,9 +215,13 @@ header.top{padding:16px 0 8px}
 .chart-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .chart-scroll::-webkit-scrollbar{display:none}
 .chart{display:block;touch-action:pan-x}
-.chart .band{fill:var(--raised)}
-.chart .band.dusk{fill:var(--dusk)}
-.chart .band.dark{fill:var(--night)}
+/* Natt og dag: ingen farge for dag, svak nyanse for natt (ca. 5 % mørkere
+   enn bakgrunnen), skumring midt imellom - samme grep i lys og mørk modus
+   (Theodors tilbakemelding 09.10.2026, punkt 3). */
+.chart .band{fill:none}
+.chart .band.dusk{fill:var(--ink);fill-opacity:.025}
+.chart .band.dark{fill:var(--ink);fill-opacity:.05}
+.chart .flat-lbl{font-size:var(--fs-secondary);fill:var(--muted);font-weight:600}
 .chart .bar{fill:var(--rc)}
 .lr{display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px}
 .lr .lrw{font-size:var(--fs-secondary);line-height:1.2}
@@ -316,6 +320,7 @@ details.details[open] > summary .chev{transform:rotate(180deg)}
 .link{all:unset;min-height:44px;min-width:44px;padding:0 4px;color:var(--ink);font-size:var(--fs-body);cursor:pointer;display:inline-flex;align-items:center;font-weight:600}
 .field{margin:18px 0 0}
 .field > .lbl{font-size:var(--fs-secondary);color:var(--muted);margin:0 0 8px}
+.field .hint{margin:6px 0 0;font-size:var(--fs-secondary);color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.2em}
 .starpick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .starpick button{min-height:56px;border-radius:var(--radius-sm);border:1.5px solid var(--line-strong);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:var(--muted)}
 .starpick button b{font-size:20px;color:var(--ink)}
@@ -349,12 +354,12 @@ select,input[type="datetime-local"]{font:inherit;min-height:44px;width:100%;padd
 @media (min-width: 900px){
   :root{--nav-h:0px}
   body{overflow:hidden}
-  .shell{display:grid;grid-template-columns:84px 400px minmax(0,1fr);height:100dvh}
+  .shell{display:grid;grid-template-columns:100px 400px minmax(0,1fr);height:100dvh}
   nav.tabs{position:static;grid-column:1;flex-direction:column;justify-content:flex-start;gap:4px;padding:16px 10px;border-top:0;border-right:1px solid var(--line);background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none}
   .tab{flex:0 0 auto;width:64px;min-height:60px;font-size:11px}
   .tab[aria-current="page"]{background:var(--raised);box-shadow:0 1px 0 var(--line)}
-  nav.tabs .wm{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:4px 0 10px;border-radius:12px;color:var(--ink)}
-  nav.tabs .wm svg{width:34px;height:34px}
+  nav.tabs .wm{display:flex;align-items:center;justify-content:center;width:88px;height:44px;margin:6px 0 10px;border-radius:12px;color:var(--ink)}
+  nav.tabs .wm svg{width:82px;height:auto}
   nav.tabs .wm:hover{background:var(--sunken)}
   nav.tabs .wm:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   #listPane{grid-column:2;overflow-y:auto;max-width:none;margin:0;padding:12px 16px 40px;border-right:1px solid var(--line)}
@@ -377,7 +382,7 @@ select,input[type="datetime-local"]{font:inherit;min-height:44px;width:100%;padd
   .toast{bottom:32px}
 }
 @media (min-width: 1400px){
-  .shell{grid-template-columns:84px 440px minmax(0,1fr)}
+  .shell{grid-template-columns:100px 440px minmax(0,1fr)}
 }
 @media (max-width: 899px){
   .shell.view-detail #listPane{display:none}

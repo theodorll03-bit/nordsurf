@@ -9,7 +9,19 @@
    Vanlig <script>, ikke modul - app.js kaller Chart.render(). */
 (function(){
   const COL = 26;          // bredde per time (px)
-  const PAD_L = 8, PAD_R = 8, TOP = 30, H = 150, BOTTOM = 22;
+  const PAD_L = 8, PAD_R = 8, TOP = 30, H_FULL = 150, H_FLAT = 24, BOTTOM = 22;
+  // Kompakt modus (Theodors tilbakemelding 09.10.2026, punkt 2): er alle
+  // timene i det synlige tidsrommet (de neste 24 timene fra valgt time) 0
+  // stjerner, krymper grafen til ca. 60 px og sier "Flatt hele døgnet" /
+  // "Flatt de neste X timene" i dempet farge - i stedet for en stor tom boks.
+  // Den valgte timen er fortsatt markert. Trykk på en søyle lenger ut (med
+  // stjerner) velger den timen, og grafen vokser igjen.
+  function flatStretch(hours, sel){
+    // antall sammenhengende 0-stjernestimer fra valgt time og framover
+    let n = 0;
+    for(let i = Math.max(0, sel); i < hours.length; i++){ if((hours[i].stars||0) > 0) break; n++; }
+    return n;
+  }
   const MAX_H = 3.5;        // meter som fyller hele høyden (over dette klippes søylen)
   const FLAT_PX = 3;
 
@@ -20,6 +32,9 @@
     const hours = spot.hours;
     const n = hours.length;
     const width = PAD_L + n*COL + PAD_R;
+    const flatN = flatStretch(hours, sel);
+    const compact = flatN >= 24 || (flatN > 0 && sel + flatN >= hours.length);
+    const H = compact ? H_FLAT : H_FULL;
     const total = TOP + H + BOTTOM;
     const bw = spot.bw_until;
     let bands = "", bars = "", labels = "", breaks = "", selMark = "";
@@ -77,9 +92,16 @@
         selMark = `<rect class="sel-mark" x="${x+1.5}" y="${TOP-2}" width="${COL-3}" height="${H+1}"/><circle class="sel-top" cx="${x+COL/2}" cy="${TOP-9}" r="3"/>`;
       }
     });
-    const svg = `<svg class="chart" width="${width}" height="${total}" viewBox="0 0 ${width} ${total}" role="img" aria-label="${esc(opts.aria)}">
-      <g>${bands}</g><g>${breaks}</g><g>${bars}</g><g>${selMark}</g><g>${labels}</g></svg>`;
-    return {svg, width, colX: (i)=>PAD_L + i*COL + COL/2};
+    let flatText = "";
+    if(compact && opts.flatText){
+      // teksten følger det synlige utsnittet: plasseres ved valgt time (den
+      // det scrolles til), i dempet farge, uten å dekke markøren
+      const tx = PAD_L + (sel+1)*COL + 10;
+      flatText = `<text class="flat-lbl" x="${tx}" y="${TOP + H/2 + 4}">${esc(opts.flatText(flatN, sel))}</text>`;
+    }
+    const svg = `<svg class="chart${compact?" compact":""}" width="${width}" height="${total}" viewBox="0 0 ${width} ${total}" role="img" aria-label="${esc(opts.aria)}">
+      <g>${bands}</g><g>${breaks}</g><g>${bars}</g><g>${selMark}</g><g>${labels}</g><g>${flatText}</g></svg>`;
+    return {svg, width, colX: (i)=>PAD_L + i*COL + COL/2, compact, flatN};
   }
 
   function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }

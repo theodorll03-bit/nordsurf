@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-f7b9c9ac574f";
+const CACHE = "nordsurf-1944f8aeb2b7";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg",
   "css/app.css", "css/map.css",
   "js/strings.js", "js/wordmark.js", "js/explain.js", "js/chart.js", "js/app.js", "js/map.js", "js/auth.js",

@@ -147,11 +147,11 @@
 @media (min-width: 900px){
   #mapRoot{position:relative;inset:auto;height:100dvh;z-index:auto}
   .map-top{right:16px;top:16px}
-  .map-time{left:calc(84px + 400px);right:0;bottom:0;padding-bottom:16px}
+  .map-time{left:calc(100px + 400px);right:0;bottom:0;padding-bottom:16px}
   .map-round.zoom{display:flex}
   .map-explain{left:auto;right:16px;width:360px}
   #mSheet{left:auto;right:16px;bottom:120px;width:360px;transform:translateY(20px);border-radius:var(--radius)}
   #mSheet.open{transform:none}
   #mScrim{display:none!important}
 }
-@media (min-width: 1400px){ .map-time{left:calc(84px + 440px)} }
+@media (min-width: 1400px){ .map-time{left:calc(100px + 440px)} }

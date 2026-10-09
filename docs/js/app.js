@@ -287,6 +287,7 @@ function renderList(){
     if(!h) return "";
     const sel = state.tab==="kart" ? (state.mapSpot===s.id) : (state.spot===i && state.tab==="varsel");
     const facts = [];
+    if(s.area) facts.push(`<span class="f m">${esc(s.area)}</span>`);  // området lite, først i faktalinja (kompakt kort, punkt 7)
     const range = heightRangeText(h);
     if(range) facts.push(`<span class="f">${esc(range)}</span>`);
     if(h.wind_speed!=null) facts.push(`<span class="f">${windArrowHtml(h)}${esc(windShort(h))}</span>`);
@@ -295,7 +296,6 @@ function renderList(){
     return `<div class="card ${ratingClass(h)}${sel?" sel":""}" data-card="${i}">
       <button class="main" data-spot="${i}" aria-label="${esc(aria)}"${sel?' aria-current="true"':''}>
         <span class="name">${esc(s.name)}</span>
-        <span class="area">${esc(s.area||"")}</span>
         <span class="rate" aria-hidden="true">${ratingHtml(h)}</span>
         <span class="facts" aria-hidden="true">${facts.join("")}</span>
       </button>
@@ -323,15 +323,17 @@ function renderList(){
 /* ---------- Detaljside (punkt 3-6): viktigst først ---------- */
 function noticeFor(h){
   // Én kort linje i vanlig språk, første som gjelder. Forklaring ved trykk.
+  // Bare EKTE advarsler står øverst (Theodors tilbakemelding 09.10.2026,
+  // punkt 4): gammelt varsel, kildene uenige, BarentsWatch-punktet i le,
+  // usikkert, og usikkert langt frem. "Timen er jevnet ut mellom to
+  // målepunkter" er ikke en advarsel - den står under Detaljer (Kilder-
+  // cellen). low_reason-ordene (Blåst ut osv.) står allerede som rating-
+  // ordet, og "kanten av vinduet" ligger i Retningstreff-cellen.
   if(isStale()) return {key:"notice", text: STR.notice.stale, warn:true};
-  if(h.low_reason==="blown_out") return {key:"notice", text: STR.notice.blown_out, warn:true};
-  if(h.low_reason==="stormsjo") return {key:"notice", text: STR.notice.stormsjo, warn:true};
-  if(h.low_reason==="treffer_ikke") return {key:"notice", text: STR.notice.treffer_ikke, warn:true};
   if(h.sources_disagree) return {key:"notice", text: STR.notice.disagree, warn:true};
-  if(h.zone==="langtid") return {key:"notice", text: STR.notice.farAhead, warn:false};
-  if(h.height_source==="svell_ute" && h.directness!=null && h.directness < 1 && h.directness >= 0.667) return {key:"direction", text: STR.notice.edge, warn:false};
+  if(h.bw_lee) return {key:"notice", text: STR.notice.bwLee, warn:true};
   if(h.uncertain) return {key:"notice", text: STR.notice.uncertain, warn:true};
-  if(h.bw_interpolated) return {key:"notice", text: STR.notice.interpolated, warn:false};
+  if(h.zone==="langtid") return {key:"notice", text: STR.notice.farAhead, warn:true};
   return null;
 }
 function tipHtml(h){
@@ -428,7 +430,16 @@ function renderSpot(){
   $("#bdOpen").onclick = ()=>openBreakdown(h);
   $("#chartHelp").onclick = ()=>toast(STR.chartHelpText, null, null, 12000);
   const barTitle = (hh)=>{ const tt = new Date(hh.t); const r = hh.stars ? STR.starsAria(hh.stars, hh.faded) : ratingWord(hh); const ht = heightRangeText(hh); return `${cap(relDay(tt))} kl. ${fmtHour.format(tt)}: ${r}${ht?`, ${ht}`:""}`; };
-  Chart.render($("#chartWrap"), s, state.sel, {tz:TZ, fmtHour, relDay, nf1, aria: chartAria, scrollToSel: !!state.scrollToSel, focus:false, heightOf: heightMForDisplay, barTitle},
+  const flatText = (n, selIdx)=>{
+    // "Flatt hele døgnet" når hele den valgte dagen er flat og det ikke er
+    // mer enn et døgn - ellers "Flatt de neste X timene". Siste time i
+    // varselet: "Flatt resten av varselet".
+    if(selIdx + n >= s.hours.length) return STR.flatRest;
+    const dayK = dayKey(new Date(s.hours[selIdx].t));
+    const wholeDay = s.hours.every(hh => dayKey(new Date(hh.t)) !== dayK || !(hh.stars||0));
+    return (wholeDay && n <= 36) ? STR.flatAllDay : STR.flatNext(n);
+  };
+  Chart.render($("#chartWrap"), s, state.sel, {tz:TZ, fmtHour, relDay, nf1, aria: chartAria, scrollToSel: !!state.scrollToSel, focus:false, heightOf: heightMForDisplay, barTitle, flatText},
     (i, fromKey)=>{ state.sel = i; state.scrollToSel = !!fromKey; renderSpot(); if(fromKey){ const svg = $("#chartWrap svg"); if(svg) svg.focus({preventScroll:true}); } },
     tipHtml);
   state.scrollToSel = false;
@@ -1090,6 +1101,14 @@ function renderSettings(){
 }
 
 /* ---------- Loggeark ---------- */
+function updateLogTimeText(){
+  // Norsk, 24-timers visning av valgt tidspunkt under feltet - selve
+  // <input type="datetime-local"> følger nettleserens språk, ikke sidens
+  // lang="nb", så dette er garantien for norsk format (punkt 6, 09.10.2026).
+  const el = $("#logTimeText"); if(!el) return;
+  const v = $("#logTime").value; const d = v ? new Date(v) : null;
+  el.textContent = d && !isNaN(d) ? cap(new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hour12:false,timeZone:TZ}).format(d)) : "";
+}
 function localInputValue(d){
   const p = new Intl.DateTimeFormat("sv-SE",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
   return p.replace(" ","T");
@@ -1101,6 +1120,7 @@ function openSheet(spotId, time){
   logDraft = {spot: spotId || DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
   $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
   $("#logTime").value = localInputValue(time || new Date());
+  updateLogTimeText();
   $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
   document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
   document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
@@ -1222,6 +1242,7 @@ $("#logPhotoInput").onchange = async ()=>{
   input.value = ""; // bildet er ferdig lest - ingen referanse beholdes
   if(!$("#sheet").classList.contains("open")) openSheet(null, when);
   else $("#logTime").value = localInputValue(when);
+  updateLogTimeText();
   toast(STR.toast.photoDate(`${relDay(when)} kl. ${fmtTime.format(when)}`));
   const typeBtns = document.querySelector('[data-group="type"]').querySelectorAll("button");
   if(typeBtns[1]) typeBtns[1].click(); // "Observert"
@@ -1309,6 +1330,7 @@ matchMedia("(min-width: 900px)").addEventListener("change", ()=>{ if(DATA) rende
 
 /* ---------- Oppstart ---------- */
 async function start(){
+  const nav = $("#navWordmark"); if(nav) nav.innerHTML = wordmarkSvg();  // sidemenyen på PC (punkt 1, 09.10.2026)
   $("#listPane").innerHTML = `<header class="top"><h1 class="wordmark" aria-label="${STR.app}">${wordmarkSvg()}</h1><p class="sub">${esc(STR.loading)}</p></header>`;
   try{
     DATA = window.__FORECAST__ || await (await fetch("data/forecast.json",{cache:"no-cache"})).json();

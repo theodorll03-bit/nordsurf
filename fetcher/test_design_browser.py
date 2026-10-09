@@ -97,11 +97,19 @@ def main():
     errors, violations = [], []
     exe = os.environ.get("NORDSURF_CHROMIUM")
     with sync_playwright() as p:
-        browser = p.chromium.launch(**({"executable_path": exe} if exe else {}))
+        # --lang=nb-NO: datofeltet (<input type="datetime-local">) formateres av
+        # nettleserens eget språk, ikke av sidens lang - som en norsk telefon
+        # Systemspråket (LANG) er det som faktisk styrer formatet i Chromium -
+        # "--lang" alene gjør det ikke (prøvd 09.10.2026).
+        nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
+        browser = p.chromium.launch(args=["--lang=nb-NO"], env=nb_env, **({"executable_path": exe} if exe else {}))
         for label, vp, scheme in (("mobil_lys", (390, 844), "light"), ("mobil_mork", (390, 844), "dark"),
                                   ("pc_lys", (1440, 900), "light"), ("pc_mork", (1440, 900), "dark")):
             mobile = vp[0] < 900
-            ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme=scheme,
+            # locale nb-NO: som en norsk telefon/PC - datofeltet i loggarket
+            # viser da norsk format med 24 timer (punkt 6, 09.10.2026)
+            ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme=scheme, locale="nb-NO",
+                                      timezone_id="Europe/Oslo",
                                       device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
             page = ctx.new_page()
             page.set_default_timeout(ELEMENT_TIMEOUT_MS)
@@ -139,6 +147,13 @@ def main():
             else:
                 assert kj_visible > 0, "kJ skal vises (liten skrift) i lista på PC"
             assert page.locator(".day-chip").filter(has_text="kJ").count() == 0, "dagbrikkene skal ikke ha kJ"
+            if mobile and len(spots) >= 5:
+                # punkt 7 (09.10.2026): minst fem spots synlige uten å scrolle på 390x844
+                box5 = page.locator(".card").nth(4).bounding_box()
+                tabs_top = page.locator("nav.tabs").bounding_box()["y"]
+                assert box5 and box5["y"] + box5["height"] <= tabs_top, f"femte kortet skal være helt synlig over tabbaren uten scroll (bunn {box5 and round(box5['y'] + box5['height'])} px, tabbaren starter ved {round(tabs_top)} px)"
+                dot = page.locator(".day-chip .dot").first.bounding_box()
+                assert dot and dot["height"] >= 8, f"dagsprikkene skal være minst 8 px (var {dot and dot['height']})"
             shot("liste"); axe_check("liste")
             # 4+5: ingen svevende verktøylinje, trykkflater i lista
             assert page.locator(".toolbar").count() == 0, "den gamle svevende verktøylinja skal være borte"
@@ -184,12 +199,24 @@ def main():
             expected = lw[hf["low_reason"]] if hf.get("low_reason") else "Flatt"
             assert shown == expected, f"ordet på detaljsiden ({shown}) stemmer ikke med forecast.json ({expected})"
             assert not shown.endswith("."), "ordet skal stå uten punktum"
+            # punkt 2 (09.10.2026): flat dag = kompakt graf (ca. 60 px) med tekst, valgt time fortsatt markert
+            fh = spots[fi]["hours"]
+            if all((hh.get("stars") or 0) == 0 for hh in fh[:24]):
+                svg_box = page.locator("#chartWrap svg").bounding_box()
+                assert svg_box and svg_box["height"] <= 80, f"grafen skal være kompakt på en flat dag (var {svg_box and svg_box['height']} px)"
+                assert page.locator("#chartWrap svg .flat-lbl").count() == 1, "kompakt graf skal si 'Flatt ...'"
+                assert "Flatt" in (page.locator("#chartWrap svg .flat-lbl").text_content() or "")
+                assert page.locator("#chartWrap svg .sel-mark").count() == 1, "valgt time skal være markert også i kompakt graf"
             shot("detalj_flat"); axe_check("detalj_flat")
 
             # loggark (med "Fra bilde" inni) og forklaringsark
             page.evaluate(f"state.tab='varsel'; state.spot={bi}; state.sel={bidx}; render(); openSheet(DATA.spots[{bi}].id, new Date());")
             page.wait_for_selector("#sheet.open")
             assert page.locator("#sheet #logFromPhotoBtn").count() == 1, "'Fra bilde' skal ligge i loggarket"
+            # punkt 6 (09.10.2026): norsk tid med 24 timer under datofeltet, aldri "PM"
+            tt = page.locator("#logTimeText").inner_text()
+            assert tt and "kl." in tt and "PM" not in tt and "AM" not in tt, f"tidsteksten under datofeltet skal være norsk med 24 timer: '{tt}'"
+            assert page.locator("#logTime").get_attribute("lang") == "nb"
             shot("logg"); axe_check("logg")
             page.evaluate("closeSheet();")
             page.evaluate(f"openExplain('surf_height', DATA.spots[{bi}].hours[{bidx}], DATA.spots[{bi}]);")
