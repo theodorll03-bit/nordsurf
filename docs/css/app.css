@@ -390,3 +390,7 @@ select,input[type="datetime-local"]{font:inherit;min-height:44px;width:100%;padd
   .shell.view-map #listPane,.shell.view-map #detailPane{display:none}
   #mapRoot{position:fixed;top:0;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px))}
 }
+
+/* ordforklaring øverst i «Hvorfor denne ratingen?» («Smått»/«Grøtete») */
+.bd-note{margin:0 0 12px;font-size:14px;line-height:1.4;color:var(--muted)}
+.bd-note b{color:var(--ink);font-weight:600}

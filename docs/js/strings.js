@@ -21,6 +21,15 @@
     starWords: ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"],
     pickWords: ["Flatt","Dårlig","Ok","Bra","Topp","Rått"],
     lowReason: {flat:"Flatt", blown_out:"Blåst ut", stormsjo:"Stormsjø", treffer_ikke:"Treffer ikke"},
+    // 0 stjerner med årsak «flat» (Theodors ja 09.10.2026, begge runder): ordet
+    // etter surfehøyden - under 0,3 m «Flatt», 0,3 til under 0,8 m «Smått»,
+    // 0,8 m eller mer «Grøtete». Bare visningsordet, aldri stjernene.
+    wordSmall: "Smått",
+    wordMushy: "Grøtete",
+    wordExplain: {
+      "Smått": "Litt bølger, men for lite til en stjerne.",
+      "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake og uten kraft.",
+    },
     starsAria: (n, faded) => `${n} av 5 stjerner` + (faded ? `, ${faded} tapt på vind eller tidevann` : ""),
     whyRating: "Hvorfor denne ratingen? Trykk for forklaring",
     lostTo: (wind, tide) => {
@@ -57,6 +66,8 @@
     transferSub: "andel av svellhøyden ute som når spoten ved direkte treff",
     kjUnderOne: "under 1 kJ",
     flat:   { allDay: "Flatt hele døgnet", next: (n)=>`Flatt de neste ${n} timene`, rest: "Flatt resten av varselet" },
+    small:  { allDay: "Smått hele døgnet", next: (n)=>`Smått de neste ${n} timene`, rest: "Smått resten av varselet" },
+    mushy:  { allDay: "Grøtete hele døgnet", next: (n)=>`Grøtete de neste ${n} timene`, rest: "Grøtete resten av varselet" },
     noSurf: { allDay: "Ingen surf hele døgnet", next: (n)=>`Ingen surf de neste ${n} timene`, rest: "Ingen surf resten av varselet" },
     kjEstimateSub: "anslag: svellet er ikke skilt ut, regnet fra totalhøyden",
     reports: "Rapporter fra andre",

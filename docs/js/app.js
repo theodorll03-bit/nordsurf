@@ -113,11 +113,30 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 // alltid der. Tallene kommer fra forecast.json (rating.py) - aldri regnet her.
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
 function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; return `r-${n}`; }
+// Ordet ved 0 stjerner med årsak «flat» (low_reason flat, eller 0 stjerner
+// uten annen grunn), etter surfehøyden (Theodors ja 09.10.2026, to runder):
+// under 0,3 m «Flatt», 0,3 til under 0,8 m «Smått», 0,8 m eller mer
+// «Grøtete» (bølgene er der, men kort periode og lite energi gjør dem svake).
+// Bare visningsordet - stjernene, low_reason og tallene er uendret. Blåst ut/
+// Treffer ikke/Stormsjø uendret. Samme ord overalt via ratingWord().
+const SMALL_SURF_MIN_M = 0.3, MUSHY_SURF_MIN_M = 0.8;
+const ZERO_WORDS = [STR.starWords[0], STR.wordSmall, STR.wordMushy];   // stigende: Flatt, Smått, Grøtete
+function zeroWord(h){
+  // null når regelen ikke gjelder (stjerner, annen low_reason, eller tallet mangler)
+  if(!h || h.stars || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return null;
+  return h.surf_height >= MUSHY_SURF_MIN_M ? STR.wordMushy : h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
+}
 function ratingWord(h){
   if(!h) return "–";
+  // 0 stjerner uten grunn OG uten surfehøyde: tallet mangler - aldri «Flatt»
+  // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
+  if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";
+  const z = zeroWord(h); if(z!=null) return z;
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }
+// Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
+function ratingWordExplain(h){ const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null; }
 function starsSVG(solid, faded, big){
   let out = "";
   for(let i=0;i<5;i++){
@@ -191,82 +210,11 @@ function heightRangeText(h){
 }
 
 /* ---------- Beste vindu, kort tekst ---------- */
-function bestText(spot){
-  const b = bestWindow(spot);
-  if(!b) return STR.bestNoLight;
-  if(b.none) return STR.bestNone;
-  const extra = [];
-  if(b.zone==="langtid") extra.push(STR.longrange);
-  else if(spot.bw_until && toHourKey(b.start) > spot.bw_until) extra.push(STR.estimate);
-  if(b.confidence!=null) extra.push(STR.confident(b.confidence));
-  return STR.best(relDay(b.start), fmtHour.format(b.start), fmtHour.format(b.end), b.stars) + (extra.length ? ` (${extra.join(", ")})` : "");
-}
 
 /* ---------- Dagbrikker: ukedag + farget prikk, ingen tall (punkt 1) ---------- */
-function dayBest(list){
-  const lit = list.filter(([h])=>h.daylight===true);
-  if(!lit.length) return null;
-  const clean = lit.filter(([h])=>!h.sources_disagree);
-  const pool = clean.length ? clean : lit;
-  let best = pool[0];
-  for(const pair of pool) if(pair[0].stars > best[0].stars) best = pair;
-  return best;
-}
-function dayChipsHtml(spot, spotIdx, selDayKey){
-  const days = new Map();
-  spot.hours.forEach((h,i)=>{ const k = dayKey(new Date(h.t)); if(!days.has(k)) days.set(k,[]); days.get(k).push([h,i]); });
-  const chips = [...days.entries()].slice(0, 8).map(([k, list])=>{
-    const d = new Date(list[0][0].t);
-    const shortLbl = relDayShort(d), fullLbl = cap(relDay(d));
-    const best = dayBest(list);
-    const sel = k===selDayKey ? " sel" : "";
-    if(!best){
-      return `<button type="button" class="day-chip dark r-0${sel}" data-spot="${spotIdx}" data-sel="${list[0][1]}" aria-label="${esc(STR.dayChipAria(fullLbl, STR.darkAll))}" title="${esc(STR.darkAll)}">
-        <span class="d">${esc(shortLbl)}</span><span class="dot"></span></button>`;
-    }
-    const [h, idx] = best;
-    return `<button type="button" class="day-chip ${ratingClass(h)}${sel}" data-spot="${spotIdx}" data-sel="${idx}" aria-label="${esc(STR.dayChipAria(fullLbl, h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h)))}" title="${esc(h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h))}">
-      <span class="d">${esc(shortLbl)}</span><span class="dot"></span></button>`;
-  }).join("");
-  return `<div class="days" role="list" aria-label="${STR.daysAria}">${chips}</div>`;
-}
 
 /* ---------- Visninger ---------- */
 const isDesktop = () => matchMedia("(min-width: 900px)").matches;
-window.onMapSelect = (id)=>{ state.mapSpot = id; if(isDesktop() && state.tab==="kart") renderList(); };
-function setRoute(){
-  let hash = "#/";
-  if(state.tab==="varsel") hash = state.spot!=null ? `#/spot/${DATA.spots[state.spot].id}` : "#/";
-  else hash = `#/${state.tab}`;
-  if(location.hash !== hash) history.replaceState(null, "", hash);
-}
-function parseRoute(){
-  const m = location.hash.match(/^#\/(spot\/([^/?#]+)|kart|logger|innstillinger)?/);
-  if(!m || !m[1]) return;
-  if(m[2]){ const i = DATA.spots.findIndex(s=>s.id===decodeURIComponent(m[2])); if(i>=0){ state.tab="varsel"; state.spot=i; state.sel=currentHour(DATA.spots[i]); } }
-  else state.tab = m[1];
-}
-function render(){
-  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current", t.dataset.tab===state.tab ? "page" : "false"));
-  const shell = $("#shell");
-  const isMap = state.tab==="kart";
-  const desktop = isDesktop();
-  // PC: lista står alltid til venstre; detaljer/logger/innstillinger til høyre.
-  if(desktop && state.tab==="varsel" && state.spot==null){ state.spot = 0; state.sel = currentHour(DATA.spots[0]); }
-  shell.className = "shell " + (isMap ? "view-map" : state.tab!=="varsel" ? "view-page" : state.spot!=null ? "view-detail" : "view-list");
-  document.body.classList.toggle("view-map", isMap);
-  $("#mapRoot").hidden = !isMap;
-  $("#detailPane").hidden = isMap;
-  $("#detailPane").classList.toggle("full", state.tab==="logger" || state.tab==="innstillinger");
-  $("#listPane").hidden = isMap ? !desktop : state.tab!=="varsel";
-  setRoute();
-  if(state.tab==="varsel" || isMap) renderList();
-  if(isMap){ window.SurfMap && SurfMap.show(); return; }
-  window.SurfMap && SurfMap.hide();
-  if(state.tab==="logger") return renderLogs();
-  if(state.tab==="innstillinger") return renderSettings();
-  if(state.spot!=null) renderSpot();
-}
 function wordmarkSvg(){ return window.WORDMARK_SVG || `<svg viewBox="0 0 10 10"></svg>`; }
 function sampleBanner(){
   return DATA.sample ? `<p class="banner sample"><b>${esc(STR.sample)}</b></p>` : "";
@@ -285,49 +233,6 @@ function staleBanner(){
 }
 function spotImg(id){ return `img/spots/${encodeURIComponent(id)}.jpg`; }
 
-function renderList(){
-  const gen = new Date(DATA.generated);
-  const favs = DATA.spots.map((s,i)=>i).filter(i=>isFavSpot(DATA.spots[i].id));
-  const rest = DATA.spots.map((s,i)=>i).filter(i=>!isFavSpot(DATA.spots[i].id));
-  const selKey = state.spot!=null && state.tab==="varsel" ? dayKey(new Date(DATA.spots[state.spot].hours[state.sel].t)) : null;
-  const card = (i)=>{
-    const s = DATA.spots[i];
-    const h = s.hours[currentHour(s)];
-    if(!h) return "";
-    const sel = state.tab==="kart" ? (state.mapSpot===s.id) : (state.spot===i && state.tab==="varsel");
-    const facts = [];
-    if(s.area) facts.push(`<span class="f m">${esc(s.area)}</span>`);  // området lite, først i faktalinja (kompakt kort, punkt 7)
-    const range = heightRangeText(h);
-    if(range) facts.push(`<span class="f">${esc(range)}</span>`);
-    if(h.wind_speed!=null) facts.push(`<span class="f">${windArrowHtml(h)}${esc(windShorter(h))}</span>`);
-    if(kjText(h)) facts.push(`<span class="f kj">${esc(kjText(h))}</span>`); // vises bare på PC (CSS), Theodors svar på PR #2
-    const aria = `${s.name}, ${h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h)}${h.stars && h.low_reason ? `, ${ratingWord(h)}` : ""}${range?`, ${range}`:""}${isDesktop() && kjText(h) ? `, ${kjText(h)}` : ""}${h.wind_speed!=null?`, ${STR.windAria(nf0.format(h.wind_speed), compass(h.wind_dir), windLabel(h))}`:""}`;
-    return `<div class="card ${ratingClass(h)}${sel?" sel":""}" data-card="${i}">
-      <button class="main" data-spot="${i}" aria-label="${esc(aria)}"${sel?' aria-current="true"':''}>
-        <span class="name">${esc(s.name)}</span>
-        <span class="rate" aria-hidden="true">${ratingHtml(h)}</span>
-        <span class="facts" aria-hidden="true">${facts.join("")}</span>
-      </button>
-      <img class="thumb" src="${spotImg(s.id)}" alt="" loading="lazy" onerror="this.hidden=true">
-      ${favBtnHtml(s.id, true)}
-      ${dayChipsHtml(s, i, sel ? selKey : null)}
-    </div>`;
-  };
-  const rows = favs.map(card).join("") + (favs.length && rest.length ? `<div class="fav-sep" role="separator"></div>` : "") + rest.map(card).join("");
-  $("#listPane").innerHTML = `${sampleBanner()}${staleBanner()}
-    <header class="top"><h1 class="wordmark" aria-label="${STR.app}">${wordmarkSvg()}</h1><p class="sub">${DATA.sample?esc(STR.exampleSub):esc(STR.updated(relDay(gen), fmtTime.format(gen)))}</p></header>
-    <div class="list">${rows}</div>`;
-  $("#listPane").querySelectorAll(".main").forEach(b=>b.onclick=()=>{
-    if(state.tab==="kart" && isDesktop()){ window.SurfMap && SurfMap.select(DATA.spots[+b.dataset.spot].id); return; }
-    state.tab = "varsel"; state.spot = +b.dataset.spot; state.sel = currentHour(DATA.spots[state.spot]); state.scrollToSel = true; render();
-    if(!isDesktop()) window.scrollTo(0,0); else $("#detailPane").scrollTo(0,0);
-  });
-  $("#listPane").querySelectorAll(".day-chip").forEach(b=>b.onclick=()=>{
-    state.tab = "varsel"; state.spot = +b.dataset.spot; state.sel = +b.dataset.sel; state.scrollToSel = true; render();
-    if(!isDesktop()) window.scrollTo(0,0);
-  });
-  wireFavButtons();
-}
 
 /* ---------- Detaljside (punkt 3-6): viktigst først ---------- */
 function noticeFor(h){
@@ -398,71 +303,6 @@ function detailsGrid(s, h, t){
     ${localRulesHtml(h)}
   </div>`;
 }
-function renderSpot(){
-  const s = DATA.spots[state.spot];
-  const h = s.hours[state.sel];
-  const t = new Date(h.t);
-  const fw = h.faded_wind ?? h.faded, ft = h.faded_tide ?? 0;
-  const verdict = h.faded ? `${STR.worth(h.stars+h.faded)}${STR.lostTo(fw, ft)}.` : "";
-  const notice = noticeFor(h);
-  const chartAria = `${STR.chartTitle}, ${s.name}`;
-  const range = heightRangeText(h);
-  const pane = $("#detailPane");
-  pane.innerHTML = `<div class="inner">
-    ${sampleBanner()}${staleBanner()}
-    <div class="hero" id="hero" hidden><img src="${spotImg(s.id)}" alt="" onload="this.parentElement.hidden=false"></div>
-    <header class="top">
-      <button class="back" id="back" aria-label="${esc(STR.backToList)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4-8-8 8-8z"/></svg>${esc(STR.backToList)}</button>
-      <div class="spot-head">
-        <div class="titles"><h1>${esc(s.name)}</h1><p class="when">${esc(cap(relDay(t)))} kl. ${fmtHour.format(t)}${h.daylight===false?", mørkt":""}${s.area?` · ${esc(s.area)}`:""}</p></div>
-        <div class="spot-tools">${favBtnHtml(s.id, false)}<button type="button" class="btn ghost" id="logBtn">${esc(STR.log)}</button></div>
-      </div>
-    </header>
-    <button type="button" class="now" id="bdOpen" aria-label="${esc(STR.whyRating)}"><span class="verdict vh">${esc(ratingWord(h))}</span>${ratingHtml(h, true)}</button>
-    ${verdict?`<p class="verdict">${esc(verdict)}</p>`:""}
-    <div class="keyline">
-      ${range?`<span class="kv"><button type="button" class="tap" data-explain="surf_height"><b>${esc(range)}</b></button><span class="u">${esc(STR.heightSets)}</span></span>`:""}
-      ${h.period!=null?`<span class="kv"><button type="button" class="tap" data-explain="period"><b>${nf0.format(h.period)} s</b></button><span class="u">periode</span></span>`:""}
-      ${kjText(h)?`<span class="kv"><button type="button" class="tap" data-explain="energy"><b>${esc(kjText(h))}</b></button><span class="u">energi</span></span>`:""}
-      ${h.wind_speed!=null?`<span class="kv"><button type="button" class="tap" data-explain="wind">${windArrowHtml(h)}<b>${esc(windShort(h))}</b></button></span>`:""}
-    </div>
-    ${notice?`<button type="button" class="notice${notice.warn?"":" info"}" data-explain="${notice.key}">${notice.warn?`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 1 21h22zm0 6.5 6.9 11.5H5.1zM11 10h2v5h-2zm0 6h2v2h-2z"/></svg>`:`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 6h2v7h-2zm0-3h2v2h-2z"/></svg>`}<span class="t">${esc(notice.text)}</span><span class="chev" aria-hidden="true">›</span></button>`:""}
-    <p class="best">${esc(bestText(s))}</p>
-    <div class="chart-wrap" id="chartWrap">
-      <div class="chart-head"><h2>${esc(STR.chartTitle)}</h2><button type="button" class="help-btn" id="chartHelp" aria-label="${esc(STR.chartHelp)}">?</button></div>
-      <div class="chart-scroll"></div>
-    </div>
-    <details class="details" id="details"><summary>${esc(STR.details)}<span class="chev" aria-hidden="true">⌄</span></summary>${detailsGrid(s, h, t)}</details>
-    <h2 class="sec">${esc(STR.reports)}</h2>
-    <div class="reports" id="reportsSection"><p class="empty">Laster…</p></div>
-  </div>`;
-  $("#back").onclick = ()=>{ state.spot=null; render(); };
-  wireFavButtons();
-  $("#logBtn").onclick = ()=>openSheet(s.id, new Date(h.t));
-  $("#bdOpen").onclick = ()=>openBreakdown(h);
-  $("#chartHelp").onclick = ()=>toast(STR.chartHelpText, null, null, 12000);
-  const barTitle = (hh)=>{ const tt = new Date(hh.t); const r = hh.stars ? STR.starsAria(hh.stars, hh.faded) : ratingWord(hh); const ht = heightRangeText(hh); return `${cap(relDay(tt))} kl. ${fmtHour.format(tt)}: ${r}${ht?`, ${ht}`:""}`; };
-  const flatText = (n, selIdx, allFlat)=>{
-    // "Flatt ..." bare når ALLE timene i strekket er ekte flate; ellers
-    // "Ingen surf ..." (blåst ut, treffer ikke, stormsjø eller 0 stjerner
-    // med reell høyde er ikke flatt - fysikk-kontrollør 09.10.2026).
-    // "... hele døgnet" når hele den valgte dagen er uten surf og strekket
-    // ikke er mer enn et døgn, ellers "... de neste X timene"; når strekket
-    // når slutten av varselet: "... resten av varselet".
-    const T = allFlat ? STR.flat : STR.noSurf;
-    if(selIdx + n >= s.hours.length) return T.rest;
-    const dayK = dayKey(new Date(s.hours[selIdx].t));
-    const wholeDay = s.hours.every(hh => dayKey(new Date(hh.t)) !== dayK || !(hh.stars||0));
-    return (wholeDay && n <= 36) ? T.allDay : T.next(n);
-  };
-  Chart.render($("#chartWrap"), s, state.sel, {tz:TZ, fmtHour, relDay, nf1, aria: chartAria, scrollToSel: !!state.scrollToSel, focus:false, heightOf: heightMForDisplay, barTitle, flatText},
-    (i, fromKey)=>{ state.sel = i; state.scrollToSel = !!fromKey; renderSpot(); if(fromKey){ const svg = $("#chartWrap svg"); if(svg) svg.focus({preventScroll:true}); } },
-    tipHtml);
-  state.scrollToSel = false;
-  if(window.wireExplain) wireExplain(pane, h, s);
-  if(isDesktop()) renderList(); // markér valgt kort og dag i lista
-  loadReportsUI(s.id);
-}
 
 /* ---------- Hjelpere for Detaljer (fra før, uendret logikk) ---------- */
 // 26.09.2026: surfehøyde (der bølgene brekker) er nå det man ser først -
@@ -476,7 +316,7 @@ function surfHeadline(h){
   // "Trolig flatt" som før.
   if(h.low_reason){
     const m = heightMForDisplay(h);
-    return m!=null ? `${LOW_REASON_WORD[h.low_reason]} (${nf1.format(m)} m)` : LOW_REASON_WORD[h.low_reason];
+    return m!=null ? `${ratingWord(h)} (${nf1.format(m)} m)` : ratingWord(h);
   }
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";
@@ -613,7 +453,7 @@ function favBtnHtml(id, wrap){
 }
 async function toggleFavoriteUI(spotId){
   if(!window.Auth || !Auth.state.user){
-    toast("Logg inn for å lagre favoritter", "Logg inn", ()=>{ state.tab = "innstillinger"; render(); window.scrollTo(0,0); });
+    toast("Logg inn for å lagre favoritter", "Logg inn", ()=>{ Front.go("innstillinger"); });
     return;
   }
   try{ await Auth.toggleFavorite(spotId); }
@@ -709,7 +549,7 @@ async function loadReportsUI(spotId){
   if($("#reportsSection") !== el) return; // spot byttet mens vi ventet
   el.innerHTML = listHtml + reportFormHtml();
   const gk = $("#gotoKonto");
-  if(gk) gk.onclick = (e)=>{ e.preventDefault(); state.tab = "innstillinger"; render(); window.scrollTo(0,0); };
+  if(gk) gk.onclick = (e)=>{ e.preventDefault(); Front.go("innstillinger"); };
   const send = $("#reportSend");
   if(send) send.onclick = async ()=>{
     const text = $("#reportText").value.trim();
@@ -1006,8 +846,7 @@ async function syncLogs(manual){
     if(manual) toast(`Synk feilet: ${e.message}`);
   }finally{
     syncing = false;
-    if(state.tab==="innstillinger") renderSettings();
-    if(state.tab==="logger") renderLogs();
+    Front.refresh();
   }
 }
 
@@ -1078,9 +917,8 @@ function wireAccountSection(){
   };
 }
 window.addEventListener("authchange", ()=>{
-  if(!DATA) return; // ikke lastet ferdig ennå - start() sitt render() dekker det
-  if(state.tab==="innstillinger") renderSettings();
-  else if(state.tab==="varsel") render();
+  if(!DATA || !window.Front) return; // ikke lastet ferdig ennå
+  Front.refresh();
 });
 
 function renderSettings(){
@@ -1136,7 +974,7 @@ function openSheet(spotId, time){
   // ROADMAP oppgave F: kalt uten argumenter fra verktøylinjens "Logg økt"
   // (nåværende spot/nå, som før) - kalt MED fra kartets trykk-og-hold
   // (map.js) og fra "Logg fra bilde" (bildets foreslåtte tidspunkt).
-  logDraft = {spot: spotId || DATA.spots[state.spot ?? 0].id, stars:null, size:null, wind:null, type:"own", source:null};
+  logDraft = {spot: spotId || (Front.state.spotId || DATA.spots[0].id), stars:null, size:null, wind:null, type:"own", source:null};
   $("#logSpot").innerHTML = DATA.spots.map(s=>`<option value="${s.id}"${s.id===logDraft.spot?" selected":""}>${esc(s.name)}</option>`).join("");
   $("#logTime").value = localInputValue(time || new Date());
   $("#logTime").oninput = updateLogTimeText;  // følger også tid endret for hånd
@@ -1277,7 +1115,8 @@ function breakdownRowHtml(line, isTotal){
 }
 function openBreakdown(h){
   if(!h.breakdown || !h.breakdown.length) return;
-  $("#bdBody").innerHTML = h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
+  const ex = ratingWordExplain(h);
+  $("#bdBody").innerHTML = (ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : "") + h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
   $("#bdSheet").classList.add("open"); $("#bdScrim").classList.add("open"); $("#bdSheet").setAttribute("aria-hidden","false");
 }
 function closeBreakdown(){
@@ -1329,7 +1168,7 @@ $("#saveLog").onclick = ()=>{
   closeSheet();
   toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");
   syncLogs();
-  if(state.tab==="logger") renderLogs();
+  Front.refresh();
 };
 
 let toastTimer;
@@ -1341,29 +1180,28 @@ function toast(msg, action, fn, duration){
 }
 
 
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
-  if(t.dataset.tab==="varsel" && state.tab==="varsel" && !isDesktop()) state.spot = null; // trykk igjen = tilbake til lista
-  state.tab = t.dataset.tab; render(); window.scrollTo(0,0);
-});
-window.addEventListener("hashchange", ()=>{ if(DATA){ parseRoute(); render(); } });
-matchMedia("(min-width: 900px)").addEventListener("change", ()=>{ if(DATA) render(); });
 
 /* ---------- Oppstart ---------- */
 async function start(){
-  $("#listPane").innerHTML = `<header class="top"><h1 class="wordmark" aria-label="${STR.app}">${wordmarkSvg()}</h1><p class="sub">${esc(STR.loading)}</p></header>`;
+  // Kart først (09.10.2026): forsiden er kartet (js/kart.js + js/front.js).
+  // app.js er biblioteket: loggarket, logger, innstillinger, breakdown,
+  // forklaringer, Detaljer-rutenettet og formateringen.
+  const wm = $("#wordmark"); if(wm) wm.innerHTML = wordmarkSvg();
   try{
     DATA = window.__FORECAST__ || await (await fetch("data/forecast.json",{cache:"no-cache"})).json();
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
-    parseRoute();
-    render();
+    const gen = new Date(DATA.generated);
+    $("#updated").textContent = DATA.sample ? STR.exampleSub : STR.updated(relDay(gen), fmtTime.format(gen));
+    await Front.start(DATA);
     syncLogs();
     recordWitness();
     maybeShowWitnessPrompt();
   }catch(e){
-    $("#listPane").innerHTML = `<header class="top"><h1 class="wordmark" aria-label="${STR.app}">${wordmarkSvg()}</h1></header><p class="empty">${esc(STR.noData)}</p>`;
+    console.error(e);
+    $("#loading").textContent = STR.noData; $("#loading").hidden = false;
   }
 }
-start();
+// start() kalles fra js/front.js når kartmotoren er lastet (kart først, 09.10.2026).
 if("serviceWorker" in navigator && location.protocol==="https:" && !window.__FORECAST__) navigator.serviceWorker.register("sw.js").catch(()=>{});
 
 /* ---------- "Var du der?" (ROADMAP oppgave F) ----------
@@ -1441,7 +1279,7 @@ function maybeShowWitnessPrompt(){
     closeWitness();
     toast("Takk! Lagret som økt.");
     syncLogs();
-    if(state.tab==="logger") renderLogs();
+    Front.refresh();
   });
   $("#witnessSheet").classList.add("open"); $("#witnessScrim").classList.add("open"); $("#witnessSheet").setAttribute("aria-hidden","false");
 }

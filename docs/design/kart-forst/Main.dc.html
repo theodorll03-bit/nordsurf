@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>Nordsurf mobil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&amp;family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#081520}
+a{color:#9FE3EE}a:hover{color:#CFF3F8}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid #9FE3EE;outline-offset:2px}
+@keyframes ns-ripple{0%{transform:scale(.45);opacity:.8}100%{transform:scale(3.4);opacity:0}}
+@keyframes ns-blow{0%{transform:translateX(-70px);opacity:0}25%{opacity:1}75%{opacity:1}100%{transform:translateX(150px);opacity:0}}
+@keyframes ns-swell{0%{transform:translateY(0);opacity:0}18%{opacity:1}82%{opacity:.95}100%{transform:translateY(46px);opacity:0}}
+@keyframes ns-swell-sm{0%{transform:translateY(0);opacity:0}18%{opacity:1}82%{opacity:.95}100%{transform:translateY(34px);opacity:0}}
+@keyframes ns-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes ns-rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ns-breathe{0%,100%{opacity:.55}50%{opacity:1}}
+.ns-ripple{position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;border:2px solid;box-sizing:border-box;animation:ns-ripple 2.6s cubic-bezier(.2,.6,.3,1) infinite;pointer-events:none}
+.ns-wind line{animation-name:ns-blow;animation-timing-function:linear;animation-iteration-count:infinite}
+.ns-arc{animation:ns-swell 3s linear infinite}
+.ns-arc-sm{animation:ns-swell-sm 3s linear infinite}
+.ns-bar{transform-origin:bottom;animation:ns-grow .7s cubic-bezier(.2,.85,.25,1) both}
+.ns-rise{animation:ns-rise .55s cubic-bezier(.2,.85,.25,1) both}
+.ns-breathe{animation:ns-breathe 2.4s ease-in-out infinite}
+input.ns-range{-webkit-appearance:none;appearance:none;background:transparent;width:100%;height:36px;margin:0;cursor:pointer}
+input.ns-range::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:rgba(234,242,244,.16)}
+input.ns-range::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#F2F7F8;margin-top:-10px;box-shadow:0 0 0 6px rgba(242,247,248,.12),0 4px 14px rgba(0,0,0,.5)}
+input.ns-range::-moz-range-track{height:4px;border-radius:2px;background:rgba(234,242,244,.16)}
+input.ns-range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;background:#F2F7F8}
+.ns-scroll{scrollbar-width:none}.ns-scroll::-webkit-scrollbar{display:none}
+@media (prefers-reduced-motion: reduce){.ns-ripple,.ns-wind line,.ns-arc,.ns-arc-sm,.ns-bar,.ns-rise,.ns-breathe{animation:none!important}.ns-ripple{display:none}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #0A1822; font-family: Geist, 'Helvetica Neue', Helvetica, system-ui, sans-serif; color: #EAF2F4; -webkit-font-smoothing: antialiased">
+
+  <!-- KART -->
+  <div style="{{mapStyle}}">
+    <svg width="1000" height="844" viewBox="0 0 1000 844" aria-hidden="true" style="display: block; overflow: visible">
+      <sc-for list="{{grid}}" as="g" hint-placeholder-count="6">
+        <line x1="{{g.x1}}" y1="{{g.y1}}" x2="{{g.x2}}" y2="{{g.y2}}" style="stroke: rgba(160,205,220,.07); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 2 6"></line>
+      </sc-for>
+      <path d="{{coastD}}" style="fill: none; stroke: rgba(120,210,225,.16); stroke-width: 9; vector-effect: non-scaling-stroke; stroke-linejoin: round"></path>
+      <path d="{{coastD}}" style="fill: #15252E; stroke: #3B5866; stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round"></path>
+      <sc-if value="{{showWedge}}" hint-placeholder-val="{{false}}">
+        <g transform="{{wedge.tf}}">
+          <path d="{{wedge.d}}" style="{{wedge.fillStyle}}"></path>
+          <circle r="1.6" style="fill: #F2F7F8"></circle>
+          <g transform="{{wedge.rot}}">
+            <sc-if value="{{wedge.hit}}" hint-placeholder-val="{{true}}">
+              <sc-for list="{{wedge.arcs}}" as="a" hint-placeholder-count="4">
+                <path class="ns-arc" d="M-17,-60 Q0,-66 17,-60" style="{{a.style}}"></path>
+              </sc-for>
+            </sc-if>
+            <sc-if value="{{wedge.miss}}" hint-placeholder-val="{{false}}">
+              <line x1="0" y1="-64" x2="0" y2="-8" style="stroke: #7D8F98; stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-dasharray: 4 5"></line>
+            </sc-if>
+          </g>
+        </g>
+      </sc-if>
+    </svg>
+  </div>
+
+  <!-- VIND -->
+  <div class="ns-wind" style="{{windStyle}}" aria-hidden="true">
+    <svg width="890" height="1250" style="display: block">
+      <sc-for list="{{windLines}}" as="w" hint-placeholder-count="10">
+        <line x1="{{w.x1}}" y1="{{w.y1}}" x2="{{w.x2}}" y2="{{w.y2}}" style="{{w.style}}"></line>
+      </sc-for>
+    </svg>
+  </div>
+
+  <!-- NATT -->
+  <div style="{{nightStyle}}" aria-hidden="true"></div>
+
+  <!-- MERKER -->
+  <sc-for list="{{markers}}" as="m" hint-placeholder-count="5">
+    <button onClick="{{m.open}}" aria-label="{{m.aria}}" style="{{m.style}}">
+      <span style="position: relative; width: 22px; height: 22px; flex: none; display: grid; place-items: center">
+        <sc-if value="{{m.ripple}}" hint-placeholder-val="{{false}}">
+          <span class="ns-ripple" style="{{m.r1}}"></span>
+          <span class="ns-ripple" style="{{m.r2}}"></span>
+        </sc-if>
+        <span style="{{m.dot}}"></span>
+      </span>
+      <span style="{{m.pill}}">
+        <span style="font-weight: 600; font-size: 13px; letter-spacing: -0.01em; color: #EAF2F4">{{m.name}}</span>
+        <span style="{{m.labelStyle}}">{{m.label}}</span>
+      </span>
+    </button>
+  </sc-for>
+
+  <!-- UTENFOR SKJERMEN -->
+  <sc-for list="{{edges}}" as="e" hint-placeholder-count="2">
+    <button onClick="{{e.open}}" aria-label="{{e.aria}}" style="{{e.style}}">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="{{e.arrow}}"><path d="M2 7h9M7.5 3.2 11.3 7 7.5 10.8" style="fill: none; stroke: #EAF2F4; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round"></path></svg>
+      <span style="{{e.dot}}"></span>
+      <span style="font-size: 12px; font-weight: 600">{{e.name}}</span>
+      <span style="{{e.labelStyle}}">{{e.label}}</span>
+    </button>
+  </sc-for>
+
+  <!-- TOPP -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 54px 18px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; pointer-events: none">
+    <div style="display: flex; flex-direction: column; gap: 2px; pointer-events: auto">
+      <div style="font-family: Fraunces, 'Iowan Old Style', Georgia, serif; font-weight: 900; font-size: 30px; line-height: 1; letter-spacing: -0.02em; font-variation-settings: 'opsz' 144; color: #F2F7F8">Nordsurf</div>
+      <div style="font-size: 12px; color: #93A7B1">{{updated}}</div>
+    </div>
+    <div role="group" aria-label="Område" style="display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(12,26,34,.72); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); border: 1px solid rgba(255,255,255,.08); pointer-events: auto">
+      <sc-for list="{{regions}}" as="r" hint-placeholder-count="3">
+        <button onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="{{r.style}}">{{r.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ARK -->
+  <div style="{{sheetStyle}}">
+    <button onClick="{{toggleSheet}}" aria-label="{{grabLabel}}" style="display: block; width: 100%; height: 26px; border: 0; background: transparent; padding: 0">
+      <span style="display: block; width: 40px; height: 5px; border-radius: 3px; background: rgba(234,242,244,.28); margin: 10px auto 0"></span>
+    </button>
+
+    <!-- TID -->
+    <div style="padding: 2px 20px 0; display: flex; flex-direction: column; gap: 2px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button onClick="{{togglePlay}}" aria-label="{{playLabel}}" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(242,247,248,.08); display: grid; place-items: center; flex: none">
+          <sc-if value="{{playing}}" hint-placeholder-val="{{false}}">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" style="fill: #F2F7F8"></rect><rect x="9.5" y="2" width="3.5" height="12" rx="1" style="fill: #F2F7F8"></rect></svg>
+          </sc-if>
+          <sc-if value="{{paused}}" hint-placeholder-val="{{true}}">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z" style="fill: #F2F7F8"></path></svg>
+          </sc-if>
+        </button>
+        <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1">
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{timeText}}</span>
+            <span style="{{nowBadge}}">{{nowText}}</span>
+          </div>
+          <span style="font-size: 12px; color: #93A7B1">{{lightText}}</span>
+        </div>
+      </div>
+      <input id="tid" class="ns-range" type="range" min="0" max="{{maxIdx}}" step="1" value="{{idx}}" onChange="{{onSlide}}" aria-label="Velg tidspunkt" aria-valuetext="{{timeText}}">
+      <div style="position: relative; height: 16px; margin-top: -6px" aria-hidden="true">
+        <sc-for list="{{dayTicks}}" as="d" hint-placeholder-count="7">
+          <span style="{{d.style}}">{{d.label}}</span>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- KIKK -->
+    <sc-if value="{{isPeek}}" hint-placeholder-val="{{true}}">
+      <div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px">
+        <sc-if value="{{hasBest}}" hint-placeholder-val="{{true}}">
+          <button class="ns-rise" onClick="{{best.open}}" aria-label="{{best.aria}}" style="{{best.cardStyle}}">
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #93A7B1">Beste neste 48 timer</span>
+              <span style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em">{{best.name}}</span>
+              <span style="font-size: 13px; color: #C5D3D8">{{best.when}}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+              <span style="display: flex; gap: 2px">
+                <sc-for list="{{best.stars}}" as="s" hint-placeholder-count="5">
+                  <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3 6.1 20.5l1.3-6.5L2.5 9.4l6.6-.8z" style="{{s.style}}"></path></svg>
+                </sc-for>
+              </span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; font-weight: 600">{{best.height}}</span>
+            </div>
+          </button>
+        </sc-if>
+        <button onClick="{{openList}}" style="display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(242,247,248,.05); font-size: 15px; font-weight: 600">
+          <span>Alle spots</span>
+          <span style="display: flex; align-items: center; gap: 8px; color: #93A7B1; font-weight: 500; font-size: 13px">{{countText}}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 9 7 5.5 10.5 9" style="fill: none; stroke: #93A7B1; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round"></path></svg></span>
+        </button>
+      </div>
+    </sc-if>
+
+    <!-- LISTE -->
+    <sc-if value="{{isList}}" hint-placeholder-val="{{false}}">
+      <div class="ns-scroll" style="{{scrollStyle}}">
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 40px">
+          <sc-for list="{{rows}}" as="row" hint-placeholder-count="6">
+            <button class="ns-rise" onClick="{{row.open}}" aria-label="{{row.aria}}" style="{{row.style}}">
+              <span style="{{row.dot}}"></span>
+              <span style="display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; flex: 1">
+                <span style="font-size: 15px; font-weight: 600">{{row.name}}</span>
+                <span style="font-size: 12px; color: #93A7B1">{{row.area}}</span>
+              </span>
+              <span style="display: flex; align-items: flex-end; gap: 1.5px; height: 22px; width: 96px; flex: none" aria-hidden="true">
+                <sc-for list="{{row.spark}}" as="b" hint-placeholder-count="24">
+                  <span style="{{b.style}}"></span>
+                </sc-for>
+              </span>
+              <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 1px; width: 76px; flex: none">
+                <span style="{{row.labelStyle}}">{{row.label}}</span>
+                <span style="font-size: 11px; color: #93A7B1">{{row.wind}}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- SPOT -->
+    <sc-if value="{{isSpot}}" hint-placeholder-val="{{false}}">
+      <div class="ns-scroll" style="{{scrollStyle}}">
+        <div style="display: flex; flex-direction: column; gap: 18px; padding: 14px 20px 48px">
+          <div class="ns-rise" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05">{{det.name}}</span>
+              <span style="font-size: 13px; color: #93A7B1">{{det.sub}}</span>
+            </div>
+            <button onClick="{{closeSpot}}" aria-label="Lukk spot" style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); background: rgba(242,247,248,.06); display: grid; place-items: center; flex: none">
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" style="stroke: #EAF2F4; stroke-width: 1.8; stroke-linecap: round"></path></svg>
+            </button>
+          </div>
+
+          <div class="ns-rise" style="display: flex; align-items: center; gap: 12px; animation-delay: 60ms">
+            <sc-if value="{{det.isStars}}" hint-placeholder-val="{{true}}">
+              <span style="display: flex; gap: 4px">
+                <sc-for list="{{det.stars}}" as="s" hint-placeholder-count="5">
+                  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3 6.1 20.5l1.3-6.5L2.5 9.4l6.6-.8z" style="{{s.style}}"></path></svg>
+                </sc-for>
+              </span>
+            </sc-if>
+            <span style="{{det.wordStyle}}">{{det.word}}</span>
+          </div>
+
+          <div class="ns-rise" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; animation-delay: 110ms">
+            <div style="padding: 12px 14px; border-radius: 16px; background: rgba(242,247,248,.05); display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #93A7B1">Surfehøyde</span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 22px; font-weight: 600; letter-spacing: -0.02em">{{det.height}}</span>
+            </div>
+            <div style="padding: 12px 14px; border-radius: 16px; background: rgba(242,247,248,.05); display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #93A7B1">Periode · energi</span>
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 22px; font-weight: 600; letter-spacing: -0.02em">{{det.period}}</span>
+              <span style="font-size: 12px; color: #93A7B1">{{det.kj}}</span>
+            </div>
+          </div>
+
+          <div class="ns-rise" style="display: flex; align-items: center; gap: 16px; padding: 14px; border-radius: 20px; background: rgba(242,247,248,.05); animation-delay: 160ms">
+            <svg width="112" height="112" viewBox="-64 -64 128 128" role="img" aria-label="{{det.discAria}}" style="flex: none; overflow: visible">
+              <circle r="58" style="fill: rgba(8,20,28,.6); stroke: rgba(234,242,244,.12); stroke-width: 1"></circle>
+              <path d="{{det.wedge}}" style="{{det.wedgeStyle}}"></path>
+              <line x1="0" y1="0" x2="{{det.fx}}" y2="{{det.fy}}" style="stroke: rgba(234,242,244,.35); stroke-width: 1; stroke-dasharray: 2 3"></line>
+              <g transform="{{det.rot}}">
+                <sc-if value="{{det.hit}}" hint-placeholder-val="{{true}}">
+                  <sc-for list="{{det.arcs}}" as="a" hint-placeholder-count="4">
+                    <path class="ns-arc-sm" d="M-15,-54 Q0,-59 15,-54" style="{{a.style}}"></path>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{det.miss}}" hint-placeholder-val="{{false}}">
+                  <line x1="0" y1="-58" x2="0" y2="-10" style="stroke: #7D8F98; stroke-width: 2; stroke-dasharray: 4 4"></line>
+                </sc-if>
+              </g>
+              <g transform="{{det.windRot}}">
+                <path d="M0,-74 L5,-64 L-5,-64 Z" style="fill: #CFE2E8"></path>
+              </g>
+              <circle r="3" style="fill: #F2F7F8"></circle>
+            </svg>
+            <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+              <div style="display: flex; flex-direction: column; gap: 1px">
+                <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #93A7B1">Svell</span>
+                <span style="font-size: 15px; font-weight: 600">{{det.swell}}</span>
+                <span style="{{det.hitStyle}}">{{det.hitText}}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 1px">
+                <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #93A7B1">Vind</span>
+                <span style="font-size: 15px; font-weight: 600">{{det.wind}}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ns-rise" style="display: flex; flex-direction: column; gap: 8px; animation-delay: 210ms">
+            <div style="display: flex; justify-content: space-between; align-items: baseline">
+              <span style="font-size: 15px; font-weight: 600">Neste 48 timer</span>
+              <span style="font-size: 12px; color: #93A7B1">Trykk for å velge time</span>
+            </div>
+            <div style="display: flex; align-items: flex-end; gap: 2px; height: 104px; position: relative">
+              <sc-for list="{{det.bars}}" as="b" hint-placeholder-count="48">
+                <button onClick="{{b.pick}}" aria-label="{{b.aria}}" style="{{b.col}}">
+                  <span class="ns-bar" style="{{b.bar}}"></span>
+                  <span style="{{b.tick}}"></span>
+                  <span style="{{b.dayStyle}}">{{b.day}}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <sc-if value="{{det.offMap}}" hint-placeholder-val="{{false}}">
+            <div style="font-size: 13px; color: #93A7B1; padding: 12px 14px; border-radius: 14px; background: rgba(242,247,248,.05)">Ligger utenfor kartutsnittet. Kartet viser Nord-Norge.</div>
+          </sc-if>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); font-size: 15px; font-weight: 600; color: #C5D3D8">
+            <span>Detaljer</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 5.5 7 9l3.5-3.5" style="fill: none; stroke: #93A7B1; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round"></path></svg>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
+    <div class="ns-breathe" style="position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 13px; color: #93A7B1">Henter varselet …</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { data: null, coast: null, idx: 0, sheet: 'peek', spotId: null, view: 'nord', playing: false };
+    let seed = 11;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    this.wind = [];
+    for (let i = 0; i < 74; i++) {
+      const len = 16 + rnd() * 34, x = rnd() * 860, y = rnd() * 1240;
+      const w = (0.8 + rnd() * 1.2).toFixed(2), a = (0.12 + rnd() * 0.3).toFixed(2);
+      this.wind.push({ x1: x, y1: y, x2: x + len, y2: y,
+        style: 'stroke: rgba(214,238,244,' + a + '); stroke-width: ' + w + '; stroke-linecap: round; animation-delay: -' + (rnd() * 6).toFixed(2) + 's; animation-duration: calc(var(--wd) * ' + (0.7 + rnd() * 0.7).toFixed(2) + ')' });
+    }
+  }
+
+  componentDidMount() {
+    fetch('/_blob/24d19b6d1966bd926ad44ef899878284').then(r => r.json()).then(d => this.setState({ data: d })).catch(() => {});
+    fetch('/_blob/c94fb125dae8fd8b36ea949b1c3877d0').then(r => r.json()).then(c => this.setState({ coast: c })).catch(() => {});
+  }
+
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+
+  num(v, d) { if (v == null) return '–'; return v.toFixed(d == null ? 1 : d).replace('.', ','); }
+  local(t) { return new Date(Date.parse(t + ':00:00Z') + 2 * 3600e3); }
+  dayName(dt, long) { return (long ? ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'] : ['Søn','Man','Tir','Ons','Tor','Fre','Lør'])[dt.getUTCDay()]; }
+  hh(dt) { return String(dt.getUTCHours()).padStart(2, '0'); }
+  color(st) { return ['#617480', '#EC6A43', '#EFBA45', '#47C88E', '#2DC3D3', '#9A88FF'][Math.max(0, Math.min(5, st || 0))]; }
+  word(h) {
+    const st = h[1] || 0;
+    if (st >= 1) return ['', 'Dårlig', 'Ok', 'Bra', 'Veldig bra', 'Rått'][st];
+    return ({ flat: 'Flatt', treffer_ikke: 'Treffer ikke', blown_out: 'Blåst ut', stormsjo: 'Stormsjø' })[h[11]] || 'Flatt';
+  }
+  windWord(wt) { return ({ offshore: 'offshore', side: 'side', sideonshore: 'side-on', onshore: 'onshore' })[wt] || ''; }
+  compass(d) { if (d == null) return ''; return ['N','NNØ','NØ','ØNØ','Ø','ØSØ','SØ','SSØ','S','SSV','SV','VSV','V','VNV','NV','NNV'][Math.round(d / 22.5) % 16]; }
+  segs(win) { return Array.isArray(win[0]) ? win : [win]; }
+  inWin(win, d) { if (d == null) return false; return this.segs(win).some(([a, b]) => a <= b ? (d >= a && d <= b) : (d >= a || d <= b)); }
+  pt(b, r) { const a = b * Math.PI / 180; return [r * Math.sin(a), -r * Math.cos(a)]; }
+  wedge(win, r) {
+    return this.segs(win).map(([a, b]) => {
+      const span = (b - a + 360) % 360, p1 = this.pt(a, r), p2 = this.pt(b, r);
+      return 'M0,0L' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) + 'A' + r + ',' + r + ' 0 ' + (span > 180 ? 1 : 0) + ' 1 ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) + 'Z';
+    }).join('');
+  }
+  winText(win) { return this.segs(win).map(([a, b]) => a + '–' + b + '°').join(' og '); }
+  range(h) { if (h[2] == null) return '–'; if (h[2] <= 0) return '0 m'; return this.num(h[2]) + '–' + this.num(h[3]) + ' m'; }
+  stars(st, size) {
+    const out = [];
+    for (let i = 0; i < 5; i++) {
+      const on = i < st;
+      out.push({ style: on ? 'fill: ' + this.color(st) + '; stroke: none' : 'fill: none; stroke: rgba(234,242,244,.28); stroke-width: 1.4' });
+    }
+    return out;
+  }
+  arcs(col, period, sm) {
+    const dur = Math.max(1.8, Math.min(4.4, (period || 10) * 0.26));
+    const out = [];
+    for (let i = 0; i < 4; i++) out.push({ style: 'fill: none; stroke: ' + col + '; stroke-width: ' + (sm ? 2.4 : 2.2) + '; stroke-linecap: round; vector-effect: non-scaling-stroke; animation-duration: ' + dur.toFixed(2) + 's; animation-delay: -' + (dur * i / 4).toFixed(2) + 's' });
+    return out;
+  }
+
+  openSpot(id, i) {
+    const s = { spotId: id, sheet: 'spot' };
+    if (i != null) s.idx = i;
+    this.setState(s);
+  }
+  setPlaying(on) {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (on) {
+      this.timer = setInterval(() => {
+        const max = this.maxIdx || 0;
+        this.setState(st => ({ idx: st.idx >= max ? 0 : st.idx + 1 }));
+      }, 240);
+    }
+    this.setState({ playing: on });
+  }
+
+  renderVals() {
+    const S = this.state, D = S.data, C = S.coast;
+    const W = 390, SHEET_TOP = 144;
+    const sheetY = { peek: 386, list: 0, spot: 236 }[S.sheet];
+    const visBottom = SHEET_TOP + sheetY;
+    const centerY = S.sheet === 'list' ? 150 : Math.round((104 + visBottom) / 2);
+    const spots = D ? D.spots : [];
+    const H = spots.length ? spots[0].h : [];
+
+    if (H.length && this.maxIdx == null) {
+      const t0 = this.local(H[0][0]).getTime();
+      let m = 0; H.forEach((h, i) => { if (this.local(h[0]).getTime() - t0 <= 7 * 24 * 3600e3) m = i; });
+      let h48 = 0; H.forEach((h, i) => { if (this.local(h[0]).getTime() - t0 < 48 * 3600e3) h48 = i + 1; });
+      this.maxIdx = m; this.h48 = h48;
+    }
+    const maxIdx = this.maxIdx || 0;
+    const idx = Math.min(S.idx, maxIdx);
+    const sel = spots.find(p => p.id === S.spotId) || null;
+    const offMap = sel ? (sel.x < 0 || sel.x > 1000 || sel.y < 0 || sel.y > 844) : false;
+
+    const views = { nord: [712, 285, 1.05], lofoten: [190, 690, 1.7], alle: [520, 470, 0.46] };
+    let cx, cy, sc;
+    if (sel && S.sheet === 'spot' && !offMap) { cx = sel.x; cy = sel.y; sc = 3.1; }
+    else { [cx, cy, sc] = views[S.view]; }
+
+    const ease = 'cubic-bezier(.2,.8,.2,1)';
+    const mapStyle = 'position: absolute; left: ' + (W / 2) + 'px; top: ' + centerY + 'px; width: 1000px; height: 844px; transform-origin: 0 0; transform: translate(' + (-cx * sc).toFixed(1) + 'px, ' + (-cy * sc).toFixed(1) + 'px) scale(' + sc + '); transition: transform 1s ' + ease + ', top .7s ' + ease;
+
+    // rutenett
+    const grid = [];
+    if (C) {
+      const [w0, s0, e0, n0] = C.bbox;
+      const merc = l => Math.log(Math.tan(Math.PI / 4 + l * Math.PI / 360));
+      for (let lat = 68; lat <= 70.5; lat += 0.5) { const y = (merc(n0) - merc(lat)) / (merc(n0) - merc(s0)) * C.vh; grid.push({ x1: -400, y1: y, x2: 1400, y2: y }); }
+      for (let lon = 13; lon <= 21; lon += 1) { const x = (lon - w0) * C.vw / (e0 - w0); grid.push({ x1: x, y1: -400, x2: x, y2: 1300 }); }
+    }
+
+    // vind
+    const focus = sel || spots.find(p => p.id === (S.view === 'lofoten' ? 'unstad' : 'grotfjord')) || spots[0];
+    const fh = focus ? focus.h[idx] : null;
+    const ws = fh && fh[6] != null ? fh[6] : 0, wd = fh && fh[7] != null ? fh[7] : 270;
+    const travel = (wd + 180) % 360;
+    const wDur = Math.max(1.1, Math.min(6, 5.6 - ws * 0.42));
+    const wOp = ws < 0.6 ? 0.18 : Math.min(0.95, 0.35 + ws * 0.06);
+    const windStyle = 'position: absolute; left: -250px; top: -200px; width: 890px; height: 1250px; pointer-events: none; --wd: ' + wDur.toFixed(2) + 's; opacity: ' + wOp.toFixed(2) + '; transform: rotate(' + (travel - 90) + 'deg); transition: transform 1.4s ' + ease + ', opacity .8s ease';
+
+    const light = fh ? fh[12] : 'dag';
+    const nightStyle = 'position: absolute; inset: 0; pointer-events: none; background: #020910; opacity: ' + (light === 'mørkt' ? 0.42 : light === 'skumring' ? 0.2 : 0) + '; transition: opacity .8s ease';
+
+    // merker
+    const left = { tromvik: 1, steinkrossa: 1, lenangsoyra: 1 };
+    const markers = [], edges = [];
+    const edgeTop = 112, edgeBot = visBottom - 38;
+    spots.forEach(p => {
+      const h = p.h[idx]; const st = h[1] || 0; const col = this.color(st);
+      const sx = W / 2 + (p.x - cx) * sc, sy = centerY + (p.y - cy) * sc;
+      const label = st >= 1 ? this.num(h[2]) + ' m' : this.word(h);
+      const open = () => this.openSpot(p.id);
+      const isSel = sel && sel.id === p.id;
+      const labelStyle = 'font-size: 12px; font-weight: 600; font-family: \'Geist Mono\', ui-monospace, monospace; color: ' + (st >= 1 ? col : '#93A7B1');
+      const aria = p.name + ', ' + (st >= 1 ? st + ' stjerner, ' + label : label);
+      if (S.sheet !== 'list' && sx >= 12 && sx <= W - 12 && sy >= 100 && sy <= visBottom - 14) {
+        const rl = !!left[p.id];
+        const dur = Math.max(1.8, Math.min(4.2, (h[4] || 10) * 0.24)).toFixed(2);
+        markers.push({
+          name: p.name, label, labelStyle, open, aria, ripple: st >= 1,
+          style: 'position: absolute; left: ' + sx.toFixed(1) + 'px; top: ' + sy.toFixed(1) + 'px; transform: translate(' + (rl ? 'calc(-100% + 11px)' : '-11px') + ', -11px); display: flex; flex-direction: ' + (rl ? 'row-reverse' : 'row') + '; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; transition: left 1s ' + ease + ', top 1s ' + ease + '; z-index: ' + (isSel ? 3 : 2),
+          dot: 'width: ' + (isSel ? 14 : 11) + 'px; height: ' + (isSel ? 14 : 11) + 'px; border-radius: 50%; background: ' + col + '; box-shadow: 0 0 0 3px rgba(10,24,34,.9)' + (st >= 1 ? ', 0 0 16px 3px ' + col : '') + '; transition: background .4s ease, box-shadow .4s ease',
+          r1: 'border-color: ' + col + '; animation-duration: ' + dur + 's',
+          r2: 'border-color: ' + col + '; animation-duration: ' + dur + 's; animation-delay: -' + (dur / 2).toFixed(2) + 's',
+          pill: 'display: flex; align-items: baseline; gap: 6px; padding: 5px 10px; border-radius: 999px; white-space: nowrap; background: rgba(10,24,34,.74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid ' + (isSel ? 'rgba(242,247,248,.55)' : st >= 1 ? col + '66' : 'rgba(255,255,255,.08)') + '; transition: border-color .4s ease'
+        });
+      } else if (S.sheet === 'peek') {
+        const ex = Math.max(70, Math.min(W - 70, sx)), ey = Math.max(edgeTop, Math.min(edgeBot, sy));
+        const ang = Math.atan2(sy - ey, sx - ex) * 180 / Math.PI;
+        edges.push({ p, st, col, label, open, aria: aria + ', utenfor kartet', ex, ey, ang });
+      }
+    });
+    edges.sort((a, b) => a.ex - b.ex || a.ey - b.ey);
+    const placed = [];
+    edges.forEach(e => {
+      let y = e.ey;
+      while (placed.some(q => Math.abs(q.x - e.ex) < 150 && Math.abs(q.y - y) < 38)) y -= 40;
+      placed.push({ x: e.ex, y });
+      e.style = 'position: absolute; left: ' + e.ex.toFixed(1) + 'px; top: ' + y.toFixed(1) + 'px; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1); background: rgba(10,24,34,.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: left 1s ' + ease + ', top 1s ' + ease + '; z-index: 2';
+      e.arrow = 'transform: rotate(' + e.ang.toFixed(0) + 'deg); flex: none';
+      e.dot = 'width: 8px; height: 8px; border-radius: 50%; background: ' + e.col + '; flex: none';
+      e.labelStyle = 'font-size: 12px; font-family: \'Geist Mono\', ui-monospace, monospace; color: ' + (e.st >= 1 ? e.col : '#93A7B1');
+      e.name = e.p.name;
+    });
+
+    // kile og svell på kartet
+    let wedge = null;
+    if (sel && S.sheet === 'spot' && !offMap) {
+      const h = sel.h[idx]; const st = h[1] || 0; const sd = h[9];
+      const hit = this.inWin(sel.win, sd); const col = st >= 1 ? this.color(st) : '#9FE3EE';
+      wedge = {
+        tf: 'translate(' + sel.x + ' ' + sel.y + ')', d: this.wedge(sel.win, 64),
+        fillStyle: 'fill: ' + (hit ? col : '#9FE3EE') + '; fill-opacity: .16; stroke: ' + (hit ? col : '#9FE3EE') + '; stroke-opacity: .5; stroke-width: 1; vector-effect: non-scaling-stroke',
+        rot: 'rotate(' + (sd == null ? 0 : sd) + ')', hit: hit && sd != null, miss: !hit && sd != null, arcs: this.arcs(col, h[4])
+      };
+    }
+
+    // tid
+    const dt = H.length ? this.local(H[idx][0]) : null;
+    const timeText = dt ? this.dayName(dt) + ' ' + this.hh(dt) + ':00' : '';
+    const gen = D ? new Date(Date.parse(D.generated) + 2 * 3600e3) : null;
+    const updated = gen ? 'Oppdatert ' + this.dayName(gen).toLowerCase() + ' kl. ' + this.hh(gen) + ':00' : 'Henter …';
+    const lightText = light === 'mørkt' ? 'Mørkt' : light === 'skumring' ? 'Skumring' : 'Dagslys';
+    const dayTicks = [];
+    H.forEach((h, i) => {
+      if (i > maxIdx) return;
+      const d = this.local(h[0]);
+      if (i > 0 && d.getUTCHours() < (i < 72 ? 1 : 3)) {
+        const prev = this.local(H[i - 1][0]);
+        if (prev.getUTCDate() !== d.getUTCDate()) dayTicks.push({ label: this.dayName(d).toLowerCase(), style: 'position: absolute; left: calc(12px + (100% - 24px) * ' + (i / maxIdx).toFixed(4) + '); transform: translateX(-50%); font-size: 11px; color: #7E939E' });
+      }
+    });
+
+    // beste
+    let best = null;
+    spots.forEach(p => {
+      for (let i = 0; i < (this.h48 || 0); i++) {
+        const h = p.h[i]; if (!h || h[12] === 'mørkt') continue;
+        const st = h[1] || 0; if (!best || st > best.st) best = { p, i, st };
+      }
+    });
+    let bestV = null;
+    if (best && best.st >= 1) {
+      let j = best.i; while (j + 1 < this.h48 && (best.p.h[j + 1][1] || 0) === best.st && best.p.h[j + 1][12] !== 'mørkt') j++;
+      const a = this.local(best.p.h[best.i][0]), b = this.local(best.p.h[j][0]);
+      const col = this.color(best.st);
+      bestV = {
+        name: best.p.name, when: this.dayName(a, true) + ' ' + this.hh(a) + '–' + String((b.getUTCHours() + 1) % 24).padStart(2, '0') + ' · ' + best.p.area,
+        stars: this.stars(best.st), height: this.range(best.p.h[best.i]),
+        open: () => this.openSpot(best.p.id, best.i), aria: 'Beste neste 48 timer: ' + best.p.name + ', ' + best.st + ' stjerner',
+        cardStyle: 'display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-radius: 20px; text-align: left; border: 1px solid ' + col + '55; background: linear-gradient(135deg, ' + col + '26, rgba(242,247,248,.04) 60%); box-shadow: 0 10px 30px -12px ' + col + '80'
+      };
+    }
+
+    // liste
+    const rows = spots.map(p => {
+      let mx = 0; for (let i = 0; i < (this.h48 || 0); i++) mx = Math.max(mx, (p.h[i] && p.h[i][1]) || 0);
+      return { p, mx };
+    }).sort((a, b) => b.mx - a.mx).map(({ p, mx }, k) => {
+      const h = p.h[idx]; const st = h[1] || 0; const col = this.color(st);
+      const spark = [];
+      for (let i = 0; i < (this.h48 || 0); i += 2) {
+        const hh2 = p.h[i]; const s2 = (hh2 && hh2[1]) || 0;
+        spark.push({ style: 'flex: 1; border-radius: 1px; height: ' + (s2 ? 6 + s2 * 4 : 2) + 'px; background: ' + (s2 ? this.color(s2) : 'rgba(234,242,244,.16)') });
+      }
+      const label = st >= 1 ? this.num(h[2]) + ' m' : this.word(h);
+      return {
+        name: p.name, area: p.area, spark, label,
+        wind: (h[6] != null ? Math.round(h[6]) + ' m/s ' : '') + this.windWord(h[8]),
+        labelStyle: 'font-size: 14px; font-weight: 600; font-family: \'Geist Mono\', ui-monospace, monospace; color: ' + (st >= 1 ? col : '#93A7B1'),
+        dot: 'width: 10px; height: 10px; border-radius: 50%; background: ' + col + '; flex: none' + (st >= 1 ? '; box-shadow: 0 0 10px ' + col : ''),
+        style: 'display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; border-radius: 16px; border: 0; background: rgba(242,247,248,.045); text-align: left; animation-delay: ' + (k * 40) + 'ms',
+        open: () => this.openSpot(p.id), aria: 'Åpne ' + p.name
+      };
+    });
+
+    // spot
+    let det = null;
+    if (sel) {
+      const h = sel.h[idx]; const st = h[1] || 0; const col = this.color(st); const sd = h[9];
+      const hit = this.inWin(sel.win, sd);
+      const f = this.pt(sel.facing, 52);
+      const start = idx < 40 ? 0 : Math.max(0, idx - 8);
+      const win = sel.h.slice(start, start + 48);
+      const maxS = Math.max(2, ...win.map(x => x[3] || 0));
+      const bars = win.map((x, k) => {
+        const i = start + k, s2 = x[1] || 0, c2 = s2 ? this.color(s2) : 'rgba(234,242,244,.22)';
+        const bh = x[2] ? Math.max(3, Math.round(x[2] / maxS * 80)) : 3, th = x[3] ? Math.round(x[3] / maxS * 80) : 0;
+        const d = this.local(x[0]), isSel = i === idx;
+        const night = x[12] === 'mørkt' ? 'rgba(2,9,16,.45)' : x[12] === 'skumring' ? 'rgba(2,9,16,.22)' : 'transparent';
+        const newDay = k === 0 || this.local(win[k - 1][0]).getUTCDate() !== d.getUTCDate();
+        return {
+          pick: () => this.setState({ idx: i }), aria: this.dayName(d) + ' ' + this.hh(d) + ':00, ' + this.word(x),
+          col: 'position: relative; flex: 1; height: 100%; padding: 0; border: 0; border-radius: 3px; display: flex; align-items: flex-end; background: ' + night + (isSel ? '; outline: 1.5px solid #F2F7F8; outline-offset: 1px' : ''),
+          bar: 'display: block; width: 100%; height: ' + bh + 'px; border-radius: 2px; background: ' + c2 + '; animation-delay: ' + (k * 14) + 'ms',
+          tick: 'position: absolute; left: 0; right: 0; bottom: ' + th + 'px; height: 2px; border-radius: 1px; background: ' + (th ? c2 : 'transparent') + '; opacity: .75',
+          day: newDay ? this.dayName(d).toLowerCase() : '',
+          dayStyle: 'position: absolute; left: 0; top: -2px; font-size: 10px; color: #93A7B1; white-space: nowrap; pointer-events: none'
+        };
+      });
+      det = {
+        name: sel.name, sub: sel.area + ' · ' + timeText + ' · ' + lightText.toLowerCase(),
+        isStars: st >= 1, stars: this.stars(st), word: this.word(h),
+        wordStyle: st >= 1 ? 'font-size: 15px; font-weight: 600; color: ' + col : 'font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #9FB2BB',
+        height: this.range(h), period: h[4] ? Math.round(h[4]) + ' s' : '–',
+        kj: h[5] != null ? Math.round(h[5]).toLocaleString('nb-NO') + ' kJ i svellet' : '–',
+        wedge: this.wedge(sel.win, 56), wedgeStyle: 'fill: ' + (hit ? col : '#9FE3EE') + '; fill-opacity: .18; stroke: ' + (hit ? col : '#9FE3EE') + '; stroke-opacity: .45; stroke-width: 1',
+        fx: f[0].toFixed(1), fy: f[1].toFixed(1),
+        rot: 'rotate(' + (sd == null ? 0 : sd) + ')', hit: hit && sd != null, miss: !hit && sd != null, arcs: this.arcs(st >= 1 ? col : '#9FE3EE', h[4], true),
+        windRot: 'rotate(' + (h[7] == null ? 0 : h[7]) + ')',
+        swell: h[10] != null ? this.num(h[10]) + ' m fra ' + this.compass(sd) + ' (' + sd + '°)' : 'Ingen svelldata',
+        hitText: sd == null ? '' : hit ? 'Rett inn i vinduet' : 'Utenfor vinduet ' + this.winText(sel.win),
+        hitStyle: 'font-size: 12px; color: ' + (hit ? '#9FE3EE' : '#93A7B1'),
+        wind: h[6] != null ? Math.round(h[6]) + ' m/s ' + this.windWord(h[8]) + ' fra ' + this.compass(h[7]) : '–',
+        discAria: 'Svellvindu ' + this.winText(sel.win) + ', svell fra ' + (sd == null ? 'ukjent' : sd + ' grader'),
+        bars, offMap
+      };
+    }
+
+    const regions = [['nord', 'Troms'], ['lofoten', 'Lofoten'], ['alle', 'Alle']].map(([k, label]) => ({
+      label, pressed: String(S.view === k && S.sheet !== 'spot'),
+      pick: () => this.setState({ view: k, sheet: 'peek', spotId: null }),
+      style: 'height: 32px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 13px; font-weight: 600; transition: background .3s ease, color .3s ease; background: ' + (S.view === k && S.sheet !== 'spot' ? '#F2F7F8' : 'transparent') + '; color: ' + (S.view === k && S.sheet !== 'spot' ? '#0A1822' : '#C5D3D8')
+    }));
+
+    return {
+      loading: !D, mapStyle, coastD: C ? C.d : '', grid, windLines: this.wind, windStyle, nightStyle,
+      markers, edges, showWedge: !!wedge, wedge: wedge || { tf: '', d: '', fillStyle: '', rot: '', hit: false, miss: false, arcs: [] },
+      updated, regions,
+      sheetStyle: 'position: absolute; left: 0; right: 0; top: ' + SHEET_TOP + 'px; height: 700px; border-radius: 30px 30px 0 0; background: rgba(13,27,36,.82); backdrop-filter: blur(26px) saturate(160%); -webkit-backdrop-filter: blur(26px) saturate(160%); border-top: 1px solid rgba(255,255,255,.1); box-shadow: 0 -18px 50px rgba(0,0,0,.35); transform: translateY(' + sheetY + 'px); transition: transform .65s cubic-bezier(.22,1,.28,1); z-index: 5; display: flex; flex-direction: column',
+      scrollStyle: 'height: ' + (700 - sheetY - 126) + 'px; overflow-y: auto; margin-top: 6px; border-top: 1px solid rgba(255,255,255,.06)',
+      toggleSheet: () => this.setState({ sheet: S.sheet === 'peek' ? 'list' : 'peek', spotId: S.sheet === 'spot' ? null : S.spotId }),
+      grabLabel: S.sheet === 'peek' ? 'Vis alle spots' : 'Vis kartet',
+      openList: () => this.setState({ sheet: 'list' }),
+      closeSpot: () => this.setState({ sheet: 'peek', spotId: null }),
+      togglePlay: () => this.setPlaying(!S.playing), playing: S.playing, paused: !S.playing, playLabel: S.playing ? 'Stopp avspilling' : 'Spill av varselet',
+      timeText, nowText: idx === 0 ? 'Nå' : '', nowBadge: idx === 0 ? 'font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #F2F7F8; color: #0A1822' : 'display: none',
+      lightText, idx, maxIdx, onSlide: e => this.setState({ idx: +e.target.value }), dayTicks,
+      isPeek: S.sheet === 'peek', isList: S.sheet === 'list', isSpot: S.sheet === 'spot' && !!det,
+      hasBest: !!bestV, best: bestV || { name: '', when: '', stars: [], height: '', open: () => {}, aria: '', cardStyle: '' },
+      countText: spots.length + ' steder', rows,
+      det: det || { name: '', sub: '', isStars: false, stars: [], word: '', wordStyle: '', height: '', period: '', kj: '', wedge: '', wedgeStyle: '', fx: 0, fy: 0, rot: '', hit: false, miss: false, arcs: [], windRot: '', swell: '', hitText: '', hitStyle: '', wind: '', discAria: '', bars: [], offMap: false }
+    };
+  }
+}
+</script>
+</body>
+</html>

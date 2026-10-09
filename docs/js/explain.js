@@ -139,8 +139,8 @@
     },
     stars: {
       title: "Stjerner",
-      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Blasse stjerner er det vind og tidevann tar fra svellets potensial.",
-      numbers: (h) => [["Stjerner", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? lowWord(h.low_reason) : "–"]],
+      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 stjerner sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til en stjerne), «Grøtete» fra 0,8 m (bølgene er der, men kort periode og lite energi gjør dem svake og uten kraft). Blasse stjerner er det vind og tidevann tar fra svellets potensial.",
+      numbers: (h) => [["Stjerner", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
       how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på stjernene for hele regnestykket."],
     },
     sources: {
@@ -165,7 +165,7 @@
       what: "En kort linje øverst sier fra når tallene er mer usikre enn vanlig. Trykk for å se hvorfor.",
       numbers: (h) => [
         ["Kildene uenige", h.sources_disagree ? (h.sources_disagree_reason || "ja") : "nei"],
-        ["Grunn for lav rating", h.low_reason ? ({flat:"flatt", blown_out:"blåst ut", stormsjo:"stormsjø", treffer_ikke:"treffer ikke"})[h.low_reason] : "–"],
+        ["Grunn for lav rating", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h).toLowerCase() : h.low_reason) : "–"],
         ["Usikker time", h.uncertain ? "ja" : "nei"],
         ["Jevnet ut mellom målepunkter", h.bw_interpolated ? "ja" : "nei"],
         ["Dager frem", h.day!=null ? String(h.day) : "mangler"],
