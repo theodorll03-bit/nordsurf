@@ -1341,8 +1341,24 @@ def rate(hour, spot):
     energy_swell = energy_kj(hour.get("swell_offshore"), energy_period_value)
     energy_total = energy_kj(hour.get("height_offshore"), energy_period_value)
     energy_factor_value = energy_factor(spot, energy_swell)
+    # 09.10.2026, Theodors ordregel ved 0 stjerner og minst 0,8 m surfehøyde
+    # (se docs/js/app.js zeroCause()): appen trenger å vite hva som faktisk
+    # trekker MEST - energifaktoren, vinden, tidevannet, de lokale reglene
+    # eller kappingen ved usikkert varsel/uenige kilder. Den vanlige
+    # bokføringen (faded_wind/faded_tide = det vinden og tidevannet tok av
+    # det som var IGJEN etter energifaktoren) egner seg ikke til det: med
+    # lite energi ville energien alltid "vinne" selv når vinden er det
+    # største problemet (fysikk-kontrollør 09.10.2026). Derfor ett eget,
+    # rent visningsfelt `zero_losses` der hver faktor måles ALENE mot
+    # potensialet FØR energifaktoren (vind/tidevann: min(potensial, straff)),
+    # energi = før − etter, lokale regler = det de faktisk tok av det som var
+    # igjen, kapping = det kappingen tok. Stjernene er uendret.
+    faded_cap = ((disagree_cap - 1) if disagree_cap is not None
+                 else (capped_from - 3) if capped_from is not None else 0)
+    potential_before_energy = potential
     if energy_factor_value < 0.999:
         potential = int(potential * energy_factor_value + 1e-9)
+    faded_energy = potential_before_energy - potential
 
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
     wt = wind_type(wind_dir, spot)
@@ -1353,8 +1369,16 @@ def rate(hour, spot):
     solid = potential - lost_wind - lost_tide
 
     local_extra_stars, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed)
+    solid_before_local = solid
     if local_extra_stars:
         solid = max(0, solid - local_extra_stars)
+    zero_losses = {
+        "energy": faded_energy,
+        "wind": min(potential_before_energy, wp),
+        "tide": min(potential_before_energy, tide_pen),
+        "local": solid_before_local - solid,
+        "cap": faded_cap,
+    }
     local_rules_source = None
     if spot.get("local_rules"):
         src = spot["local_rules"].get("source", "")
@@ -1377,6 +1401,8 @@ def rate(hour, spot):
         "faded": lost_wind + lost_tide,
         "faded_wind": lost_wind,
         "faded_tide": lost_tide,
+        # bare visning (hva som trekker mest ved 0 stjerner), se over
+        "zero_losses": zero_losses,
         "wind_type": wt,
         "height": None if h is None else round(h, 2),
         "height_source": source,

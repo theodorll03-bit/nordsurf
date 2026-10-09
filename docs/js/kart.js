@@ -437,9 +437,9 @@
   // (manglende tall er aldri flatt).
   function clusterInfo(items){
     // Ordene kommer fra ratingWord() i app.js (samme ord overalt, «Smått» inkludert).
-    // 0 stjerner: det høyeste ordet blant spotene (Grøtete > Smått > Flatt,
-    // samme rekkefølge som flatInfo i front.js), «ingen surf» hvis noen er
-    // blåst ut/treffer ikke/stormsjø.
+    // 0 stjerner: «smått» hvis alle er Flatt/Smått og minst én Smått, «flatt»
+    // hvis alle er Flatt (samme regel som flatInfo i front.js), ellers
+    // «ingen surf» (grøtete, blåst ut, treffer ikke, stormsjø ...).
     let best = 0, top = 0, missing = false;
     items.forEach(it=>{
       const h = hourOf(it.p.s, state.idx);

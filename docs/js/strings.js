@@ -25,11 +25,23 @@
     // etter surfehøyden - under 0,3 m «Flatt», 0,3 til under 0,8 m «Smått»,
     // 0,8 m eller mer «Grøtete». Bare visningsordet, aldri stjernene.
     wordSmall: "Smått",
+    // Fra 0,8 m (Theodors regel 09.10.2026, tredje runde): ordet følger det
+    // som faktisk trekker mest - se zeroWord() i app.js.
     wordMushy: "Grøtete",
+    wordTide: "Feil tidevann",
+    wordLittleSwell: "For lite svell",
+    wordNotNow: "Ikke surfbart nå",
     wordExplain: {
       "Smått": "Litt bølger, men for lite til en stjerne.",
       "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake og uten kraft.",
+      "Blåst ut": "Bølgene er der, men vinden ødelegger dem.",
+      "Feil tidevann": "Bølgene er der, men tidevannet passer ikke spoten nå.",
+      "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.",
     },
+    notNowCap: "Bølgene er der, men varselet er usikkert (kildene uenige eller ingen BarentsWatch), så ratingen er kappet – se regnestykket under.",
+    notNowLow: "Bølgene er der, men svellet gir for lite til en stjerne – se regnestykket under.",
+    localRuleExplain: (src, rest)=>`Ifølge ${src}: ${rest}`,
+    localEnergyExplain: (kj, full)=>`for lite svellenergi ute (${kj} kJ, full uttelling fra ${full} kJ).`,
     starsAria: (n, faded) => `${n} av 5 stjerner` + (faded ? `, ${faded} tapt på vind eller tidevann` : ""),
     whyRating: "Hvorfor denne ratingen? Trykk for forklaring",
     lostTo: (wind, tide) => {
@@ -67,7 +79,6 @@
     kjUnderOne: "under 1 kJ",
     flat:   { allDay: "Flatt hele døgnet", next: (n)=>`Flatt de neste ${n} timene`, rest: "Flatt resten av varselet" },
     small:  { allDay: "Smått hele døgnet", next: (n)=>`Smått de neste ${n} timene`, rest: "Smått resten av varselet" },
-    mushy:  { allDay: "Grøtete hele døgnet", next: (n)=>`Grøtete de neste ${n} timene`, rest: "Grøtete resten av varselet" },
     noSurf: { allDay: "Ingen surf hele døgnet", next: (n)=>`Ingen surf de neste ${n} timene`, rest: "Ingen surf resten av varselet" },
     kjEstimateSub: "anslag: svellet er ikke skilt ut, regnet fra totalhøyden",
     reports: "Rapporter fra andre",

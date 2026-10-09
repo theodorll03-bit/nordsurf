@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## Ny design «kart først» (09.10.2026, Theodors godkjente skisse) - BYGGET på gren `design/kart-forst`, PR åpen, IKKE merget - første versjon før finpuss
+## Ny design «kart først» (09.10.2026, Theodors godkjente skisse) - UTE: PR #3 merget til main 09.10.2026 kl. 21:07Z etter fire runder (Theodors ja etter runde 3)
 
 **Rammen holdt:** bare visning - `fetcher/test_display_only.py` passerer (rating-/hentefiler, spots.json og forecast.json byte for byte like main). Skissen (Main.dc.html, Desktop.dc.html, coast.json) ligger i docs/design/kart-forst/ som referanse; formatet er ikke kopiert, utseendet og oppførselen er gjenskapt i docs/.
 
@@ -66,6 +66,38 @@ Dagens varsel (forecast.json kl. 20, 0 stjerner med årsak flat/ingen, 949 timer
 **Fysikk-kontrollør, runde 4 (GODKJENT for koden):** grensene like i app.js, testens `word_of` og forklaringsteksten (nøyaktig 0,3 → Smått, nøyaktig 0,8 → Grøtete; testen dekker nå 0,29/0,3/0,79/0,8); ingen fysikk rørt; manglende surfehøyde fortsatt «–»; surfehøyde/Hs 1,6-2,3 for Grøtete-timene (rimelig). Småting rettet: ubrukt `isSmall()` fjernet, kommentar i `tileHeight`.
 - SPØR THEODOR (teksten er Theodors egen ordlyd, så ikke endret): «kort periode og lite energi» stemmer for alle 8 Grøtete-timer på «lite energi» (132-783 kJ, energifaktor 0,51-0,73), men «kort periode» bare for de 4 Unstad-timene (4-7 s). De 4 andre (Steinkrøssa 10.10 kl. 18Z 10,5 s; Farstadsanden 17.10 kl. 18Z 10,5 s, 18.10 kl. 00Z 11,3 s, 24.10 kl. 18Z 8,6 s) har 0 stjerner av vind/tidevann/Magnus sine regler/«kildene uenige», og der står notisen rett over linja «Periode 10 s (ute): god uttelling» i samme ark. Valg: (1) behold teksten, (2) «kort periode» bare under ca. 8 s, ellers «lite energi, eller vind, tidevann eller retning trekker ned», (3) en generell tekst («Bølgene er der, men for svake eller uryddige til en stjerne – se regnestykket under»).
 - Notert, lav: ordet regnes fra rå surfehøyde mens flisa viser avrundet (Tromvik 15.10 kl. 08Z: 0,78 m → «0,8 m» og «Smått»); avrundet sammenligning flytter grensen under 0,05 m - krever ja. «Høyeste ord vinner» i den kompakte grafen kan overdrive (én Grøtete-time blant 47 flate gir «Grøtete de neste 48 timene») - samme mønster som allerede godkjent for Smått; alternativ: ordet flest timer har.
+
+**Etter merge (09.10.2026):** sw.js-hashen var med i merge-commiten (b207c6cd9645) og er oppdatert igjen i commiten under. Den publiserte siden (GitHub Pages) kan IKKE nås fra skyøkten (github.io er blokkert i sandkassen, svar 000) - Theodor må åpne appen selv og se at kartet laster; installerte PWA-er får ny shell via sw.js-hashen.
+
+**Ordregel ved 0 stjerner, tredje runde (09.10.2026, Theodors svar på kontrollørens spørsmål) - egen commit på main etter merge:** fra 0,8 m surfehøyde (0 stjerner, årsak flat/ingen) følger ordet det som faktisk trekker mest, ikke én fast tekst:
+- periode under 9 s, eller energifaktoren er det største fradraget → «Grøtete» («Bølgene er der, men kort periode og lite energi gjør dem svake og uten kraft.»); kommer energigrensen fra en LOKAL regel (spot.local_rules.min_energy_kj) → «For lite svell», forklaringen nevner kilden («Ifølge Magnus, lokal surfer (Molde): for lite svellenergi ute (601 kJ, full uttelling fra 3 000 kJ).»)
+- vindstraffen størst → «Blåst ut» («Bølgene er der, men vinden ødelegger dem.» - MIN formulering, Theodor ga ingen); tidevannsstraffen størst → «Feil tidevann» («Bølgene er der, men tidevannet passer ikke spoten nå.»)
+- lokale regler størst → ordet etter regelen: linjen med «−» i local_rules.lines avgjør (Tidevann → «Feil tidevann», Vind → «Blåst ut»), forklaringen «Ifølge {kilde}: {regellinjen}»
+- ingen tydelig hovedårsak (alt 0, uavgjort mellom to årsaker, flere lokale linjer, eller kappingen ved usikkert varsel/uenige kilder er minst like stor som det største fradraget) → «Ikke surfbart nå» («Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.»)
+- Henteren (rating.py `rate()`) skriver ETT nytt, rent visningsfelt per time: `zero_losses` {energy, wind, tide, local, cap} - hver faktor målt ALENE mot potensialet FØR energifaktoren (vind/tidevann: min(potensial, straff); energi: før − etter; lokale regler: det de faktisk tok; kapping: det kappingen tok). Den vanlige bokføringen (faded_wind/faded_tide) egner seg ikke: den viser bare hva vind/tidevann tok av det som var IGJEN etter energifaktoren, så energi ville alltid «vunnet» på dager med lite energi (fysikk-kontrollørens funn, rettet). Stjerner, low_reason, breakdown, faded_* uendret (kontrolløren kjørte gammel og ny `rate()` på alle 1608 timer: identisk utenom det nye feltet; test_rating, test_pipeline, 15 faste observasjoner grønne). Appen (`zeroCause()` i app.js) regner ingen tall - bare sammenligner. Feltet finnes først i forecast.json når «Hent varsel» har kjørt igjen (trigget manuelt etter push); inntil da brukes faded_wind/faded_tide/local stars_lost, og energi/kapping teller som 0 (to Farstadsanden-timer viser da «Blåst ut»/«Ikke surfbart nå» i stedet for «For lite svell» i opptil ca. 3 timer).
+- «Ikke surfbart nå» har tre forklaringer (MINE formuleringer): kappingen størst («… varselet er usikkert (kildene uenige eller ingen BarentsWatch), så ratingen er kappet …»), alt 0 («… svellet gir for lite til en stjerne …»), ellers «… flere ting trekker ned uten én tydelig hovedårsak …».
+- Kompakt graf og klyngepil slår bare sammen «Flatt»/«Smått»; alt annet gir «Ingen surf» (`STR.mushy` fjernet).
+- Test: 18 tilfeller (grenser 0/0,29/0,3/0,5/0,79; periode 7 og 8,9; energi/vind/tidevann størst; lokal tidevann/vind/energi med Magnus som kilde; uavgjort; alt 0; kapp ≥ største; to lokale linjer; eldre forecast uten `zero_losses`) sjekkes i rating, lapp, liste og forklaringsnotisen; `word_of`/`zero_cause` i testen speiler app.js og brukes for alle lapper og klyngepila.
+
+**Fysikk-kontrollør (MÅ RETTES → rettet, se over; resten notert):**
+- RETTET (middels): «største fradrag» målt på restene etter energifaktoren ga skjevt ordvalg (energi vant alltid ved lite energi, og `int(potensial×f)` runder ned så 1 stjerne forsvinner ved enhver faktor under 1); `local_rules.stars_lost` var nominelt, ikke effektivt (kunne «vinne» uten å ha tatt noe). Nå `zero_losses` som over.
+- RETTET (lav): egne forklaringer når kappingen vinner og når alt er 0 (før sto «flere ting trekker ned» også der).
+- SPØR THEODOR (ikke endret): (1) Unstad har også `local_rules.min_energy_kj` (kilde «Observasjoner 26.09-05.10.2026», et kalibreringsgulv i gammel kJ-skala, ikke lokal kunnskap om at lite energi er dårlig) - energi-vinner der ville gitt «For lite svell» med «Ifølge Observasjoner …» som kilde, som tillegger observasjonene noe de ikke sier. Bør «For lite svell» med kilde bare gjelde navngitte personer (Magnus)? Ingen Unstad-time rammes i dag (alle har periode under 9 s). (2) Magnus sin strenge vindregel (over 4 m/s sidevind) gir ordet «Blåst ut» ved 5 m/s - Theodor ga bare ord for energi og tidevann blant lokale regler; «Blåst ut» er min tolkning (vind → vindordet), forklaringen sier «Ifølge Magnus, lokal surfer (Molde): vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) …». Et mildere ord? (3) «Grøtete» når energien vinner ved 9 s eller mer: forklaringen sier fortsatt «kort periode og lite energi» (Theodors tekst) selv om perioden ikke er kort.
+
+Dagens åtte timer (forecast.json kl. 20, `rate()` kjørt på nytt lokalt for å få `zero_losses` - veiledende, spot-posten i forecast.json mangler lært eksponering, så Farstadsanden 18.10 får 1 stjerne ved ny kjøring mot 0 lagret; «energi/vind/tidevann/lokal/kapp» = stjerner hver faktor tar alene):
+
+| Spot | Tid (UTC) | Surfehøyde | Periode | energi | vind | tidevann | lokal | kapp | Ord |
+|---|---|---|---|---|---|---|---|---|---|
+| Steinkrøssa | 10.10 kl. 18 | 0,82 m | 10,5 s | 1 | 1 | 0 | 0 | 2 | Ikke surfbart nå (kapping) |
+| Unstad | 11.10 kl. 06 | 1,00 m | 7,0 s | 1 | 0 | 0 | 0 | 0 | Grøtete |
+| Unstad | 11.10 kl. 07 | 1,03 m | 7,1 s | 1 | 0 | 0 | 0 | 0 | Grøtete |
+| Unstad | 14.10 kl. 13 | 1,85 m | 4,6 s | 1 | 0 | 0 | 0 | 0 | Grøtete |
+| Unstad | 14.10 kl. 23 | 1,43 m | 4,1 s | 1 | 1 | 0 | 0 | 0 | Grøtete |
+| Farstadsanden | 17.10 kl. 18 | 0,96 m | 10,5 s | 2 | 0 | 0 | 1 | 0 | For lite svell (Magnus) |
+| Farstadsanden | 18.10 kl. 00 | 1,36 m | 11,3 s | 2 | 0 | 0 | 1 | 0 | For lite svell (Magnus) |
+| Farstadsanden | 24.10 kl. 18 | 0,85 m | 8,6 s | 1 | 0 | 0 | 1 | 0 | Grøtete |
+
+Steinkrøssa 10.10: «kildene uenige» kappet 3 → 1 stjerne (2 tapt), energi og vind 1 hver - ingen av Theodors fire årsaker er størst, derfor «Ikke surfbart nå» med kappings-forklaringen (advarselen «kildene uenige» står uansett over). Unstad sine timer har også en lokal energigrense (kilde «Observasjoner 26.09-05.10.2026»), men perioden under 9 s avgjør først.
 
 
 ## Designrunde 1 (09.10.2026, Theodors oppdrag «Gjør Nordsurf proff på mobil og PC») - BYGGET på gren `design/runde-1`, PR åpen, IKKE merget

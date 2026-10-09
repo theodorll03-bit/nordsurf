@@ -119,12 +119,69 @@ function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; retu
 // «Grøtete» (bølgene er der, men kort periode og lite energi gjør dem svake).
 // Bare visningsordet - stjernene, low_reason og tallene er uendret. Blåst ut/
 // Treffer ikke/Stormsjø uendret. Samme ord overalt via ratingWord().
-const SMALL_SURF_MIN_M = 0.3, MUSHY_SURF_MIN_M = 0.8;
-const ZERO_WORDS = [STR.starWords[0], STR.wordSmall, STR.wordMushy];   // stigende: Flatt, Smått, Grøtete
+const SMALL_SURF_MIN_M = 0.3, MUSHY_SURF_MIN_M = 0.8, MUSHY_PERIOD_MAX_S = 9;
+const ZERO_WORDS = [STR.starWords[0], STR.wordSmall];   // «Flatt» < «Smått» - ordene den kompakte grafen/klyngepila slår sammen
+let _hourSpot = null;
+function spotOfHour(h){
+  // spoten en time-post hører til (samme objekt som i DATA) - til lokale regler
+  if(!_hourSpot || _hourSpot.data!==DATA){
+    const m = new WeakMap(); (DATA.spots||[]).forEach(s=>(s.hours||[]).forEach(x=>m.set(x, s)));
+    _hourSpot = {data: DATA, map: m};
+  }
+  return _hourSpot.map.get(h) || null;
+}
+// Fra 0,8 m (Theodors regel 09.10.2026, tredje runde): ordet følger det som
+// faktisk trekker MEST, fra henterens egen bokføring `zero_losses` (hver
+// faktor målt ALENE mot potensialet før energifaktoren - se rating.rate();
+// eldre forecast.json uten feltet: faded_wind/faded_tide/local stars_lost,
+// energi og kapping ukjent = 0). Bare visning, stjernene regnes ikke her:
+// - periode under 9 s, eller energifaktoren er det største fradraget: «Grøtete»
+//   (energigrense fra en LOKAL regel: «For lite svell», kilden nevnes)
+// - vindstraffen størst: «Blåst ut»; tidevannsstraffen størst: «Feil tidevann»
+// - lokale regler størst: ordet etter regelen (tidevann → «Feil tidevann»,
+//   vind → «Blåst ut»), forklaringen nevner kilden
+// - ingen tydelig hovedårsak (alt 0, uavgjort, eller kappingen ved
+//   usikkert varsel/uenige kilder er minst like stor): «Ikke surfbart nå»
+function zeroCause(h){
+  const per = h.period;
+  const mushy = {word: STR.wordMushy, explain: STR.wordExplain[STR.wordMushy]};
+  if(per!=null && per < MUSHY_PERIOD_MAX_S) return mushy;
+  const lr = h.local_rules || null, src = lr && lr.source ? lr.source : null;
+  const spot = spotOfHour(h);
+  const localEnergy = !!(spot && spot.local_rules && spot.local_rules.min_energy_kj);
+  const z = h.zero_losses || null;
+  const c = z ? {energy: z.energy||0, wind: z.wind||0, tide: z.tide||0, local: z.local||0}
+              : {energy: 0, wind: h.faded_wind||0, tide: h.faded_tide||0, local: lr ? (lr.stars_lost||0) : 0};
+  const cap = z ? (z.cap||0) : 0;
+  const max = Math.max(c.energy, c.wind, c.tide, c.local);
+  const winners = Object.keys(c).filter(k=>c[k]===max && max > 0);
+  const notNow = {word: STR.wordNotNow, explain: STR.wordExplain[STR.wordNotNow]};
+  if(max===0 && cap===0) return {word: STR.wordNotNow, explain: STR.notNowLow};
+  if(cap >= max) return {word: STR.wordNotNow, explain: STR.notNowCap};
+  if(winners.length!==1) return notNow;
+  const w = winners[0];
+  if(w==="energy"){
+    if(localEnergy && src){
+      const full = spot.local_rules.min_energy_kj.full, kj = h.energy_swell_kj!=null ? nf0.format(h.energy_swell_kj) : "–";
+      return {word: STR.wordLittleSwell, explain: STR.localRuleExplain(src, STR.localEnergyExplain(kj, nf0.format(full)))};
+    }
+    return mushy;
+  }
+  if(w==="wind") return {word: LOW_REASON_WORD.blown_out, explain: STR.wordExplain[LOW_REASON_WORD.blown_out]};
+  if(w==="tide") return {word: STR.wordTide, explain: STR.wordExplain[STR.wordTide]};
+  // lokale regler: linjene som faktisk trakk (inneholder «−»)
+  const pen = (lr.lines||[]).filter(l=>/−/.test(l));
+  if(pen.length!==1) return notNow;
+  const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
+  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: STR.localRuleExplain(src || "lokal regel", rest)};
+  if(/^Vind/.test(line)) return {word: LOW_REASON_WORD.blown_out, explain: STR.localRuleExplain(src || "lokal regel", rest)};
+  return notNow;
+}
 function zeroWord(h){
   // null når regelen ikke gjelder (stjerner, annen low_reason, eller tallet mangler)
   if(!h || h.stars || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return null;
-  return h.surf_height >= MUSHY_SURF_MIN_M ? STR.wordMushy : h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
+  if(h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).word;
+  return h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
 }
 function ratingWord(h){
   if(!h) return "–";
@@ -136,7 +193,10 @@ function ratingWord(h){
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }
 // Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
-function ratingWordExplain(h){ const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null; }
+function ratingWordExplain(h){
+  if(h && !h.stars && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).explain;
+  const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null;
+}
 function starsSVG(solid, faded, big){
   let out = "";
   for(let i=0;i<5;i++){
