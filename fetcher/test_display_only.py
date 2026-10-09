@@ -4,9 +4,10 @@ bekrefter at ingenting som lager tallene er endret på designgrenen:
 1. Filene som regner ratingen og henter data (fetcher/rating.py, fetch.py,
    sources.py, calibrate.py, exposure_learn.py, exposure.py, longrange.py,
    tide.py, sun.py, notify.py) og spots.json er BYTE FOR BYTE like filene på
-   main (origin/main, eller main lokalt). Går main videre mens grenen lever,
-   er det main-versjonen som gjelder - testen sammenligner alltid mot den
-   nyeste main den finner.
+   grenens felles utgangspunkt med main (merge-base mot origin/main, eller
+   main lokalt). Går main videre mens grenen lever (henteren pusher «Nytt
+   varsel» hver tredje time), er det fortsatt bare grenens EGNE endringer
+   som telles.
 2. docs/data/forecast.json er ikke rørt av designgrenen: fila er lik main
    sin (henteren skriver den, aldri designarbeidet).
 3. Tallene i ratingen er uendret: alle faste observasjoner (test_rating.py)
@@ -32,9 +33,14 @@ def git(*args):
 
 
 def main_ref():
+    # Sammenligner mot FELLES UTGANGSPUNKT (merge-base) med main, ikke main sin
+    # spiss: henteren pusher «Nytt varsel» (forecast.json) til main hver tredje
+    # time, og det skal ikke gjøre en designgren rød - spørsmålet er om GRENEN
+    # har rørt filene, ikke om main har gått videre (CI-rødt 09.10.2026, PR #3).
     for ref in ("origin/main", "main"):
         if git("rev-parse", "--verify", ref).returncode == 0:
-            return ref
+            mb = git("merge-base", "HEAD", ref)
+            return mb.stdout.strip() if mb.returncode == 0 and mb.stdout.strip() else ref
     return None
 
 
@@ -60,7 +66,7 @@ else:
         if a != b:
             bad.append(path)
     assert not bad, f"designgrenen har endret filer som lager tallene (skal være like {ref}): {bad}"
-    print(f"1-2: {len(RATING_FILES)} rating-/hentefiler og {len(DATA_FILES)} datafil(er) er byte for byte like {ref}")
+    print(f"1-2: {len(RATING_FILES)} rating-/hentefiler og {len(DATA_FILES)} datafil(er) er byte for byte like grenens utgangspunkt {ref[:12]}")
 
 # 3: faste observasjoner gir samme tall som før (fast tabell, uavhengig av test_rating.py)
 import backtest  # noqa: E402
