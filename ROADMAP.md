@@ -2,6 +2,119 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
+## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN, ingenting bygget, venter på Theodors ja
+
+Målet: flere hundre spots langs hele norskekysten, samme rating (urørt), samme kilder. Appen og henteren er i dag bygget for 8. Tallene under er målt 09.10.2026 (forecast.json kl. 21Z, Actions-kjøring nr. 147, måleworkflowen «Mål skalering», kjøring 1). Fysikk-kontrollør 09.10.2026: fire antakelser rettet før commit (Open-Meteo er to HTTP-kall per havpunkt; deling bare på API-ets eget rutenettpunkt per modell, ikke egen 0,25°-avrunding; kortere tidsavbrudd må måles først fordi et feilet GFS-kall endrer svellmodellen for dag 1-9; detaljfila er de 53 feltene appen faktisk leser, `breakdown` inkludert) - se STATUS.md. Rating, spots.json og henterens tall er ikke rørt - `fetcher/measure_scale.py` og `.github/workflows/measure_scale.yml` er bare måleverktøy.
+
+### 1. Dagens grenser, og hvor det går i stykker
+
+**Filstørrelse.** forecast.json er 3 354 KiB rå / 159 KiB gzip for 8 spots × 200 timer = 419 KiB rå / 19,8 KiB gzip per spot (2,1 KB per time, 67 felt, av dem 562 byte `breakdown`-tekst). GitHub Pages leverer gzip, så det er gzip-tallet mobilen laster - men nettleseren må parse hele rå-filen (3,4 MB i dag) før første visning.
+
+| Spots | forecast.json i dag-format, rå | gzip (det mobilen laster) | Første parse på mobil |
+|---|---|---|---|
+| 8 (i dag) | 3,4 MB | 159 KiB | ok |
+| 100 | 41 MB | 2,0 MB | 1-3 s på en middels telefon, 4G: ca. 2 s |
+| 300 | 123 MB | 5,8 MB | **går i stykker**: over GitHub sin 100 MB-grense per fil i git |
+| 500 | 205 MB | 9,7 MB | - |
+| 1000 | 409 MB | 19,4 MB | - |
+
+Grensene: (a) GitHub nekter filer over 100 MB - nås ved ca. 240 spots i dagens format; (b) git-historikken: henteren committer forecast.json 8 ganger i døgnet (i dag 3,4 MB × 8 = 27 MB rå per døgn, pakket mindre, men JSON med nye tall delta-komprimerer dårlig) - med 100 spots blir det ca. 330 MB rå per døgn inn i historikken, og repoet passerer GitHub sin anbefalte 1 GB på dager; (c) mobil: alt over ca. 1 MB gzip ved åpning er for tregt. Dagens ene fil tåler altså ikke engang 100 spots uten at historikken flyttes ut av git (se punkt 4 og 5).
+
+Andre filer som vokser per spot og per kjøring: `data/forecast_archive/` 5,6 KiB per spot per kjøring (500 spots: 22 MB per døgn i git - må ut av git), `data/bw_calibration.json` 1,9 KB per spot, `data/forecast_accuracy.json` 0,4 KB per spot, `spots.json` 3 KB per spot (mest kommentarer).
+
+**Kall per kilde.** Per spot per kjøring i dag: met.no 3 (hav spot, hav ute, vind), Open-Meteo 3 (`openmeteo_marine()` gjør TO HTTP-kall per havpunkt - GFS Wave og standardmodellen (sources.py:324/329) - pluss GFS-vind langtid; +2 for spots med `offshore_longrange`), BarentsWatch 2 (250 m, og 150 m som er RESERVEN når 250 m-punktet er tomt, fetch.py:532), Kartverket 1 = 9-11 HTTP-kall per spot, alle sekvensielt (`fetch.py` sin for-løkke, `sources._get` med 4 forsøk og pauser 4/10/20 s ved 429/5xx/tidsavbrudd). Per kjøring i dag: met.no 24, Open-Meteo 28, BarentsWatch 16 (+1 token), Kartverket 8, pluss GitHub (logger), ntfy og WW3 på thredds (budsjett 120 s). Open-Meteo teller i tillegg lange forespørsler (vi ber om 16 dager) som mer enn ett kall mot kvoten - bekreft vektingen mot Open-Meteo sin egen side før tallene under regnes som endelige.
+
+| Spots | met.no per kjøring / døgn | Open-Meteo per kjøring / døgn | BarentsWatch per kjøring / døgn | Kartverket per kjøring / døgn |
+|---|---|---|---|---|
+| 8 | 24 / 192 | 28 / 224 | 16 / 128 | 8 / 64 |
+| 100 | 300 / 2 400 | 350 / 2 800 | 200 / 1 600 | 100 / 800 |
+| 300 | 900 / 7 200 | 1 050 / 8 400 | 600 / 4 800 | 300 / 2 400 |
+| 500 | 1 500 / 12 000 | 1 750 / **14 000** | 1 000 / 8 000 | 500 / 4 000 |
+| 1000 | 3 000 / 24 000 | 3 500 / **28 000** | 2 000 / 16 000 | 1 000 / 8 000 |
+
+Kildenes vilkår (sjekket 09.10.2026):
+- **Open-Meteo** (gratis, ikke-kommersiell): under 10 000 kall per døgn, 5 000 per time, 600 per minutt; misbruk blokkeres uten varsel. **Går i stykker ved ca. 350 spots** i dagens opplegg (8 400/døgn ved 300, 14 000 ved 500) - og tidligere hvis 16-dagers forespørsler vektes som flere kall. Og 600/min betyr at parallelle jobber MÅ dele én takt (maks 10 kall/s samlet). Kilde: open-meteo.com/en/terms.
+- **met.no** (api.met.no): ingen tallfestet grense i vilkårene - «identifiser deg, unngå unødvendig trafikk, ikke overbelast»; 429 ved brudd, uformell terskel ca. 20 kall/s; krav om User-Agent med kontakt (har vi), cache til `Expires`, ikke mer enn 4 desimaler i koordinatene, spre planlagte kall tilfeldig i tid. 1 500 kall per kjøring er greit hvis de spres over minutter, ikke sekunder. Kilde: api.met.no/doc/TermsOfService.
+- **BarentsWatch** (bølgevarsel): NLOD-lisens, gratis med registrert klient (har vi), ingen formelle krav til last, men kreditering i appen er et krav («data via BarentsWatch»). Kilde: barentswatch.no/en/articles/api-terms-and-conditions.
+- **Kartverket** (vannstand/tidevann): ingen dokumentert grense funnet; CC BY 4.0 på dataene; spørsmål til tidevann@kartverket.no. Posisjonsoppslag beregnes fra tidevannssoner - spots i samme sone får samme svar, så kallene kan deles (punkt 5).
+
+**Kjøretid.** Henteren bruker i dag 11-18 minutter per kjøring for 8 spots (siste 12 kjøringer: 10:53-18:10, snitt ca. 13 min), altså 80-135 s per spot - men mesteparten er ikke per spot: WW3-annenmeningen har 120 s budsjett, treffsikkerhetsmålingen leser arkivet, og `_get` sine pauser slår inn når en kilde svarer 429/tidsavbrudd (sett i praksis for Open-Meteo). Rene regnedeler er små: `test_pipeline.py` kjører hele henteren uten nett på 2 s for 8 spots. MÅLT PER KALL (måleworkflowen «Mål skalering», kjøring 1, 09.10.2026 kl. 21:47-22:02 UTC):
+
+| Kilde | Kall per spot | Snitt svartid | Maks | Svar |
+|---|---|---|---|---|
+| met.no hav (spot) | 1 | 0,65 s | 0,74 s | 15 KB |
+| met.no hav (ute) | 1 | 0,54 s | 0,67 s | 15 KB |
+| met.no vind | 1 | 0,56 s | 0,66 s | 8 KB |
+| Open-Meteo svell (ute) | 1 | **45,7 s** | 105,5 s | 86 KB |
+| Open-Meteo GFS-vind | 1 | **25,2 s** | 49,8 s | 35 KB |
+| Open-Meteo svell (langtid-reserve) | 0-1 | **77,9 s** | 154,7 s | 86 KB |
+| Kartverket tidevann | 1 | 0,79 s | 0,83 s | 4 KB |
+| BarentsWatch (250 m) | 1 | 0,60 s | 1,20 s | 3 KB |
+| BarentsWatch (150 m) | 1 | 0,46 s | 0,47 s | 3 KB |
+
+Sum sekvensielt: **751 s for 8 spots = 94 s per spot**, hvorav ca. 90 s er Open-Meteo. Når Open-Meteo svarer, svarer det på 0,6-1,1 s; men i 9 av 18 funksjonskall (hvert «svell (ute)»-kall er to HTTP-kall, GFS Wave + standardmodell, så det er 9 av 28 HTTP-kall som hang, hvilke av de to vet målingen ikke) svarte det ikke før `TIMEOUT` (45 s), og `_get` ventet 4/10/20 s før nye forsøk (49,8 s = ett tidsavbrudd + 4 s pause + ett svar; 105 s = to tidsavbrudd; 155 s = tre). Ingen 429, ingen feil - kallene henger bare, fra GitHub sine delte IP-adresser. Det er forklaringen på dagens 11-18 min, ikke antall spots. Alle andre kilder til sammen: **4,1 s per spot** (met.no 1,75 s, Kartverket 0,8 s, BarentsWatch 1,1 s). Den parallelle delen av målingen rakk ikke å kjøre innenfor budsjettet på 15 min (måleworkflowen endte med tidsavbrudd, exit 124), fordi den sekvensielle delen alene tok 12,5 min - må kjøres på nytt med Open-Meteo skilt ut, se rekkefølgen under. Regnedelene: `test_pipeline.py` kjører hele henteren uten nett på 2 s for 8 spots (ca. 0,25 s per spot), så regning er ikke flaskehalsen.
+
+Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i stykker** mot GitHub Actions sin grense på 6 timer per jobb (ved ca. 230 spots), og mot kjøringen hver tredje time (ved ca. 115 spots). Selv med et friskt Open-Meteo (1,7 s per spot, 5,8 s totalt per spot) tar 500 spots sekvensielt 48 minutter, 100 spots 10 minutter - for tregt uten parallellisering. Actions-grenser (docs.github.com/en/actions/reference/limits): 6 t per jobb, 256 jobber per matrise, 20 samtidige jobber på gratisplanen, 2 000 minutter per måned for PRIVATE repo (vi bruker allerede ca. 3 000-4 000 min/måned - det går bare fordi repoet er offentlig, der standard-runnere er gratis; repoet MÅ forbli offentlig, eller planen må om).
+
+**Strakstiltak uavhengig av skalering (foreslås - rører ikke ratingen når det gjøres riktig, men MÅ måles først, se under):** Open-Meteo-hengingen koster 9 av dagens 13 minutter. Forslag: delt tidsavbrudd for Open-Meteo (`timeout=(5, 20)`: 5 s på oppkobling, 20 s på svar) med samme fire forsøk, og først etter at måleworkflowen (kjørt på nytt med Open-Meteo for seg) har vist hvor ofte ETT kall vs. alle fire forsøk feiler med kortere frist - for feiler GFS-kallet helt, faller dag 10-16 bort og dag 1-9 kommer fra standardmodellen i stedet (`primary = {}`), som endrer `swell_model` og høyden (lovlig etter grunnregelen, mangler blir None, men varselet endres). Kilderapporten må da si «GFS Wave feilet» per punkt. Gjenbruk av svar mellom spots BARE på identiske koordinater eller på rutenettpunktet Open-Meteo selv returnerer (`latitude`/`longitude` i svaret), per modell - IKKE på egen avrunding til 0,25°: standardmodellen har finere rutenett enn GFS Wave, og marine-API-et velger nærmeste sjøpunkt selv, så to spots i samme 0,25°-celle kan få ulikt standardsvell og ulikt skaleringsforhold i `ratio_blend_correction()`. Dette er også første byggesteg i punkt 5.
+
+### 2. Kart: MapLibre GL JS
+
+- **Bibliotek:** MapLibre GL JS **5.24.0** (siste i 5-serien, april 2026) fra cdnjs (`cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.js` + `.css`, samme versjonsmønster som 5.x-sidene der; må bekreftes ved bygging - cdnjs er ikke nåbar fra skyøkten) eller jsDelivr (`cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/`). IKKE 6.0.0 (juli 2026): bare ESM-modul og WebGL2 - ingen enkel `<script>`-fil, og eldre telefoner faller ut. Ca. 800 KB JS minifisert (ca. 230 KB gzip) - lastes én gang og precaches i sw.js, men hashen må da ikke inkludere en 800 KB fil fra nett; CDN-filen legges i `SHELL` med fast URL. Dette er en ny ekstern tjeneste i produksjon (CDN) - **krever Theodors ja** (fontene ble selvhostet av samme grunn; alternativ: legg 5.24.0 i `docs/vendor/` selvhostet, 800 KB i repoet, ingen CDN).
+- **Egen mørk stil** (style.json i docs/): hav #0A1822, land #15252E med strek #3B5866, samme tokens som i dag; rutenett som eget lag; ingen etiketter fra kartleverandør - navnene er våre spots.
+- **Kystlinje for hele Norge** som vektorkilde. Tre alternativer, i rekkefølge: (a) én GeoJSON-fil med Norges landpolygoner fra GSHHS full oppløsning, forenklet (Douglas-Peucker ca. 50 m), anslag 1-2 MB rå / 300-500 KB gzip, i precache - holder til zoom ca. 10 (1 km-detaljer); over det tynnes den synlig, så zoom begrenses til 11; (b) PMTiles (vektorfliser i én fil, HTTP range requests) laget fra Kartverket N250 kystkontur (CC BY 4.0) - skarpt til zoom 14, men GitHub Pages sin støtte for range requests må bekreftes først; (c) Kartverket sine rasterfliser (cache.kartverket.no) som valgfritt lag over vår stil ved zoom over 11 - ekstern tjeneste, krever ja. Anbefaling: (a) nå, (b) senere.
+- **Klynging:** MapLibre sin innebygde `cluster: true` på GeoJSON-kilden med `clusterProperties: {best: ["max", ["get","stars"]], favs: ["+", ["get","fav"]]}` - klyngen tegnes som sirkel i ratingfargen for beste rating, med antall; trykk zoomer inn (`getClusterExpansionZoom`). Klyngeradius ca. 44 px (trykkflate).
+- **Lapper:** symbol-lag med `text-field` navn + høyde/ord, `text-optional: true` (MapLibre sin kollisjonshåndtering fjerner lappen når det ikke er plass, prikken står), `symbol-sort-key` = −(fav×10 + stjerner) så favoritter og beste rating vinner plassen, favoritter med `text-allow-overlap: true` (alltid synlig). Dette ERSTATTER `layoutPills`/søket i kart.js og de tre faste utsnittene (Troms/Lofoten/Alle) - startutsnitt blir «der du er» eller favorittene, ellers hele kysten.
+- **Vind og svell som eget lag oppå:** vindlaget (150 streker, CSS-rotasjon) er allerede uavhengig av kartet og beholdes som HTML-lag over canvasen; svellkilen og bølgefrontene tegnes i et SVG-lag som følger valgt spot via `map.project()` på hver `move`/`zoom` (samme formler som i dag). Alternativ senere: MapLibre `CustomLayerInterface` (WebGL) for vind over hele kartet.
+- Kantpiler bare for favoritter (dagens `placeEdges`, begrenset til `fav`).
+- Tilgjengelighet som i dag: klynger og spots er også knapper i et skjult DOM-lag for skjermleser/tastatur (MapLibre sine symboler er ikke fokuserbare).
+
+### 3. Forside og liste
+
+- Forsiden viser tre korte lister i stedet for alle spots: **Beste nå** (topp 5 etter stjerner i dagslys de neste 48 t, hele landet eller valgt område), **Nær meg** (Geolocation API ved trykk, aldri automatisk; sortert etter avstand, 10 nærmeste; uten posisjon: velg område), **Favoritter** (fra localStorage/Supabase som i dag). «Beste neste 48 timer»-kortet blir «Beste nå».
+- **Søk** (navn, område, region - klientside over oversiktsfila, 500 spots er ingenting) og **filter** (område/region, minste rating, bare favoritter).
+- **Lista tegner bare det som synes:** faste radhøyder (60 px) + enkel vindusteknikk (render radene i synlig område ± 10, `IntersectionObserver`/scroll-posisjon) - 500 rader blir 25 DOM-noder. Minigrafen per rad (48 søyler) tegnes først når raden er synlig.
+- Kantpiler bare for favoritter.
+
+### 4. Data: én oversiktsfil + én detaljfil per spot
+
+- `docs/data/oversikt.json`: per spot `{id, n (navn), a (område), r (region), lat, lon, fav-uavhengig, now: {stars, word, h}, d: [beste stjerner per dag, 16], bw_until}` - **164 byte rå per spot**; 500 spots = 80 KiB rå, ca. 25-30 KiB gzip (anslag; gzip av ekte, ulike spots - ikke målt på 500 ekte). Lastes ved åpning, precaches ikke (nettverk først, cache som reserve).
+- `docs/data/spots/<id>.json`: dagens timer med nøyaktig de 53 feltene appen leser i dag (grep av `h.`-feltene i docs/js mot forecast.json: 14 av 67 felt leses aldri - `blown_out`, `breaking_height`, `bw_dir_raw`, `bw_file_source`, `bw_height_near`, `bw_source`, `dir_spot`, `energy_period_source`, `height_spot_model`, `likely_flat`, `spot_direction_offshore`, `spot_direction_overridden`, `swell_peak_period`, `turn` - de beholdes i henterens eget arkiv, ikke i appfila), uten `_`-kommentarer: **340 KiB rå / 16,9 KiB gzip per spot** med `breakdown`-teksten (trengs i «Hvorfor denne ratingen?»), 255 KiB rå / 13,2 KiB gzip uten. Hentes først når spoten åpnes (ca. 17 KiB gzip, 50-200 ms på 4G). 500 filer = ca. 8,5 MB gzip på disk i Pages, aldri lastet samlet. Slanking under 53 felt krever at appen endres samtidig - ikke i denne planen. Feltlista legges i henteren (én konstant) med en test som sjekker at hvert felt docs/js leser finnes i detaljfila, så ord og forklaringer aldri forsvinner stille.
+- **500 spots samlet:** oversikt ca. 30 KiB gzip ved åpning + 17 KiB per åpnet spot, mot 9,7 MB gzip i dag-formatet. Kartet trenger bare oversiktsfila.
+- Lista og kartet trenger ingen detaljfil; minigrafen i lista (48 søyler) kommer fra et lite `h48`-felt i oversikten (48 × 1 byte stjerner = ca. 60 byte gzip per spot) - 500 spots: +30 KiB. Alternativ: hent detaljfila først når raden er synlig.
+- Henteren skriver filene atomisk (alle eller ingen) og `oversikt.json` sist, slik at appen aldri ser en halv kjøring.
+
+### 5. Henteren: parallell, samlekall, gjenbruk
+
+- **Matrise i GitHub Actions:** én jobb per region (f.eks. 12 regioner: Østfold/Vestfold, Sørlandet, Jæren, Vestlandet sør, Vestlandet nord, Møre, Trøndelag, Helgeland, Salten/Lofoten, Vesterålen, Troms, Finnmark) med `strategy.matrix`, hver jobb henter sine spots med 4-6 tråder innenfor kildenes takt, og laster opp region-resultatet som artifact; en samlejobb (`needs: fetch`) slår sammen, regner treffsikkerhet, skriver oversikt + detaljfiler og publiserer. 12 jobber under 20 samtidige. Hvis Open-Meteo sin 600/min skal holdes, hentes GFS Wave/GFS-vind i ÉN forjobb for alle unike rutenettceller (sekvensielt, 3 kall/s) før matrisen, og deles som artifact.
+- **Samlekall:** Open-Meteo tar flere punkter i ett kall (`latitude=…,…&longitude=…,…`) - sparer HTTP-tid, men vilkårene teller trolig hvert punkt som ett kall mot døgngrensen (må bekreftes mot Open-Meteo før det regnes inn). met.no, BarentsWatch og Kartverket har ikke samlekall.
+- **Gjenbruk når spots deler modellpunkt - bare der det er fysisk det samme punktet:** Open-Meteo: deles per modell på rutenettpunktet API-et returnerer i svaret (GFS Wave 0,25°, ca. 28 × 10 km her - i dag ligger 8 havpunkt i 7 slike celler; standardmodellen er finere og deles sjeldnere), aldri på egen avrunding; med 500 spots langs en 2 500 km kyst anslagsvis 150-250 unike GFS-punkt og 300-450 standardpunkt (må telles mot den faktiske spot-lista). met.no hav (ute): oppløsningen bak Oceanforecast er IKKE bekreftet (STATUS.md sier det selv) - deles bare på identiske koordinater (4 desimaler, som vilkårene krever) til den er bekreftet; met.no vind er 1 km (lite deling). Havpunktene må uansett ligge i åpent hav innenfor vinduet per spot - deling er aldri en grunn til å flytte et havpunkt. Kartverket: deles bare på referansestedet API-et returnerer, eller identisk posisjon - IKKE på «30 km langs kysten», fase og amplitude skifter over kort avstand ved fjordmunninger og sund (Ullsfjorden mot ytterkysten, Saltstraumen), og tidevannet inngår i `faded_tide`/local_rules; anslag 100-200 kall for 500 spots. BarentsWatch: 250 m-punktet er per spot (ingen deling); 150 m-punktet er RESERVEN når 250 m-punktet er tomt - beholdes for de 8 spotsene som finnes, og for nye spots velges per spot om reserven trengs (uten den gir et tomt 250 m-punkt «mangler», lovlig etter grunnregelen, men teksten må si det) - 1-2 kall per spot.
+- **Respekt for vilkår:** én takt per kilde på tvers av jobber (Open-Meteo ≤ 3/s samlet, met.no ≤ 5/s samlet, BarentsWatch ≤ 5/s, Kartverket ≤ 2/s), tilfeldig startforskyvning per jobb (met.no ber om det), `If-Modified-Since`/`Expires` for met.no, User-Agent med kontakt (har vi), kreditering av BarentsWatch/met.no/Kartverket/Open-Meteo i appen (BarentsWatch og CC BY krever det).
+- **Forventet for 500 spots per kjøring:** met.no ca. 1 400 kall (500 vind + ca. 900 hav, lite deling før oppløsningen er bekreftet), Open-Meteo ca. 800 (ca. 200 GFS Wave-punkt + ca. 400 standardmodell-punkt + ca. 200 GFS-vind-punkt) = ca. 6 400/døgn ved 8 kjøringer - under 10 000, men marginen er tynn, og tynnere hvis 16-dagers forespørsler vektes som flere kall: reserve er å hente dag 10-16 (GFS Wave/GFS-vind) hver 6. time i stedet for hver 3. (halverer de to GFS-kallene: ca. 4 800/døgn); BarentsWatch 500-1 000; Kartverket 100-200. Sum ca. 2 800-3 400 kall per kjøring. Tid (regnet fra målte svartider): forjobb Open-Meteo ca. 800 kall à 1 s med 4 tråder, delt tidsavbrudd (5 s/20 s) og nye forsøk = 4-6 min (henger den som i dag, blir det 10-15 min - derfor eget budsjett og egen jobb, og den tryggeste reserven er forrige kjørings svar per punkt, merket i kilderapporten); matrisen: ca. 2 300 kall (met.no, BarentsWatch, Kartverket) à 0,5-0,8 s fordelt på 12 jobber med 4 tråder, holdt under 10 kall/s samlet = ca. 4 min; samlejobb 2-3 min; oppsett ca. 1 min per jobb = anslått **10-14 min veggtid** for 500 spots, mot 11-18 min for 8 i dag. Actions-minutter: 13 jobber × ca. 4 min × 8 kjøringer × 30 dager = ca. 12 500 min/måned - gratis bare i offentlig repo.
+- **Ut av git:** forecast_archive (22 MB/døgn ved 500 spots) og selve varselfilene committes ikke lenger - publiseres via `actions/deploy-pages` fra en artifact (Pages uten git-historikk), arkivet lagres som Actions-artifact med 30 dagers levetid eller i en egen `data`-gren som overskrives (force-push). Dette endrer hvordan siden publiseres - **krever Theodors ja**. Loggene (LOGS_REPO) er uberørt.
+- WW3-annenmeningen (thredds) og treffsikkerhetsmålingen begrenses til kalibrerte spots (status, punkt 6), ikke alle 500.
+
+### 6. spots.json: format som tåler hundrevis
+
+- Én fil per region: `spots/<region>.json` (f.eks. `spots/troms.json`), hver med `{"region": "Troms", "spots": [...]}`; `spots.json` i rota blir en indeks (`{"regions": ["ostfold", …]}`) så henterens matrise og appen leser samme liste. Kommentarfeltene (`_vindu`, `_havpunkt`, …, i dag 2/3 av filen) flyttes til `spots/notes/<id>.md` - de er dokumentasjon, ikke konfigurasjon.
+- Nye felt per spot: `region` (matrise-nøkkel), `area` (finnes), `status`: `kalibrert` (har observasjoner/kalibrering - vises med full tillit, får WW3-annenmening og treffsikkerhet), `forelopig` (lagt inn fra kart/kjennskap, ingen observasjon - vises med merkelapp «foreløpig» i appen; REN VISNING, rører ikke `confidence`, stjerner eller ord - skal merkelappen noen gang påvirke sikkerheten i prosent, krever det Theodors ja), `hemmelig` (vises ikke i offentlige lister/kart - men siden er statisk og offentlig, så ekte hemmelighold krever at hemmelige spots ligger i det private loggrepoet og hentes med innlogging (Supabase-auth finnes); i første omgang betyr `hemmelig` bare «utelatt fra oversiktsfila»). `source` (hvem la den inn, dato). Rating-feltene (facing, swell_window, offshore, barentswatch_point, exposure_override, local_rules …) er uendret.
+- Validering: `fetcher/test_spots.py` (nytt) sjekker at alle id-er er unike, at havpunkt har fri linje (check_spot.py), at region finnes, og at `status` er en av de tre.
+- Hvordan 500 spots faktisk skal legges inn (kilde: Theodors liste, surfeklubbenes spotlister, lokale surfere) er en egen oppgave; henteren og appen må tåle at det kommer gradvis.
+
+### 7. Ytelsestest
+
+- `docs/design/skalering/test500.html` med 500 oppdiktede spots langs kysten (fra kystlinja: hvert 5. km, tilfeldig rating per time) og `fetcher/test_scale_browser.py` (Playwright, mobil 390×844 med CPU-struping 4×): mål at kartet laster på under 2 s, at panorering/zoom holder minst 50 fps (requestAnimationFrame-avstander), at klyngene oppdateres på under 100 ms ved timebytte, og at vind- og svellanimasjonene går jevnt (ingen bilder over 33 ms i 5 s). Samme tidsgrenser som de andre nettlesertestene.
+
+### Rekkefølge, og hva som krever Theodors ja
+
+1. Ja/nei til: MapLibre fra CDN eller selvhostet; kystlinje-alternativ (a); publisering via Pages-artifact i stedet for git-commits; spots per region med `status`; «hemmelig» = utelatt fra oversikten i første omgang.
+2. Måleworkflowen kjøres på nytt med Open-Meteo for seg (ett HTTP-kall per rad, kort og lang frist, parallelt 4/8 tråder) før punkt 5 bygges - tallene for Open-Meteo over er anslag fra funksjonskall, ikke per HTTP-kall.
+3. Data og hentere først (punkt 4, 5, 6) med de 8 spotsene - appen får oversikt + detaljfiler, ingenting synlig endres. test_display_only skal passere (rating urørt).
+4. Kart med MapLibre, klynging, lapper (punkt 2) - egen gren, PR med skjermbilder, ikke merge før ja.
+5. Forside/liste (punkt 3).
+6. Ytelsestest med 500 oppdiktede spots (punkt 7) - før noen ekte spot nr. 9 legges inn.
+7. Første region med ekte, foreløpige spots (f.eks. Lofoten/Vesterålen), så resten.
+
 ## 0. Grøtfjord "Flatt" med 2 166 kJ ute (Theodor, 07.10.2026) - FERDIG, begge punkter på main
 Grøtfjord om ca. 10 dager: svell ute 2,3 m, 15 s, 2166 kJ, fra 271 grader (15 grader utenfor vinduet, bak Tromvik-halvøya), offshore 5 m/s. Appen viser "Flatt", 0,1 m.
 1. Ordet er feil: med 2166 kJ og 2,3 m svell ute er det ikke flatt. Når årsaken til lav høyde er retningen (svell ute utenfor vinduet med lav eksponering), og energien ute er høy, skal ordet være "Treffer ikke", ikke "Flatt". "Flatt" bare når energien ute også er lav. Rett i klassifiseringen og test. **FERDIG (main): `rating.classify_low_rating()`, test 23, 144 av 1608 timer i dagens varsel bytter ord (0 stjerner endret).**
