@@ -18,6 +18,18 @@
   const stars = (h)=> h ? (h.stars||0) : 0;
   const lightOf = (h)=> window.Kart ? Kart.lightOf(h) : (h && h.light) || null;   // null = ukjent, aldri "dag"
   const lightWord = (l)=> l==="mørkt" ? "Mørkt" : l==="skumring" ? "Skumring" : l==="dag" ? "Dagslys" : "–";
+  const tileHeight = (h)=>{
+    // Flisa: "1,3–1,7 m" (kort form, får alltid plass). Ordet («Flatt»,
+    // «Treffer ikke» ...) når surfehøyden er 0 eller low_reason mangler tall -
+    // "–" betyr at tallet MANGLER (Theodors punkt 6). 0 stjerner med reell
+    // høyde viser tallet (ratinglinja sier da ordet).
+    if(!h) return "–";
+    if(h.low_reason){ const m = heightMForDisplay(h); return m!=null ? `${nf1.format(m)} m` : ratingWord(h); }
+    if(h.surf_height==null) return "–";
+    if(h.surf_height<=0) return STR.starWords[0];
+    const a = nf1.format(h.surf_height), b = h.surf_height_sets!=null ? nf1.format(h.surf_height_sets) : null;
+    return b!=null && b!==a ? `${a}–${b} m` : `${a} m`;
+  };
   const markLabel = (h)=> stars(h) >= 1 && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : ratingWord(h);
   const markAria = (s, h)=> `${s.name}, ${stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h)}`;
   const timeText = (i)=>{ const t = T(i); return t ? `${cap(relDay(t))} ${fmtHour.format(t)}:00` : ""; };
@@ -39,7 +51,8 @@
     let coast = window.__COAST__;
     if(!coast){ try{ coast = await (await fetch("geo/coast.json",{cache:"force-cache"})).json(); }catch(e){ coast = null; } }
     if(coast){
-      Kart.init($("#kart"), data, coast, { onPick: (id)=>openSpot(id), hourOf: hourAt, labelOf: markLabel, ariaOf: markAria });
+      Kart.init($("#kart"), data, coast, { onPick: (id)=>openSpot(id), hourOf: hourAt, labelOf: markLabel, ariaOf: markAria,
+        onCluster: ()=>{ S.view = "alle"; S.spotId = null; S.mode = isDesktop() ? "list" : "peek"; renderAll(); } });
       coastReady = true;
     }
     $("#loading").hidden = true;
@@ -81,13 +94,15 @@
   function layout(animate){
     if(!coastReady) return;
     const W = window.innerWidth, H = window.innerHeight;
+    const topBar = $(".top-bar").getBoundingClientRect();
     if(isDesktop()){
       Kart.setArea({x:0, y:0, w: W - 420 - 32, h: H}, animate);
     } else {
       const y = sheetY();
       $("#ark").style.setProperty("--sheet-y", y+"px");
       const visBottom = 110 + y;
-      Kart.setArea({x:0, y:96, w: W, h: Math.max(120, visBottom - 96)}, animate);
+      const top = Math.round(topBar.bottom) + 8;   // under topplinja (merke, knapper, regionvalg)
+      Kart.setArea({x:0, y: top, w: W, h: Math.max(120, visBottom - top)}, animate);
     }
   }
 
@@ -284,18 +299,41 @@
       <line class="facing" x1="0" y1="0" x2="${f[0].toFixed(1)}" y2="${f[1].toFixed(1)}"/>
       <g transform="rotate(${sd==null?0:sd})">${arcs}</g>${wind}<circle class="c" r="3"/></svg>`;
   }
+  function flatInfo(win, start, total){
+    // Er alle timene i grafen 0 stjerner: kompakt visning med «Flatt de neste
+    // X timene» (bare når alle er EKTE flate) eller «Ingen surf ...» - samme
+    // regel som grafen i designrunde 1 (manglende tall er ikke flatt).
+    if(!win.length || win.some(x=>(x.stars||0) > 0)) return null;
+    let allFlat = true;
+    for(const x of win){ if(x.surf_height==null && !x.low_reason) return null; if(!(x.low_reason==="flat" || (!x.low_reason && x.surf_height<=0))) allFlat = false; }
+    const T = allFlat ? STR.flat : STR.noSurf;
+    const n = win.length;
+    if(start + n >= total) return T.rest;
+    return n >= 48 ? T.next(n) : T.allDay;
+  }
   function barsHtml(s){
     const start = S.idx < S.w0 + 40 ? S.w0 : Math.max(S.w0, S.idx - 8);
     const win = s.hours.slice(start, start + 48);
+    const flat = flatInfo(win, start, s.hours.length);
+    if(flat){
+      let lastDay = null;
+      return `<span class="flat-lbl">${esc(flat)}</span>` + win.map((x,k)=>{
+        const i = start + k, d = new Date(x.t), dk = dayKey(d), newDay = dk!==lastDay; lastDay = dk;
+        return `<button type="button" class="hbar flat${i===S.idx?" sel":""}" data-i="${i}" aria-label="${esc(cap(relDay(d)))} ${fmtHour.format(d)}:00, ${esc(ratingWord(x))}"><span class="b" style="height:3px;--rc:rgba(234,242,244,.22)"></span>${newDay ? `<span class="d">${esc(relDay(d))}</span>` : ""}</button>`;
+      }).join("");
+    }
     const maxS = Math.max(2, ...win.map(x=>x.surf_height_sets || x.surf_height || 0));
     let lastDay = null;
     return win.map((x,k)=>{
       const i = start + k, s2 = stars(x), m = heightMForDisplay(x);
+      // Mangler tallet helt (ingen surfehøyde, ingen low_reason): INGEN søyle,
+      // bare en stiplet «mangler»-markør - aldri en strek som ser ut som flatt.
+      const missing = m==null && !x.low_reason;
       const bh = m ? Math.max(3, Math.round(m / maxS * 80)) : 3, th = x.surf_height_sets ? Math.round(x.surf_height_sets / maxS * 80) : 0;
       const d = new Date(x.t), dk = dayKey(d), newDay = dk!==lastDay; lastDay = dk;
       const l = lightOf(x);
-      return `<button type="button" class="hbar${l==="mørkt"?" night":l==="skumring"?" dusk":""}${i===S.idx?" sel":""} r-${s2}" data-i="${i}" aria-label="${esc(cap(relDay(d)))} ${fmtHour.format(d)}:00, ${esc(x.stars ? STR.starsAria(x.stars, x.faded) : ratingWord(x))}${heightRangeText(x)?", "+esc(heightRangeText(x)):""}" title="${esc(tipHtml(x).replace(/<[^>]+>/g," "))}">
-        <span class="b" style="height:${bh}px;${s2?"":"--rc:rgba(234,242,244,.22)"};animation-delay:${k*14}ms"></span>
+      return `<button type="button" class="hbar${l==="mørkt"?" night":l==="skumring"?" dusk":""}${i===S.idx?" sel":""}${missing?" miss":""} r-${s2}" data-i="${i}" aria-label="${esc(cap(relDay(d)))} ${fmtHour.format(d)}:00, ${missing ? "mangler data" : esc(x.stars ? STR.starsAria(x.stars, x.faded) : ratingWord(x))}${heightRangeText(x)?", "+esc(heightRangeText(x)):""}" title="${esc(tipHtml(x).replace(/<[^>]+>/g," "))}">
+        ${missing ? `<span class="miss-mk" aria-hidden="true"></span>` : `<span class="b" style="height:${bh}px;${s2?"":"--rc:rgba(234,242,244,.22)"};animation-delay:${k*14}ms"></span>`}
         ${th ? `<span class="tk" style="bottom:${th}px"></span>` : ""}
         ${newDay ? `<span class="d">${esc(relDay(d))}</span>` : ""}</button>`;
     }).join("");
@@ -310,7 +348,7 @@
       // avspilling/glidebryter: oppdater bare tallene, ikke hele arket
       root.querySelector(".spot-head .s").textContent = `${s.area||""} · ${timeText(S.idx)} · ${lightWord(lightOf(h)).toLowerCase()}`;
       root.querySelector(".rating-line").innerHTML = ratingLine(h);
-      root.querySelector("#tHeight .v").textContent = heightRangeText(h) || "–";
+      root.querySelector("#tHeight .v").textContent = tileHeight(h);
       root.querySelector("#tPeriod .v").textContent = h && h.period!=null ? `${nf0.format(h.period)} s` : "–";
       root.querySelector("#tKj .v").textContent = kjText(h) || "–";
       root.querySelector("#tKjSmall").textContent = kjText(h) || "–";
@@ -325,11 +363,11 @@
     root.innerHTML = `
       <div class="spot-head rise">
         <div><div class="n">${esc(s.name)}</div><div class="s">${esc(s.area||"")} · ${esc(timeText(S.idx))} · ${esc(lightWord(lightOf(h)).toLowerCase())}</div></div>
-        <div class="spot-tools">${favBtnHtml(s.id, false)}<button type="button" class="close" id="closeSpot" aria-label="Lukk spot"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+        <div class="spot-tools">${favBtnHtml(s.id, false)}<button type="button" class="btn ghost pc-only" id="logBtn">${esc(STR.log)}</button><button type="button" class="close" id="closeSpot" aria-label="Lukk spot"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
       </div>
       <button type="button" class="now rise" id="bdOpen" aria-label="${esc(STR.whyRating)}" style="animation-delay:60ms"><span class="rating-line">${ratingLine(h)}</span></button>
       <div class="tiles rise" style="animation-delay:110ms">
-        <button type="button" class="tile" id="tHeight" data-explain="surf_height"><span class="k">Surfehøyde</span><span class="v">${esc(heightRangeText(h) || "–")}</span></button>
+        <button type="button" class="tile" id="tHeight" data-explain="surf_height"><span class="k">Surfehøyde</span><span class="v">${esc(tileHeight(h))}</span></button>
         <button type="button" class="tile" id="tPeriod" data-explain="period"><span class="k"><span class="pc-hide">Periode · energi</span><span class="pc-only">Periode</span></span><span class="v">${h && h.period!=null ? `${nf0.format(h.period)} s` : "–"}</span><span class="s pc-hide" id="tKjSmall">${esc(kjText(h) || "–")}</span></button>
         <button type="button" class="tile pc-only" id="tKj" data-explain="energy"><span class="k">Energi</span><span class="v">${esc(kjText(h) || "–")}</span></button>
       </div>
@@ -337,14 +375,15 @@
       ${notice ? `<button type="button" class="notice${notice.warn?"":" info"} rise" data-explain="${notice.key}"><span class="t">${esc(notice.text)}</span><span class="chev" aria-hidden="true">›</span></button>` : ""}
       <div class="rise" style="animation-delay:210ms">
         <div class="bars-head"><span>Neste 48 timer</span><small>Trykk for å velge time</small></div>
-        <div class="bars" id="bars">${barsHtml(s)}</div>
+        <div class="bars${flatInfo(s.hours.slice(S.idx < S.w0 + 40 ? S.w0 : Math.max(S.w0, S.idx - 8), (S.idx < S.w0 + 40 ? S.w0 : Math.max(S.w0, S.idx - 8)) + 48), S.idx < S.w0 + 40 ? S.w0 : Math.max(S.w0, S.idx - 8)) ? " compact" : ""}" id="bars">${barsHtml(s)}</div>
       </div>
       ${info && info.offMap ? `<div class="note">Ligger utenfor kartutsnittet. Kartet viser Nord-Norge.</div>` : ""}
-      <div class="spot-tools"><button type="button" class="btn ghost" id="logBtn">${esc(STR.log)}</button></div>
+      <div class="spot-tools pc-hide"><button type="button" class="btn ghost" id="logBtnBottom">${esc(STR.log)}</button></div>
       <details class="details" id="details"><summary>${esc(STR.details)}<span class="chev" aria-hidden="true">⌄</span></summary>${detailsGrid(s, h, t)}</details>`;
     $("#closeSpot").onclick = closeSpot;
     $("#bdOpen").onclick = ()=> h && openBreakdown(h);
     $("#logBtn").onclick = ()=> openSheet(s.id, t);
+    $("#logBtnBottom").onclick = ()=> openSheet(s.id, t);
     root.querySelectorAll(".hbar").forEach(b=>b.onclick = ()=>setIdx(+b.dataset.i));
     wireFavButtons();
     if(window.wireExplain) wireExplain(root, h, s);

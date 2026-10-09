@@ -24,6 +24,9 @@
   let state = { view:"nord", spotId:null, idx:0, area:{x:0,y:0,w:390,h:844}, sheetMode:"peek" };
   let cur = { cx:0, cy:0, sc:1 };
   let onPick = ()=>{};
+  let onCluster = ()=>{};
+  let clusters = [];   // klyngepiler («N spots») - farges på nytt ved hvert timebytte
+  let crisp = false;   // true når kartet står stille og SVG-en er tegnet skarpt via viewBox
   let hourOf = (spot, idx)=>spot.hours[idx];
   let labelOf = (h)=>"";
   let ariaOf = (spot, h)=>spot.name;
@@ -45,6 +48,7 @@
   function init(el, data, coastJson, opts){
     root = el; coast = coastJson; proj = makeProj(coast);
     onPick = opts.onPick || onPick;
+    onCluster = opts.onCluster || onCluster;
     hourOf = opts.hourOf || hourOf;
     labelOf = opts.labelOf || labelOf;
     ariaOf = opts.ariaOf || ariaOf;
@@ -71,6 +75,13 @@
     windLayer = root.querySelector("#windLayer"); windSvg = root.querySelector("#windSvg");
     night = root.querySelector("#nightLayer"); markersEl = root.querySelector("#markersLayer");
     drawGrid(); makeWind(); buildMarkers();
+    // Etter at zoom-animasjonen er ferdig: tegn kartet skarpt på nytt (viewBox
+    // i stedet for CSS-skalering - Theodors punkt 5, 09.10.2026).
+    mapLayer.addEventListener("transitionend", (e)=>{ if(e.target===mapLayer && e.propertyName==="transform") crispen(); });
+  }
+  function hexMix(a, b, t){
+    const pa = [1,3,5].map(i=>parseInt(a.slice(i,i+2),16)), pb = [1,3,5].map(i=>parseInt(b.slice(i,i+2),16));
+    return "#" + pa.map((v,i)=>Math.round(v + (pb[i]-v)*t).toString(16).padStart(2,"0")).join("");
   }
 
   function drawGrid(){
@@ -123,7 +134,13 @@
   }
   function setNight(h){
     const light = lightOf(h);
-    night.style.opacity = light==="mørkt" ? ".42" : light==="skumring" ? ".2" : "0";
+    const o = light==="mørkt" ? 0.42 : light==="skumring" ? 0.2 : 0;
+    night.style.opacity = String(o);
+    // nattlaget mørkner alt likt - løft landet tilsvarende, så det alltid
+    // ligger tydelig lysere enn havet (skissen: land #15252E, hav #0A1822)
+    const coastPath = svg.querySelector(".coast");
+    coastPath.style.fill = hexMix("#15252E", "#2E4A59", o);
+    coastPath.style.stroke = hexMix("#3B5866", "#5E8597", o);
   }
 
   /* ---------- utsnitt ---------- */
@@ -145,12 +162,46 @@
     if(view==="alle") return fit(on, padW);
     return fit(nord.length ? nord : on, padW);
   }
+  let prevT = null;  // forrige CSS-transform (translate/scale) - utgangspunkt for neste animasjon
+  function cssTransform(){
+    const a = state.area, ox = a.x + a.w/2, oy = a.y + a.h/2;
+    return { tx: ox - cur.cx*cur.sc, ty: oy - cur.cy*cur.sc, sc: cur.sc };
+  }
+  function uncrispen(){
+    // tilbake til CSS-transform-modus (full 1000×844-SVG) uten overgang
+    if(!crisp) return;
+    crisp = false;
+    svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`); svg.setAttribute("width", VW); svg.setAttribute("height", VH);
+    mapLayer.style.width = VW+"px"; mapLayer.style.height = VH+"px";
+    mapLayer.style.transition = "none";
+    const t = prevT || cssTransform();
+    mapLayer.style.transform = `translate(${t.tx.toFixed(1)}px, ${t.ty.toFixed(1)}px) scale(${t.sc.toFixed(4)})`;
+    void mapLayer.offsetWidth;  // tving ny layout før overgangen settes
+  }
+  function crispen(){
+    // skarp tegning: SVG-en dekker hele scenen 1:1, utsnittet ligger i viewBox
+    const t = cssTransform();
+    const W = root.clientWidth || window.innerWidth, H = root.clientHeight || window.innerHeight;
+    crisp = true;
+    mapLayer.style.transition = "none";
+    mapLayer.style.transform = "none";
+    mapLayer.style.width = W+"px"; mapLayer.style.height = H+"px";
+    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    svg.setAttribute("viewBox", `${(-t.tx/t.sc).toFixed(3)} ${(-t.ty/t.sc).toFixed(3)} ${(W/t.sc).toFixed(3)} ${(H/t.sc).toFixed(3)}`);
+  }
+  const reduced = ()=> matchMedia("(prefers-reduced-motion: reduce)").matches;
   function applyTransform(animate){
-    const a = state.area;
-    const ox = a.x + a.w/2, oy = a.y + a.h/2;
-    mapLayer.style.transition = animate ? `transform 1s ${EASE}` : "none";
-    mapLayer.style.transform = `translate(${(ox - cur.cx*cur.sc).toFixed(1)}px, ${(oy - cur.cy*cur.sc).toFixed(1)}px) scale(${cur.sc.toFixed(4)})`;
-    placeMarkers(animate);
+    const t = cssTransform();
+    const same = prevT && Math.abs(prevT.tx-t.tx) < 0.5 && Math.abs(prevT.ty-t.ty) < 0.5 && Math.abs(prevT.sc-t.sc) < 1e-4;
+    if(animate && !reduced() && !same){
+      uncrispen();
+      mapLayer.style.transition = `transform 1s ${EASE}`;
+      mapLayer.style.transform = `translate(${t.tx.toFixed(1)}px, ${t.ty.toFixed(1)}px) scale(${t.sc.toFixed(4)})`;
+    } else {
+      prevT = t; crispen();
+    }
+    prevT = t;
+    placeMarkers(animate && !reduced());
   }
   function setArea(area, animate){ state.area = area; recenter(animate); }
   function setView(view, animate){ state.view = view; recenter(animate); }
@@ -166,7 +217,7 @@
   function buildMarkers(){
     markersEl.innerHTML = spots.map(p=>`
       <button type="button" class="mk" data-id="${p.id}" aria-label="">
-        <span class="mk-dot-wrap"><span class="rip"></span><span class="rip rip2"></span><span class="mk-dot"></span></span>
+        <span class="mk-dot-wrap"><span class="rip"></span><span class="rip rip2"></span><span class="mk-dot"></span><span class="lead" hidden></span></span>
         <span class="mk-pill"><span class="mk-name">${esc(p.name)}</span><span class="mk-label"></span></span>
       </button>
       <button type="button" class="mk-edge" data-id="${p.id}" aria-label="" hidden>
@@ -175,52 +226,182 @@
       </button>`).join("");
     markersEl.querySelectorAll(".mk, .mk-edge").forEach(b=>b.onclick = ()=>onPick(b.dataset.id));
   }
+  const PH = 30, GAP = 15;     // pillens høyde, avstand prikksentrum -> pillekant (prikk 5,5 + luft)
+  function pillWidth(mk){ return 30 + mk.querySelector(".mk-name").textContent.length*7.4 + mk.querySelector(".mk-label").textContent.length*7.2; }
+  function obstacles(){
+    // områder kantpiler aldri skal ligge i: topplinjas knapper/regionvalg og fargeforklaringen
+    const out = [];
+    document.querySelectorAll(".top-bar .icon-btn, .top-bar .seg, .top-bar .brand, .legend").forEach(el=>{
+      const r = el.getBoundingClientRect(); if(r.width && r.height && getComputedStyle(el).display!=="none") out.push({x:r.left-8, y:r.top-8, w:r.width+16, h:r.height+16});
+    });
+    return out;
+  }
+  const hitRect = (r, list)=> list.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
+  function layoutPills(){
+    // Lappen står rett ved prikken (høyre side, eller venstre nær høyre kant);
+    // ligger to lapper oppå hverandre, flyttes den ene til motsatt side eller
+    // litt opp/ned (aldri mer enn 24 px - prikk og lapp skal alltid henge
+    // sammen, under 12 px mellom dem), og først ved 24 px tegnes en kort
+    // tynn strek fra prikk til lapp. Et lite søk finner en plassering uten
+    // konflikt for ALLE lappene samlet (andre spots sine prikker er også
+    // hindre), i stedet for å plassere én og én (Theodors punkt 1, 09.10.2026).
+    const a = state.area;
+    const mks = [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside).sort((m1,m2)=>m1._sy-m2._sy);
+    const dots = mks.map(m=>({x: m._sx-6, y: m._sy-6, w: 12, h: 12}));
+    const cands = mks.map(mk=>{
+      const w = pillWidth(mk);
+      const preferLeft = mk._sx > a.x + a.w*0.62;
+      const sides = preferLeft ? ["left","right"] : ["right","left"];
+      const out = [];
+      for(const dy of [0, -14, 14, -24, 24]) for(const side of sides){
+        const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w;
+        if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
+        out.push({side, dy, lead: Math.abs(dy) >= 24, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+      }
+      if(!out.length){ const side = sides[0]; const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w; out.push({side, dy:0, lead:false, r:{x, y: mk._sy - PH/2, w, h: PH}}); }
+      return out;
+    });
+    // dybde-først-søk med tak på antall forsøk; ellers beste greske løsning
+    const chosen = new Array(mks.length).fill(null);
+    let nodes = 0;
+    const ok = (i, c)=>{
+      const others = dots.filter((_,j)=>j!==i);
+      if(hitRect(c.r, others)) return false;
+      for(let j=0;j<i;j++) if(chosen[j] && hitRect(c.r, [chosen[j].r])) return false;
+      return true;
+    };
+    const dfs = (i)=>{
+      if(i === mks.length) return true;
+      for(const c of cands[i]){
+        if(++nodes > 20000) return false;
+        if(!ok(i, c)){ continue; }
+        chosen[i] = c;
+        if(dfs(i+1)) return true;
+        chosen[i] = null;
+      }
+      return false;
+    };
+    if(!dfs(0)){
+      // ingen konfliktfri løsning (svært tett) - ta den første som ikke
+      // krasjer med allerede valgte, ellers den første kandidaten
+      for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i,c)) || cands[i][0];
+    }
+    mks.forEach((mk, i)=>{
+      const c = chosen[i];
+      mk.classList.toggle("left", c.side==="left");
+      mk.style.setProperty("--ly", c.dy+"px");
+      const lead = mk.querySelector(".lead");
+      if(c.lead){
+        const px = c.side==="right" ? GAP - 2 : -(GAP - 2), py = c.dy;
+        const L = Math.hypot(px, py), ang = Math.atan2(py, px)*180/Math.PI;
+        lead.hidden = false; lead.style.width = L.toFixed(1)+"px"; lead.style.transform = `rotate(${ang.toFixed(1)}deg)`;
+      } else lead.hidden = true;
+    });
+  }
   function placeMarkers(animate){
     const a = state.area;
     const ox = a.x + a.w/2, oy = a.y + a.h/2;
-    const placed = [];
+    const hideAll = state.sheetMode==="list";
+    const outs = [];
     spots.forEach(p=>{
       const mk = markersEl.querySelector(`.mk[data-id="${p.id}"]`);
-      const ed = markersEl.querySelector(`.mk-edge[data-id="${p.id}"]`);
       const sx = ox + (p.x - cur.cx)*cur.sc, sy = oy + (p.y - cur.cy)*cur.sc;
       const inside = !p.offMap && sx >= a.x+12 && sx <= a.x+a.w-12 && sy >= a.y+12 && sy <= a.y+a.h-12;
-      const hideAll = state.sheetMode==="list";
       mk.hidden = hideAll || !inside;
       mk.style.transition = animate ? `transform 1s ${EASE}` : "none";
       mk.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0)`;
-      const showEdge = !hideAll && !inside && state.sheetMode!=="spot";
-      ed.hidden = !showEdge;
-      if(showEdge){
-        // utenfor skjermen (eller utenfor kartet): pil i kanten som peker dit
-        let ex = Math.max(a.x+70, Math.min(a.x+a.w-70, sx)), ey = Math.max(a.y+112, Math.min(a.y+a.h-40, sy));
-        if(p.offMap){ ex = a.x+a.w-100; ey = a.y+a.h-44; }
-        while(placed.some(q=>Math.abs(q.x-ex) < 150 && Math.abs(q.y-ey) < 38)) ey -= 40;
-        placed.push({x:ex, y:ey});
-        const ang = p.offMap ? 135 : Math.atan2(sy-ey, sx-ex)*180/Math.PI;
+      mk._sx = sx; mk._sy = sy; mk._inside = inside && !hideAll;
+      if(!inside && !hideAll && state.sheetMode!=="spot") outs.push({p, sx, sy});
+    });
+    layoutPills();
+    placeEdges(outs, animate);
+  }
+  function placeEdges(outs, animate){
+    // Spots utenfor skjermen: pil i kanten som peker dit. Flere enn to i
+    // omtrent samme retning slås sammen til én pil («6 spots», beste rating
+    // som farge) - trykk zoomer ut. Aldri i topplinja eller bak forklaringen.
+    const a = state.area, ox = a.x + a.w/2, oy = a.y + a.h/2;
+    markersEl.querySelectorAll(".mk-edge").forEach(e=>{ e.hidden = true; });
+    markersEl.querySelectorAll(".mk-edge.cluster").forEach(e=>e.remove());
+    clusters = [];
+    const items = outs.map(o=>{
+      const ang = o.p.offMap ? 215 : (Math.atan2(o.sy-oy, o.sx-ox)*180/Math.PI + 360) % 360;   // utenfor kartet: sørvest
+      return {...o, ang};
+    }).sort((u,v)=>u.ang-v.ang);
+    // grupper etter retning (innenfor 30 grader)
+    const groups = [];
+    items.forEach(it=>{
+      const g = groups.find(gr=> Math.abs(((it.ang - gr.ang + 540) % 360) - 180) < 30);
+      if(g){ g.items.push(it); g.ang = (g.ang*(g.items.length-1) + it.ang)/g.items.length; } else groups.push({ang: it.ang, items:[it]});
+    });
+    const obs = obstacles(); const placed = [];
+    const findSpot = (ex, ey, w)=>{
+      ex = Math.max(a.x + w/2 + 6, Math.min(a.x + a.w - w/2 - 6, ex));
+      ey = Math.max(a.y + 24, Math.min(a.y + a.h - 24, ey));
+      const r = ()=>({x: ex - w/2, y: ey - 22, w, h: 44});
+      let guard = 0;
+      while(guard++ < 30 && (hitRect(r(), obs) || hitRect(r(), placed))){
+        const ob = obs.find(q=>hitRect(r(), [q]));
+        if(ob){ ey = (ob.y + ob.h/2 < (a.y + a.h/2)) ? ob.y + ob.h + 24 : ob.y - 24; }
+        else ey -= 46;
+        ey = Math.max(a.y + 24, Math.min(a.y + a.h - 24, ey));
+        if(hitRect(r(), obs) && guard > 15) ex += (ex < a.x + a.w/2 ? 1 : -1) * 60;
+      }
+      placed.push(r());
+      return [ex, ey];
+    };
+    groups.forEach(g=>{
+      if(g.items.length > 2){
+        const el = document.createElement("button");
+        el.type = "button"; el.className = "mk-edge cluster";
+        el.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" class="mk-arrow"><path d="M2 7h9M7.5 3.2 11.3 7 7.5 10.8"/></svg><span class="mk-dot small"></span><span class="mk-name">${g.items.length} spots</span><span class="mk-label"></span>`;
+        el.onclick = ()=>onCluster(g.items.map(it=>it.p.id));
+        markersEl.appendChild(el);
+        const c = {el, items: g.items}; clusters.push(c); colorCluster(c);
+        const rad = g.ang*Math.PI/180, w = 150;
+        const [ex, ey] = findSpot(ox + Math.cos(rad)*a.w, oy + Math.sin(rad)*a.h, w);
+        el.style.transform = `translate3d(${ex.toFixed(1)}px, ${ey.toFixed(1)}px, 0) translate(-50%,-50%)`;
+        el.querySelector(".mk-arrow").style.transform = `rotate(${g.ang.toFixed(0)}deg)`;
+      } else g.items.forEach(it=>{
+        const ed = markersEl.querySelector(`.mk-edge[data-id="${it.p.id}"]`);
+        const w = 60 + it.p.name.length*7.2 + ed.querySelector(".mk-label").textContent.length*7.2;
+        let ex = it.p.offMap ? a.x + a.w - 110 : it.sx, ey = it.p.offMap ? a.y + a.h - 44 : it.sy;
+        [ex, ey] = findSpot(ex, ey, w);
+        const ang = it.p.offMap ? 135 : Math.atan2(it.sy-ey, it.sx-ex)*180/Math.PI;
+        ed.hidden = false;
         ed.style.transition = animate ? `transform 1s ${EASE}` : "none";
         ed.style.transform = `translate3d(${ex.toFixed(1)}px, ${ey.toFixed(1)}px, 0) translate(-50%,-50%)`;
         ed.querySelector(".mk-arrow").style.transform = `rotate(${ang.toFixed(0)}deg)`;
-      }
-      // pille til venstre for spots nær høyre kant
-      mk.classList.toggle("left", sx > a.x + a.w*0.62);
-      mk._sx = sx; mk._sy = sy; mk._inside = inside && !hideAll;
+      });
     });
-    // Piller som ville ligget oppå hverandre (spots som ligger tett, f.eks.
-    // Grøtfjord/Tromvik) forskyves nedover, én linje om gangen - prikken
-    // står alltid på spoten, bare pillen flyttes.
-    const rects = [];
-    [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside).sort((m1,m2)=>m1._sy-m2._sy).forEach(mk=>{
-      const w = 70 + mk.querySelector(".mk-name").textContent.length*7.5 + mk.querySelector(".mk-label").textContent.length*7;
-      const left = mk.classList.contains("left") ? mk._sx - w : mk._sx;
-      let dy = 0;
-      const hit = ()=> rects.some(r=> left < r.x + r.w && left + w > r.x && mk._sy + dy < r.y + 30 && mk._sy + dy + 30 > r.y);
-      while(hit() && dy < 150) dy += 30;
-      rects.push({x:left, y:mk._sy + dy, w});
-      mk.style.setProperty("--ly", dy ? dy+"px" : "0px");
+  }
+  // Klyngepil: beste rating i VALGT time gir farge og etikett («beste 3★»).
+  // 0 stjerner: «flatt» bare når ALLE timene er ekte flate (samme regel som
+  // flatInfo i front.js), ellers «ingen surf» - og «–» hvis noen mangler
+  // (manglende tall er aldri flatt).
+  function clusterInfo(items){
+    let best = 0, allFlat = true, missing = false;
+    items.forEach(it=>{
+      const h = hourOf(it.p.s, state.idx);
+      if(!h || (h.surf_height==null && !h.low_reason)){ missing = true; return; }
+      best = Math.max(best, h.stars||0);
+      if(!(h.low_reason==="flat" || (!h.low_reason && h.surf_height<=0))) allFlat = false;
     });
+    const label = best ? `beste ${best}★` : missing ? "–" : allFlat ? "flatt" : "ingen surf";
+    const words = ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"];
+    const aria = best ? `beste: ${best} ${best===1?"stjerne":"stjerner"} (${words[Math.min(5,best)]})` : missing ? "noen timer mangler data" : allFlat ? "flatt" : "ingen surf";
+    return {best, label, aria};
+  }
+  function colorCluster(c){
+    const {best, label, aria} = clusterInfo(c.items);
+    c.el.className = `mk-edge cluster r-${Math.min(5,best)}${best?" lit":""}`;
+    c.el.style.setProperty("--mc", COL[Math.min(5,best)]);
+    c.el.querySelector(".mk-label").textContent = label;
+    c.el.setAttribute("aria-label", `${c.items.length} spots utenfor kartet: ${c.items.map(it=>it.p.name).join(", ")}. ${aria}. Trykk for å zoome ut`);
   }
   function colorMarkers(){
     const idx = state.idx;
+    clusters.forEach(colorCluster);
     spots.forEach(p=>{
       const h = hourOf(p.s, idx);
       const st = h ? (h.stars||0) : 0;
@@ -238,6 +419,7 @@
         el.setAttribute("aria-label", aria + (el.classList.contains("mk-edge") ? ", utenfor kartet" : ""));
       }
     });
+    layoutPills();   // etikettene bestemmer pillens bredde - legg dem på nytt
   }
 
   /* ---------- svellkilen ved valgt spot ---------- */
@@ -322,5 +504,5 @@
   function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function spotInfo(id){ return spots.find(p=>p.id===id) || null; }
 
-  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, COL, focusSpot, hitClass, lightOf };
+  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, COL, focusSpot, hitClass, lightOf, relayout: ()=>placeMarkers(false) };
 })();

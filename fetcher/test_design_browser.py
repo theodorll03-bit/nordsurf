@@ -141,6 +141,45 @@ def main():
                         assert lab == exp, f"merket for {s['id']} sier '{lab}', forecast.json sier '{exp}'"
                     else:
                         assert lab and "m" not in lab.split()[-1] or lab, f"merket for {s['id']} skal vise ordet, viste '{lab}'"
+                # Theodors punkt 1 og 2 (09.10.2026): i alle tre utsnitt skal lappen sitte
+                # rett ved prikken (under 12 px mellom prikk og lapp) på mobil, og ingen
+                # kantpil skal overlappe en knapp i toppen eller fargeforklaringen.
+                for view in ("nord", "lofoten", "alle"):
+                    page.locator(f".seg button[data-view='{view}']").click(); page.wait_for_timeout(1400)
+                    gaps = page.evaluate("""() => [...document.querySelectorAll('.mk')].filter(m => !m.hidden).map(m => {
+                        const d = m.querySelector('.mk-dot').getBoundingClientRect(), p = m.querySelector('.mk-pill').getBoundingClientRect();
+                        const dx = Math.max(0, d.left - (p.left + p.width), p.left - (d.left + d.width));
+                        const dy = Math.max(0, d.top - (p.top + p.height), p.top - (d.top + d.height));
+                        return {id: m.dataset.id, gap: Math.hypot(dx, dy), lead: !m.querySelector('.lead').hidden}; })""")
+                    if mobile:
+                        far = [g for g in gaps if g["gap"] >= 12]
+                        assert not far, f"lapp langt fra prikken i utsnitt {view}: {far}"
+                    overl = page.evaluate("""() => { const obs = [...document.querySelectorAll('.top-bar .icon-btn, .top-bar .seg, .legend')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.getBoundingClientRect());
+                        return [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).map(e => e.getBoundingClientRect()).filter(r => obs.some(o => r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top)).length; }""")
+                    assert overl == 0, f"{overl} kantpil(er) overlapper en knapp eller forklaringen i utsnitt {view}"
+                    if view == "alle":
+                        shot("alle")
+                    # Klyngepil («N spots»): farge og etikett skal følge VALGT time, og
+                    # «flatt» bare når alle timene er ekte flate (kontrolløren 09.10.2026).
+                    if page.locator(".mk-edge.cluster:visible").count():
+                        i0 = page.evaluate("Front.state.idx")
+                        for ti in (i0, i0 + 23, i0):
+                            page.evaluate(f"Front.setIdx({ti})"); page.wait_for_timeout(150)
+                            info = page.evaluate("""() => { const c = document.querySelector('.mk-edge.cluster'); const ids = c.getAttribute('aria-label').split(':')[1].split('.')[0].split(',').map(x => x.trim());
+                                return {label: c.querySelector('.mk-label').textContent, cls: c.className, names: ids}; }""")
+                            best, all_flat, miss = 0, True, False
+                            for sp in spots:
+                                if sp["name"] not in info["names"]: continue
+                                h = sp["hours"][ti] if ti < len(sp["hours"]) else None
+                                if not h or (h.get("surf_height") is None and not h.get("low_reason")): miss = True; continue
+                                best = max(best, h.get("stars") or 0)
+                                if not (h.get("low_reason") == "flat" or (not h.get("low_reason") and (h.get("surf_height") or 0) <= 0)): all_flat = False
+                            exp = f"beste {best}★" if best else "–" if miss else "flatt" if all_flat else "ingen surf"
+                            assert info["label"] == exp and f"r-{min(5,best)}" in info["cls"].split(), f"klyngepil i time {ti}: viste '{info['label']}' ({info['cls']}), forecast.json gir '{exp}'"
+                page.locator(".seg button[data-view='nord']").click(); page.wait_for_timeout(1200)
+                # 3: «Nå»-merket er lite og på linje med klokkeslettet
+                now_h = page.evaluate("(() => { const n = document.getElementById('timeNow'); return n.hidden ? 20 : n.getBoundingClientRect().height; })()")
+                assert now_h <= 22, f"«Nå»-merket er {now_h} px høyt, skal være ca. 20"
                 page.evaluate("Front.go('list')"); page.wait_for_timeout(900)
                 assert page.locator("#list .row").count() == len(spots), "lista skal ha én rad per spot"
                 shot("liste"); axe_check("liste"); buttons_ok("liste")
@@ -193,6 +232,23 @@ def main():
                     if exp == "miss":
                         assert page.locator("#wedgeG .arc-miss").count() == 1, "ved bom skal det være en grå, stiplet linje"
                 assert page.locator("#spot #logBtn").count() == 1 and page.locator("#spot #details").count() == 1, "Logg-knapp og Detaljer skal finnes i spotarket"
+                if not mobile:
+                    # 7: Logg-knappen står ved favorittstjerna i spotpanelet på PC
+                    lb, fb = page.locator("#spot #logBtn").bounding_box(), page.locator("#spot .spot-head .fav-btn").bounding_box()
+                    assert lb and fb and abs(lb["y"] - fb["y"]) < 20, "Logg-knappen skal stå ved favorittstjerna i hodet (PC)"
+                    # 4: ingen tekst flyter over i flisene ved 1024 og 1440 px (også med lang høydetekst)
+                    for w in (1024, 1440):
+                        page.set_viewport_size({"width": w, "height": 900}); page.wait_for_timeout(400)
+                        page.evaluate("""() => { const h = DATA.spots[0].hours[0]; window.__bak = {...h};
+                            Object.assign(h, {surf_height: 1.3, surf_height_sets: 1.7, stars: 3, low_reason: null, period: 14, swell_offshore: 2.0, energy_swell_kj: 1234}); Front.openSpot(DATA.spots[0].id, 0); }""")
+                        page.wait_for_timeout(500)
+                        hv = page.locator("#tHeight .v").text_content()
+                        assert "1,3–1,7 m" in hv, f"høydeflisa skal si «1,3–1,7 m», sa '{hv}'"
+                        over = page.evaluate("""() => [...document.querySelectorAll('#spot .tile .v, #spot .tile')].filter(e => e.scrollWidth > e.clientWidth + 1).length""")
+                        assert over == 0, f"{over} flise(r) flyter over ved {w} px"
+                        page.evaluate("() => { Object.assign(DATA.spots[0].hours[0], window.__bak); }")
+                    page.set_viewport_size({"width": vp[0], "height": vp[1]})
+                    page.evaluate(f"Front.openSpot('{s['id']}', {bidx})"); page.wait_for_timeout(800)
                 assert page.locator("#bars .hbar").count() == min(48, len(s["hours"])), "48 søyler i spotarket"
                 shot("spot"); axe_check("spot"); buttons_ok("spot")
                 # søyle-trykk velger time
@@ -212,6 +268,16 @@ def main():
                 if not fh["stars"]:
                     w = page.locator("#spot .rating-line .word").text_content()
                     assert w and not w.endswith(".") and page.locator("#spot .rating-line .stars").count() == 0, "0 stjerner: ordet alene, ingen stjerner, ikke punktum"
+                    # 6: surfehøyde-flisa sier ordet («Flatt»), aldri «–» (som betyr at tallet mangler)
+                    hv = page.locator("#tHeight .v").text_content().strip()
+                    if fh.get("low_reason") == "flat" or (fh.get("surf_height") is not None and fh["surf_height"] <= 0 and not fh.get("low_reason")):
+                        assert hv == "Flatt", f"flat spot skal vise «Flatt» i høydeflisa, viste '{hv}'"
+                    assert hv != "–" or fh.get("surf_height") is None, "«–» skal bare bety at tallet mangler"
+                    i0 = page.evaluate("Front.state.w0")
+                    if all((x.get("stars") or 0) == 0 for x in spots[fi]["hours"][i0:i0+48]):
+                        assert page.locator("#bars.compact").count() == 1 and page.locator("#bars .flat-lbl").count() == 1, "alle 48 timer 0 stjerner: kompakt visning med tekst"
+                        lbl = page.locator("#bars .flat-lbl").text_content()
+                        assert lbl.startswith("Flatt") or lbl.startswith("Ingen surf"), lbl
                 shot("spot_flat"); axe_check("spot_flat")
 
                 # ---- loggark og forklaring ----

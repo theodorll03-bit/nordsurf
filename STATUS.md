@@ -25,6 +25,26 @@
 - Notert, ikke gjort: vind/natt/lys på kartet kommer fra én spot (valgt, ellers regionens referansespot) - bør vises hvilken spot vinden gjelder (finpuss). Surfehøyde null og 0 gir samme 3 px-stump i søylene (aria skiller dem) - stiplet «mangler»-stump i finpussen.
 
 
+**Runde 2 på PR #3 (09.10.2026, Theodors tilbakemelding, 7 punkter - gjort, pushet, IKKE merget):**
+- 1 Mobil, navnelapper: lappen plasseres med et lite søk (`layoutPills`, dybde-først over side og ±14/±24 px forskyvning for alle merker samtidig, andre prikker er hindringer) - rett ved prikken; overlapp → motsatt side; bare når det ikke holder, en tynn strek fra prikk til lapp (Russelv/Steinkrøssa i «Troms»). Test: avstand prikk-lapp under 12 px for alle spots i alle tre utsnitt på mobil.
+- 2 Kantpiler: aldri i topplinja (kartområdet starter under den) eller bak forklaringen - knappene og forklaringen er hindringer i `placeEdges`. Flere enn to spots utenfor skjermen i omtrent samme retning (innen 30°) → én klyngepil «6 spots» med beste rating i valgt time som farge; trykk zoomer ut til «Alle». Test: ingen kantpil overlapper en knapp eller forklaringen.
+- 3 «Nå»-merket: 20 px høyt, på linje med klokkeslettet (klassen `now-badge` - den gamle `.now` traff ratingknappens 44 px-regel). Test: ≤ 22 px.
+- 4 PC-spotkortet: «1,3–1,7 m» (`tileHeight`), flisene 1,35fr/1fr/1fr med 17 px tall, nowrap. Test ved 1024 og 1440 px med en injisert time 1,3/1,7 m: ingen tekst flyter over.
+- 5 Kartet: etter zoom-animasjonen tegnes SVG-en skarpt på nytt via viewBox (`crispen`, transform bare under animasjonen - `uncrispen` før neste); kystgløden 4 px/10 % (var 7 px/18 %); land #15252E mot hav #0A1822 også om natta (nattlaget legges over begge, landfargen løftes tilsvarende i `setNight` - kontrolløren regnet ut at land står på ca. #13222C mot hav #07121A ved mørkt, dvs. fortsatt tydelig lysere).
+- 6 Flate spots: høydeflisa sier «Flatt» (ordet; «–» betyr fortsatt at tallet MANGLER); er alle 48 timene 0 stjerner, kompakt 40 px-visning «Flatt de neste 48 timene» (bare når alle er EKTE flate, ellers «Ingen surf …», manglende tall bryter - samme regel som grafen i designrunde 1).
+- 7 PC: Logg-knappen står i spotpanelets hode ved favorittstjerna (`#logBtn`, pc-only); på mobil fortsatt nederst. Test: innen 20 px i høyde fra stjerna.
+- Nye skjermbilder av de samme skjermene (+ «Alle»-utsnittet) i docs/design/kart-forst/skjermbilder/.
+
+**Fysikk-kontrollør, runde 2 («MÅ RETTES» - alt rettet før push):**
+- RETTET (middels): klyngepilas farge/etikett ble bare regnet i `placeEdges` (ved utsnittsbytte), ikke ved timebytte - under avspilling og glidebryter viste den beste rating fra timen kartet sist ble lagt ut. Nå `clusterInfo()`/`colorCluster()` i kart.js, kalt fra `colorMarkers` (dvs. hver `setHour`). Test: etikett/farge = beste stjerner i forecast.json for valgt time, i tre timer.
+- RETTET (middels, grunnregelen): klyngepila sa «flatt» når beste = 0, også om timene var blåst ut/treffer ikke/mangler. Nå samme regel som `flatInfo`: «flatt» bare når alle er ekte flate, ellers «ingen surf», «–» hvis noen mangler. Aria-teksten nevner nå ratingen («beste: 3 stjerner (Bra)»).
+- RETTET (middels, eldre feil på grenen): i den vanlige 48-timersgrafen fikk en time der tallet MANGLER (ingen surfehøyde, ingen low_reason) samme 3 px-strek som en flat time. Nå ingen søyle, bare en stiplet «mangler»-markør (`.hbar.miss`), aria «mangler data» - som chart.js i designrunde 1. Ingen slike timer i dagens data.
+- RETTET (kosmetisk): landfargen byttet momentant mens nattlaget gled over 0,8 s (kort lyst blink) - `.coast` har nå samme overgang.
+- RETTET (lav): `flatInfo` leste `DATA.spots[0].hours.length` i stedet for spotens egen lengde; kommentaren i `tileHeight` sa «0 stjerner: ordet» mens koden (riktig) viser tallet ved 0 stjerner med reell høyde.
+- Bekreftet riktig: `tileHeight` (null → «–», aldri 0 eller «Flatt»); `flatInfo` («Flatt hele døgnet» kan ikke nås - vinduet er alltid 48 t eller «resten av varselet»); `setNight` gjør ikke land «opplyst»; `git diff` rører ingen fil som lager tall (test_display_only passerer).
+- Notert, ikke gjort (lav, eldre): 17 timer i dagens varsel har 0 stjerner uten low_reason men reell høyde (0,6-0,7 m) - flisa viser tallet, ratinglinja (`ratingWord`) sier «Flatt». Et annet ord for «0 stjerner med høyde» krever Theodors ja (stjerneord). Søylene i den kompakte visningen: dagsnavnene «i dag»/«i morgen» kan kollidere på 40 px (finpuss).
+
+
 ## Designrunde 1 (09.10.2026, Theodors oppdrag «Gjør Nordsurf proff på mobil og PC») - BYGGET på gren `design/runde-1`, PR åpen, IKKE merget
 
 **Regel 2 («bare visning») - bevist, ikke bare lovet:** `fetcher/test_display_only.py` (ny) sammenligner sha256 av `fetcher/rating.py`, `fetch.py`, `sources.py`, `calibrate.py`, `exposure_learn.py`, `exposure.py`, `longrange.py`, `tide.py`, `sun.py`, `notify.py`, `spots.json` og `docs/data/forecast.json` mot origin/main (byte for byte like), og re-rater de 15 faste observasjonene gjennom testlaben mot en fast tabell (unstad_2609 = 4 stjerner / 2,42 m, farstadsanden_338 = 0 / 1,28 m osv.). Kjøres i Actions (test.yml) med eksplisitt `git fetch origin main`.
