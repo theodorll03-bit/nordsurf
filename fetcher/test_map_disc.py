@@ -22,12 +22,12 @@ Kjør: python fetcher/test_map_disc.py"""
 import re
 from pathlib import Path
 
-MAP_JS = (Path(__file__).parent.parent / "docs" / "js" / "map.js").read_text(encoding="utf-8")
+MAP_JS = (Path(__file__).parent.parent / "docs" / "js" / "kart.js").read_text(encoding="utf-8")  # kart først (09.10.2026): skivas regel lever videre i kartmotoren
 
 # ---------- 1. Kildetekst-sjekk ----------
 # discAriaLabel() sin "miss"-variabel (skjermleser-teksten).
 m_aria = re.search(r'const miss = h\.directness!=null && h\.directness < ([\d.]+);', MAP_JS)
-assert m_aria, "fant ikke discAriaLabel() sin miss-sjekk i map.js - er linja endret?"
+assert m_aria, "fant ikke wedgeAriaLabel() sin miss-sjekk i kart.js - er linja endret?"
 assert "bw_confirms" not in m_aria.group(0) and "spot_direction_factor" not in m_aria.group(0)
 ARIA_MISS_THRESHOLD = float(m_aria.group(1))
 
@@ -36,7 +36,7 @@ m_dn = re.search(r'const dn = h\.directness;', MAP_JS)
 assert m_dn, "fant ikke 'const dn = h.directness;' i discSvgMarkup() - er den endret til å lese et annet felt?"
 m_cls = re.search(
     r'const cls = missing \|\| dn==null \|\| dn < ([\d.]+) \? "miss" : dn >= ([\d.]+) \? "" : "edge";', MAP_JS)
-assert m_cls, ("fant ikke discSvgMarkup() sin cls-linje i forventet form - sjekk om noen har lagt "
+assert m_cls, ("fant ikke wedgeMarkup() sin cls-linje i forventet form - sjekk om noen har lagt "
                "bw_confirms/spot_direction_factor inn i klassifiseringen (selve regresjonen denne testen "
                "er skrevet mot, se modul-docstringen).")
 assert "bw_confirms" not in m_cls.group(0) and "spot_direction_factor" not in m_cls.group(0)

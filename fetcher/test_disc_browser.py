@@ -1,17 +1,18 @@
 """06.10.2026, Theodors rettelse (Farstadsanden 337 grader, Nordneset - se
-STATUS.md): ekte nettleser-tester for skiva, med Playwright for Python (ikke
-Node - se README/STATUS.md for hvorfor). Åpner den faktiske docs/index.html
-i Chromium, med en fast, hardkodet testfil for forecast.json
-(window.__FORECAST__ - samme hook appen selv bruker til "oppdiktet vær",
-se DATA = window.__FORECAST__ || fetch(...) i docs/index.html), og sjekker:
+STATUS.md): ekte nettleser-tester for svellkilen, med Playwright for Python
+(ikke Node - se README/STATUS.md for hvorfor). Åpner den faktiske
+docs/index.html i Chromium, med en fast, hardkodet testfil for forecast.json
+(window.__FORECAST__ - samme hook appen selv bruker), og sjekker:
 
-1. Skiva (kartet): svell ute med eksponering under 0,667 gir grå, stiplet
-   linje UTEN strøm-animasjon, OGSÅ når bw_confirms er sann (selve
-   regresjonen Theodor meldte). Eksponering 1,0 gir farget, heltrukket,
-   ANIMERT linje.
-2. "Retningstreff" (detaljsiden), ordet for lav rating (samme side) og
-   kartmerket (før skiva åpnes - markøren skjules mens skiva vises, se
-   map.js sin renderMarkers()) sier det samme som skiva for SAMME time.
+1. Kilen på kartet («kart først», 09.10.2026 - tidligere skiva i map.js):
+   svell ute med eksponering under 0,667 gir grå, stiplet linje UTEN
+   bølgefronter, OGSÅ når bw_confirms er sann (selve regresjonen Theodor
+   meldte). Eksponering 1,0 gir fargede, ANIMERTE bølgefronter; 0,667-0,999
+   gir kantsone (færre, stiplede fronter). Spoten i testfila (Farstadsanden)
+   ligger egentlig utenfor kystkartet - testfila gir den derfor Unstads
+   posisjon, så kilen tegnes; alle timeverdiene er Farstadsandens egne.
+2. "Retningstreff" (Detaljer i spotarket), ordet for lav rating (samme ark)
+   og kartmerket sier det samme som kilen for SAMME time.
 3. Skjermbilder i mobilvisning, lagret til fetcher/test_screenshots/ (se
    .gitignore - ikke committet, regenereres hver kjøring).
 
@@ -129,7 +130,10 @@ HOUR_EDGE = {**HOUR_BASE, "t": "2026-10-06T21:00Z", "dir_offshore": 320,
 
 SPOT = {
     "id": "farstadsanden", "name": "Farstadsanden", "area": "Hustadvika", "enabled": True,
-    "spot": {"lat": 62.983474, "lon": 7.152127}, "offshore": {"lat": 63.0602, "lon": 6.9843},
+    # «kart først» (09.10.2026): posisjonen er Unstads, så spoten ligger INNE på
+    # kystkartet og kilen tegnes (Farstadsanden selv ligger utenfor kartet og
+    # vises bare som kantpil). Alle timeverdier under er Farstadsandens egne.
+    "spot": {"lat": 68.2692, "lon": 13.5808}, "offshore": {"lat": 63.0602, "lon": 6.9843},
     "barentswatch_point": {"lat": 62.985072, "lon": 7.148631},
     "barentswatch_point_near": {"lat": 62.984433, "lon": 7.15003},
     "swell_window": [284, 326], "offshore_wind": [85, 175],
@@ -167,16 +171,6 @@ def _start_server():
     return server, port
 
 
-def hit_class(markup):
-    import re
-    m = re.search(r'<line class="disc-swell ?([a-z]*)"', markup)
-    return m.group(1) if m else None
-
-
-def crests_class(markup):
-    import re
-    m = re.search(r'<g class="disc-crests ?([a-z]*)"', markup)
-    return m.group(1) if m else None
 
 
 def main():
@@ -197,7 +191,6 @@ def main():
             # maybeShowExplainAuto()) - den dekker skiva på skjermbildet
             # ellers, uten å påvirke selve testen (den styrer bare om
             # boblen vises, ikke noe disc-logikken leser).
-            page.add_init_script("try{localStorage.setItem('nordsurf.mapExplainSeen.v1','1');}catch(e){}")
             page.goto(f"http://127.0.0.1:{port}/index.html")
             # DATA/state/render/STAR_WORDS/LOW_REASON_WORD er toppnivå let/
             # const/function i hovedskriptet (ikke en IIFE, i motsetning til
@@ -214,90 +207,62 @@ def main():
             # ROADMAP oppgave G (07.10.2026): fixturen er "generert" 06.10.2026
             # kl. 15 UTC - alltid eldre enn STALE_HOURS når testen kjører - så
             # advarselen "Varselet er ikke oppdatert siden ..." skal stå øverst
-            # både på lista og på detaljsiden, og forsvinne når varselet er ferskt.
-            page.evaluate("state.tab='varsel'; state.spot=null; render();")
-            stale_list = page.locator(".stale").inner_text()
-            assert "ikke oppdatert siden" in stale_list, stale_list
-            page.evaluate("state.tab='varsel'; state.spot=0; state.sel=0; render();")
-            # Designrunde 1 (09.10.2026): lista og detaljsiden er to faste
-            # paneler i DOM-en (på PC side om side, på mobil ett synlig om
-            # gangen) - tell derfor bare SYNLIGE advarsler, og krev at
-            # detaljpanelet selv har en.
-            assert page.locator("#detailPane .stale").count() == 1, "advarselen skal også stå på detaljsiden"
-            assert page.locator(".stale:visible").count() >= 1, "advarselen skal være synlig på detaljsiden"
-            page.evaluate("DATA.generated = new Date().toISOString(); render();")
-            assert page.locator(".stale").count() == 0, "ferskt varsel skal ikke ha advarsel"
-            page.evaluate(f"DATA.generated = {json.dumps(FIXTURE['generated'])}; render();")
-            print("G: 'Varselet er ikke oppdatert siden' vises på liste og detaljside når varselet er over 6 t gammelt, ikke ellers - OK")
+            # i arket, og forsvinne når varselet er ferskt.
+            page.wait_for_function("window.Front && document.querySelectorAll('.mk').length > 0")
+            stale = page.locator("#banners .stale").inner_text()
+            assert "ikke oppdatert siden" in stale, stale
+            page.evaluate("DATA.generated = new Date().toISOString(); Front.refresh();")
+            assert page.locator("#banners .stale").count() == 0, "ferskt varsel skal ikke ha advarsel"
+            page.evaluate(f"DATA.generated = {json.dumps(FIXTURE['generated'])}; Front.refresh();")
+            print("G: 'Varselet er ikke oppdatert siden' vises øverst i arket når varselet er over 6 t gammelt, ikke ellers - OK")
+
 
             def check_scenario(idx, hour, label):
-                # ---------- 1. Detaljsiden: Retningstreff + lavstjerne-ordet ----------
-                # Designrunde 1: Retningstreff ligger i "Detaljer" (lukket
-                # <details>) - åpne den først, så teksten er synlig.
-                page.evaluate(f"state.tab='varsel'; state.spot=0; state.sel={idx}; render(); document.getElementById('details').open=true;")
-                verdict = page.locator("#detailPane .verdict").inner_text()
-                retningstreff = page.locator('#detailPane .cell:has-text("Retningstreff") >> .v').inner_text()
+                # ---------- 1. Spotarket: Retningstreff + lavstjerne-ordet ----------
+                page.evaluate(f"Front.openSpot('farstadsanden', {idx});")
+                page.wait_for_timeout(700)
+                page.evaluate("document.getElementById('details').open = true")
+                word_el = page.locator("#spot .rating-line .word")
+                verdict = (word_el.text_content() or "").strip() if word_el.count() else ""
+                retningstreff = (page.locator('#details .cell:has-text("Retningstreff") >> .v').text_content() or "").strip()
                 expected_pct = f"{round(hour['directness'] * 100)} %"
                 assert retningstreff == expected_pct, (
                     f"{label}: Retningstreff viste '{retningstreff}', forventet '{expected_pct}'")
                 expected_word = low_words[hour["low_reason"]] if hour["low_reason"] else star_words[hour["stars"]]
                 if hour["low_reason"]:
                     assert verdict.startswith(expected_word), (
-                        f"{label}: forsidens ord var '{verdict}', forventet å starte med '{expected_word}'")
-                print(f"{label}: detaljside - Retningstreff {retningstreff}, ordet '{expected_word}' - OK")
+                        f"{label}: ordet i arket var '{verdict}', forventet å starte med '{expected_word}'")
+                print(f"{label}: spotarket - Retningstreff {retningstreff}, ordet '{expected_word}' - OK")
 
-                # ---------- 2. Kartet: merket (FØR skiva åpnes) ----------
-                page.evaluate("state.tab='kart'; state.spot=null; render();")
-                # Avvelg forrige scenarios valgte spot på KARTET - map.js sin
-                # EGEN mapState.spotId (ikke appens state.spot over, en annen
-                # variabel) er ikke nullstilt av dette alene, og en valgt
-                # spot sitt eget merke er skjult mens skiva vises (se
-                # renderMarkers() sin "isSelected: continue"). Et klikk på
-                # tomt kart (onMapBackgroundClick) avvelger ekte, uansett
-                # hvilken spot som var valgt.
-                page.wait_for_selector(".leaflet-container")
-                page.locator(".leaflet-container").click(position={"x": 5, "y": 5})
-                page.wait_for_selector(".spot-mark")
-                slider = page.locator("#mapSlider")
-                slider.evaluate(f"el => {{ el.value={idx}; el.dispatchEvent(new Event('input', {{bubbles:true}})); }}")
-                marker = page.locator(".spot-mark")
-                marker_label = marker.get_attribute("aria-label")
+                # ---------- 2. Kartmerket ----------
+                marker_label = page.locator(".mk[data-id='farstadsanden']").get_attribute("aria-label")
                 if hour["low_reason"]:
-                    # heightText() (map.js) viser low_reason-ORDET i stedet
-                    # for en høyde når det er satt - samme ord som verdict.
                     assert expected_word in marker_label, (
                         f"{label}: kartmerket sa '{marker_label}', forventet ordet '{expected_word}' i det")
                 else:
-                    # Uten low_reason viser heightText() en ekte høyde i
-                    # meter, ALDRI et lavstjerne-ord - det er den riktige
-                    # konsistensen her (samme funksjon, samme felt som
-                    # verdict ville brukt OM low_reason hadde vært satt).
-                    assert "m" in marker_label and not any(w in marker_label for w in low_words.values()), (
+                    assert " m" in marker_label and not any(w in marker_label for w in low_words.values()), (
                         f"{label}: kartmerket sa '{marker_label}', forventet en ekte høyde, ikke et lavstjerne-ord")
                 print(f"{label}: kartmerket - '{marker_label}' - OK")
 
-                # ---------- 3. Skiva ----------
-                # Tre klasser, samme grenser som map.js (og test_map_disc.py
-                # sin formel-port): miss (dn<0,667), edge (0,667<=dn<0,999),
-                # rent treff (dn>=0,999, tom klasse) - IKKE en binær hit/miss-
-                # sjekk, ellers ville HOUR_EDGE (0,774) feilaktig blitt
-                # forventet som et rent treff.
+                # ---------- 3. Kilen på kartet ----------
+                # Tre klasser, samme grenser som før (og test_map_disc.py sin
+                # formel-port): miss (dn<0,667), edge (0,667<=dn<0,999), rent
+                # treff (dn>=0,999, tom klasse).
                 dn = hour["directness"]
                 expected_class = "miss" if dn < 0.667 else ("edge" if dn < 0.999 else "")
-                marker.click()
-                page.wait_for_selector(".disc-wrap")
-                disc_html = page.locator(".disc-wrap").inner_html()
-                hc, cc = hit_class(disc_html), crests_class(disc_html)
-                assert hc == expected_class and cc == expected_class, (
-                    f"{label}: forventet klasse '{expected_class}' (directness {dn}), fikk linje='{hc}' crests='{cc}'")
+                page.wait_for_selector("#wedgeG .wedge")
+                cls = page.evaluate("(() => { const w = document.querySelector('#wedgeG .wedge'); return w.classList.contains('miss') ? 'miss' : w.classList.contains('edge') ? 'edge' : ''; })()")
+                assert cls == expected_class, f"{label}: forventet klasse '{expected_class}' (directness {dn}), fikk '{cls}'"
+                n_arc = page.locator("#wedgeG .arc").count()
                 if expected_class == "miss":
-                    assert "disc-miss-label" in disc_html, f"{label}: mangler 'Treffer ikke'-etikett ved miss"
+                    assert n_arc == 0 and page.locator("#wedgeG .arc-miss").count() == 1, f"{label}: ved bom skal det være stiplet linje og ingen bølgefronter"
                 else:
-                    assert "disc-miss-label" not in disc_html, f"{label}: fant 'Treffer ikke'-etikett ved et ekte treff/kantsone"
-                print(f"{label}: skiva - linje='{hc}' crests='{cc}' (directness {dn}, "
-                      f"bw_confirms {hour['bw_confirms']}) - OK")
+                    assert n_arc > 0 and page.locator("#wedgeG .arc-miss").count() == 0, f"{label}: ved treff/kant skal bølgefrontene rulle inn"
+                    anim = page.evaluate("getComputedStyle(document.querySelector('#wedgeG .arc')).animationName")
+                    assert anim and anim != "none", f"{label}: bølgefrontene skal være animert"
+                print(f"{label}: kilen - klasse '{cls}', {n_arc} bølgefronter (directness {dn}, bw_confirms {hour['bw_confirms']}) - OK")
 
-                page.wait_for_timeout(700)  # la disc-enter/strøm-animasjonen roe seg før skjermbildet
+                page.wait_for_timeout(500)
                 page.screenshot(path=str(SHOT_DIR / f"disc_{label}.png"))
 
             check_scenario(0, HOUR_MISS, "miss_338grader")

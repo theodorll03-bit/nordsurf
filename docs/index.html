@@ -3,43 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F6F1E8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#16130F" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0A1822">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nordsurf">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
 <title>Nordsurf</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/map.css">
+<link rel="stylesheet" href="css/kart.css">
 </head>
 <body>
-<div class="shell view-list" id="shell">
-  <nav class="tabs" aria-label="Hovedmeny">
-    <button class="tab" data-tab="varsel" aria-current="page">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 16c2.2 0 2.2-1.6 4.4-1.6S8.6 16 10.8 16s2.2-1.6 4.4-1.6S17.4 16 19.6 16 22 14.4 22 14.4V18c0 .2-.2 1.6-2.4 1.6s-2.2-1.6-4.4-1.6-2.2 1.6-4.4 1.6S8.6 18 6.4 18 4.2 19.6 2 19.6zM4 12.5C4 8.4 7.4 5 11.5 5c2.4 0 4.6 1.2 6 3-3-.8-6.2.6-7.5 3.5-.6 1.3-.8 2.4-.8 3.2-1.4-.5-3.3-.8-5.2-.9 0-.1 0-.2 0-.3z"/></svg>
-      Varsel
-    </button>
-    <button class="tab" data-tab="kart">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M12 2c4.42 0 8 3.58 8 8 0 5.25-6.72 11.19-7.19 11.6a1 1 0 0 1-1.62 0C10.72 21.19 4 15.25 4 10c0-4.42 3.58-8 8-8zm0 5.5A2.5 2.5 0 1 0 12 12.5 2.5 2.5 0 0 0 12 7.5z"/></svg>
-      Kart
-    </button>
-    <button class="tab" data-tab="logger">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>
-      Logger
-    </button>
-    <button class="tab" data-tab="innstillinger">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.1 6.8l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg>
-      Innstillinger
-    </button>
-  </nav>
-  <main class="pane" id="listPane" aria-label="Spotliste"></main>
-  <section class="pane" id="detailPane" aria-live="polite" aria-label="Detaljer" hidden></section>
-  <div id="mapRoot" hidden></div>
+<div class="stage" id="stage">
+  <div class="kart" id="kart" aria-label="Kart over spots"></div>
+  <p class="loading" id="loading">Henter varselet …</p>
+  <header class="top-bar">
+    <div class="brand"><a class="wm" href="#/" id="wordmark" aria-label="Nordsurf, til kartet"></a><span class="upd" id="updated"></span></div>
+    <div class="top-btns">
+      <button type="button" class="icon-btn" id="btnLogg" aria-label="Logg økt" title="Logg økt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      <button type="button" class="icon-btn" id="btnLogger" aria-label="Logger" title="Logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg></button>
+      <button type="button" class="icon-btn" id="btnSettings" aria-label="Innstillinger" title="Innstillinger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.1 6.8l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg></button>
+    </div>
+    <div class="seg" role="group" aria-label="Område">
+      <button type="button" data-view="nord" aria-pressed="true">Troms</button>
+      <button type="button" data-view="lofoten" aria-pressed="false">Lofoten</button>
+      <button type="button" data-view="alle" aria-pressed="false">Alle</button>
+    </div>
+  </header>
+  <div class="legend" aria-label="Fargene">
+    <span class="r-1"><i></i>Dårlig</span><span class="r-2"><i></i>Ok</span><span class="r-3"><i></i>Bra</span><span class="r-4"><i></i>Veldig bra</span><span class="r-5"><i></i>Rått</span>
+    <span class="hint">Strekene på kartet viser vinden</span>
+  </div>
+  <section class="ark" id="ark" aria-label="Varsel">
+    <button type="button" class="ark-handle" aria-label="Vis alle spots"><span></span></button>
+    <div id="banners"></div>
+    <div class="ark-head">
+      <div class="time">
+        <button type="button" class="play" id="play" aria-label="Spill av varselet"></button>
+        <div class="time-text"><div class="t"><span id="timeT"></span><span class="now" id="timeNow">Nå</span></div><span class="l" id="timeL"></span></div>
+      </div>
+      <input type="range" class="range" id="tid" min="0" max="0" step="1" value="0" aria-label="Velg tidspunkt">
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+    </div>
+    <div class="ark-scroll">
+      <div class="page peek" id="peek" data-page="peek"></div>
+      <div class="page rows" id="list" data-page="list"></div>
+      <div class="page spot" id="spot" data-page="spot"></div>
+      <div class="page" data-page="side"><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></div>
+    </div>
+  </section>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -98,10 +112,9 @@
 <script src="js/strings.js"></script>
 <script src="js/wordmark.js"></script>
 <script src="js/explain.js"></script>
-<script src="js/chart.js"></script>
 <script src="js/app.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="js/map.js"></script>
+<script src="js/kart.js"></script>
+<script src="js/front.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/auth.js"></script>
 </body>

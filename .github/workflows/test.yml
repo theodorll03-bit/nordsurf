@@ -35,14 +35,14 @@ jobs:
         run: |
           git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
           python fetcher/test_display_only.py
-      - name: Designrunde 1 - nettleser-test av lista, detaljsiden, kartet og arkene (Playwright + axe)
+      - name: Kart først - nettleser-test av kartet, arket/panelet, spot, loggark, forklaring (Playwright + axe)
         run: timeout 330 python fetcher/test_design_browser.py
       - name: Last opp designskjermbilder (til feilsøking, selv om testen bestod)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: design-screenshots
-          path: docs/design/runde-1/
+          path: docs/design/kart-forst/skjermbilder/
           if-no-files-found: ignore
       - name: Last opp skjermbilder (til feilsøking, selv om testen bestod)
         if: always()

@@ -1,5 +1,22 @@
 # Nordsurf: status
 
+## Ny design «kart først» (09.10.2026, Theodors godkjente skisse) - BYGGET på gren `design/kart-forst`, PR åpen, IKKE merget - første versjon før finpuss
+
+**Rammen holdt:** bare visning - `fetcher/test_display_only.py` passerer (rating-/hentefiler, spots.json og forecast.json byte for byte like main). Skissen (Main.dc.html, Desktop.dc.html, coast.json) ligger i docs/design/kart-forst/ som referanse; formatet er ikke kopiert, utseendet og oppførselen er gjenskapt i docs/.
+
+**Hva som er bygget:**
+- `docs/js/kart.js` (kartmotor): vektorkysten (docs/geo/coast.json, forenklet GSHHS, 8 400 punkter) som SVG i ett lag som flyttes/zoomes med CSS-transform (kartet tegnes aldri på nytt under avspilling), rutenett, lysende kystlinje, merker som ekte knapper i skjermrommet (prikk i ratingfarge, navn + høyde/ord i glass-pille, pulserende ringer ved stjerner med roligere puls ved lang periode), piller som ligger tett forskyves nedover, spots utenfor skjermen/kartet som kantpiler (Farstadsanden ligger utenfor kystkartet og åpnes direkte), vindlag (150 faste streker, retning/fart via CSS-variabler), nattlag, svellkile ved valgt spot med bølgefronter (fart etter perioden) - treff/kant/bom KUN fra h.directness (samme regel og grenser som skiva, test_map_disc.py leser nå kart.js).
+- `docs/js/front.js` (forsiden): ark på mobil med tre tilstander (kikk / liste / spot) som dras med fingeren (pointer-hendelser, snapper til nærmeste), panel til høyre på PC; tid med play-knapp og glidebryter (7 døgn, dagnavn), «Nå»-merke og lys; «Beste neste 48 timer»; liste med minigraf (48 timer) sortert etter beste rating; spotark med stjerner/ord, fliser (surfehøyde, periode, energi - trykk gir forklaring), svellskive med kile, bølgefronter og vindpil, 48-timers søyler som velger time, advarselslinje (ekte advarsler), Logg-knapp, Detaljer (lukket). Regionvalg Troms/Lofoten/Alle. Logg, Logger og Innstillinger som knapper i toppen. Dyplenker #/spot/<id>, #/liste, #/logger, #/innstillinger.
+- `docs/css/kart.css`: mørk nattblå, land i mørk skifer, glass-ark/-panel, ratingfarger fra skissen (0 #617480, 1 #EC6A43, 2 #EFBA45, 3 #47C88E, 4 #2DC3D3, 5 #9A88FF), Fraunces bare i ordmerket, Geist for tekst, Geist Mono for tall (selvhostet, OFL). prefers-reduced-motion skrur av alle animasjoner, prefers-reduced-transparency fjerner blur. Alle knapper minst 44 px med tilgjengelig navn.
+- app.js er biblioteket (loggark, logger, innstillinger, breakdown, forklaringer, Detaljer-rutenettet, formatering); gamle liste/detalj-funksjoner er fjernet. map.js, map.css, chart.js og Leaflet er borte (kartfliser kan komme tilbake som valg senere).
+- Ytelse: avspilling (240 ms per time) oppdaterer bare merkenes farge/tekst, vindlagets rotasjon/fart, nattlagets dekning, tidsteksten og (i spotarket) tallene og valgt søyle - ingen ny tegning av kartet.
+
+**Tester:** `fetcher/test_design_browser.py` (omskrevet): mobil 390×844 og PC 1440×900 - rendrer uten JS-feil, merker/stjerner/høyde/periode/energi/Retningstreff = forecast.json, kilen fra directness alene, arket dras med fingeren, avspilling, regionvalg, axe color-contrast, 44 px, tilgjengelige navn, reduced-motion. `fetcher/test_disc_browser.py` (omskrevet til kilen, samme tre scenarioer og G-testen). test_map_disc.py leser kart.js. Skjermbilder i docs/design/kart-forst/skjermbilder/. Alle tester grønne lokalt.
+
+**Animasjonene (skjermopptak i ord):** se PR-beskrivelsen.
+
+**Fysikk-kontrollør:** se under (fylles inn).
+
 ## Designrunde 1 (09.10.2026, Theodors oppdrag «Gjør Nordsurf proff på mobil og PC») - BYGGET på gren `design/runde-1`, PR åpen, IKKE merget
 
 **Regel 2 («bare visning») - bevist, ikke bare lovet:** `fetcher/test_display_only.py` (ny) sammenligner sha256 av `fetcher/rating.py`, `fetch.py`, `sources.py`, `calibrate.py`, `exposure_learn.py`, `exposure.py`, `longrange.py`, `tide.py`, `sun.py`, `notify.py`, `spots.json` og `docs/data/forecast.json` mot origin/main (byte for byte like), og re-rater de 15 faste observasjonene gjennom testlaben mot en fast tabell (unstad_2609 = 4 stjerner / 2,42 m, farstadsanden_338 = 0 / 1,28 m osv.). Kjøres i Actions (test.yml) med eksplisitt `git fetch origin main`.
