@@ -141,9 +141,12 @@ header.top{padding:16px 0 8px}
 .card .area{grid-area:area;color:var(--muted);font-size:var(--fs-secondary)}
 .card .rate{grid-area:rating;align-self:start;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
 .card .rate .word{font-size:18px;line-height:1.2}
-.card .facts{grid-area:facts;display:flex;flex-wrap:nowrap;gap:4px 12px;margin-top:3px;font-size:var(--fs-secondary);color:var(--ink);min-width:0;overflow:hidden}
-.card .facts .f{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.card .facts .f.kj,.card .facts .f:not(.m){flex-shrink:0} /* vind og kJ kuttes aldri; området kan kuttes med … */
+/* Én linje, alltid: området (første, dempet) krymper med «…» først, høyde,
+   vind og kJ beholder full bredde - et kuttet tall er verre enn et kuttet
+   stedsnavn (fysikk-kontrollør 09.10.2026). */
+.card .facts{grid-area:facts;display:grid;grid-auto-flow:column;grid-template-columns:minmax(0,max-content);grid-auto-columns:max-content;justify-content:start;gap:4px 12px;margin-top:3px;font-size:var(--fs-secondary);color:var(--ink);min-width:0;overflow:hidden}
+.card .facts .f{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
+.card .facts .f.m{overflow:hidden;text-overflow:ellipsis;display:block}
 .card .facts .f.m{color:var(--muted)}
 .card .facts .f.kj{display:none} /* kJ bare på PC, se PC-blokken */
 .wind-arrow{width:16px;height:16px;display:inline-block;flex:0 0 auto}

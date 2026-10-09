@@ -37,7 +37,7 @@
     noHeight: "–",
     wind: {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"},
     windCalm: "blankt", windNearCalm: "nesten blankt",
-    windShort: {"nesten blankt":"blankt", "side-onshore":"side-on", "sidevind":"side"},  // kortene i lista
+    windShort: {"nesten blankt":"lett", "side-onshore":"side-on", "sidevind":"side"},  // kortene i lista - "lett" (1,5-3 m/s) er ikke "blankt" (fysikk-kontrollør 09.10.2026)
     windAria: (speed, dir, type) => `vind ${speed} meter per sekund fra ${dir}, ${type}`,
 
     /* dagbrikker */

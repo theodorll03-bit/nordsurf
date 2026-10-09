@@ -151,6 +151,16 @@ def main():
                 # småfiks 2 (09.10.2026): kJ på samme linje som vinden - alle kort like høye
                 hs = [round(b["height"]) for b in [page.locator(".card").nth(i).bounding_box() for i in range(len(spots))] if b]
                 assert len(set(hs)) == 1, f"kortene i PC-lista skal være like høye, var {hs}"
+                # ... og ved smaleste PC-bredde (900 px, liste 400 px) skal ingen faktalinje
+                # flyte over - også med lang vindtekst og stort kJ-tall (fysikk-kontrollørens
+                # forslag 09.10.2026). Prøves med et verstefall-kort før ekte data gjenopprettes.
+                page.set_viewport_size({"width": 900, "height": 900})
+                page.evaluate("""() => { const h = DATA.spots[0].hours[0]; window.__bak = {...h};
+                    Object.assign(h, {surf_height: 1.2, surf_height_sets: 1.8, wind_speed: 12, wind_type: 'sideonshore', wind_dir: 200, stars: 3, low_reason: null, swell_offshore: 2.0, energy_swell_kj: 1234}); render(); }""")
+                over = page.evaluate("""() => [...document.querySelectorAll('.card .facts')].filter(f => f.scrollWidth > f.clientWidth + 1).length""")
+                page.evaluate("() => { Object.assign(DATA.spots[0].hours[0], window.__bak); render(); }")
+                page.set_viewport_size({"width": vp[0], "height": vp[1]})
+                assert over == 0, f"{over} faktalinje(r) flyter over ved 900 px bredde (tall kan bli kuttet)"
             if mobile and len(spots) >= 5:
                 # punkt 7 (09.10.2026): minst fem spots synlige uten å scrolle på 390x844
                 box5 = page.locator(".card").nth(4).bounding_box()
@@ -211,7 +221,8 @@ def main():
                 assert page.locator("#chartWrap svg .flat-lbl").count() == 1, "kompakt graf skal si 'Flatt ...' eller 'Ingen surf ...'"
                 lbl = page.locator("#chartWrap svg .flat-lbl").text_content() or ""
                 # "Flatt" bare når alle timene i strekket er ekte flate, ellers "Ingen surf"
-                all_flat = all(hh.get("low_reason") == "flat" or (not hh.get("low_reason") and (hh.get("surf_height") or 0) <= 0) for hh in fh[:24])
+                # samme regel som chart.js: ekte flat = low_reason "flat", eller ingen low_reason og surfehøyde 0 (manglende tall er IKKE flatt)
+                all_flat = all(hh.get("low_reason") == "flat" or (not hh.get("low_reason") and hh.get("surf_height") is not None and hh["surf_height"] <= 0) for hh in fh[:24])
                 assert lbl.startswith("Flatt" if all_flat else "Ingen surf"), f"kompakt graf-tekst '{lbl}' passer ikke timene (alle ekte flate: {all_flat})"
                 assert page.locator("#chartWrap svg .sel-line").count() == 1, "valgt time skal være markert med en tynn strek i kompakt graf"
             # småfiks 3 (09.10.2026): første dagsnavn skal være helt synlig selv om dagen starter utenfor utsnittet
