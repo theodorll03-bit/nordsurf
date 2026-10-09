@@ -1,163 +1,163 @@
 {
- "last_scored_until": "2026-10-09T06:00:00+00:00",
+ "last_scored_until": "2026-10-09T09:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 218,
+    "n": 245,
+    "hits": 245,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "tromvik": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 217,
+    "n": 245,
+    "hits": 244,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 31,
+    "n": 51,
+    "hits": 41,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "ersfjordstranda": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 218,
+    "n": 245,
+    "hits": 245,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "russelv": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 217,
+    "n": 245,
+    "hits": 244,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "lenangsoyra": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 214,
+    "n": 245,
+    "hits": 241,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "steinkrossa": {
    "1": {
-    "n": 351,
-    "hits": 339,
+    "n": 372,
+    "hits": 360,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 180,
+    "n": 245,
+    "hits": 207,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 8,
+    "n": 51,
+    "hits": 17,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "unstad": {
    "1": {
-    "n": 351,
-    "hits": 350,
+    "n": 372,
+    "hits": 371,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 200,
+    "n": 245,
+    "hits": 227,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "farstadsanden": {
    "1": {
-    "n": 351,
-    "hits": 351,
+    "n": 372,
+    "hits": 372,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 218,
-    "hits": 218,
+    "n": 245,
+    "hits": 245,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 36,
-    "hits": 36,
+    "n": 51,
+    "hits": 51,
     "n_logs": 0,
     "hits_logs": 0
    }
