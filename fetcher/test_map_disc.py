@@ -102,4 +102,13 @@ for dir_off, dn, bwc, expected in _cases:
     assert got == expected, f"dir={dir_off} directness={dn} bw_confirms={bwc}: forventet {expected}, fikk {got}"
 print(f"5: {len(_cases)} kombinasjoner av retning/directness/bw_confirms gir riktig klasse - OK")
 
+
+# ---------- 6. Skiva i spotarket (front.js) bruker SAMME funksjon ----------
+# («kart først», 09.10.2026, fysikk-kontrollør): front.js skal ikke ha noen
+# egen treff/bom-grense - den kaller Kart.hitClass(h), som er linjene over.
+FRONT_JS = (Path(__file__).parent.parent / "docs" / "js" / "front.js").read_text(encoding="utf-8")
+assert FRONT_JS.count("Kart.hitClass(h)") >= 2, "front.js skal klassifisere skiva via Kart.hitClass(h)"
+assert "0.667" not in FRONT_JS and "0.999" not in FRONT_JS, "front.js skal ikke ha egne treff/bom-grenser"
+assert "bw_confirms" not in FRONT_JS and "spot_direction_factor" not in FRONT_JS
+print("6: front.js sin skive bruker Kart.hitClass(h) - ingen egen grense, ingen bw_confirms - OK")
 print("Alle tester ok")

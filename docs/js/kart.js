@@ -98,19 +98,31 @@
     windSvg.setAttribute("width", W); windSvg.setAttribute("height", H);
     windSvg.innerHTML = out;
   }
+  let windAngle = null;  // akkumulert vinkel, så overgangen alltid tar korteste vei (ingen nesten-hel runde ved 0/360)
   function setWind(h){
     const ws = h && h.wind_speed!=null ? h.wind_speed : null;
     const wd = h && h.wind_dir!=null ? h.wind_dir : null;
     if(ws==null || wd==null){ windLayer.style.opacity = "0"; return; }
     const travel = (wd + 180) % 360;                       // "fra" -> dit vinden går
+    const target = travel - 90;
+    if(windAngle==null) windAngle = target;
+    else { let d = ((target - windAngle) % 360 + 540) % 360 - 180; windAngle += d; }
     const dur = Math.max(1.1, Math.min(6, 5.6 - ws*0.42)); // fart etter styrke
     const op = ws < 0.6 ? 0.18 : Math.min(0.95, 0.35 + ws*0.06);
     windLayer.style.setProperty("--wd", dur.toFixed(2)+"s");
     windLayer.style.opacity = op.toFixed(2);
-    windLayer.style.transform = `rotate(${travel - 90}deg)`;
+    windLayer.style.transform = `rotate(${windAngle.toFixed(1)}deg)`;
+  }
+  function lightOf(h){
+    // ukjent lys er ukjent (null) - aldri "dag" (grunnregelen: mangler er ikke et svar)
+    if(!h) return null;
+    if(h.light) return h.light;
+    if(h.daylight===false) return "mørkt";
+    if(h.daylight===true) return "dag";
+    return null;
   }
   function setNight(h){
-    const light = h ? (h.light || (h.daylight===false ? "mørkt" : "dag")) : "dag";
+    const light = lightOf(h);
     night.style.opacity = light==="mørkt" ? ".42" : light==="skumring" ? ".2" : "0";
   }
 
@@ -241,17 +253,26 @@
   // linjene): treff/bom KUN fra h.directness - aldri bw_confirms/
   // spot_direction_factor. Grensene speiler rating.SPOT_DIRECTION_OVERRIDE_EXPOSURE.
   function wedgeAriaLabel(h){
+    if(!h || h.dir_offshore==null || h.directness==null) return "svellretning ukjent";
     const miss = h.directness!=null && h.directness < 0.667;
     return miss ? "svellet treffer ikke vinduet" : "svellet treffer vinduet";
   }
-  function wedgeMarkup(p, h){
-    const win = p.s.swell_window; if(!win) return "";
-    const st = h ? (h.stars||0) : 0;
-    const col = st>=1 ? COL[Math.min(5,st)] : WINDOW_COL;
-    const missing = !h || h.dir_offshore==null;
+  // Én felles klassifisering for kilen på kartet OG skiva i spotarket
+  // (front.js kaller Kart.hitClass) - test_map_disc.py leser disse linjene.
+  function hitClass(h){
+    if(!h) return "miss";
+    const missing = h.dir_offshore==null;
     const dn = h.directness;
     const cls = missing || dn==null || dn < 0.667 ? "miss" : dn >= 0.999 ? "" : "edge";
-    const per = h && h.period!=null ? h.period : 10;
+    return cls;
+  }
+  function wedgeMarkup(p, h){
+    const win = p.s.swell_window; if(!win || !h) return "";
+    const st = h.stars||0;
+    const col = st>=1 ? COL[Math.min(5,st)] : WINDOW_COL;
+    const missing = h.dir_offshore==null;
+    const cls = hitClass(h);
+    const per = h.period!=null ? h.period : 10;
     const dur = Math.max(1.8, Math.min(4.4, per*0.26));        // bølgefrontenes fart etter perioden
     const dir = missing ? 0 : h.dir_offshore;
     let swell = "";
@@ -263,12 +284,12 @@
     }
     // BarentsWatch sin egen retning ved punktet (tynn linje), som på skiva
     let spotSwellMarkup = "";
-    if(h && h.bw_dir!=null){
+    if(h.height_source==="barentswatch" && h.bw_dir!=null){
       const noHit = h.spot_direction_factor===0;
       const q = pt(h.bw_dir, 44);
       spotSwellMarkup = `<line class="disc-spot-swell${noHit?" miss":""}" x1="${q[0].toFixed(2)}" y1="${q[1].toFixed(2)}" x2="0" y2="0"/>`;
     }
-    return `<g class="wedge ${cls}" transform="translate(${p.x.toFixed(2)} ${p.y.toFixed(2)})" aria-label="${esc(wedgeAriaLabel(h||{}))}">
+    return `<g class="wedge ${cls}" transform="translate(${p.x.toFixed(2)} ${p.y.toFixed(2)})" aria-label="${esc(wedgeAriaLabel(h))}">
       <path class="wedge-fill" d="${wedgePath(win, R_WEDGE)}" style="fill:${cls==="miss"?WINDOW_COL:col};stroke:${cls==="miss"?WINDOW_COL:col}"/>
       ${spotSwellMarkup}
       <circle r="1.4" class="wedge-c"/>
@@ -301,5 +322,5 @@
   function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function spotInfo(id){ return spots.find(p=>p.id===id) || null; }
 
-  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, COL, focusSpot };
+  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, COL, focusSpot, hitClass, lightOf };
 })();

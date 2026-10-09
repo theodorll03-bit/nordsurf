@@ -15,7 +15,15 @@
 
 **Animasjonene (skjermopptak i ord):** se PR-beskrivelsen.
 
-**Fysikk-kontrollør:** se under (fylles inn).
+**Fysikk-kontrollør (09.10.2026, «MÅ RETTES» - alt rettet, pushet som oppfølging):**
+- Bekreftet riktig: vindlaget går dit vinden går; bølgefrontene i kilen og på skiva kommer FRA svellretningen; treff/bom bare fra h.directness, inWin fra skissen er ikke brukt; coast.json er konform Mercator (vinklene stemmer); ingen fil som lager tall er rørt.
+- RETTET (middels): vindpila på skiva pekte UTOVER (mot der vinden kommer fra) - arvet fra skissen; den gamle skiva, vindlaget og pila i lista peker dit vinden går. Snudd (`M0,-64 L5,-74 L-5,-74`).
+- RETTET (middels): «Beste neste 48 timer», lista, minigrafen og søylene regnet vinduet fra henterens kjøretid (opptil 3-6 t bak nå), så kortet kunne anbefale en passert time. Nå fra NÅTIMEN (`S.w0`) og 48 timer frem (`S.w1`); avspilling starter på nytt fra nåtimen.
+- RETTET (middels): skiva i spotarket hadde egen treff/bom-kode og egne ord («Rett inn i vinduet»); nå kaller den `Kart.hitClass(h)` (samme linjer som test_map_disc.py leser) og bruker `directionHitText()` fra app.js - test_map_disc.py sjekker nå også at front.js ikke har egne grenser.
+- RETTET (grunnregelen): «fra – (0°)» når retningen manglet - gradtall vises bare når retningen finnes; ukjent lys er nå null («–», ingen natt, ikke «Dagslys») i stedet for «dag»; aria-tekstene sier «svellretning ukjent» når retning/directness mangler; `wedgeMarkup` tåler null-time; BW-linja ved punktet krever igjen `height_source === "barentswatch"`.
+- RETTET (lav): vindlagets rotasjon tar nå korteste vei over 0/360 (ingen nesten-hel runde ved sørlig vind under avspilling).
+- Notert, ikke gjort: vind/natt/lys på kartet kommer fra én spot (valgt, ellers regionens referansespot) - bør vises hvilken spot vinden gjelder (finpuss). Surfehøyde null og 0 gir samme 3 px-stump i søylene (aria skiller dem) - stiplet «mangler»-stump i finpussen.
+
 
 ## Designrunde 1 (09.10.2026, Theodors oppdrag «Gjør Nordsurf proff på mobil og PC») - BYGGET på gren `design/runde-1`, PR åpen, IKKE merget
 

@@ -16,8 +16,8 @@
   const T = (i)=> DATA.spots[0].hours[i] ? new Date(DATA.spots[0].hours[i].t) : null;
   const hourAt = (spot, i)=> spot.hours[i] || null;
   const stars = (h)=> h ? (h.stars||0) : 0;
-  const lightOf = (h)=> h ? (h.light || (h.daylight===false ? "mørkt" : "dag")) : "dag";
-  const lightWord = (l)=> l==="mørkt" ? "Mørkt" : l==="skumring" ? "Skumring" : "Dagslys";
+  const lightOf = (h)=> window.Kart ? Kart.lightOf(h) : (h && h.light) || null;   // null = ukjent, aldri "dag"
+  const lightWord = (l)=> l==="mørkt" ? "Mørkt" : l==="skumring" ? "Skumring" : l==="dag" ? "Dagslys" : "–";
   const markLabel = (h)=> stars(h) >= 1 && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : ratingWord(h);
   const markAria = (s, h)=> `${s.name}, ${stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h)}`;
   const timeText = (i)=>{ const t = T(i); return t ? `${cap(relDay(t))} ${fmtHour.format(t)}:00` : ""; };
@@ -28,9 +28,14 @@
   async function start(data){
     // tidsakse: glidebryteren dekker de første 7 døgnene, "48 timer" lista/søylene
     const H = data.spots[0].hours; const t0 = new Date(H[0].t).getTime();
-    S.maxIdx = 0; S.h48 = 0;
-    H.forEach((h,i)=>{ const dt = new Date(h.t).getTime() - t0; if(dt <= 7*24*3600e3) S.maxIdx = i; if(dt < 48*3600e3) S.h48 = i+1; });
-    S.idx = Math.max(0, Math.min(S.maxIdx, currentHour(data.spots[0])));
+    S.maxIdx = 0;
+    H.forEach((h,i)=>{ const dt = new Date(h.t).getTime() - t0; if(dt <= 7*24*3600e3) S.maxIdx = i; });
+    // «Neste 48 timer» regnes fra NÅTIMEN (ikke henterens kjøretid, som kan
+    // ligge opptil 3-6 timer bak - fysikk-kontrollør 09.10.2026): w0..w1
+    S.w0 = Math.max(0, Math.min(S.maxIdx, currentHour(data.spots[0])));
+    const tw = new Date(H[S.w0].t).getTime();
+    S.w1 = H.length; H.forEach((h,i)=>{ if(i > S.w0 && S.w1===H.length && new Date(h.t).getTime() >= tw + 48*3600e3) S.w1 = i; });
+    S.idx = S.w0;
     let coast = window.__COAST__;
     if(!coast){ try{ coast = await (await fetch("geo/coast.json",{cache:"force-cache"})).json(); }catch(e){ coast = null; } }
     if(coast){
@@ -100,7 +105,7 @@
   function setPlaying(on){
     if(timer){ clearInterval(timer); timer = null; }
     S.playing = on;
-    if(on) timer = setInterval(()=>{ setIdx(S.idx >= S.maxIdx ? 0 : S.idx + 1); }, 240);
+    if(on) timer = setInterval(()=>{ setIdx(S.idx >= S.maxIdx ? S.w0 : S.idx + 1); }, 240);  // starter på nytt fra nåtimen
     renderTime();
   }
   function setIdx(i){
@@ -209,9 +214,9 @@
   /* beste neste 48 timer: høyeste stjerner i lyse timer */
   function best48(){
     let best = null;
-    DATA.spots.forEach(s=>{ for(let i=0;i<S.h48;i++){ const h = s.hours[i]; if(!h || lightOf(h)==="mørkt") continue; const st = stars(h); if(!best || st > best.st) best = {s, i, st}; } });
+    DATA.spots.forEach(s=>{ for(let i=S.w0;i<S.w1;i++){ const h = s.hours[i]; if(!h || lightOf(h)==="mørkt") continue; const st = stars(h); if(!best || st > best.st) best = {s, i, st}; } });
     if(!best || best.st < 1) return null;
-    let j = best.i; while(j+1 < S.h48 && stars(best.s.hours[j+1])===best.st && lightOf(best.s.hours[j+1])!=="mørkt") j++;
+    let j = best.i; while(j+1 < S.w1 && stars(best.s.hours[j+1])===best.st && lightOf(best.s.hours[j+1])!=="mørkt") j++;
     const a = new Date(best.s.hours[best.i].t), b = new Date(best.s.hours[j].t);
     return { ...best, when: `${cap(relDay(a))} ${fmtHour.format(a)}–${String((+fmtHour.format(b)+1)%24).padStart(2,"0")} · ${best.s.area||""}` };
   }
@@ -229,12 +234,12 @@
   }
   function wireBest(root){ const b = root.querySelector(".best"); if(b) b.onclick = ()=>openSpot(b.dataset.spot, +b.dataset.idx); }
   function rowsSorted(){
-    return DATA.spots.map(s=>{ let mx = 0; for(let i=0;i<S.h48;i++) mx = Math.max(mx, stars(s.hours[i])); return {s, mx}; }).sort((a,b)=>b.mx - a.mx);
+    return DATA.spots.map(s=>{ let mx = 0; for(let i=S.w0;i<S.w1;i++) mx = Math.max(mx, stars(s.hours[i])); return {s, mx}; }).sort((a,b)=>b.mx - a.mx);
   }
   function rowHtml(s, k){
     const h = hourAt(s, S.idx); const st = stars(h);
     let spark = "";
-    for(let i=0;i<S.h48;i+=2){ const x = s.hours[i]; const s2 = stars(x); spark += `<i style="height:${s2 ? 6 + s2*4 : 2}px;${s2?`--sc:${COL(s2)}`:""}"></i>`; }
+    for(let i=S.w0;i<S.w1;i+=2){ const x = s.hours[i]; const s2 = stars(x); spark += `<i style="height:${s2 ? 6 + s2*4 : 2}px;${s2?`--sc:${COL(s2)}`:""}"></i>`; }
     const kj = kjText(h);
     return `<button type="button" class="row r-${st}${st?" lit":""} rise" data-spot="${s.id}" style="animation-delay:${k*40}ms" aria-label="Åpne ${esc(s.name)}: ${esc(markAria(s, h))}">
       <span class="dot"></span>
@@ -264,21 +269,23 @@
   function winText(win){ return segs(win).map(([a,b])=>`${a}–${b}°`).join(" og "); }
   function discSvg(s, h){
     const st = stars(h); const col = st>=1 ? COL(st) : "#9FE3EE";
-    const dn = h ? h.directness : null; const sd = h ? h.dir_offshore : null;
-    const cls = sd==null || dn==null || dn < 0.667 ? "miss" : dn >= 0.999 ? "" : "edge";
+    const sd = h ? h.dir_offshore : null;
+    const cls = Kart.hitClass(h);   // samme regel som kilen på kartet (bare h.directness)
     const per = h && h.period!=null ? h.period : 10; const dur = Math.max(1.8, Math.min(4.4, per*0.26));
     const f = pt(s.facing||0, 52);
     let arcs = "";
     if(sd!=null && cls!=="miss"){ for(let i=0;i<4;i++) arcs += `<path class="arc ${cls}" d="M-15,-54 Q0,-59 15,-54" style="stroke:${col};animation-duration:${dur.toFixed(2)}s;animation-delay:-${(dur*i/4).toFixed(2)}s"/>`; }
     else if(sd!=null) arcs = `<line class="arc-miss" x1="0" y1="-58" x2="0" y2="-10"/>`;
-    const wind = h && h.wind_dir!=null ? `<g transform="rotate(${h.wind_dir})"><path class="windp" d="M0,-74 L5,-64 L-5,-64 Z"/></g>` : "";
-    return `<svg class="disc" viewBox="-64 -64 128 128" role="img" aria-label="Svellvindu ${esc(winText(s.swell_window||[0,0]))}, svell fra ${sd==null?"ukjent":sd+" grader"}, ${cls==="miss"?"treffer ikke":"treffer"}">
+    // vindpila står på fra-siden og peker INN mot sentrum - dit vinden går
+    // (som vindlaget på kartet og pila i lista; fysikk-kontrollør 09.10.2026)
+    const wind = h && h.wind_dir!=null ? `<g transform="rotate(${h.wind_dir})"><path class="windp" d="M0,-64 L5,-74 L-5,-74 Z"/></g>` : "";
+    return `<svg class="disc" viewBox="-64 -64 128 128" role="img" aria-label="Svellvindu ${esc(winText(s.swell_window||[0,0]))}, ${sd==null || (h && h.directness==null) ? "svellretning ukjent" : `svell fra ${Math.round(sd)} grader, ${cls==="miss"?"treffer ikke":"treffer"}`}">
       <circle class="ring" r="58"/><path class="wedge-fill" d="${wedgePath(s.swell_window||[0,0], 56)}" style="fill:${cls==="miss"?"#9FE3EE":col};stroke:${cls==="miss"?"#9FE3EE":col}"/>
       <line class="facing" x1="0" y1="0" x2="${f[0].toFixed(1)}" y2="${f[1].toFixed(1)}"/>
       <g transform="rotate(${sd==null?0:sd})">${arcs}</g>${wind}<circle class="c" r="3"/></svg>`;
   }
   function barsHtml(s){
-    const start = S.idx < 40 ? 0 : Math.max(0, S.idx - 8);
+    const start = S.idx < S.w0 + 40 ? S.w0 : Math.max(S.w0, S.idx - 8);
     const win = s.hours.slice(start, start + 48);
     const maxS = Math.max(2, ...win.map(x=>x.surf_height_sets || x.surf_height || 0));
     let lastDay = null;
@@ -349,10 +356,14 @@
     return `${starsRow(st)}<span class="word r-${st}">${esc(ratingWord(h))}</span>`;
   }
   function discBox(s, h){
-    const sd = h ? h.dir_offshore : null; const dn = h ? h.directness : null;
-    const hit = sd!=null && dn!=null && dn >= 0.667;
-    const swell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m fra ${compass(sd)} (${Math.round(sd)}°)` : (h && h.height_offshore!=null ? `${nf1.format(h.height_offshore)} m totalt fra ${compass(sd)}` : "Ingen svelldata");
-    const hitText = sd==null ? "" : (dn!=null && dn >= 0.999 ? "Rett inn i vinduet" : hit ? `I kanten av vinduet ${winText(s.swell_window||[0,0])}` : `Utenfor vinduet ${winText(s.swell_window||[0,0])}`);
+    const sd = h ? h.dir_offshore : null;
+    const cls = Kart.hitClass(h);
+    const hit = cls!=="miss";
+    const fromTxt = sd!=null ? ` fra ${compass(sd)} (${Math.round(sd)}°)` : "";   // ingen grader når retningen mangler
+    const swell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${fromTxt}` : (h && h.height_offshore!=null ? `${nf1.format(h.height_offshore)} m totalt${fromTxt}` : "Ingen svelldata");
+    // samme ord som Retningstreff-cellen (app.js directionHitText: "" når tallet mangler)
+    const dh = h ? directionHitText(h) : "";
+    const hitText = dh ? `${dh}${cls!=="" ? ` ${winText(s.swell_window||[0,0])}` : ""}` : "";
     const wind = h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s ${windLabel(h)} fra ${compass(h.wind_dir)}` : "–";
     return `${discSvg(s, h)}<div class="disc-txt">
       <button type="button" class="tap" data-explain="direction" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:1px"><span class="k">Svell</span><span class="v">${esc(swell)}</span><span class="h${hit?" hit":""}">${esc(hitText)}</span></button>
