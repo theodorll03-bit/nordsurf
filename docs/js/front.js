@@ -26,7 +26,7 @@
     if(!h) return "–";
     if(h.low_reason){ const m = heightMForDisplay(h); return m!=null ? `${nf1.format(m)} m` : ratingWord(h); }
     if(h.surf_height==null) return "–";
-    if(h.surf_height<=0) return STR.starWords[0];   // 0 → «Flatt» (ratingWord gir «Smått» fra 0,3 m, men da står tallet her)
+    if(h.surf_height<=0) return STR.starWords[0];   // 0 → «Flatt» (ratingWord gir «Smått»/«Grøtete» fra 0,3/0,8 m, men da står tallet her)
     const a = nf1.format(h.surf_height), b = h.surf_height_sets!=null ? nf1.format(h.surf_height_sets) : null;
     return b!=null && b!==a ? `${a}–${b} m` : `${a} m`;
   };
@@ -304,18 +304,17 @@
     // X timene» (bare når alle er EKTE flate) eller «Ingen surf ...» - samme
     // regel som grafen i designrunde 1 (manglende tall er ikke flatt).
     if(!win.length || win.some(x=>(x.stars||0) > 0)) return null;
-    // «Flatt» når alle er ekte flate, «Smått» når alle er flate eller smått
-    // (minst én smått, dvs. surfehøyde ≥ 0,3 m - Theodors ja 09.10.2026),
-    // ellers «Ingen surf» (blåst ut, treffer ikke, stormsjø).
-    // Én regel: ordet fra ratingWord() (samme som klyngepila i kart.js).
-    let allFlat = true, anySmall = false;
+    // Alle timene flate/smått/grøtete (ordet fra ratingWord, samme regel som
+    // klyngepila i kart.js): det høyeste ordet vinner («Grøtete» > «Smått» >
+    // «Flatt»). Ellers «Ingen surf» (blåst ut, treffer ikke, stormsjø).
+    let top = 0;
     for(const x of win){
       if(x.surf_height==null && !x.low_reason) return null;
-      const w = ratingWord(x);
-      if(w===STR.wordSmall) anySmall = true;
-      else if(w!==STR.starWords[0]) allFlat = false;
+      const k = ZERO_WORDS.indexOf(ratingWord(x));
+      if(k < 0){ top = -1; break; }
+      top = Math.max(top, k);
     }
-    const T = !allFlat ? STR.noSurf : anySmall ? STR.small : STR.flat;
+    const T = top < 0 ? STR.noSurf : top===2 ? STR.mushy : top===1 ? STR.small : STR.flat;
     const n = win.length;
     if(start + n >= total) return T.rest;
     return n >= 48 ? T.next(n) : T.allDay;

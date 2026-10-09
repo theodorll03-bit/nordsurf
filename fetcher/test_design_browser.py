@@ -87,7 +87,8 @@ def main():
         # speiler ratingWord() i docs/js/app.js, «Smått» inkludert (Theodors ja 09.10.2026)
         if not h: return "–"
         if not (h.get("stars") or 0) and not h.get("low_reason") and h.get("surf_height") is None: return "–"
-        if not (h.get("stars") or 0) and (h.get("low_reason") in ("flat", None)) and h.get("surf_height") is not None and h["surf_height"] >= 0.3: return "Smått"
+        if not (h.get("stars") or 0) and (h.get("low_reason") in ("flat", None)) and h.get("surf_height") is not None:
+            return "Grøtete" if h["surf_height"] >= 0.8 else "Smått" if h["surf_height"] >= 0.3 else "Flatt"
         if h.get("low_reason"): return LOW.get(h["low_reason"], STARW[0])
         return STARW[min(5, h.get("stars") or 0)]
     # spot med stjerner (høyest de første 72 t) og en flat spot
@@ -198,15 +199,16 @@ def main():
                             page.evaluate(f"Front.setIdx({ti})"); page.wait_for_timeout(150)
                             info = page.evaluate("""() => { const c = document.querySelector('.mk-edge.cluster'); const ids = c.getAttribute('aria-label').split(':')[1].split('.')[0].split(',').map(x => x.trim());
                                 return {label: c.querySelector('.mk-label').textContent, cls: c.className, names: ids}; }""")
-                            best, all_flat, any_small, miss = 0, True, False, False
+                            best, top, miss = 0, 0, False
+                            ZW = ["Flatt", "Smått", "Grøtete"]
                             for sp in spots:
                                 if sp["name"] not in info["names"]: continue
                                 h = sp["hours"][ti] if ti < len(sp["hours"]) else None
                                 if not h or (h.get("surf_height") is None and not h.get("low_reason")): miss = True; continue
                                 best = max(best, h.get("stars") or 0)
-                                if word_of(h) == "Smått": any_small = True
-                                elif word_of(h) != "Flatt": all_flat = False
-                            exp = f"beste {best}★" if best else "–" if miss else "ingen surf" if not all_flat else "smått" if any_small else "flatt"
+                                k = ZW.index(word_of(h)) if word_of(h) in ZW else -1
+                                top = -1 if (k < 0 or top < 0) else max(top, k)
+                            exp = f"beste {best}★" if best else "–" if miss else "ingen surf" if top < 0 else ZW[top].lower()
                             assert info["label"] == exp and f"r-{min(5,best)}" in info["cls"].split(), f"klyngepil i time {ti}: viste '{info['label']}' ({info['cls']}), forecast.json gir '{exp}'"
                 page.locator(".seg button[data-view='nord']").click(); page.wait_for_timeout(1200)
                 # 3: «Nå»-merket er lite og på linje med klokkeslettet
@@ -309,19 +311,26 @@ def main():
                     if all((x.get("stars") or 0) == 0 for x in spots[fi]["hours"][i0:i0+48]):
                         assert page.locator("#bars.compact").count() == 1 and page.locator("#bars .flat-lbl").count() == 1, "alle 48 timer 0 stjerner: kompakt visning med tekst"
                         lbl = page.locator("#bars .flat-lbl").text_content()
-                        assert lbl.startswith("Flatt") or lbl.startswith("Smått") or lbl.startswith("Ingen surf"), lbl
+                        assert lbl.split()[0] in ("Flatt", "Smått", "Grøtete", "Ingen"), lbl
                         # 2: kompakt graf uten dagnavn (de kolliderte med teksten)
                         assert page.locator("#bars.compact .d").count() == 0, "kompakt graf skal ikke ha dagnavn"
                 shot("spot_flat"); axe_check("spot_flat")
-                # 3: «Smått» (Theodors ja 09.10.2026): 0 stjerner, grunn flat, surfehøyde ≥ 0,3 m
-                # gir ordet «Smått» i rating, lapp og liste; under 0,3 m fortsatt «Flatt».
+                # 3: ordet ved 0 stjerner med grunn flat (Theodors ja 09.10.2026): under 0,3 m
+                # «Flatt», 0,3 til under 0,8 m «Smått», 0,8 m og mer «Grøtete» - i rating, lapp,
+                # liste og forklaringen bak ratingen (trykk). Bare ordet, ikke stjernene.
                 i0 = page.evaluate("Front.state.w0")
-                for sh, word in ((0.5, "Smått"), (0.2, "Flatt"), (0.0, "Flatt")):
+                for sh, word in ((0.5, "Smått"), (0.8, "Grøtete"), (1.4, "Grøtete"), (0.79, "Smått"), (0.3, "Smått"), (0.29, "Flatt"), (0.0, "Flatt")):
                     page.evaluate(f"""() => {{ const h = DATA.spots[0].hours[{i0}]; window.__bak2 = {{...h}};
                         Object.assign(h, {{surf_height: {sh}, surf_height_sets: null, stars: 0, faded: 0, low_reason: "flat"}}); Front.openSpot(DATA.spots[0].id, {i0}); }}""")
                     page.wait_for_timeout(500)
                     rw = page.locator("#spot .rating-line .word").text_content().strip()
                     assert rw == word, f"surfehøyde {sh} m med grunn flat: ratingordet skal være «{word}», var '{rw}'"
+                    if word != "Flatt" and spots[0]["hours"][i0].get("breakdown"):
+                        page.locator("#spot #bdOpen").click(); page.wait_for_timeout(300)
+                        note = page.locator("#bdBody .bd-note").text_content()
+                        exp_note = {"Smått": "for lite til en stjerne", "Grøtete": "kort periode og lite energi"}[word]
+                        assert note.startswith(word) and exp_note in note, f"forklaringen ved trykk skal forklare «{word}», sa '{note}'"
+                        page.evaluate("closeBreakdown()"); page.wait_for_timeout(200)
                     ml = page.locator(f"[data-id='{spots[0]['id']}'] .mk-label").first.text_content().strip()
                     assert ml == word, f"lappen på kartet skal si «{word}», sa '{ml}'"
                     page.evaluate("Front.go('list')"); page.wait_for_timeout(500)

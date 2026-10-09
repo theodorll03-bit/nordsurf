@@ -437,18 +437,20 @@
   // (manglende tall er aldri flatt).
   function clusterInfo(items){
     // Ordene kommer fra ratingWord() i app.js (samme ord overalt, «Smått» inkludert).
-    let best = 0, allFlat = true, anySmall = false, missing = false;
+    // 0 stjerner: det høyeste ordet blant spotene (Grøtete > Smått > Flatt,
+    // samme rekkefølge som flatInfo i front.js), «ingen surf» hvis noen er
+    // blåst ut/treffer ikke/stormsjø.
+    let best = 0, top = 0, missing = false;
     items.forEach(it=>{
       const h = hourOf(it.p.s, state.idx);
       if(!h || (h.surf_height==null && !h.low_reason)){ missing = true; return; }
       best = Math.max(best, h.stars||0);
-      const w = ratingWord(h);
-      if(w===STR.wordSmall) anySmall = true;
-      else if(w!==STR.starWords[0]) allFlat = false;
+      const k = ZERO_WORDS.indexOf(ratingWord(h));
+      top = k < 0 ? -1 : (top < 0 ? -1 : Math.max(top, k));
     });
-    const zeroWord = !allFlat ? "ingen surf" : anySmall ? STR.wordSmall.toLowerCase() : STR.starWords[0].toLowerCase();
-    const label = best ? `beste ${best}★` : missing ? "–" : zeroWord;
-    const aria = best ? `beste: ${best} ${best===1?"stjerne":"stjerner"} (${STR.starWords[Math.min(5,best)]})` : missing ? "noen timer mangler data" : zeroWord;
+    const zw = top < 0 ? "ingen surf" : ZERO_WORDS[top].toLowerCase();
+    const label = best ? `beste ${best}★` : missing ? "–" : zw;
+    const aria = best ? `beste: ${best} ${best===1?"stjerne":"stjerner"} (${STR.starWords[Math.min(5,best)]})` : missing ? "noen timer mangler data" : zw;
     return {best, label, aria};
   }
   function colorCluster(c){

@@ -113,22 +113,30 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 // alltid der. Tallene kommer fra forecast.json (rating.py) - aldri regnet her.
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
 function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; return `r-${n}`; }
-// «Smått» (Theodors ja 09.10.2026): der ordet ellers ville vært «Flatt»
-// (low_reason flat, eller 0 stjerner uten annen grunn) men surfehøyden er
-// minst 0,3 m. «Flatt» bare under 0,3 m eller 0. Bare visningsordet -
-// stjernene, low_reason og tallene er uendret. Blåst ut/Treffer ikke/
-// Stormsjø uendret.
-const SMALL_SURF_MIN_M = 0.3;
-function isSmall(h){ return !!h && !(h.stars) && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= SMALL_SURF_MIN_M; }
+// Ordet ved 0 stjerner med årsak «flat» (low_reason flat, eller 0 stjerner
+// uten annen grunn), etter surfehøyden (Theodors ja 09.10.2026, to runder):
+// under 0,3 m «Flatt», 0,3 til under 0,8 m «Smått», 0,8 m eller mer
+// «Grøtete» (bølgene er der, men kort periode og lite energi gjør dem svake).
+// Bare visningsordet - stjernene, low_reason og tallene er uendret. Blåst ut/
+// Treffer ikke/Stormsjø uendret. Samme ord overalt via ratingWord().
+const SMALL_SURF_MIN_M = 0.3, MUSHY_SURF_MIN_M = 0.8;
+const ZERO_WORDS = [STR.starWords[0], STR.wordSmall, STR.wordMushy];   // stigende: Flatt, Smått, Grøtete
+function zeroWord(h){
+  // null når regelen ikke gjelder (stjerner, annen low_reason, eller tallet mangler)
+  if(!h || h.stars || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return null;
+  return h.surf_height >= MUSHY_SURF_MIN_M ? STR.wordMushy : h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
+}
 function ratingWord(h){
   if(!h) return "–";
   // 0 stjerner uten grunn OG uten surfehøyde: tallet mangler - aldri «Flatt»
   // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
   if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";
-  if(isSmall(h)) return STR.wordSmall;
+  const z = zeroWord(h); if(z!=null) return z;
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }
+// Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
+function ratingWordExplain(h){ const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null; }
 function starsSVG(solid, faded, big){
   let out = "";
   for(let i=0;i<5;i++){
@@ -1107,7 +1115,8 @@ function breakdownRowHtml(line, isTotal){
 }
 function openBreakdown(h){
   if(!h.breakdown || !h.breakdown.length) return;
-  $("#bdBody").innerHTML = h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
+  const ex = ratingWordExplain(h);
+  $("#bdBody").innerHTML = (ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : "") + h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
   $("#bdSheet").classList.add("open"); $("#bdScrim").classList.add("open"); $("#bdSheet").setAttribute("aria-hidden","false");
 }
 function closeBreakdown(){
