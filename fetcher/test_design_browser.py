@@ -133,6 +133,12 @@ def main():
             assert page.locator(".card").count() == len(spots), "lista skal ha ett kort per spot"
             # 2: ordet i lista = forecast.json sin nåværende time
             first_card = page.locator(".card").first
+            kj_visible = page.locator(".card .facts .f.kj:visible").count()
+            if mobile:
+                assert kj_visible == 0, "kJ skal ikke vises i lista på mobil"
+            else:
+                assert kj_visible > 0, "kJ skal vises (liten skrift) i lista på PC"
+            assert page.locator(".day-chip").filter(has_text="kJ").count() == 0, "dagbrikkene skal ikke ha kJ"
             shot("liste"); axe_check("liste")
             # 4+5: ingen svevende verktøylinje, trykkflater i lista
             assert page.locator(".toolbar").count() == 0, "den gamle svevende verktøylinja skal være borte"
@@ -154,6 +160,12 @@ def main():
                 assert nf1(h["surf_height"]) in key, f"surfehøyde i nøkkellinja ({key}) stemmer ikke med forecast.json ({h['surf_height']})"
                 if h.get("surf_height_sets") is not None and h["surf_height_sets"] != h["surf_height"]:
                     assert nf1(h["surf_height_sets"]) in key, f"sett ({h['surf_height_sets']}) mangler i nøkkellinja ({key})"
+            # Theodors svar på PR #2 (09.10.2026): kJ i hovedlinja (alle
+            # skjermer), i lista bare på PC - aldri i dagbrikkene.
+            kj = h.get("energy_swell_kj") if h.get("swell_offshore") is not None else h.get("energy_total_kj")
+            if kj is not None:
+                keyline = page.locator("#detailPane .keyline").inner_text()
+                assert "kJ" in keyline, f"energien (kJ) mangler i nøkkellinja: {keyline}"
             assert page.locator("#logBtn").count() == 1, "én Logg-knapp i detaljsidens hode"
             assert page.locator("#chartWrap svg .bar").count() == len(spots[bi]["hours"]), "grafen skal ha én søyle per time"
             small = page.evaluate("""() => [...document.querySelectorAll('#detailPane button:not(.tap):not(.link)')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.width < 44 || r.height < 44); }).map(b => b.className).slice(0, 5)""")

@@ -458,14 +458,16 @@ function discSvgMarkup(spot, h){
 
 function discPlateMarkup(spot, h){
   // Samme ord som lista og detaljsiden (0 stjerner = ordet, ellers
-  // stjernene), så surfehøyde/sett og periode under. Tallene bak ligger på
-  // detaljsiden - ikke kJ og kilde her (designrunde 1, punkt 2 og 9).
+  // stjernene), så surfehøyde/sett og periode under, og energien (kJ) som
+  // liten tekst under det igjen (Theodors svar på PR #2, 09.10.2026).
+  // Resten av tallene ligger på detaljsiden.
   const night = h && (h.light==="mørkt" || h.daylight===false);
   const range = h ? heightRangeText(h) : "–";
   const period = h && h.period!=null ? `${nf0.format(h.period)} s` : "";
   const src = h ? (h.height_source==="barentswatch" ? "BarentsWatch" : (h.zone==="langtid" ? "langtid" : "anslag")) : "";
   return `<div class="big ${h?`r-${Math.min(5,h.stars||0)}`:"r-0"}">${markRatingHtml(h)}</div>
     <div class="mid">${[range, period, night?"Mørkt":""].filter(Boolean).map(esc).join(" · ")}</div>
+    ${h && kjText(h) ? `<div class="kj">${esc(kjText(h))}</div>` : ""}
     <div class="src">${esc(src)} <span class="chev" aria-hidden="true">›</span></div>`;
 }
 

@@ -54,6 +54,8 @@
     chartHelp: "Slik leser du grafen",
     chartHelpText: "Hver søyle er én time. Høyden er surfehøyden (ved blåst ut eller stormsjø: totalhøyden ved spoten), fargen er ratingen (grå 0 stjerner, rød dårlig, gul ok, grønn bra, turkis veldig bra, blå rått). Den tynne streken over søylen er settene. En lav grå strek er en flat time, en stiplet strek betyr at tallet mangler. Bakgrunnen viser dag, skumring og mørke. Lyse søyler lenger ut er anslag fra reservemodellen og langtidsvarselet. Trykk på en søyle for tallene for den timen. Piltastene flytter mellom timer.",
     transferSub: "andel av svellhøyden ute som når spoten ved direkte treff",
+    kjUnderOne: "under 1 kJ",
+    kjEstimateSub: "anslag: svellet er ikke skilt ut, regnet fra totalhøyden",
     reports: "Rapporter fra andre",
     bestNone: "Ingen brukbare vinduer de neste tre dagene",
     bestNoLight: "Ingen data i lyse timer",

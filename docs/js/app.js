@@ -148,6 +148,24 @@ function windShort(h){
   const type = windLabel(h);
   return `${nf0.format(h.wind_speed)} m/s${type?` ${type}`:""}`;
 }
+function kjText(h){
+  // Energien ute, samme tall som Energi-cellen i Detaljer: svellenergien når
+  // svellfeltet finnes, ellers energien med totalhøyde (reserve). Mangler
+  // tallet, returneres null - aldri "0 kJ". Theodors svar på PR #2
+  // (09.10.2026): kJ tilbake i hovedlinja, grafens verdier, kartplata og
+  // lista på PC (ikke mobil, ikke dagbrikkene).
+  // Reserve (fysikk-kontrollør 09.10.2026): når svellfeltet mangler, setter
+  // henteren svell = totalhøyde × fast andel (swell_model "total_fallback",
+  // 22 langtidstimer i dag) - energien er da et ANSLAG og merkes "ca.",
+  // aldri vist som et vanlig tall. Samme hvis bare totalenergien finnes.
+  // Avrundet 0 kJ er et ekte, ørlite tall, ikke manglende - vises som "under 1 kJ".
+  if(!h) return null;
+  const reserve = h.swell_model==="total_fallback" || h.swell_offshore==null;
+  const kj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
+  if(kj==null) return null;
+  if(kj===0) return STR.kjUnderOne;
+  return `${reserve?"ca. ":""}${nf0.format(kj)} kJ`;
+}
 function heightRangeText(h){
   // "0,8 til 1,1 m": surfehøyde og sett. 0 stjerner: ordet alene (ikke et
   // tall som ser ut som en måling), unntatt blåst ut/stormsjø som viser den
@@ -272,7 +290,8 @@ function renderList(){
     const range = heightRangeText(h);
     if(range) facts.push(`<span class="f">${esc(range)}</span>`);
     if(h.wind_speed!=null) facts.push(`<span class="f">${windArrowHtml(h)}${esc(windShort(h))}</span>`);
-    const aria = `${s.name}, ${h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h)}${h.stars && h.low_reason ? `, ${ratingWord(h)}` : ""}${range?`, ${range}`:""}${h.wind_speed!=null?`, ${STR.windAria(nf0.format(h.wind_speed), compass(h.wind_dir), windLabel(h))}`:""}`;
+    if(kjText(h)) facts.push(`<span class="f kj">${esc(kjText(h))}</span>`); // vises bare på PC (CSS), Theodors svar på PR #2
+    const aria = `${s.name}, ${h.stars ? STR.starsAria(h.stars, h.faded) : ratingWord(h)}${h.stars && h.low_reason ? `, ${ratingWord(h)}` : ""}${range?`, ${range}`:""}${isDesktop() && kjText(h) ? `, ${kjText(h)}` : ""}${h.wind_speed!=null?`, ${STR.windAria(nf0.format(h.wind_speed), compass(h.wind_dir), windLabel(h))}`:""}`;
     return `<div class="card ${ratingClass(h)}${sel?" sel":""}" data-card="${i}">
       <button class="main" data-spot="${i}" aria-label="${esc(aria)}"${sel?' aria-current="true"':''}>
         <span class="name">${esc(s.name)}</span>
@@ -318,7 +337,7 @@ function noticeFor(h){
 function tipHtml(h){
   const t = new Date(h.t);
   const range = heightRangeText(h);
-  const line = [range, h.period!=null?`${nf0.format(h.period)} s`:null, windShort(h)].filter(Boolean).join(" · ");
+  const line = [range, h.period!=null?`${nf0.format(h.period)} s`:null, kjText(h), windShort(h)].filter(Boolean).join(" · ");
   return `<b>${esc(cap(relDay(t)))} kl. ${fmtHour.format(t)}</b> · ${esc(h.stars ? `${h.stars} ${h.stars===1?"stjerne":"stjerner"}` : ratingWord(h))}<br>${esc(line)}`;
 }
 function tapCell(key, k, v, n){
@@ -330,7 +349,6 @@ function detailsGrid(s, h, t){
   const tideNow = h.tide ? STR.tideNow(h.tide.rising, h.tide.state) : "–";
   const swellV = h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : (h.height_offshore!=null ? `${nf1.format(h.height_offshore)} m` : "–");
   const swellN = `${esc(STR.fromDir(compass(h.dir_offshore)))}${h.dir_offshore!=null?` (${Math.round(h.dir_offshore)}°)`:""}${h.period!=null?`, ${nf0.format(h.period)} s`:""}`;
-  const kj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
   const shareV = h.swell_model==="total_fallback" ? "–" : (h.swell_share!=null ? `${nf0.format(h.swell_share*100)} %` : "–");
   const shareN = h.swell_model==="total_fallback" ? esc(STR.totalFallback) : (h.height_offshore!=null ? esc(`av ${nf1.format(h.height_offshore)} m totalt`) : "");
   const dirV = h.directness!=null ? `${nf0.format(h.directness*100)} %` : "–";
@@ -349,7 +367,7 @@ function detailsGrid(s, h, t){
     ${tapCell("surf_height", STR.cell.surf, esc(surfHeadline(h)), "")}
     ${tapCell("hs", STR.cell.hs, h.height!=null?`${nf1.format(h.height)} m`:"–", hsN)}
     ${tapCell("swell", STR.cell.swell, swellV, swellN)}
-    ${tapCell("energy", STR.cell.energy, kj!=null?`${nf0.format(kj)} kJ`:"–", h.swell_offshore!=null?"svellenergi":"med totalhøyde")}
+    ${tapCell("energy", STR.cell.energy, kjText(h)||"–", h.swell_model==="total_fallback" ? esc(STR.kjEstimateSub) : (h.swell_offshore!=null?"svellenergi":"med totalhøyde, anslag"))}
     ${tapCell("windsea", STR.cell.share, shareV, shareN)}
     ${tapCell("direction", STR.cell.direction, dirV, dirN)}
     ${tapCell("exposure", STR.cell.exposure, h.transfer!=null?`${nf0.format(h.transfer*100)} %`:"–", STR.transferSub)}
@@ -391,6 +409,7 @@ function renderSpot(){
     <div class="keyline">
       ${range?`<span class="kv"><button type="button" class="tap" data-explain="surf_height"><b>${esc(range)}</b></button><span class="u">${esc(STR.heightSets)}</span></span>`:""}
       ${h.period!=null?`<span class="kv"><button type="button" class="tap" data-explain="period"><b>${nf0.format(h.period)} s</b></button><span class="u">periode</span></span>`:""}
+      ${kjText(h)?`<span class="kv"><button type="button" class="tap" data-explain="energy"><b>${esc(kjText(h))}</b></button><span class="u">energi</span></span>`:""}
       ${h.wind_speed!=null?`<span class="kv"><button type="button" class="tap" data-explain="wind">${windArrowHtml(h)}<b>${esc(windShort(h))}</b></button></span>`:""}
     </div>
     ${notice?`<button type="button" class="notice${notice.warn?"":" info"}" data-explain="${notice.key}">${notice.warn?`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 1 21h22zm0 6.5 6.9 11.5H5.1zM11 10h2v5h-2zm0 6h2v2h-2z"/></svg>`:`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 6h2v7h-2zm0-3h2v2h-2z"/></svg>`}<span class="t">${esc(notice.text)}</span><span class="chev" aria-hidden="true">›</span></button>`:""}
@@ -503,8 +522,8 @@ function energyText(h){
   // height_offshore) - energien skal alltid matche TALLET den står ved
   // siden av, se rating.energy_kj() sin docstring for hvorfor de to kJ-
   // feltene (svell/total) kan avvike.
-  const kj = h.swell_offshore!=null ? h.energy_swell_kj : h.energy_total_kj;
-  return kj!=null ? ` · ${nf0.format(kj)} kJ` : "";
+  const t = kjText(h);  // samme tekst og samme reserve-merking som hovedlinja
+  return t ? ` · ${t}` : "";
 }
 function windowText(spot){
   const w = spot.swell_window;
