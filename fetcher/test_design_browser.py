@@ -93,10 +93,12 @@ def main():
              else {"energy": 0, "wind": h.get("faded_wind") or 0, "tide": h.get("faded_tide") or 0, "local": lr.get("stars_lost") or 0})
         cap = (z.get("cap") or 0) if z else 0
         mx = max(c.values()); win = [k for k, v in c.items() if v == mx and mx > 0]
-        if (mx == 0 and cap == 0) or cap >= mx or len(win) != 1: return "Ikke surfbart nå"
+        if mx == 0 and cap == 0: return "Ikke surfbart nå"
+        if cap >= mx: return "Usikkert" if h.get("sources_disagree") else "Ikke surfbart nå"
+        if len(win) != 1: return "Ikke surfbart nå"
         w = win[0]
         if w == "energy":
-            return "For lite svell" if (spot and (spot.get("local_rules") or {}).get("min_energy_kj") and lr.get("source")) else "Grøtete"
+            return "For lite svell" if (spot and (spot.get("local_rules") or {}).get("min_energy_kj")) else "Grøtete"
         if w == "wind": return "Blåst ut"
         if w == "tide": return "Feil tidevann"
         pen = [l for l in (lr.get("lines") or []) if "−" in l]
@@ -340,7 +342,8 @@ def main():
                 # rating, lapp, liste og forklaringen bak ratingen (trykk). Bare ordet, ikke stjernene.
                 i0 = page.evaluate("Front.state.w0")
                 MAGNUS = "Magnus, lokal surfer (Molde)"
-                base = {"surf_height_sets": None, "stars": 0, "faded": 0, "faded_wind": 0, "faded_tide": 0, "zero_losses": {"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0}, "low_reason": "flat", "local_rules": None, "period": 11}
+                base = {"surf_height_sets": None, "stars": 0, "faded": 0, "faded_wind": 0, "faded_tide": 0, "zero_losses": {"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0}, "low_reason": "flat", "local_rules": None, "period": 11, "sources_disagree": False}
+                OBS = "Observasjoner 26.09-05.10.2026"
                 Z = lambda **k: {"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0, **k}
                 CASES = [
                     ({"surf_height": 0.5}, "Smått", "for lite til en stjerne", None),
@@ -348,18 +351,20 @@ def main():
                     ({"surf_height": 0.29}, "Flatt", None, None),
                     ({"surf_height": 0.79}, "Smått", None, None),
                     ({"surf_height": 0.0}, "Flatt", None, None),
-                    ({"surf_height": 1.0, "period": 7}, "Grøtete", "kort periode og lite energi", None),
+                    ({"surf_height": 1.0, "period": 7}, "Grøtete", "kort periode og lite energi gjør dem svake", None),
                     ({"surf_height": 0.8, "period": 8.9, "zero_losses": Z(wind=3)}, "Grøtete", "kort periode", None),
-                    ({"surf_height": 1.0, "zero_losses": Z(energy=2, wind=1)}, "Grøtete", "lite energi", None),
+                    ({"surf_height": 1.0, "zero_losses": Z(energy=2, wind=1)}, "Grøtete", "for lite energi i svellet til å gi kraft", None),
                     ({"surf_height": 1.0, "zero_losses": Z(wind=2, energy=1)}, "Blåst ut", "vinden", None),
                     ({"surf_height": 1.0, "zero_losses": Z(tide=2, wind=1)}, "Feil tidevann", "tidevannet passer ikke", None),
-                    ({"surf_height": 1.0, "zero_losses": Z(energy=1, local=2), "local_rules": {"source": MAGNUS, "stars_lost": 2, "lines": ["Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0.7)"]}}, "Feil tidevann", "Magnus", None),
-                    ({"surf_height": 1.0, "zero_losses": Z(local=1), "local_rules": {"source": MAGNUS, "stars_lost": 1, "lines": ["Tidevann (lav): foretrukket lokalt, ingen straff", "Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −0.7)"]}}, "Blåst ut", "Magnus", None),
-                    ({"surf_height": 1.0, "zero_losses": Z(energy=2, local=1), "local_rules": {"source": MAGNUS, "stars_lost": 1, "lines": ["Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −0.7)"]}, "energy_swell_kj": 601}, "For lite svell", "Magnus", {"min_energy_kj": {"full": 3000, "zero": 1500}, "source": MAGNUS, "weight": 0.7}),
+                    ({"surf_height": 1.0, "zero_losses": Z(energy=1, local=2), "local_rules": {"source": MAGNUS, "stars_lost": 2, "lines": ["Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0.7)"]}}, "Feil tidevann", "Ifølge Magnus, lokal surfer: tidevann (høy)", None),
+                    ({"surf_height": 1.0, "zero_losses": Z(local=1), "local_rules": {"source": MAGNUS, "stars_lost": 1, "lines": ["Tidevann (lav): foretrukket lokalt, ingen straff", "Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −0.7)"]}}, "Blåst ut", "Ifølge Magnus, lokal surfer: Grøtfjord trenger offshore. Nå 5 m/s sidevind.", None),
+                    ({"surf_height": 1.0, "zero_losses": Z(energy=2, local=1), "local_rules": {"source": MAGNUS, "stars_lost": 1, "lines": ["Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −0.7)"]}, "energy_swell_kj": 601}, "For lite svell", "Ifølge Magnus, lokal surfer: for lite svellenergi ute (601 kJ, full uttelling fra 3 000 kJ)", {"min_energy_kj": {"full": 3000, "zero": 1500}, "source": MAGNUS, "weight": 0.7}),
+                    ({"surf_height": 1.0, "zero_losses": Z(energy=1), "local_rules": {"source": OBS, "stars_lost": 0, "lines": []}, "energy_swell_kj": 166}, "For lite svell", "Grense satt ut fra observasjonene 26.09 til 05.10: for lite svellenergi ute (166 kJ, full uttelling fra 400 kJ)", {"min_energy_kj": {"full": 400, "zero": 200}, "source": OBS, "weight": 0.7}),
                     ({"surf_height": 1.0, "zero_losses": Z(energy=1, wind=1)}, "Ikke surfbart nå", "hovedårsak", None),
                     ({"surf_height": 1.0}, "Ikke surfbart nå", "for lite til en stjerne", None),
                     ({"surf_height": 1.0, "zero_losses": None, "faded_wind": 2}, "Blåst ut", "vinden", None),
                     ({"surf_height": 1.0, "zero_losses": Z(energy=1, cap=2)}, "Ikke surfbart nå", "kappet", None),
+                    ({"surf_height": 1.0, "zero_losses": Z(energy=1, wind=1, cap=2), "sources_disagree": True}, "Usikkert", "Kildene er uenige om svellet når inn til spoten.", None),
                     ({"surf_height": 1.0, "zero_losses": Z(local=2), "local_rules": {"source": MAGNUS, "stars_lost": 2, "lines": ["Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0.7)", "Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −0.7)"]}}, "Ikke surfbart nå", "hovedårsak", None),
                 ]
                 for fields, word, exp_note, spot_rules in CASES:
@@ -373,8 +378,9 @@ def main():
                     assert rw == word, f"{fields}: ratingordet skal være «{word}», var '{rw}'"
                     if exp_note and spots[0]["hours"][i0].get("breakdown"):
                         page.locator("#spot #bdOpen").click(); page.wait_for_timeout(300)
-                        note = page.locator("#bdBody .bd-note").text_content()
+                        note = page.locator("#bdBody .bd-note").text_content().replace("\u00a0", " ").replace("\u202f", " ")
                         assert note.startswith(word) and exp_note in note, f"forklaringen ved trykk skal forklare «{word}» ({exp_note}), sa '{note}'"
+                        assert not ("Ifølge Observasjoner" in note or "Ifølge observasjon" in note), f"en kilde som ikke er en person skal ikke skrives som en person: '{note}'"
                         page.evaluate("closeBreakdown()"); page.wait_for_timeout(200)
                     ml = page.locator(f"[data-id='{spots[0]['id']}'] .mk-label").first.text_content().strip()
                     assert ml == word, f"{fields}: lappen på kartet skal si «{word}», sa '{ml}'"

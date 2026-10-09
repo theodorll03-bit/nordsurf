@@ -139,7 +139,7 @@
     },
     stars: {
       title: "Stjerner",
-      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 stjerner sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til en stjerne). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden), «Feil tidevann», «For lite svell» (lokal regel, kilden nevnes), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Blasse stjerner er det vind og tidevann tar fra svellets potensial.",
+      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 stjerner sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til en stjerne). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Blasse stjerner er det vind og tidevann tar fra svellets potensial.",
       numbers: (h) => [["Stjerner", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
       how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på stjernene for hele regnestykket."],
     },

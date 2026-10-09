@@ -140,15 +140,26 @@ function spotOfHour(h){
 // - vindstraffen størst: «Blåst ut»; tidevannsstraffen størst: «Feil tidevann»
 // - lokale regler størst: ordet etter regelen (tidevann → «Feil tidevann»,
 //   vind → «Blåst ut»), forklaringen nevner kilden
-// - ingen tydelig hovedårsak (alt 0, uavgjort, eller kappingen ved
-//   usikkert varsel/uenige kilder er minst like stor): «Ikke surfbart nå»
+// - kappingen ved «kildene uenige» er minst like stor som det største
+//   fradraget: «Usikkert» («Kildene er uenige om svellet når inn til spoten.»)
+// - ingen tydelig hovedårsak (alt 0, uavgjort, eller kappingen ved usikkert
+//   varsel - se rating.py sin `uncertain` - er minst like stor): «Ikke surfbart nå»
+// Kilden til en lokal regel skrives slik spots.json har den (STR.localSourceText),
+// aldri som en person når den ikke er det (Theodor 09.10.2026, fjerde runde).
+function localSourceText(spot, h){
+  const src = (spot && spot.local_rules && spot.local_rules.source) || (h.local_rules && h.local_rules.source) || null;
+  if(!src) return "Lokal regel";
+  return (STR.localSourceText && STR.localSourceText[src]) || STR.localSourceFallback(src);
+}
 function zeroCause(h){
   const per = h.period;
-  const mushy = {word: STR.wordMushy, explain: STR.wordExplain[STR.wordMushy]};
-  if(per!=null && per < MUSHY_PERIOD_MAX_S) return mushy;
+  const shortPer = per!=null && per < MUSHY_PERIOD_MAX_S;
+  const mushy = {word: STR.wordMushy, explain: shortPer ? STR.mushyShort : STR.mushyLong};
+  if(shortPer) return mushy;
   const lr = h.local_rules || null, src = lr && lr.source ? lr.source : null;
   const spot = spotOfHour(h);
   const localEnergy = !!(spot && spot.local_rules && spot.local_rules.min_energy_kj);
+  const srcText = localSourceText(spot, h);
   const z = h.zero_losses || null;
   const c = z ? {energy: z.energy||0, wind: z.wind||0, tide: z.tide||0, local: z.local||0}
               : {energy: 0, wind: h.faded_wind||0, tide: h.faded_tide||0, local: lr ? (lr.stars_lost||0) : 0};
@@ -157,13 +168,13 @@ function zeroCause(h){
   const winners = Object.keys(c).filter(k=>c[k]===max && max > 0);
   const notNow = {word: STR.wordNotNow, explain: STR.wordExplain[STR.wordNotNow]};
   if(max===0 && cap===0) return {word: STR.wordNotNow, explain: STR.notNowLow};
-  if(cap >= max) return {word: STR.wordNotNow, explain: STR.notNowCap};
+  if(cap >= max) return h.sources_disagree ? {word: STR.wordUncertain, explain: STR.wordExplain[STR.wordUncertain]} : {word: STR.wordNotNow, explain: STR.notNowCap};
   if(winners.length!==1) return notNow;
   const w = winners[0];
   if(w==="energy"){
-    if(localEnergy && src){
+    if(localEnergy){
       const full = spot.local_rules.min_energy_kj.full, kj = h.energy_swell_kj!=null ? nf0.format(h.energy_swell_kj) : "–";
-      return {word: STR.wordLittleSwell, explain: STR.localRuleExplain(src, STR.localEnergyExplain(kj, nf0.format(full)))};
+      return {word: STR.wordLittleSwell, explain: `${srcText}: ${STR.localEnergyExplain(kj, nf0.format(full))}`};
     }
     return mushy;
   }
@@ -173,8 +184,12 @@ function zeroCause(h){
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
   if(pen.length!==1) return notNow;
   const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
-  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: STR.localRuleExplain(src || "lokal regel", rest)};
-  if(/^Vind/.test(line)) return {word: LOW_REASON_WORD.blown_out, explain: STR.localRuleExplain(src || "lokal regel", rest)};
+  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${srcText}: ${rest}`};
+  if(/^Vind/.test(line)){
+    // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger offshore, nå 5 m/s sidevind
+    const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
+    return {word: LOW_REASON_WORD.blown_out, explain: `${srcText}: ${STR.localWindExplain(spot ? spot.name : "spoten", now)}`};
+  }
   return notNow;
 }
 function zeroWord(h){

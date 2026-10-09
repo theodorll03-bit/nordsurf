@@ -31,17 +31,30 @@
     wordTide: "Feil tidevann",
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
+    wordUncertain: "Usikkert",
     wordExplain: {
       "Smått": "Litt bølger, men for lite til en stjerne.",
-      "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake og uten kraft.",
+      // Grøtete har to tekster etter perioden (Theodor 09.10.2026, fjerde runde), se mushyShort/mushyLong
+      "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake.",
+      "Usikkert": "Kildene er uenige om svellet når inn til spoten.",
       "Blåst ut": "Bølgene er der, men vinden ødelegger dem.",
       "Feil tidevann": "Bølgene er der, men tidevannet passer ikke spoten nå.",
       "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.",
     },
-    notNowCap: "Bølgene er der, men varselet er usikkert (kildene uenige eller ingen BarentsWatch), så ratingen er kappet – se regnestykket under.",
+    mushyShort: "Bølgene er der, men kort periode og lite energi gjør dem svake.",
+    mushyLong: "Bølgene er der, men for lite energi i svellet til å gi kraft.",
+    notNowCap: "Bølgene er der, men varselet er usikkert (f.eks. ingen BarentsWatch-retning, svell utenfor vinduet, stor dreining eller svellet anslått fra totalhøyden), så ratingen er kappet – se regnestykket under.",
     notNowLow: "Bølgene er der, men svellet gir for lite til en stjerne – se regnestykket under.",
-    localRuleExplain: (src, rest)=>`Ifølge ${src}: ${rest}`,
+    // Kilden til en lokal regel, slik den står i spots.json (local_rules.source),
+    // omskrevet til forklaringstekst. En kilde som ikke er en person skal aldri
+    // skrives som en person (Theodor 09.10.2026).
+    localSourceText: {
+      "Magnus, lokal surfer (Molde)": "Ifølge Magnus, lokal surfer",
+      "Observasjoner 26.09-05.10.2026": "Grense satt ut fra observasjonene 26.09 til 05.10",
+    },
+    localSourceFallback: (src)=> /observasjon|logg|kalibrer|grense/i.test(src) ? `Grense satt ut fra ${src.charAt(0).toLowerCase()}${src.slice(1)}` : `Ifølge ${src}`,
     localEnergyExplain: (kj, full)=>`for lite svellenergi ute (${kj} kJ, full uttelling fra ${full} kJ).`,
+    localWindExplain: (spotName, now)=>`${spotName} trenger offshore. Nå ${now}.`,
     starsAria: (n, faded) => `${n} av 5 stjerner` + (faded ? `, ${faded} tapt på vind eller tidevann` : ""),
     whyRating: "Hvorfor denne ratingen? Trykk for forklaring",
     lostTo: (wind, tide) => {
