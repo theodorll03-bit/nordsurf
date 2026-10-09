@@ -14,7 +14,8 @@ Energi = ρ g² H² T² / (16π), ρ = 1025, g = 9,81, altså ca. 1,96 × H² ×
 ## B. Langtidsvarsel 16 dager med sikkerhet i prosent - FERDIG, Theodor sa ja (committet sammen med Nordneset-fiksen)
 Svell: Open-Meteo GFS Wave med forecast_days 16. Vind: met.no så langt den rekker, deretter Open-Meteo GFS-vind. Merk kilden. Tre soner: BarentsWatch til bw_until, reservemodell til dag 7, langtid dag 8 til 16 (3- eller 6-timers verdier hvis forecast.json blir for stor). Sikkerhet i prosent per dag, ikke kapping av stjerner. Startverdier (sannsynlighet for treff innenfor én stjerne): dag 1: 90, dag 2: 85, dag 3: 80, dag 4: 70, dag 5: 65, dag 6 og 7: 55, dag 8 til 10: 40, dag 11 til 16: 30. Merket "anslag". Mål treffsikkerheten selv: arkiver varselet hver kjøring (data/forecast_archive/, små filer), sammenlign med varselet laget under 6 timer før og med loggene. Når en spot har minst 30 sammenligninger for et antall dager frem, bruk målt prosent ("målt"). Varsler bare for timer med sikkerhet 70 prosent eller mer. Logger-fanen: treffprosent per antall dager frem per spot. Ferdig når: Farstadsanden fredag 16. og lørdag 17. oktober vises med sikkerhet, og testene for soner, prosent og varsler passerer.
 
-## C. Ny visuell design, inspirert av Surfline - KREVER DESIGNPLAN MED SKJERMBILDER FØR BYGGING
+## C. Ny visuell design, inspirert av Surfline - BYGGET i designrunde 1 (09.10.2026), gren `design/runde-1`, PR åpen, IKKE merget - venter på Theodor
+Se STATUS.md «Designrunde 1» og docs/design/runde-1/ (skjermbilder før/etter, ordmerkevarianter, designgjennomgang). Bare visning - `fetcher/test_display_only.py` beviser at ratingfilene, spots.json og forecast.json er like main.
 Mål: appen skal se ut og føles som en ordentlig surfeapp: mer farge, tydelige grafer, rask å lese. Inspirert av Surfline sitt oppsett, men ikke kopi av deres logo, navn eller grafiske profil.
 1. Fargeskala for rating, brukt overalt (stjerner, ringen på skiva, kartmerker, søyler, dagbrikker): 0 grå, 1 rød-oransje, 2 gul, 3 grønn, 4 turkis, 5 blå eller lilla. Tokens for lys og mørk modus, sjekket kontrast. Farge aldri eneste bærer av informasjon - tall eller stjerner alltid ved siden av.
 2. Forsiden (lista): hvert spot som et kort med fargestripe for dagens beste rating, surfehøyde ("1,2 til 1,6 m"), kJ, vind med pil og type, og en mini-graf for de neste dagene.
@@ -24,7 +25,7 @@ Mål: appen skal se ut og føles som en ordentlig surfeapp: mer farge, tydelige 
 6. Lite grafbibliotek fra cdnjs (fast versjon) eller egen SVG, ingen bundler.
 **Vis designplan med skjermbilder av forsiden, detaljsiden og kartet, i lys og mørk modus, FØR bygging.** Ferdig når Theodor har sagt ja og alt er bygget og testet.
 
-## D. Trykk for forklaring
+## D. Trykk for forklaring - BYGGET i designrunde 1 (gren `design/runde-1`, PR åpen, ikke merget)
 Alle tall og begreper skal kunne trykkes: surfehøyde, sett, signifikant høyde, svell ute, vindsjø, periode, kJ, retningstreff, eksponering, vindtype, tidevann, sikkerhet, stjerner, kilder (BarentsWatch, anslag, langtid). Trykk åpner et ark nederfra med: (a) hva det betyr, kort og enkelt, med et eksempel; (b) tallene for akkurat denne spoten og timen; (c) hvordan det er regnet ut (samme kjede som breakdown), og hvilke kilder. Fjern de små "i"-ikonene der arket erstatter dem. Ett felles forklaringsbibliotek (én fil med tekstene), så samme forklaring brukes overalt. Skjermleservennlig, fungerer med tastatur. Bygges sammen med C.
 
 ## E. Sjekk BarentsWatch-punktene for alle spots - KJØRT 06.10.2026 og 06.10.2026 (ny, fersk kjøring), ingen flytting foreslått, venter fortsatt på en svelldag for prosent-metoden
@@ -79,7 +80,7 @@ WAM800 (MyWave WAM, 800 m) dekker kysten og deler bølgene i svell og vindsjø m
    d. Hvilken kilde som brukes per spot kan bestemmes av treffsikkerhetsmålingen over tid.
 6. Vis planen og tabellene, og vent på ja før noe kobles inn i ratingen. Legg WAM800 i kilderapporten.
 
-## K. Mindre info i appen, mer ved trykk
+## K. Mindre info i appen, mer ved trykk - BYGGET i designrunde 1 (gren `design/runde-1`, PR åpen, ikke merget)
 Appen viser for mye på en gang. Standard skal være enkelt, og detaljer skal komme når man trykker.
 1. Lista: per spot bare navn, rating (farge og stjerner), surfehøyde, og vind som pil med type. Ingenting mer.
 2. Detaljsiden, øverst: stjerner med ett ord ("Bra", "Blåst ut", "Treffer ikke"), surfehøyde, periode og vind. Så timestripa eller grafen.

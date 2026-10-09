@@ -219,7 +219,12 @@ def main():
             stale_list = page.locator(".stale").inner_text()
             assert "ikke oppdatert siden" in stale_list, stale_list
             page.evaluate("state.tab='varsel'; state.spot=0; state.sel=0; render();")
-            assert page.locator(".stale").count() == 1, "advarselen skal også stå på detaljsiden"
+            # Designrunde 1 (09.10.2026): lista og detaljsiden er to faste
+            # paneler i DOM-en (på PC side om side, på mobil ett synlig om
+            # gangen) - tell derfor bare SYNLIGE advarsler, og krev at
+            # detaljpanelet selv har en.
+            assert page.locator("#detailPane .stale").count() == 1, "advarselen skal også stå på detaljsiden"
+            assert page.locator(".stale:visible").count() >= 1, "advarselen skal være synlig på detaljsiden"
             page.evaluate("DATA.generated = new Date().toISOString(); render();")
             assert page.locator(".stale").count() == 0, "ferskt varsel skal ikke ha advarsel"
             page.evaluate(f"DATA.generated = {json.dumps(FIXTURE['generated'])}; render();")
@@ -227,9 +232,11 @@ def main():
 
             def check_scenario(idx, hour, label):
                 # ---------- 1. Detaljsiden: Retningstreff + lavstjerne-ordet ----------
-                page.evaluate(f"state.tab='varsel'; state.spot=0; state.sel={idx}; render();")
-                verdict = page.locator(".verdict").inner_text()
-                retningstreff = page.locator('.cell:has-text("Retningstreff") >> .v').inner_text()
+                # Designrunde 1: Retningstreff ligger i "Detaljer" (lukket
+                # <details>) - åpne den først, så teksten er synlig.
+                page.evaluate(f"state.tab='varsel'; state.spot=0; state.sel={idx}; render(); document.getElementById('details').open=true;")
+                verdict = page.locator("#detailPane .verdict").inner_text()
+                retningstreff = page.locator('#detailPane .cell:has-text("Retningstreff") >> .v').inner_text()
                 expected_pct = f"{round(hour['directness'] * 100)} %"
                 assert retningstreff == expected_pct, (
                     f"{label}: Retningstreff viste '{retningstreff}', forventet '{expected_pct}'")

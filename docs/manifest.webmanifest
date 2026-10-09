@@ -1,10 +1,19 @@
 {
   "name": "Nordsurf",
   "short_name": "Nordsurf",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#0F1B21",
-  "theme_color": "#0F1B21",
+  "description": "Surfevarsel for Nord-Norge, Unstad og Farstadsanden",
   "lang": "nb",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F1E8",
+  "theme_color": "#F6F1E8",
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icons/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}
+  ]
 }

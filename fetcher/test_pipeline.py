@@ -645,9 +645,12 @@ print(f"7i Open-Meteo sin swell_wave_peak_period når frem helt til energy_perio
 # bundler, se README) ----------
 import re
 import calibrate as _calibrate_size
-html = (Path(__file__).parent.parent / "docs" / "index.html").read_text(encoding="utf-8")
+# Designrunde 1 (09.10.2026): appens skript ligger i docs/js/app.js (før lå
+# det inline i docs/index.html) - les den som finnes.
+_app_js = Path(__file__).parent.parent / "docs" / "js" / "app.js"
+html = (_app_js if _app_js.exists() else Path(__file__).parent.parent / "docs" / "index.html").read_text(encoding="utf-8")
 m = re.search(r'const SIZE_M = (\{[^}]*\});', html)
-assert m, "fant ikke SIZE_M i docs/index.html"
+assert m, "fant ikke SIZE_M i docs/js/app.js (eller docs/index.html)"
 js_size_m = json.loads(m.group(1))  # nøklene er allerede doble anførselstegn i JS-koden, gyldig JSON som den er
 print("8.8 SIZE_M i app vs henter:", js_size_m, "|", _calibrate_size.SIZE_M)
 assert js_size_m == _calibrate_size.SIZE_M

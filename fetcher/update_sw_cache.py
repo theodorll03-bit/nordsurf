@@ -27,12 +27,15 @@ CACHE_ANY_RE = re.compile(r'const CACHE = "nordsurf-[^"]*";')
 
 def docs_hash():
     """Sha256 (korttrunkert) av navn og innhold for alle filer i docs/,
-    utenom docs/data/ (ferske varseldata, uendret av PWA-shell-cachen) og
-    sw.js selv (ville vært sirkulært - fila kan ikke hashe sin egen verdi)."""
+    utenom docs/data/ (ferske varseldata, uendret av PWA-shell-cachen),
+    docs/design/ (skjermbilder og designnotater fra designrundene, ikke en
+    del av appen - lagt til 09.10.2026, designrunde 1, fordi nettlesertesten
+    skriver dem på nytt ved hver kjøring) og sw.js selv (ville vært
+    sirkulært - fila kan ikke hashe sin egen verdi)."""
     h = hashlib.sha256()
     files = [
         p.relative_to(DOCS) for p in DOCS.rglob("*")
-        if p.is_file() and p.relative_to(DOCS).parts[0] != "data" and p.name != "sw.js"
+        if p.is_file() and p.relative_to(DOCS).parts[0] not in ("data", "design") and p.name != "sw.js"
     ]
     for rel in sorted(files, key=str):
         h.update(str(rel).encode("utf-8"))
