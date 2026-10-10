@@ -739,7 +739,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # enheter - presisert i teksten under for å unngå forveksling.
     none_by_zone = {z: sum(1 for h in hours if h.get("swell_model") is None and h.get("zone") == z)
                      for z in ("barentswatch", "reserve", "langtid")}
-    REPORT.append((name, "Svellmodell", "ok",
+    # S1 (10.10.2026): «delvis» når GFS Wave ikke ga en eneste time selv om det
+    # finnes svelldata - da har GFS-kallene feilet (samlekall OG enkeltkall), og
+    # dag 1-9 kommer fra standardmodellen. Skal være synlig uten å lese tallet.
+    REPORT.append((name, "Svellmodell", "ok" if (gfs_hours or not (std_hours or total_fallback_hours)) else "delvis",
                    f"GFS Wave {gfs_hours}t, standardmodell (reserve) {std_hours}t, "
                    f"totalhøyde-reserve {total_fallback_hours}t, ingen svelldata {none_hours}t "
                    f"(rader uten svelldata: BarentsWatch-sonen {none_by_zone['barentswatch']}, "
@@ -1050,11 +1053,27 @@ def main():
     bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
     exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
     exposure_learned_data = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
+    # S1 (ROADMAP oppgave S): Open-Meteo hentes i samlekall FØR spot-løkka
+    # (ett kall per modell for alle havpunkt, ett for alle vindpunkt) og
+    # mellomlagres - spot-løkka under finner svarene i mellomlageret og gjør
+    # ingen Open-Meteo-kall selv med mindre samlekallet feilet for punktet.
+    enabled = [s for s in config["spots"] if s.get("enabled")]
+    sources.openmeteo_clear_cache()
+    marine_points = [(s["offshore"]["lat"], s["offshore"]["lon"]) for s in enabled]
+    marine_points += [(s["offshore_longrange"]["lat"], s["offshore_longrange"]["lon"]) for s in enabled if s.get("offshore_longrange")]
+    wind_points = [(s["spot"]["lat"], s["spot"]["lon"]) for s in enabled]
+    try:
+        st = sources.openmeteo_prefetch(marine_points, wind_points)
+        REPORT.append(("alle", "Open-Meteo samlekall", "ok" if not st.get("failed") else "delvis",
+                       f"{st.get('points', 0)} unike punkt ({st.get('jobs', 0)} punkt×modell) i {st.get('calls', 0)} kall, "
+                       f"{st.get('failed', 0)} kall feilet (hentes enkeltvis), {st.get('cached', 0)} fra mellomlager"))
+    except Exception as e:  # noqa: BLE001 - samlekallet er bare en snarvei, løkka henter enkeltvis
+        REPORT.append(("alle", "Open-Meteo samlekall", "feil", str(e)[:120]))
+        print(f"  Open-Meteo samlekall feilet: {e}")
     spots = []
-    for s in config["spots"]:
-        if s.get("enabled"):
-            spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
-                                     exposure_data, exposure_learned_data, ledger))
+    for s in enabled:
+        spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
+                                 exposure_data, exposure_learned_data, ledger))
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)

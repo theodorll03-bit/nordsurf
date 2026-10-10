@@ -49,7 +49,14 @@ notify.STATE = tmp / "notified.json"
 # data/ fra tester - samme tmp-mønster som OUT/BW_CALIB over.
 fetch.ARCHIVE_DIR = tmp / "forecast_archive"
 fetch.LEDGER = tmp / "forecast_accuracy.json"
+real_openmeteo_wind = sources.openmeteo_wind  # S1: testes i seksjon 15 uten nett
 sources.openmeteo_wind = lambda la, lo: {}  # ingen langtidsvind i de gamle testene - met.no (80 t) dekker alt
+real_openmeteo_prefetch = sources.openmeteo_prefetch  # S1: testes i seksjon 15 uten nett
+prefetch_calls = []   # S1: hva fetch.main() faktisk sender til samlekallet (sjekkes i seksjon 15)
+def _prefetch_stub(marine_points, wind_points, **k):
+    prefetch_calls.append((list(marine_points), list(wind_points)))
+    return {"points": 0, "jobs": 0, "calls": 0, "failed": 0, "cached": 0}
+sources.openmeteo_prefetch = _prefetch_stub  # samlekallet er nett - av i tester
 sent = []
 notify.requests.post = lambda url, json=None, timeout=None: sent.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
 import os; os.environ["NTFY_TOPIC"] = "test-topic"
@@ -1240,6 +1247,102 @@ assert abs(last13_5 - 2.0) < 1e-6, (
     f"korreksjon (offshore_longrange sin egen samme-punkt-korreksjon kjørte IGJEN)")
 print(f"13.5 offshore_longrange sin EGEN samme-punkt-korreksjon korrekt avslått "
       f"(apply_ratio_correction=False) - siste langtid-time {last13_5} m (riktig 2,0, IKKE 1,0 fra dobbel korreksjon), OK")
+
+# ---------- 15: S1 - Open-Meteo samlekall og mellomlager (ingen nett) ----------
+# Samlekallet legger svarene i mellomlageret; enkeltkallene finner dem der og
+# gjør ingen HTTP-kall. Feiler samlekallet, hentes enkeltvis som før.
+_src = sources
+calls_log = []
+class _Resp:
+    def __init__(self, data): self._d = data
+    def json(self): return self._d
+def fake_marine_hourly(base):
+    return {"time": ["2026-01-01T00:00", "2026-01-01T01:00"], "wave_height": [base, base + 0.1], "wave_direction": [300, 301],
+            "wave_period": [10, 10], "swell_wave_height": [base - 0.2, base - 0.1], "swell_wave_direction": [295, 296],
+            "swell_wave_period": [12, 12], "swell_wave_peak_period": [None, None], "secondary_swell_wave_height": [None, None],
+            "secondary_swell_wave_direction": [None, None], "secondary_swell_wave_period": [None, None]}
+fake_mode = {"order": "normal"}   # "reversed": postene i omvendt rekkefølge med riktig location_id; "wrongpoint": svar for feil punkt; "short": for få poster
+def fake_get(url, params=None, headers=None, timeout=None, **kw):
+    calls_log.append((url, params.get("latitude"), params.get("models"), timeout))
+    lats = str(params["latitude"]).split(",")
+    if "marine" in url:
+        posts = [{"latitude": float(la), "longitude": 17.0, "location_id": i, "hourly": fake_marine_hourly(1.0 + i)} for i, la in enumerate(lats)]
+    else:
+        posts = [{"latitude": float(la), "longitude": 17.0, "location_id": i, "hourly": {"time": ["2026-01-01T00:00"], "wind_speed_10m": [3 + i], "wind_direction_10m": [120], "wind_gusts_10m": [5], "temperature_2m": [4]}} for i, la in enumerate(lats)]
+    if fake_mode["order"] == "reversed":
+        posts = list(reversed(posts))
+    elif fake_mode["order"] == "wrongpoint" and len(posts) > 1:
+        posts[1]["latitude"] += 2.0     # svar for et punkt to grader unna
+    elif fake_mode["order"] == "short" and len(posts) > 1:
+        posts = posts[:-1]
+    return _Resp(posts if len(posts) > 1 else posts[0])
+_real_get = _src._get
+_src._get = fake_get
+_src.openmeteo_clear_cache()
+st = real_openmeteo_prefetch([(69.5, 17.0), (69.6, 17.0), (69.5, 17.00001)], [(69.51234567890123, 17.0)])
+# 2 unike havpunkt (det tredje er samme punkt på 4 desimaler) × 2 modeller + 1 vindpunkt = 3 unike punkt, 5 punkt×modell, 3 samlekall (GFS, standard, vind)
+assert st == {"points": 3, "jobs": 5, "calls": 3, "failed": 0, "cached": 0}, st
+assert len(calls_log) == 3 and all(c[3] == _src.OPENMETEO_BATCH_TIMEOUT for c in calls_log), calls_log
+# samlekallet sender de ORIGINALE koordinatene (ikke avrundet) - samme punkt som enkeltkallet spør om
+assert calls_log[0][1] == "69.5,69.6" and calls_log[2][1] == "69.51234567890123", calls_log
+calls_log.clear()
+gfs = _src._openmeteo_fetch(69.6, 17.0, model=_src.OPENMETEO_SWELL_MODEL)   # fra mellomlageret, ingen nett
+assert calls_log == [] and gfs["2026-01-01T00:00Z"]["swell_height"] == 1.8 and gfs["2026-01-01T01:00Z"]["height"] == 2.1, gfs
+std = _src._openmeteo_fetch(69.5, 17.00001, model=None)
+assert calls_log == [] and std["2026-01-01T00:00Z"]["swell_height"] == 0.8, std
+wind = real_openmeteo_wind(69.51234567890123, 17.0)
+assert calls_log == [] and wind["2026-01-01T00:00Z"]["wind_speed"] == 3, wind
+# et punkt som IKKE var med i samlekallet hentes enkeltvis med delt frist
+single = _src._openmeteo_fetch(70.0, 18.0, model=_src.OPENMETEO_SWELL_MODEL)
+assert len(calls_log) == 1 and calls_log[0][3] == _src.OPENMETEO_TIMEOUT and single["2026-01-01T00:00Z"]["swell_height"] == 0.8, calls_log
+# samlekall som feiler: telles, mellomlageret forblir tomt for punktet, enkeltkallet virker etterpå
+def failing_get(url, params=None, headers=None, timeout=None, **kw):
+    raise requests.Timeout("hang")
+_src.openmeteo_clear_cache(); _src._get = failing_get
+st = real_openmeteo_prefetch([(69.5, 17.0)], [])
+assert st["calls"] == 2 and st["failed"] == 2 and st["points"] == 1 and st["jobs"] == 2, st
+_src._get = fake_get; calls_log.clear()
+again = _src._openmeteo_fetch(69.5, 17.0, model=None)
+assert len(calls_log) == 1 and again["2026-01-01T00:00Z"]["height"] == 1.0
+# samme punkt to ganger i samme kjøring: ett HTTP-kall
+calls_log.clear(); _src._openmeteo_fetch(69.5, 17.0, model=None); assert calls_log == []
+# postene i omvendt rekkefølge (men riktig location_id): hvert punkt får SITT svar
+_src.openmeteo_clear_cache(); fake_mode["order"] = "reversed"
+real_openmeteo_prefetch([(69.5, 17.0), (69.6, 17.0)], [])
+assert _src._openmeteo_fetch(69.5, 17.0, model=None)["2026-01-01T00:00Z"]["height"] == 1.0
+assert _src._openmeteo_fetch(69.6, 17.0, model=None)["2026-01-01T00:00Z"]["height"] == 2.0
+# svar for FEIL punkt (2° unna): hele samlekallet forkastes, ingenting i mellomlageret, hentes enkeltvis
+_src.openmeteo_clear_cache(); fake_mode["order"] = "wrongpoint"; calls_log.clear()
+st = real_openmeteo_prefetch([(69.5, 17.0), (69.6, 17.0)], [])
+assert st["failed"] == 2 and not _src._OM_CACHE, (st, _src._OM_CACHE.keys())
+fake_mode["order"] = "normal"; calls_log.clear()
+assert _src._openmeteo_fetch(69.6, 17.0, model=None)["2026-01-01T00:00Z"]["height"] == 1.0 and len(calls_log) == 1
+# for få poster: forkastes også
+_src.openmeteo_clear_cache(); fake_mode["order"] = "short"
+st = real_openmeteo_prefetch([(69.5, 17.0), (69.6, 17.0)], [])
+assert st["failed"] == 2 and not _src._OM_CACHE, st
+fake_mode["order"] = "normal"
+# hele kjeden: samlekall OG enkeltkall for GFS feiler, standardmodellen svarer → bare standard-timer, ingen 0, ingen None der standard har tall
+def gfs_failing_get(url, params=None, headers=None, timeout=None, **kw):
+    if "marine" in url and params.get("models") == _src.OPENMETEO_SWELL_MODEL:
+        raise requests.ConnectTimeout("henger på oppkoblingen")
+    return fake_get(url, params, headers, timeout, **kw)
+_src.openmeteo_clear_cache(); _src._get = gfs_failing_get
+st = real_openmeteo_prefetch([(69.5, 17.0)], [])
+assert st["failed"] == 1 and st["calls"] == 2, st
+res = real_openmeteo_marine(69.5, 17.0)
+assert all(v["swell_model"] == "standard" for k, v in res.items() if not k.startswith("_")), res
+assert res["2026-01-01T00:00Z"]["swell_height"] == 0.8 and res["2026-01-01T00:00Z"]["height"] == 1.0, res
+assert not any(v.get("swell_height") == 0 or v.get("dir") == 0 for k, v in res.items() if not k.startswith("_")), "ingen 0 ved feilet GFS"
+# koblingen i fetch.main(): samlekallet fikk alle havpunkt + offshore_longrange og alle spotpunkt, og mellomlageret tømmes per kjøring
+mp, wp = prefetch_calls[-1]
+cfg = json.loads(fetch.SPOTS.read_text(encoding="utf-8"))
+en = [x for x in cfg["spots"] if x.get("enabled")]
+assert len(wp) == len(en) and all((x["spot"]["lat"], x["spot"]["lon"]) in wp for x in en), wp
+assert all((x["offshore"]["lat"], x["offshore"]["lon"]) in mp for x in en), mp
+assert all((x["offshore_longrange"]["lat"], x["offshore_longrange"]["lon"]) in mp for x in en if x.get("offshore_longrange")), mp
+_src._get = _real_get; _src.openmeteo_clear_cache()
+print("15: S1 Open-Meteo - samlekall fyller mellomlageret (3 punkt/5 punkt×modell i 3 kall) med originale koordinater, enkeltkall leser derfra uten nett, omvendt rekkefølge/feil punkt/for få poster håndteres, feilet GFS gir bare standard-timer og aldri 0, fetch.main() sender alle punkt inkl. offshore_longrange - OK")
 
 print("Pipeline ok")
 

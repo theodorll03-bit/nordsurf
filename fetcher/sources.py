@@ -24,7 +24,46 @@ def parse_iso(s: str) -> dt.datetime:
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 
-def _get(url, params=None, headers=None):
+# S1 (ROADMAP oppgave S, 10.10.2026): Open-Meteo hang til 45 s-fristen på ca.
+# halvparten av kallene fra GitHub sine runnere (måleworkflowen «Mål
+# skalering» 09.10.2026: 90 av 94 s per spot var Open-Meteo-venting), uten
+# feilkode - kallet hang bare. Derfor: (1) delt frist for Open-Meteo - 5 s
+# på oppkobling, 20 s på svar - med samme fire forsøk som før; (2) ett
+# samlekall for alle punkter per modell før spot-løkka (openmeteo_prefetch,
+# Open-Meteo tar flere koordinater i samme kall og svarer med én post per
+# punkt i samme rekkefølge, med location_id); (3) mellomlager per
+# (kilde, lat, lon, modell) på 4 desimaler, så spots med samme punkt (eller
+# samme offshore_longrange) henter én gang. Faller samlekallet, hentes
+# punktene enkeltvis som før - tallene er identiske (samme modell, samme
+# rutenettpunkt, bekreftet i «Mål Open-Meteo»), bare færre kall.
+# «Mål Open-Meteo» 10.10.2026 kl. 08:31 UTC (24 enkeltkall): hengingen er på
+# OPPKOBLINGEN (nøyaktig 5,1 s ved delt frist), ikke på svaret - 1 av 24
+# sekvensielt, 4 av 24 med 4 tråder; når det svarer, svarer det på 0,2-0,5 s.
+# Samlekall gir identiske timeverdier og samme rutenettpunkt som enkeltkall
+# (bekreftet for alle 8 vindpunkt), men hang like ofte (6 av 6 forsøk for
+# havpunktene den morgenen) - derfor er samlekallet bare en snarvei med
+# enkeltkall som reserve, aldri eneste vei. Pausene mellom forsøk er korte
+# for Open-Meteo (1/3/6 s - et heng er et heng, ikke en 429), så et kall som
+# henger fire ganger koster ca. 30 s, ikke 214.
+OPENMETEO_TIMEOUT = (5, 20)
+OPENMETEO_BATCH_TIMEOUT = (5, 40)
+OPENMETEO_PAUSES = (0, 1, 3, 6)             # samlekall: fire forsøk
+OPENMETEO_SINGLE_PAUSES = (0, 1, 3, 6, 10, 10)   # enkeltkall: seks forsøk - det er reserven, og hvert forsøk koster bare 5 s ved heng
+OPENMETEO_BATCH = 10            # punkter per samlekall
+OPENMETEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
+OPENMETEO_WIND_URL = "https://api.open-meteo.com/v1/forecast"
+_OM_CACHE = {}
+
+
+def openmeteo_clear_cache():
+    _OM_CACHE.clear()
+
+
+def _om_key(kind, lat, lon, model):
+    return (kind, round(float(lat), 4), round(float(lon), 4), model)
+
+
+def _get(url, params=None, headers=None, timeout=TIMEOUT, pauses=(0, 4, 10, 20)):
     # Kildene timer av og til ut forbigående, eller svarer midlertidig med
     # 429/5xx, når flere spots hentes tett etter hverandre (sett i
     # Actions-kjøringer, som deler IP-adresser med mange andre). Sett i live
@@ -33,14 +72,17 @@ def _get(url, params=None, headers=None):
     # Gir opp med en gang på en varig feil (f.eks. 404), der nytt forsøk
     # aldri vil hjelpe.
     last_err = None
-    for attempt, wait in enumerate((0, 4, 10, 20)):
+    for attempt, wait in enumerate(pauses):
         if wait:
             time.sleep(wait)
         try:
-            r = requests.get(url, params=params, headers=headers or HEADERS, timeout=TIMEOUT)
+            r = requests.get(url, params=params, headers=headers or HEADERS, timeout=timeout)
             r.raise_for_status()
             return r
         except (requests.Timeout, requests.ConnectionError) as e:
+            # ConnectTimeout (henger på oppkoblingen) mot ReadTimeout (treg
+            # server) - skilles i loggen, se S1-målingen over _get()
+            print(f"  {url.split('/')[2]} forsøk {attempt + 1}: {type(e).__name__}")
             last_err = e
         except requests.HTTPError as e:
             if e.response is None or e.response.status_code not in RETRYABLE_STATUS:
@@ -135,9 +177,21 @@ def _openmeteo_fetch(lat, lon, model=None):
     alltid tomt for akkurat denne modellen) - treffer derfor i praksis bare
     unntaksvis (når standardmodellen er den valgte kilden for timen, se
     openmeteo_marine()), ikke "vanligvis"."""
+    key = _om_key("marine", lat, lon, model)
+    if key in _OM_CACHE:   # fra openmeteo_prefetch() eller et tidligere punkt med samme koordinater
+        # samme dict-objekt til alle som spør - openmeteo_marine() og merge_wind()
+        # lager nye dicts og endrer aldri dette på stedet (må forbli slik)
+        return _OM_CACHE[key]
+    r = _get(OPENMETEO_MARINE_URL, _marine_params([lat], [lon], model), timeout=OPENMETEO_TIMEOUT, pauses=OPENMETEO_SINGLE_PAUSES)
+    out = _parse_marine_hourly(r.json()["hourly"])
+    _OM_CACHE[key] = out
+    return out
+
+
+def _marine_params(lats, lons, model):
     params = {
-        "latitude": lat,
-        "longitude": lon,
+        "latitude": ",".join(str(x) for x in lats),
+        "longitude": ",".join(str(x) for x in lons),
         "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,"
         "swell_wave_direction,swell_wave_period,swell_wave_peak_period,"
         "secondary_swell_wave_height,secondary_swell_wave_direction,"
@@ -152,8 +206,10 @@ def _openmeteo_fetch(lat, lon, model=None):
     }
     if model:
         params["models"] = model
-    r = _get("https://marine-api.open-meteo.com/v1/marine", params)
-    h = r.json()["hourly"]
+    return params
+
+
+def _parse_marine_hourly(h):
     n = len(h["time"])
     missing = [None] * n
     out = {}
@@ -683,17 +739,28 @@ def openmeteo_wind(lat, lon):
     met.no slutter - se merge_wind(). Live sjekket 06.10.2026: 384 timer,
     alle felt satt, m/s bekreftet via wind_speed_unit=ms.
     {time: {wind_speed, wind_dir, gust, air_temp}}"""
-    params = {
-        "latitude": lat,
-        "longitude": lon,
+    key = _om_key("wind", lat, lon, OPENMETEO_WIND_MODEL)
+    if key in _OM_CACHE:
+        return _OM_CACHE[key]
+    r = _get(OPENMETEO_WIND_URL, _wind_params([lat], [lon]), timeout=OPENMETEO_TIMEOUT, pauses=OPENMETEO_SINGLE_PAUSES)
+    out = _parse_wind_hourly(r.json()["hourly"])
+    _OM_CACHE[key] = out
+    return out
+
+
+def _wind_params(lats, lons):
+    return {
+        "latitude": ",".join(str(x) for x in lats),
+        "longitude": ",".join(str(x) for x in lons),
         "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m",
         "wind_speed_unit": "ms",
         "timezone": "GMT",
         "forecast_days": 16,
         "models": OPENMETEO_WIND_MODEL,
     }
-    r = _get("https://api.open-meteo.com/v1/forecast", params)
-    h = r.json()["hourly"]
+
+
+def _parse_wind_hourly(h):
     out = {}
     for i, t in enumerate(h["time"]):
         key = t + "Z" if len(t) == 16 else t
@@ -705,6 +772,80 @@ def openmeteo_wind(lat, lon):
             "air_temp": h["temperature_2m"][i],
         }
     return out
+
+
+def _unique_points(points):
+    """Unike punkt (nøkkel på 4 desimaler), men med det FØRSTE ORIGINALE
+    koordinatparet - samlekallet skal spørre om nøyaktig samme punkt som
+    enkeltkallet (fysikk-kontrollør 10.10.2026: avrunding flytter et
+    vindpunkt opptil 5 m, og Open-Meteo kan velge celle/høyde ut fra det)."""
+    seen, out = set(), []
+    for lat, lon in points:
+        k = (round(float(lat), 4), round(float(lon), 4))
+        if k not in seen:
+            seen.add(k); out.append((lat, lon))
+    return out
+
+
+def openmeteo_prefetch(marine_points, wind_points, batch=None):
+    """Samlekall: henter alle havpunkt (GFS Wave + standardmodellen) og alle
+    vindpunkt (GFS-vind) i kall med inntil `batch` punkter hver, og legger
+    svarene i mellomlageret som _openmeteo_fetch()/openmeteo_wind() leser
+    fra. Returnerer tall til kilderapporten: {"points", "calls", "failed",
+    "cached"}. Et samlekall som feiler (alle fire forsøk) gir bare at
+    punktene hentes enkeltvis etterpå - aldri at noe blir 0 eller tomt.
+    Open-Meteo svarer med en liste (én post per punkt, samme rekkefølge og
+    med location_id) når flere koordinater sendes, og med én post når det
+    bare er ett punkt."""
+    batch = batch or OPENMETEO_BATCH
+    stats = {"points": 0, "jobs": 0, "calls": 0, "failed": 0, "cached": 0}
+    jobs = []
+    um, uw = _unique_points(marine_points), _unique_points(wind_points)
+    for lat, lon in um:
+        for model in (OPENMETEO_SWELL_MODEL, None):
+            jobs.append(("marine", lat, lon, model))
+    for lat, lon in uw:
+        jobs.append(("wind", lat, lon, OPENMETEO_WIND_MODEL))
+    stats["points"] = len(um) + len(uw)   # unike punkt
+    stats["jobs"] = len(jobs)             # punkt × modell (det som faktisk hentes)
+    # grupper per (kilde, modell), så per chunk
+    groups = {}
+    for kind, lat, lon, model in jobs:
+        key = _om_key(kind, lat, lon, model)
+        if key in _OM_CACHE:
+            stats["cached"] += 1
+            continue
+        groups.setdefault((kind, model), []).append((lat, lon))
+    for (kind, model), pts in groups.items():
+        for i in range(0, len(pts), batch):
+            chunk = pts[i:i + batch]
+            lats, lons = [p[0] for p in chunk], [p[1] for p in chunk]
+            stats["calls"] += 1
+            try:
+                if kind == "marine":
+                    r = _get(OPENMETEO_MARINE_URL, _marine_params(lats, lons, model), timeout=OPENMETEO_BATCH_TIMEOUT, pauses=OPENMETEO_PAUSES)
+                else:
+                    r = _get(OPENMETEO_WIND_URL, _wind_params(lats, lons), timeout=OPENMETEO_BATCH_TIMEOUT, pauses=OPENMETEO_PAUSES)
+                data = r.json()
+                arr = data if isinstance(data, list) else [data]
+                if len(arr) != len(chunk):
+                    raise ValueError(f"samlekall ga {len(arr)} poster for {len(chunk)} punkt")
+                parsed_all = []
+                for j, loc in enumerate(arr):
+                    idx = int(loc.get("location_id", j))
+                    lat, lon = chunk[idx]
+                    # svaret SKAL gjelde punktet vi spurte om (innenfor én
+                    # rutenettcelle, 0,3°) - ellers kastes hele samlekallet og
+                    # punktene hentes enkeltvis (fysikk-kontrollør 10.10.2026)
+                    if abs(float(loc.get("latitude", 999)) - float(lat)) > 0.3 or abs(float(loc.get("longitude", 999)) - float(lon)) > 0.3:
+                        raise ValueError(f"samlekall svarte for ({loc.get('latitude')},{loc.get('longitude')}) der vi spurte om ({lat},{lon})")
+                    parsed_all.append((lat, lon, _parse_marine_hourly(loc["hourly"]) if kind == "marine" else _parse_wind_hourly(loc["hourly"])))
+                for lat, lon, parsed in parsed_all:   # først når ALLE postene er kontrollert
+                    _OM_CACHE[_om_key(kind, lat, lon, model)] = parsed
+            except (requests.Timeout, requests.ConnectionError, requests.HTTPError, ValueError, KeyError, IndexError, TypeError) as e:
+                stats["failed"] += 1
+                print(f"  Open-Meteo samlekall ({kind}, {model or 'standard'}, {len(chunk)} punkt) feilet, punktene hentes enkeltvis: {e}")
+    return stats
 
 
 def merge_wind(metno_hourly, openmeteo_hourly):
