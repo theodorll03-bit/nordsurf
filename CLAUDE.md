@@ -50,6 +50,12 @@ Lokale surfere kjenner spoten bedre enn noen modell. Denne kunnskapen skal juste
 - Loggene kan foreslå å MYKE OPP en regel (se `renderLogs()` sin regel-forslag-sjekk i docs/index.html) når minst 3 logger med 3 stjerner eller mer bryter den samme regelen - det er et tegn på at terskelen er for streng. Forslaget vises bare, det endrer ALDRI `local_rules` automatisk - bare Theodor kan stramme inn eller løsne en terskel.
 - Legg til lokalkunnskap for andre spots etter samme mønster: `local_rules` i spots.json, kilden navngitt her (ikke anonymt "en lokal sa"), og en `weight` som reflekterer hvor sikker kilden er.
 
+## Spots med status `hemmelig` (Theodor, 10.10.2026)
+En statisk, offentlig side kan ikke holde noe hemmelig. `status: hemmelig` i spots-filene betyr at spoten IKKE publiseres i det hele tatt - verken i oversiktsfila, i detaljfiler, på kartet eller i noen annen fil under docs/ - før appen har innlogging og en server som kan holde på data. Henteren kan kalibrere og lære på den (data/ er ikke publisert), men ingenting av det skal ut i docs/. `forelopig` vises med merkelapp, `kalibrert` som i dag.
+
+## Open-Meteo
+Gratisversjonen av Open-Meteo er bare for ikke-kommersiell bruk (under 10 000 kall per døgn, 5 000 per time, 600 per minutt). Nordsurf er ikke-kommersiell. Blir det noen gang betaling eller reklame, må Open-Meteo byttes til betalt plan eller en annen kilde FØR det.
+
 ## Krever Theodors ja (stopp og spør)
 - Endringer i svellvinduer, havpunkter, barentswatch_point, facing, offshorevind, exposure_override, ideal_height, max_height, SHADOW_CURVE, DEFAULT_TRANSFER, vindtabellen eller stjernegrenser.
 - Diffraksjonsdempingens p(T)-kurve (`rating.DIFFRACTION_PERIOD_SHORT`/`_LONG`/`_LONG_WEIGHT`: 1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre - Theodors rettelse 07.10.2026, samme kurve som skjermingen i oppgave I).

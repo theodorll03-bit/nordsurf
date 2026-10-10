@@ -2,7 +2,7 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN, ingenting bygget, venter på Theodors ja
+## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 PÅGÅR
 
 Målet: flere hundre spots langs hele norskekysten, samme rating (urørt), samme kilder. Appen og henteren er i dag bygget for 8. Tallene under er målt 09.10.2026 (forecast.json kl. 21Z, Actions-kjøring nr. 147, måleworkflowen «Mål skalering», kjøring 1). Fysikk-kontrollør 09.10.2026: fire antakelser rettet før commit (Open-Meteo er to HTTP-kall per havpunkt; deling bare på API-ets eget rutenettpunkt per modell, ikke egen 0,25°-avrunding; kortere tidsavbrudd må måles først fordi et feilet GFS-kall endrer svellmodellen for dag 1-9; detaljfila er de 53 feltene appen faktisk leser, `breakdown` inkludert) - se STATUS.md. Rating, spots.json og henterens tall er ikke rørt - `fetcher/measure_scale.py` og `.github/workflows/measure_scale.yml` er bare måleverktøy.
 
@@ -105,7 +105,22 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 
 - `docs/design/skalering/test500.html` med 500 oppdiktede spots langs kysten (fra kystlinja: hvert 5. km, tilfeldig rating per time) og `fetcher/test_scale_browser.py` (Playwright, mobil 390×844 med CPU-struping 4×): mål at kartet laster på under 2 s, at panorering/zoom holder minst 50 fps (requestAnimationFrame-avstander), at klyngene oppdateres på under 100 ms ved timebytte, og at vind- og svellanimasjonene går jevnt (ingen bilder over 33 ms i 5 s). Samme tidsgrenser som de andre nettlesertestene.
 
-### Rekkefølge, og hva som krever Theodors ja
+### Theodors svar (10.10.2026) og rekkefølgen - én oppgave av gangen, egen PR/commit etter CLAUDE.md
+
+1. MapLibre: SELVHOSTET i `docs/vendor/`, fast versjon 5.24.0, i sw.js sin precache så kartet virker uten nett.
+2. Kystlinje til visning: IKKE GSHHS - Kartverkets kystlinje (N250, eller N50 hvis størrelsen tåler det) eller OpenStreetMap sine vannpolygoner; finn ut hva som gir best kvalitet for Norge, sjekk lisensen, legg riktig kildehenvisning i appen. Lagres som vektorfliser i én PMTiles-fil; bekreft at GitHub Pages støtter range requests før valget låses. Fysikken (exposure_baseline, check_spot) beholder GSHHS inntil videre.
+3. Publisering via Pages-artifact i stedet for å committe forecast.json: JA. Men `data/` (kalibrering, forecast_archive, bw_calibration, exposure, benchmarks) skal fortsatt lagres varig i git (eller på en egen datagren) og aldri gå tapt mellom kjøringer - S2 må vise hvordan læringen fortsatt får sine data.
+4. Spots per region med status (kalibrert, foreløpig, hemmelig): JA.
+5. Hemmelig: en statisk, offentlig side kan ikke holde noe hemmelig. `status: hemmelig` betyr at spoten ikke publiseres i det hele tatt, verken i oversikt eller detaljfiler, før appen har innlogging og server. Står i CLAUDE.md.
+
+- **S1. Open-Meteo** (PÅGÅR): mål feilraten med delt frist, hent flere punkter i samme kall der API-et støtter det, mellomlagre svar som deles mellom spots. Mål: henteren under 3 minutter for dagens 8 spots, uten at GFS-dataene for dag 1-9 faller over på standardmodellen oftere enn i dag. Vis før og etter.
+- **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren.
+- **S3. MapLibre-kart** med den mørke stilen fra dagens design, klynger med antall og beste rating, lapper bare der det er plass og alltid for favoritter, vind og svell som eget lag oppå.
+- **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
+- **S5. spots.json per region med status.**
+- **S6. Parallell henter per region (matrise) - VENTER: ikke før det er minst 30 spots.**
+
+### Rekkefølge slik den sto i planen (erstattet av lista over)
 
 1. Ja/nei til: MapLibre fra CDN eller selvhostet; kystlinje-alternativ (a); publisering via Pages-artifact i stedet for git-commits; spots per region med `status`; «hemmelig» = utelatt fra oversikten i første omgang.
 2. Måleworkflowen kjøres på nytt med Open-Meteo for seg (ett HTTP-kall per rad, kort og lang frist, parallelt 4/8 tråder) før punkt 5 bygges - tallene for Open-Meteo over er anslag fra funksjonskall, ikke per HTTP-kall.
