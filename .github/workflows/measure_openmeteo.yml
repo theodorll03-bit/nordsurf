@@ -1,0 +1,23 @@
+name: Mål Open-Meteo
+
+on:
+  workflow_dispatch:          # bare manuelt - S1 (ROADMAP oppgave S), måling før bygging
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Mål Open-Meteo per HTTP-kall (delt frist, samlekall, parallelt)
+        run: python fetcher/measure_openmeteo.py
+        timeout-minutes: 14
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
