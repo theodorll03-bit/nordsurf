@@ -2,7 +2,7 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 PÅGÅR
+## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 FERDIG, neste er S2
 
 Målet: flere hundre spots langs hele norskekysten, samme rating (urørt), samme kilder. Appen og henteren er i dag bygget for 8. Tallene under er målt 09.10.2026 (forecast.json kl. 21Z, Actions-kjøring nr. 147, måleworkflowen «Mål skalering», kjøring 1). Fysikk-kontrollør 09.10.2026: fire antakelser rettet før commit (Open-Meteo er to HTTP-kall per havpunkt; deling bare på API-ets eget rutenettpunkt per modell, ikke egen 0,25°-avrunding; kortere tidsavbrudd må måles først fordi et feilet GFS-kall endrer svellmodellen for dag 1-9; detaljfila er de 53 feltene appen faktisk leser, `breakdown` inkludert) - se STATUS.md. Rating, spots.json og henterens tall er ikke rørt - `fetcher/measure_scale.py` og `.github/workflows/measure_scale.yml` er bare måleverktøy.
 
@@ -113,7 +113,7 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 4. Spots per region med status (kalibrert, foreløpig, hemmelig): JA.
 5. Hemmelig: en statisk, offentlig side kan ikke holde noe hemmelig. `status: hemmelig` betyr at spoten ikke publiseres i det hele tatt, verken i oversikt eller detaljfiler, før appen har innlogging og server. Står i CLAUDE.md.
 
-- **S1. Open-Meteo** (PÅGÅR): mål feilraten med delt frist, hent flere punkter i samme kall der API-et støtter det, mellomlagre svar som deles mellom spots. Mål: henteren under 3 minutter for dagens 8 spots, uten at GFS-dataene for dag 1-9 faller over på standardmodellen oftere enn i dag. Vis før og etter.
+- **S1. Open-Meteo - FERDIG 10.10.2026 (commit 5387aa8, se STATUS.md):** delt frist (5 s oppkobling/20 s svar) og korte pauser, samlekall for alle punkt før spot-løkka, mellomlager delt mellom spots. Før: 10 min 49 s hentesteg (11-18 min per kjøring). Etter: 52 s, 3 Open-Meteo-kall i stedet for 28, GFS-timer per spot uendret (sum 1 187 mot 1 179).
 - **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren.
 - **S3. MapLibre-kart** med den mørke stilen fra dagens design, klynger med antall og beste rating, lapper bare der det er plass og alltid for favoritter, vind og svell som eget lag oppå.
 - **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
