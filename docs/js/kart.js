@@ -10,7 +10,13 @@
    Ren visning: leser bare feltene rating.py skrev til forecast.json. Treff/
    bom for svellkilen leses ALLTID fra h.directness (samme regel og samme
    grenser som skiva hadde, se fetcher/test_map_disc.py) - aldri fra
-   bw_confirms eller spot_direction_factor. */
+   bw_confirms eller spot_direction_factor.
+
+   Rolig kart (Theodor 13.10.2026): lapp bare for spots med stjerner,
+   favoritter og valgt spot - 0 stjerner er en liten grå prikk. Ingen streker
+   fra prikk til lapp. Kantpiler bare for favoritter og spots med stjerner.
+   Vindlaget bare når en spot er valgt. Er alle spots i utsnittet 0 stjerner,
+   står én diskret tekst på kartet (teksten lages i front.js). */
 (function(){
   const VW = 1000, VH = 844;           // kartrommets størrelse (coast.json sin viewBox)
   const EASE = "cubic-bezier(.2,.8,.2,1)";
@@ -19,7 +25,7 @@
   const R_WEDGE = 64;                  // kilens radius i kartenheter
   const merc = (lat) => Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
 
-  let root, mapLayer, svg, gridG, wedgeG, windLayer, windSvg, night, markersEl;
+  let root, mapLayer, svg, gridG, wedgeG, windLayer, windSvg, night, markersEl, noteEl;
   let coast = null, spots = [], proj = null;
   let state = { view:"nord", spotId:null, idx:0, area:{x:0,y:0,w:390,h:844}, sheetMode:"peek" };
   let cur = { cx:0, cy:0, sc:1 };
@@ -30,6 +36,9 @@
   let hourOf = (spot, idx)=>spot.hours[idx];
   let labelOf = (h)=>"";
   let ariaOf = (spot, h)=>spot.name;
+  let isFav = (id)=>false;
+  let noteOf = ()=>null;
+  let lastOuts = [];   // spots utenfor skjermen ved siste plassering - kantpilene velges på nytt ved hvert timebytte
   let windLines = [];
 
   /* ---------- projeksjon ---------- */
@@ -52,6 +61,8 @@
     hourOf = opts.hourOf || hourOf;
     labelOf = opts.labelOf || labelOf;
     ariaOf = opts.ariaOf || ariaOf;
+    isFav = opts.isFav || isFav;
+    noteOf = opts.noteOf || noteOf;
     spots = data.spots.map(s=>{
       const lat = s.spot && s.spot.lat, lon = s.spot && s.spot.lon;
       const p = { s, id:s.id, name:s.name, area:s.area||"", x: lon!=null ? proj.x(lon) : -9999, y: lat!=null ? proj.y(lat) : -9999 };
@@ -69,11 +80,13 @@
       </div>
       <div class="wind" id="windLayer" aria-hidden="true"><svg id="windSvg"></svg></div>
       <div class="night" id="nightLayer" aria-hidden="true"></div>
-      <div class="markers" id="markersLayer"></div>`;
+      <div class="markers" id="markersLayer"></div>
+      <p class="map-note" id="mapNote" hidden></p>`;
     mapLayer = root.querySelector("#mapLayer"); svg = root.querySelector("#mapSvg");
     gridG = root.querySelector("#mapGrid"); wedgeG = root.querySelector("#wedgeG");
     windLayer = root.querySelector("#windLayer"); windSvg = root.querySelector("#windSvg");
     night = root.querySelector("#nightLayer"); markersEl = root.querySelector("#markersLayer");
+    noteEl = root.querySelector("#mapNote");
     drawGrid(); makeWind(); buildMarkers();
     // Etter at zoom-animasjonen er ferdig: tegn kartet skarpt på nytt (viewBox
     // i stedet for CSS-skalering - Theodors punkt 5, 09.10.2026).
@@ -153,14 +166,20 @@
     const sc = Math.min((a.w - 2*pad) / w, (a.h - 2*pad) / hgt);
     return { cx: (x0+x1)/2, cy: (y0+y1)/2, sc: Math.max(0.3, Math.min(8, sc)) };
   }
-  function viewFor(view){
+  // Spotene et utsnitt viser (og rammer inn). Samme sett brukes av svarlinja
+  // og teksten på kartet i front.js («området i utsnittet»).
+  function viewPoints(view){
     const on = spots.filter(p=>!p.offMap);
     const lof = on.filter(p=>/lofoten/i.test(p.area));
     const nord = on.filter(p=>!/lofoten/i.test(p.area));
+    if(view==="lofoten" && lof.length) return lof;
+    if(view==="alle") return on;
+    return nord.length ? nord : on;
+  }
+  function viewSpotIds(view){ return new Set(viewPoints(view).map(p=>p.id)); }
+  function viewFor(view){
     const padW = Math.min(120, state.area.w*0.18);
-    if(view==="lofoten" && lof.length) return fit(lof, padW);
-    if(view==="alle") return fit(on, padW);
-    return fit(nord.length ? nord : on, padW);
+    return fit(viewPoints(view), padW);
   }
   let prevT = null;  // forrige CSS-transform (translate/scale) - utgangspunkt for neste animasjon
   function cssTransform(){
@@ -216,8 +235,8 @@
   /* ---------- merker ---------- */
   function buildMarkers(){
     markersEl.innerHTML = spots.map(p=>`
-      <button type="button" class="mk" data-id="${p.id}" aria-label="">
-        <span class="mk-dot-wrap"><span class="rip"></span><span class="rip rip2"></span><span class="mk-dot"></span><span class="lead" hidden></span></span>
+      <button type="button" class="mk bare" data-id="${p.id}" aria-label="">
+        <span class="mk-dot-wrap"><span class="rip"></span><span class="rip rip2"></span><span class="mk-dot"></span></span>
         <span class="mk-pill"><span class="mk-name">${esc(p.name)}</span><span class="mk-label"></span></span>
       </button>
       <button type="button" class="mk-edge" data-id="${p.id}" aria-label="" hidden>
@@ -228,35 +247,44 @@
   }
   const PH = 30, GAP = 15;     // pillens høyde, avstand prikksentrum -> pillekant (prikk 5,5 + luft)
   function pillWidth(mk){ return 30 + mk.querySelector(".mk-name").textContent.length*7.4 + mk.querySelector(".mk-label").textContent.length*7.2; }
+  // Tall i Geist Mono, navn og ord i Geist (Theodor 13.10.2026): bare sifrene pakkes inn.
+  function labelHtml(t){ return esc(t).replace(/\d[\d,.–]*/g, m=>`<span class="num">${m}</span>`); }
   function obstacles(){
-    // områder kantpiler aldri skal ligge i: topplinjas knapper/regionvalg og fargeforklaringen
+    // områder kantpiler aldri skal ligge i: topplinjas knapper/regionvalg/tidspille, fargeforklaringen og teksten på kartet
     const out = [];
-    document.querySelectorAll(".top-bar .icon-btn, .top-bar .seg, .top-bar .brand, .legend").forEach(el=>{
-      const r = el.getBoundingClientRect(); if(r.width && r.height && getComputedStyle(el).display!=="none") out.push({x:r.left-8, y:r.top-8, w:r.width+16, h:r.height+16});
+    document.querySelectorAll(".top-bar .icon-btn, .top-bar .seg, .top-bar .brand, .top-bar .tctl, .legend, .map-note").forEach(el=>{
+      const r = el.getBoundingClientRect(); if(r.width && r.height && !el.hidden && getComputedStyle(el).display!=="none") out.push({x:r.left-8, y:r.top-8, w:r.width+16, h:r.height+16});
     });
     return out;
   }
+  const prio = (mk)=> (mk._sel ? 1000 : 0) + (mk._fav ? 100 : 0) + (mk._st || 0);
   const hitRect = (r, list)=> list.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
   function layoutPills(){
-    // Lappen står rett ved prikken (høyre side, eller venstre nær høyre kant);
-    // ligger to lapper oppå hverandre, flyttes den ene til motsatt side eller
-    // litt opp/ned (aldri mer enn 24 px - prikk og lapp skal alltid henge
-    // sammen, under 12 px mellom dem), og først ved 24 px tegnes en kort
-    // tynn strek fra prikk til lapp. Et lite søk finner en plassering uten
-    // konflikt for ALLE lappene samlet (andre spots sine prikker er også
-    // hindre), i stedet for å plassere én og én (Theodors punkt 1, 09.10.2026).
+    // Lapp bare for spots som skal ha det (_wantLabel: stjerner, favoritt
+    // eller valgt - Theodor 13.10.2026 - og «–» når tallet mangler, så det
+    // aldri ser ut som en kjent 0); de andre er en prikk uten lapp
+    // (klassen «bare»). Lappen står rett ved prikken: høyre eller venstre
+    // side, litt opp/ned (høyst 24 px), eller rett over/under prikken - alltid
+    // under 12 px unna, og aldri med strek. Et lite søk finner en plassering
+    // uten konflikt for alle lappene samlet (alle prikker i utsnittet er
+    // hindre, og hver lapp skal ligge nærmere sin egen prikk enn noen annen).
+    // Går det ikke (svært tette prikker, f.eks. «Alle» på mobil), får de
+    // viktigste lapp (valgt, favoritt, flest stjerner) og resten står som
+    // prikk uten lapp - lista har dem uansett.
     const a = state.area;
-    const mks = [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside).sort((m1,m2)=>m1._sy-m2._sy);
-    const dots = mks.map(m=>({x: m._sx-6, y: m._sy-6, w: 12, h: 12}));
+    const inside = [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside);
+    inside.forEach(m=>{ m.classList.toggle("bare", !m._wantLabel); m.dataset.label = m._wantLabel ? "shown" : "rule"; });
+    const mks = inside.filter(m=>m._wantLabel).sort((x, y)=> prio(y) - prio(x));
+    const dots = inside.map(m=>({id: m.dataset.id, x: m._sx-6, y: m._sy-6, w: 12, h: 12}));
     // Avstand fra et punkt (en prikk) til nærmeste kant av et rektangel (en lapp)
     const distRP = (r, x, y)=> Math.hypot(Math.max(r.x - x, 0, x - (r.x + r.w)), Math.max(r.y - y, 0, y - (r.y + r.h)));
-    const cands = mks.map((mk, i)=>{
+    const cands = mks.map(mk=>{
       const w = pillWidth(mk);
       let preferLeft = mk._sx > a.x + a.w*0.62;
       // Prikker som ligger tett (Grøtfjord/Tromvik, Theodor 09.10.2026): den
       // vestligste får lappen på venstre side, den østligste på høyre - lappen
       // peker bort fra naboen.
-      const near = dots.filter((d, j)=> j!==i && Math.abs(d.y + 6 - mk._sy) < PH + 12 && Math.abs(d.x + 6 - mk._sx) < w + 2*GAP + 12);
+      const near = dots.filter(d=> d.id!==mk.dataset.id && Math.abs(d.y + 6 - mk._sy) < PH + 12 && Math.abs(d.x + 6 - mk._sx) < w + 2*GAP + 12);
       if(near.length){
         const east = near.some(d=>d.x + 6 > mk._sx), west = near.some(d=>d.x + 6 < mk._sx);
         if(east && !west) preferLeft = true; else if(west && !east) preferLeft = false;
@@ -266,44 +294,23 @@
       for(const dy of [0, -14, 14, -24, 24]) for(const side of sides){
         const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w;
         if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
-        out.push({side, dy, lead: Math.abs(dy) >= 24, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+        out.push({side, dy, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
       }
-      // Siste utvei (to prikker helt inntil hverandre ved kartkanten, f.eks.
-      // Steinkrøssa/Ersfjordstranda 12 px fra hverandre): lappen rett over
-      // eller under sin egen prikk, midtstilt, med en tynn strek.
+      // Rett over eller under prikken, midtstilt (to prikker helt inntil
+      // hverandre ved kartkanten, f.eks. Steinkrøssa/Ersfjordstranda).
       for(const dy of [-(PH/2 + 12), PH/2 + 12]){
         const x = Math.max(a.x + 4, Math.min(a.x + a.w - 4 - w, mk._sx - w/2));
-        out.push({side:"vert", dy, lead:true, vert:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
+        out.push({side:"vert", dy, vert:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
       }
-      // Aller siste utvei (bare når ingen konfliktfri løsning finnes ellers,
-      // f.eks. «Alle» på mobil der seks Troms-spots ligger innenfor 110×50 px):
-      // lengre unna prikken, alltid med strek.
-      for(const dy of [-36, 36, -48, 48]) for(const side of sides){
-        const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w;
-        if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
-        out.push({side, dy, lead:true, far:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
-      }
-      for(const dy of [-(PH/2 + 42), PH/2 + 42]){
-        const x = Math.max(a.x + 4, Math.min(a.x + a.w - 4 - w, mk._sx - w/2));
-        out.push({side:"vert", dy, lead:true, vert:true, far:true, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
-      }
-      if(!out.length){ const side = sides[0]; const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w; out.push({side, dy:0, lead:false, r:{x, y: mk._sy - PH/2, w, h: PH}}); }
       return out;
     });
-    // dybde-først-søk med tak på antall forsøk; ellers beste greske løsning
     const chosen = new Array(mks.length).fill(null);
-    let nodes = 0, strict = true, allowFar = false;
+    let nodes = 0;
     const ok = (i, c)=>{
-      if(c.far && !allowFar) return false;
-      const others = dots.filter((_,j)=>j!==i);
+      const others = dots.filter(d=>d.id!==mks[i].dataset.id);
       if(hitRect(c.r, others)) return false;
-      // lappen skal ligge nærmere sin egen prikk enn noen annen prikk
-      // (Theodor 09.10.2026) - i strengt pass; i det løse passet (bare når det
-      // strenge ikke går opp) holder det at den ikke dekker noen prikk/lapp.
-      if(strict){
-        const own = distRP(c.r, mks[i]._sx, mks[i]._sy);
-        if(others.some(d=> distRP(c.r, d.x + 6, d.y + 6) <= own)) return false;
-      }
+      const own = distRP(c.r, mks[i]._sx, mks[i]._sy);
+      if(others.some(d=> distRP(c.r, d.x + 6, d.y + 6) <= own)) return false;
       for(let j=0;j<i;j++) if(chosen[j] && hitRect(c.r, [chosen[j].r])) return false;
       return true;
     };
@@ -311,27 +318,23 @@
       if(i === mks.length) return true;
       for(const c of cands[i]){
         if(++nodes > 20000) return false;
-        if(!ok(i, c)){ continue; }
+        if(!ok(i, c)) continue;
         chosen[i] = c;
         if(dfs(i+1)) return true;
         chosen[i] = null;
       }
       return false;
     };
-    // tre pass: strengt nært, strengt med lange streker, løst med lange streker
-    let solved = false;
-    for(const [st, far, name] of [[true,false,"strict"],[true,true,"far"],[false,true,"loose"]]){
-      strict = st; allowFar = far; nodes = 0; chosen.fill(null);
-      if(dfs(0)){ solved = true; markersEl.dataset.pills = name; break; }
+    let pass = mks.length ? "strict" : "none";
+    if(mks.length && !dfs(0)){
+      // for tett: de viktigste først, en lapp som ikke får plass blir borte
+      pass = "dense"; chosen.fill(null);
+      for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i, c)) || null;
     }
-    if(!solved){
-      markersEl.dataset.pills = "none";
-      // ingen konfliktfri løsning (svært tett) - ta den første som ikke
-      // krasjer med allerede valgte, ellers den første kandidaten
-      for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i,c)) || cands[i][0];
-    }
+    markersEl.dataset.pills = pass;
     mks.forEach((mk, i)=>{
       const c = chosen[i];
+      if(!c){ mk.classList.add("bare"); mk.classList.remove("left","vert"); mk.dataset.label = "dense"; return; }
       mk.classList.toggle("left", c.side==="left");
       mk.classList.toggle("vert", !!c.vert);
       if(c.vert){
@@ -342,17 +345,21 @@
         mk.style.removeProperty("--lx");
         mk.style.setProperty("--ly", c.dy+"px");
       }
-      const lead = mk.querySelector(".lead");
-      if(c.lead){
-        let px, py;
-        if(c.vert){
-          px = mk._sx < c.r.x ? c.r.x - mk._sx + 4 : mk._sx > c.r.x + c.r.w ? c.r.x + c.r.w - mk._sx - 4 : 0;
-          py = c.dy < 0 ? (c.r.y + c.r.h - mk._sy) + 2 : (c.r.y - mk._sy) - 2;
-        } else { px = c.side==="right" ? GAP - 2 : -(GAP - 2); py = c.dy; }
-        const L = Math.hypot(px, py), ang = Math.atan2(py, px)*180/Math.PI;
-        lead.hidden = false; lead.style.width = L.toFixed(1)+"px"; lead.style.transform = `rotate(${ang.toFixed(1)}deg)`;
-      } else lead.hidden = true;
     });
+    inside.filter(m=>!m._wantLabel).forEach(m=>m.classList.remove("left","vert"));
+  }
+  function updateNote(){
+    // Én diskret tekst øverst på kartet når alle spots i utsnittet er 0
+    // stjerner (teksten lages i front.js). Ikke når en spot er valgt eller
+    // kartet ligger skjult bak lista.
+    const text = state.sheetMode==="spot" || state.sheetMode==="list" ? null : noteOf();
+    if(!text){ noteEl.hidden = true; noteEl.textContent = ""; return; }
+    noteEl.hidden = false; noteEl.textContent = text;
+    const a = state.area;
+    let ctrlBottom = 0;
+    document.querySelectorAll(".top-bar .ctrl, .top-bar .brand, .top-bar .top-btns").forEach(el=>{ const r = el.getBoundingClientRect(); if(r.height) ctrlBottom = Math.max(ctrlBottom, r.bottom); });
+    const y = Math.max(a.y + 22, ctrlBottom + 30);
+    noteEl.style.transform = `translate3d(${(a.x + a.w/2).toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%,-50%)`;
   }
   function placeMarkers(animate){
     const a = state.area;
@@ -369,18 +376,26 @@
       mk._sx = sx; mk._sy = sy; mk._inside = inside && !hideAll;
       if(!inside && !hideAll && state.sheetMode!=="spot") outs.push({p, sx, sy});
     });
+    lastOuts = outs;
     layoutPills();
+    updateNote();
     placeEdges(outs, animate);
   }
+  // Kantpil bare for favoritter og spots med stjerner i valgt time (Theodor 13.10.2026)
+  function qualifies(p){ const h = hourOf(p.s, state.idx); return !!(h && (h.stars||0) >= 1) || isFav(p.id); }
   function placeEdges(outs, animate){
     // Spots utenfor skjermen: pil i kanten som peker dit. Flere enn to i
     // omtrent samme retning slås sammen til én pil («6 spots», beste rating
     // som farge) - trykk zoomer ut. Aldri i topplinja eller bak forklaringen.
+    // animate: true/false fra en ny plassering av kartet; null fra et
+    // timebytte - da beholder piler som allerede står sin overgang, og nye
+    // piler dukker bare opp der de skal stå.
     const a = state.area, ox = a.x + a.w/2, oy = a.y + a.h/2;
+    const wasShown = new Set([...markersEl.querySelectorAll(".mk-edge:not(.cluster)")].filter(e=>!e.hidden).map(e=>e.dataset.id));
     markersEl.querySelectorAll(".mk-edge").forEach(e=>{ e.hidden = true; });
     markersEl.querySelectorAll(".mk-edge.cluster").forEach(e=>e.remove());
     clusters = [];
-    const items = outs.map(o=>{
+    const items = outs.filter(o=>qualifies(o.p)).map(o=>{
       const ang = o.p.offMap ? 215 : (Math.atan2(o.sy-oy, o.sx-ox)*180/Math.PI + 360) % 360;   // utenfor kartet: sørvest
       return {...o, ang};
     }).sort((u,v)=>u.ang-v.ang);
@@ -425,7 +440,8 @@
         [ex, ey] = findSpot(ex, ey, w);
         const ang = it.p.offMap ? 135 : Math.atan2(it.sy-ey, it.sx-ex)*180/Math.PI;
         ed.hidden = false;
-        ed.style.transition = animate ? `transform 1s ${EASE}` : "none";
+        if(animate === true) ed.style.transition = `transform 1s ${EASE}`;
+        else if(animate === false || !wasShown.has(it.p.id)) ed.style.transition = "none";
         ed.style.transform = `translate3d(${ex.toFixed(1)}px, ${ey.toFixed(1)}px, 0) translate(-50%,-50%)`;
         ed.querySelector(".mk-arrow").style.transform = `rotate(${ang.toFixed(0)}deg)`;
       });
@@ -457,30 +473,40 @@
     const {best, label, aria} = clusterInfo(c.items);
     c.el.className = `mk-edge cluster r-${Math.min(5,best)}${best?" lit":""}`;
     c.el.style.setProperty("--mc", COL[Math.min(5,best)]);
-    c.el.querySelector(".mk-label").textContent = label;
+    c.el.querySelector(".mk-label").innerHTML = labelHtml(label);
     c.el.setAttribute("aria-label", `${c.items.length} spots utenfor kartet: ${c.items.map(it=>it.p.name).join(", ")}. ${aria}. Trykk for å zoome ut`);
   }
   function colorMarkers(){
     const idx = state.idx;
-    clusters.forEach(colorCluster);
     spots.forEach(p=>{
       const h = hourOf(p.s, idx);
       const st = h ? (h.stars||0) : 0;
       const col = COL[Math.min(5, st)];
       const label = h ? labelOf(h) : "–";
-      const aria = h ? ariaOf(p.s, h) : p.name;
+      const aria = h ? ariaOf(p.s, h) : `${p.name}, tallet mangler`;
       const isSel = state.spotId===p.id;
-      for(const el of [markersEl.querySelector(`.mk[data-id="${p.id}"]`), markersEl.querySelector(`.mk-edge[data-id="${p.id}"]`)]){
-        el.className = (el.classList.contains("mk-edge") ? "mk-edge" : "mk") + ` r-${Math.min(5,st)}` + (st>=1 ? " lit" : "") + (isSel ? " sel" : "") + (el.classList.contains("left") ? " left" : "");
+      const fav = isFav(p.id);
+      // Tallet mangler (ingen time, eller 0 stjerner uten grunn og uten høyde):
+      // ALDRI den grå 0-prikken - stiplet prikk og lappen «–» (grunnregelen).
+      const missing = !h || (!h.stars && !h.low_reason && h.surf_height==null);
+      const mk = markersEl.querySelector(`.mk[data-id="${p.id}"]`);
+      for(const el of [mk, markersEl.querySelector(`.mk-edge[data-id="${p.id}"]`)]){
+        const edge = el.classList.contains("mk-edge");
+        // left/vert/bare eies av layoutPills (kjøres rett under)
+        el.className = (edge ? "mk-edge" : "mk") + ` r-${Math.min(5,st)}` + (st>=1 ? " lit" : "") + (isSel ? " sel" : "") + (fav ? " fav" : "") + (missing ? " miss" : "");
         el.style.setProperty("--mc", col);
         // roligere puls ved lang periode
         const per = h && h.period!=null ? h.period : 10;
         el.style.setProperty("--pulse", Math.max(1.8, Math.min(4.2, per*0.24)).toFixed(2)+"s");
-        el.querySelector(".mk-label").textContent = label;
-        el.setAttribute("aria-label", aria + (el.classList.contains("mk-edge") ? ", utenfor kartet" : ""));
+        el.querySelector(".mk-label").innerHTML = labelHtml(label);
+        el.setAttribute("aria-label", aria + (edge ? ", utenfor kartet" : "") + (fav ? ", favoritt" : ""));
       }
+      mk._st = st; mk._sel = isSel; mk._fav = fav;
+      mk._wantLabel = st >= 1 || fav || isSel || missing;
     });
-    layoutPills();   // etikettene bestemmer pillens bredde - legg dem på nytt
+    layoutPills();          // hvem som har lapp, og pillens bredde, følger timen
+    updateNote();
+    placeEdges(lastOuts, null);   // kantpiler følger stjernene i valgt time
   }
 
   /* ---------- svellkilen ved valgt spot ---------- */
@@ -555,7 +581,10 @@
   function setHour(idx){
     state.idx = idx;
     const f = focusSpot(); const h = f ? hourOf(f.s, idx) : null;
-    setWind(h); setNight(h); colorMarkers(); drawWedge();
+    // Vindstrekene bare når en spot er valgt - da gjelder vinden den spoten
+    // (Theodor 13.10.2026: animasjon bare der det er noe å vise).
+    setWind(state.sheetMode==="spot" && state.spotId ? h : null);
+    setNight(h); colorMarkers(); drawWedge();
   }
   function setSpot(id, mode, animate){
     state.spotId = id; state.sheetMode = mode;
@@ -565,5 +594,5 @@
   function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function spotInfo(id){ return spots.find(p=>p.id===id) || null; }
 
-  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, COL, focusSpot, hitClass, lightOf, relayout: ()=>placeMarkers(false) };
+  window.Kart = { init, setArea, setView, setHour, setSpot, setMode, spotInfo, viewSpotIds, COL, focusSpot, hitClass, lightOf, relayout: ()=>placeMarkers(false) };
 })();

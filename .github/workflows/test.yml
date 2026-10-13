@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: design-screenshots
-          path: docs/design/kart-forst/skjermbilder/
+          path: docs/design/oversikt/etter/
           if-no-files-found: ignore
       - name: Last opp skjermbilder (til feilsøking, selv om testen bestod)
         if: always()
