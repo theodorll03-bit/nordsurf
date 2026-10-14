@@ -54,7 +54,7 @@ def period_group(period):
     return "kort" if period < PERIOD_SHORT_MAX else "lang"
 
 
-def exposure_pairs_for_run(hours, run_id, spot):
+def exposure_pairs_for_run(hours, run_id, spot, stats=None):
     """Kalibreringspar for denne kjøringen: bare RÅ (ikke interpolerte)
     BarentsWatch-timer med et stort nok, overveiende ekte svell ute til at
     forholdet bw_height*swell_share / swell_offshore sier noe fornuftig om
@@ -70,13 +70,20 @@ def exposure_pairs_for_run(hours, run_id, spot):
     Farstadsanden: BarentsWatch viste 0,6-1,8 m for retninger som geometrisk
     ligger i dyp skygge bak Nordneset), og ville da lært INN den samme
     feilen her - en falskt høy eksponering for akkurat den bøtta, i stedet
-    for å la den forbli den geometriske (lave) verdien fra del C."""
+    for å la den forbli den geometriske (lave) verdien fra del C.
+
+    stats (valgfri dict): teller avslagsgrunnene - «uenige», «mangler»,
+    «lite_svell», «naer_hindring» - og «par» (godtatt), til kilderapporten
+    (Theodor 14.10.2026, punkt 4: at nær-hindring-utelatelsen synes)."""
+    def rej(reason):
+        if stats is not None:
+            stats[reason] = stats.get(reason, 0) + 1
     pairs = []
     for h in hours:
         if h.get("height_source") != "barentswatch" or h.get("bw_interpolated"):
             continue
         if h.get("sources_disagree"):
-            continue
+            rej("uenige"); continue
         swell = h.get("swell_offshore")
         share = h.get("swell_share")
         dir_off = h.get("dir_offshore")
@@ -84,15 +91,17 @@ def exposure_pairs_for_run(hours, run_id, spot):
         period = h.get("period")
         pg = period_group(period)
         if None in (swell, share, dir_off, bw, pg):
-            continue
+            rej("mangler"); continue
         if swell < 0.5 or share < 0.7:
-            continue
+            rej("lite_svell"); continue
         if blocked_by_near_obstacle(dir_off, spot):
-            continue
+            rej("naer_hindring"); continue
         pairs.append({
             "t": h["t"], "bucket": bucket_of(dir_off), "period_group": pg,
             "ratio": round((bw * share) / swell, 4), "run": run_id,
         })
+    if stats is not None:
+        stats["par"] = len(pairs)
     return pairs
 
 

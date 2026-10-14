@@ -107,11 +107,13 @@ def load_spots():
     return {s["id"]: s for s in cfg["spots"] if s.get("enabled")}
 
 
-def prepare_spot(spot_id, spots, exposure_data, bw_calib, learned=None, use_prior=True, exposure_learned=None):
+def prepare_spot(spot_id, spots, exposure_data, bw_calib, learned=None, use_prior=True, exposure_learned=None, learned_exposure_active=None):
     """Spot-dict slik fetch.build_spot() ville satt den opp for en kjøring
     (eksponering del C, hindringsgeometri, del B lært eksponering/transfer,
     transfer fra BarentsWatch-par, surf_factor fra logger/prior), uten nett.
     use_prior=False dropper surf_factor_prior (variant ww3_svell).
+    learned_exposure_active: None = som produksjonen (fetch.EXPOSURE_LEARNED_IN_RATING,
+    skyggemodus siden 14.10.2026), True = del B koblet inn (variant laert_eksponering).
     Speiler build_spot() steg for steg - glir de fra hverandre, er
     'grunnlinje' ikke lenger produksjonen (kontrollørens punkt 07.10.2026)."""
     spot = json.loads(json.dumps(spots[spot_id]))
@@ -127,14 +129,13 @@ def prepare_spot(spot_id, spots, exposure_data, bw_calib, learned=None, use_prio
     # del B (som i build_spot): lært eksponering per bøtte/periodegruppe, og
     # dens transfer - bare når geometrisk rå-eksponering finnes.
     pairs = (exposure_learned or {}).get(spot_id, [])
-    transfer_lang = None
-    if sm is not None and raw is not None:
-        learned_lang, transfer_lang, ref_lang = exposure_learn.normalize_period_group(pairs, "lang", raw)
-        learned_kort, transfer_kort, _ = exposure_learn.normalize_period_group(pairs, "kort", raw, borrow_from=(learned_lang, transfer_lang, ref_lang))
-        if learned_lang:
-            spot["exposure_smoothed_lang"] = exposure_learn.blend_curve(learned_lang, sm, exposure_learn.bucket_pair_counts(pairs, "lang"))
-        if learned_kort:
-            spot["exposure_smoothed_kort"] = exposure_learn.blend_curve(learned_kort, sm, exposure_learn.bucket_pair_counts(pairs, "kort"))
+    # del B: SAMME hjelpefunksjoner som build_spot() (fetch.learned_exposure/
+    # apply_learned_exposure) - grunnlinja følger produksjonens bryter
+    # (skyggemodus), varianten laert_eksponering kobler læringen inn.
+    le = fetch.learned_exposure(pairs, spot.get("exposure_smoothed"), spot.get("exposure_raw"))
+    active = fetch.EXPOSURE_LEARNED_IN_RATING if learned_exposure_active is None else learned_exposure_active
+    transfer_lang = fetch.apply_learned_exposure(spot, le) if active else None
+    spot["_learned_buckets"] = {"lang": len(le["learned_lang"]), "kort": len(le["learned_kort"]), "par": len(pairs)}
     if learned.get("transfer"):
         transfer, transfer_source = learned["transfer"], "logs"
     elif transfer_lang is not None:
@@ -465,6 +466,11 @@ VARIANTS = {
     "energi_ww3": dict(fn=run_energy_ww3, use_prior=True, desc="Energi fra WW3 (svell phs1/ptp1, total hs/tp - høyde og periode fra samme modell), ellers som i dag"),
     "ww3_begge": dict(fn=run_ww3_both, use_prior=False, desc="Begge WW3-svellene hver for seg mot vindu/eksponering, beste teller (uten prior)"),
     "vind_korr": dict(fn=run_wind_corr, use_prior=True, desc="met.no-vind erstattet med målt vind fra nærmeste KystVær-stasjon (oppgave 2e)"),
+    # Theodor 14.10.2026, punkt 2: del B (lært eksponering fra data/exposure.json,
+    # skyggemodus i produksjonen) koblet inn - sammenlignes med grunnlinja. Uten
+    # lærte bøtter er varianten identisk med grunnlinja (se Merknader i rapporten).
+    "laert_eksponering": dict(fn=run_baseline, use_prior=True, learned_exposure=True,
+                              desc="Lært eksponering (del B, data/exposure.json) og dens transfer koblet inn i ratingen - ellers som i dag (produksjonen: skyggemodus)"),
 }
 
 
@@ -584,7 +590,7 @@ def run(variant_names=None, logs=None):
         spot_cache = {}
         for c in cases:
             if c["spot"] not in spot_cache:
-                spot_cache[c["spot"]] = prepare_spot(c["spot"], spots, exposure_data, bw_calib, learned.get(c["spot"]), use_prior=v["use_prior"], exposure_learned=exposure_learned)
+                spot_cache[c["spot"]] = prepare_spot(c["spot"], spots, exposure_data, bw_calib, learned.get(c["spot"]), use_prior=v["use_prior"], exposure_learned=exposure_learned, learned_exposure_active=v.get("learned_exposure"))
             r = v["fn"](c, spot_cache[c["spot"]], ctx)
             if r is None:
                 skipped += 1
@@ -599,6 +605,8 @@ def run(variant_names=None, logs=None):
     for name, res in results.items():
         ids = {x["case"]["id"] for x in res["rows"]}
         res["baseline_same"] = summarize([base_rows[i] for i in ids if i in base_rows])
+    # til Merknader: hvor mye del B faktisk har lært per spot (variant laert_eksponering)
+    ctx["laert"] = {sid: prepare_spot(sid, spots, exposure_data, bw_calib, learned.get(sid), exposure_learned=exposure_learned, learned_exposure_active=True)["_learned_buckets"] for sid in spots}
     if "grunnlinje" not in names:
         results = {k: v for k, v in results.items() if k in names}
     return cases, results, ctx
@@ -667,6 +675,8 @@ def report(cases, results, ctx, now=None):
           "- Kolonnen 'Grunnlinje på SAMME saker' er dagens rating regnet på nøyaktig de sakene varianten evaluerte - sammenlign den, ikke grunnlinjeraden øverst, når varianten hopper over saker.",
           "- Dekning: WW3-arkivet ('fersk', 48 t) og inndata-bildet (72 t) tas bare ukentlig - logger/benchmarks i dagene imellom får 'ikke evaluert' i variantene som trenger dem.",
           "- Benchmarks: fyll data/benchmarks.json (format i fila) med tall fra surf-forecast/Surfline; inndataene for timen hentes fra data/backtest/inputs/ (skrives av workflowen hver uke og kan kjøres oftere).",
+          "- laert_eksponering: del B kjører i SKYGGEMODUS i produksjonen (Theodor 14.10.2026) - varianten viser hva ratingen ville blitt med læringen koblet inn. Lærte bøtter lang/kort (par) per spot: "
+          + (", ".join(f"{sid} {v['lang']}/{v['kort']} ({v['par']} par)" for sid, v in ctx.get("laert", {}).items()) or "ingen") + ". Uten lærte bøtter er varianten identisk med grunnlinja.",
           "- Testlaben endrer aldri spots.json eller ratingen.", ""]
     return "\n".join(L)
 

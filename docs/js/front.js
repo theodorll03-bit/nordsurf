@@ -18,7 +18,7 @@
   const $ = (s, r)=> (r||document).querySelector(s);
   const S = { idx:0, mode:"home", sheet:"half", spotId:null, view:"nord", playing:false, timeOpen:false,
               maxIdx:0, now:-1, w0:0, w1:0, w3:0, days:[], fullTop:110, back:null, others:null };
-  let timer = null, coastReady = false, justDragged = false;
+  let timer = null, coastReady = false, justDragged = false, started = false;
 
   const COL = (st)=> (window.Kart ? Kart.COL : {})[Math.min(5, st||0)] || "#617480";
   const T = (i)=> DATA.spots[0].hours[i] ? new Date(DATA.spots[0].hours[i].t) : null;
@@ -97,6 +97,7 @@
     wireTop(); wireSheet(); wireTime();
     parseRoute();
     renderAll();
+    started = true;   // først nå kan refresh() tegne - se kommentaren der
     window.addEventListener("hashchange", ()=>{ parseRoute(); renderAll(); });
     window.addEventListener("resize", ()=>{ layout(false); if(S.timeOpen) positionPanel(); });
     // nåtimen flytter seg mens appen står åpen eller ligger i bakgrunnen
@@ -735,7 +736,13 @@
     else S.mode = mode;
     renderAll();
   }
-  function refresh(){ if(DATA) renderAll(); }
+  function refresh(){
+    // Ikke før start() har lest adressen: et tidlig kall (f.eks. «authchange» fra
+    // innloggingssjekken mens kystkartet lastes) ville tegnet forsiden og skrevet
+    // «#/» over en dyplenke (#/spot/<id>) før parseRoute() fikk lest den - sett
+    // 14.10.2026 ved ny lasting etter nytt varsel. start() tegner uansett til slutt.
+    if(DATA && started) renderAll();
+  }
   window.Front = { start, openSpot, setIdx, go, refresh, backToNow, state: S };
   // app.js sin start() (global) kjøres først nå, når kartmotoren og fronten er lastet
   window.start();

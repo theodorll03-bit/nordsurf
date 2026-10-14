@@ -682,19 +682,64 @@ exposure_learned_fixture = {"unstad": (
     + _mk_pairs(31, 0.3)  # geometrisk helt åpen (rå 1,0), men lært lavere - skal IKKE forbli 1,0
 )}
 now9 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
-built9 = fetch.build_spot(unstad_spot, now9, {}, {}, "test-run-9", exposure_baseline_real, exposure_learned_fixture)
+# 14.10.2026 (Theodor): del B i SKYGGEMODUS - læringen regnes ut og rapporteres,
+# men kobles ikke inn i ratingen før Theodor sier ja (fetch.EXPOSURE_LEARNED_IN_RATING).
+assert fetch.EXPOSURE_LEARNED_IN_RATING is False, "del B skal stå i skyggemodus til Theodor sier ja (ROADMAP oppgave O)"
+fetch.EXPOSURE_REPORT.clear()
+# build_spot() jobber på sin egen kopi av spoten - det som faktisk kobles inn for
+# rate(), ser vi gjennom apply_learned_exposure(): kalles den, og hva setter den?
+_applied = []
+_orig_apply = fetch.apply_learned_exposure
+fetch.apply_learned_exposure = lambda sp, le: (_applied.append(sp), _orig_apply(sp, le))[1]
+spot9 = json.loads(json.dumps(unstad_spot))
+built9 = fetch.build_spot(spot9, now9, {}, {}, "test-run-9", exposure_baseline_real, exposure_learned_fixture)
 cal9 = built9["calibration"]
-print("9: del B - transfer_source, bøtter lært (lang), transfer:", cal9["transfer_source"], cal9["exposure_buckets_learned_lang"], cal9.get("transfer_used"))
-assert cal9["transfer_source"] == "eksponering"
-assert cal9["transfer_used"] == 0.6
-assert cal9["exposure_buckets_learned_lang"] == 4  # 26, 27, 28 og 31
+print("9: del B i skyggemodus - transfer_source, bøtter lært (lang), transfer i bruk / lært:", cal9["transfer_source"], cal9["exposure_buckets_learned_lang"], cal9.get("transfer_used"), cal9["exposure_transfer_shadow"])
+assert cal9["exposure_learned_mode"] == "skygge"
+assert cal9["transfer_source"] != "eksponering", "skyggemodus: transferen fra del B skal ikke brukes"
+assert cal9["exposure_transfer_shadow"] == 0.6                    # men den vises
+assert cal9["exposure_buckets_learned_lang"] == 4                  # 26, 27, 28 og 31 - regnet ut
+assert _applied == [], "skyggemodus: den lærte kurven skal ikke kobles inn (apply_learned_exposure ikke kalt) - rate() ser bare geometrien"
 
-# Bøtte 31 (310-319 grader) sin rad i figur-dataene skal vise lært 0,3/0,6 =
-# 0,5, ikke 1,0 som den rene geometrien alene ville gitt.
+# Bøtte 31 (310-319 grader) sin rad i figur-dataene (Logger-fanen) viser lært
+# 0,3/0,6 = 0,5 ved siden av geometrien 1,0 - skyggemodus endrer ikke visningen.
 row31 = next(r for r in cal9["exposure_curve"] if r["from"] == 310)
 print("9b: bøtte 31 (310-319) - geometrisk vs lært (lang):", row31["geometric"], row31["learned_lang"])
 assert row31["geometric"] >= 0.98  # nesten helt åpen geometrisk (glattet, ikke rå)
 assert abs(row31["learned_lang"] - 0.5) < 1e-6
+
+# 9c: kilderapporten viser del B per retning med antall par (Theodor punkt 1)
+rep9 = next(e for e in fetch.EXPOSURE_REPORT if e["spot"] == spot9["name"])
+# referansebøttene = de lærte bøttene som også er geometrisk helt åpne (26, 27, 28 - og 31, som er
+# åpen i geometrien men lært lavere; medianen over alle fire er fortsatt 0,6)
+import exposure_learn as _el
+raw9 = fetch.resolve_exposure(json.loads(json.dumps(unstad_spot)), exposure_baseline_real, unstad_spot["name"])[1]
+ref9 = {26, 27, 28, 31} & _el.geometric_reference_buckets(raw9)
+print("9c: referansebøtter (lærte og geometrisk åpne):", sorted(ref9))
+assert rep9["mode"] == "skyggemodus" and rep9["pairs"] == 24 and rep9["ref_lang"] == len(ref9) >= 3 and rep9["transfer_shadow"] == 0.6, rep9
+assert [(r["from"], r["pairs_lang"], r["days_lang"]) for r in rep9["rows"]] == [(260, 6, 3), (270, 6, 3), (280, 6, 3), (310, 6, 3)]
+assert next(r for r in rep9["rows"] if r["from"] == 310)["learned_lang"] == 0.5
+txt9 = fetch.exposure_report_text()
+assert "skyggemodus" in txt9 and "310–319°" in txt9 and "| 0.50 | 6 (3) |" in txt9 and "IKKE i ratingen" in txt9, txt9[:400]
+print("9c: kilderapporten - del B per retning (geometri | lært | par (døgn)), merket skyggemodus")
+
+# 9d: med bryteren PÅ (det Theodors ja en dag betyr) kobles det samme inn:
+# transferen fra referansebøttene (0,6) og den lærte kurven for rate().
+fetch.EXPOSURE_LEARNED_IN_RATING = True
+try:
+    fetch.EXPOSURE_REPORT.clear()
+    spot9on = json.loads(json.dumps(unstad_spot))
+    cal9on = fetch.build_spot(spot9on, now9, {}, {}, "test-run-9d", exposure_baseline_real, exposure_learned_fixture)["calibration"]
+    assert cal9on["exposure_learned_mode"] == "aktiv" and cal9on["transfer_source"] == "eksponering" and cal9on["transfer_used"] == 0.6
+    assert len(_applied) == 1, "med bryteren på kobles kurven inn én gang per spot"
+    sp_in = _applied[0]   # build_spot() sin interne spot - den rate() leser
+    assert "exposure_smoothed_lang" in sp_in and abs(sp_in["exposure_smoothed_lang"][315] - (6 / 16 * 0.5 + 10 / 16 * sp_in["exposure_smoothed"][315])) < 1e-6
+    assert fetch.EXPOSURE_REPORT[-1]["mode"] == "aktiv"
+finally:
+    fetch.EXPOSURE_LEARNED_IN_RATING = False
+    fetch.apply_learned_exposure = _orig_apply
+    fetch.EXPOSURE_REPORT.clear()
+print("9d: med bryteren på: transfer_source «eksponering» (0,6) og lært kurve blandet inn (6 par: vekt 6/16) - av igjen etterpå")
 
 # ---------- 10: ROADMAP oppgave B - langtid 16 dager med sikkerhet ----------
 import longrange

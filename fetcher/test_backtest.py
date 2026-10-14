@@ -47,6 +47,33 @@ for name in ("ww3_svell", "ww3_begge", "energi_ww3", "vind_korr"):
         assert r["summary"]["evaluated"] == 0 and r["skipped"] == len(cases), name
 print("3: WW3-/vind-varianter hopper over saker uten data i stedet for å gjette")
 
+# 3b: laert_eksponering (Theodor 14.10.2026, punkt 2) - del B koblet inn i
+# varianten, skyggemodus i grunnlinja. Uten lærte bøtter er den identisk med
+# grunnlinja; med syntetiske par (samme som test_pipeline 9) får Unstad del B
+# sin transfer (0,6) og den lærte kurven - grunnlinja ikke.
+import tempfile, os
+import fetch  # noqa: E402
+assert fetch.EXPOSURE_LEARNED_IN_RATING is False
+_, res3b, ctx3b = backtest.run(["grunnlinje", "laert_eksponering"], logs=[])
+same = res3b["laert_eksponering"]
+assert same["summary"]["evaluated"] == len(cases) and same["summary"]["fixed_failed"] == []
+base_rows = {x["case"]["id"]: x["r"] for x in res3b["grunnlinje"]["rows"]}
+if not fetch.EXPOSURE_LEARNED.exists() or all(v["lang"] == 0 and v["kort"] == 0 for v in ctx3b["laert"].values()):
+    assert all((x["r"]["stars"], x["r"]["surf_height"]) == (base_rows[x["case"]["id"]]["stars"], base_rows[x["case"]["id"]]["surf_height"]) for x in same["rows"]), "uten lærte bøtter skal varianten være lik grunnlinja"
+spots3b = backtest.load_spots()
+expo3b = json.loads(backtest.EXPOSURE_BASELINE.read_text(encoding="utf-8"))
+def _pairs(bucket, ratio, n=6):
+    return [{"t": f"2026-09-{20+i%3:02d}T{(bucket+i) % 24:02d}:00Z", "bucket": bucket, "period_group": "lang", "ratio": ratio} for i in range(n)]
+fx3b = {"unstad": _pairs(26, 0.6) + _pairs(27, 0.6) + _pairs(28, 0.6) + _pairs(31, 0.3)}
+sp_on = backtest.prepare_spot("unstad", spots3b, expo3b, {}, {}, exposure_learned=fx3b, learned_exposure_active=True)
+sp_off = backtest.prepare_spot("unstad", spots3b, expo3b, {}, {}, exposure_learned=fx3b)   # None = som produksjonen (skygge)
+assert sp_on["transfer_source"] == "eksponering" and sp_on["transfer"] == 0.6 and "exposure_smoothed_lang" in sp_on
+assert sp_off["transfer_source"] != "eksponering" and "exposure_smoothed_lang" not in sp_off
+assert sp_on["_learned_buckets"] == {"lang": 4, "kort": 0, "par": 24} == sp_off["_learned_buckets"]
+rep3b = backtest.report(cases, res3b, ctx3b)
+assert "laert_eksponering: del B kjører i SKYGGEMODUS" in rep3b and "Lærte bøtter lang/kort (par) per spot: " in rep3b
+print("3b: laert_eksponering = grunnlinja uten lærte bøtter; med syntetiske par kobles del B inn bare i varianten, rapporten sier hva som er lært")
+
 # 4: judge() - stjernegrenser, surfehøyde-toleranse, ±1-treff og benchmark-avvik.
 c = {"expect": {"stars_min": 3, "surf_m": 2.4, "size_m": 2.4, "stars_obs": 4}}
 j = backtest.judge(c, {"stars": 3, "surf_height": 2.6})

@@ -804,6 +804,7 @@ function renderLogs(){
     ).join("");
     return `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
       <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter stjerner.</p>
+      ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå - ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
         <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>

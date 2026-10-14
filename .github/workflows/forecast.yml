@@ -96,6 +96,8 @@ jobs:
           # første gang), og da ble de andre filene aldri lagt til heller.
           git add data/notified.json 2>/dev/null || true
           git add data/bw_calibration.json 2>/dev/null || true
+          # Theodors ja 14.10.2026: del B sine eksponeringspar lagres (før startet hver kjøring tom)
+          git add data/exposure.json 2>/dev/null || true
           # ROADMAP oppgave B: arkiv per kjøring (små filer) og målt treffsikkerhet
           git add -A data/forecast_archive 2>/dev/null || true
           git add data/forecast_accuracy.json 2>/dev/null || true

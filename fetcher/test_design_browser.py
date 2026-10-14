@@ -286,6 +286,7 @@ def main():
                     path = req.url.split("?")[0]
                     key = "oversikt" if path.endswith("/data/oversikt.json") else path.rsplit("/", 1)[-1][:-5]
                     HOLD["count"][key] = HOLD["count"].get(key, 0) + 1
+                    HOLD.setdefault("log", []).append((key, "fail" if key in HOLD["fail"] else "newrun" if key in HOLD["newrun"] else "hold" if HOLD["on"] else "ok"))
                     if key == "oversikt":
                         return rt.fulfill(status=200, content_type="application/json", body=OV_BODY)
                     if key in HOLD["fail"]:
@@ -387,13 +388,22 @@ def main():
                 # siden lastes på nytt én gang - aldri tall fra to kjøringer blandet
                 Z = spots[6]["id"]
                 HOLD["newrun"].add(Z); EXPECT_ERR["on"] = True
-                with page.expect_navigation(timeout=ELEMENT_TIMEOUT_MS):
+                # vent på selve den nye lastingen («load»): expect_navigation ville også slått til på
+                # adresseendringen (#/spot/<id>, replaceState) som openSpot gjør FØR detaljfila er hentet,
+                # og en venting som så står midt i en ekte ny lasting kan tidsavbrytes (flakket 14.10.2026)
+                with page.expect_event("load", timeout=ELEMENT_TIMEOUT_MS):
                     page.evaluate(f"Front.openSpot('{Z}')")
                 page.wait_for_function("window.Front && document.querySelectorAll('.mk').length > 0")
                 page.wait_for_timeout(600); EXPECT_ERR["on"] = False
                 assert HOLD["count"]["oversikt"] == 2 and page.evaluate("sessionStorage.getItem('nordsurf.reloadFor')") == "annen-kjoring", f"annen kjøring i detaljfila: siden skal lastes på nytt én gang ({HOLD['count']})"
                 # etter ny lasting åpnes spoten igjen fra adressen (#/spot/<id>) - nå med detaljfila fra samme kjøring
-                page.wait_for_function("!!document.querySelector('#spot #tHeight')")
+                try:
+                    page.wait_for_function("!!document.querySelector('#spot #tHeight')")
+                except Exception as e:   # noqa: BLE001 - diagnose: hva viste arket, og hva skjedde med hentingene?
+                    diag = page.evaluate(f"""() => {{ const s = DATA.spots.find(x => x.id === '{Z}'); return {{state: {{mode: Front.state.mode, spot: Front.state.spotId}},
+                        full: s._full, loadErr: s._loadErr || null, run: DATA.run, sheet: (document.getElementById('spot') || {{innerText: ''}}).innerText.replace(/\\s+/g, ' ').slice(0, 160),
+                        reloadFor: sessionStorage.getItem('nordsurf.reloadFor'), hash: location.hash}}; }}""")
+                    raise AssertionError(f"etter ny lasting kom ikke detaljene ({label}): {diag}; hentinger {HOLD['count']} {HOLD.get('log')}; feil {errors[-3:]}") from e
                 after = page.evaluate(f"({{spot: Front.state.spotId, full: DATA.spots.filter(s => s._full !== false).map(s => s.id)}})")
                 assert after == {"spot": Z, "full": [Z]}, f"etter ny lasting: {Z} åpen med detaljene, de andre bare oversikten: {after}"
                 page.evaluate("Front.go('home')"); page.wait_for_timeout(400)
@@ -548,14 +558,14 @@ def main():
                 shot("kart_flatt")
                 # tallet mangler for én spot: stiplet prikk og lappen «–», aldri den grå 0-prikken - og ingen påstand på kartet
                 M = nord[-1]["id"]
-                page.evaluate(f"(() => {{ const h = DATA.spots.find(s => s.id === '{M}').hours[{idx}]; h.stars = 0; h.low_reason = null; h.surf_height = null; Front.refresh(); }})()"); page.wait_for_timeout(400)
+                page.evaluate(f"(() => {{ const h = DATA.spots.find(s => s.id === '{M}').hours[{idx}]; h.stars = 0; h.low_reason = null; h.surf_height = null; Front.refresh(); }})()"); page.wait_for_timeout(800)   # prikkens bakgrunn toner over 0,4 s
                 mm = page.evaluate(f"""(() => {{ const m = document.querySelector(".mk[data-id='{M}']"), d = getComputedStyle(m.querySelector('.mk-dot'));
                     const r = document.querySelector("#list .row[data-spot='{M}']");
                     return {{miss: m.classList.contains('miss'), bare: m.classList.contains('bare'), label: m.querySelector('.mk-label').textContent, border: d.borderTopStyle, bg: d.backgroundColor,
                              aria: m.getAttribute('aria-label'), note: document.getElementById('mapNote').hidden, row: r.querySelector('.rt .lb').textContent, rowAria: r.getAttribute('aria-label')}}; }})()""")
                 assert mm["miss"] and not mm["bare"] and mm["label"] == "–", f"tallet mangler: merket skal ha lappen «–», ikke være en flat prikk: {mm}"
                 alpha = float(mm["bg"].rstrip(")").split(",")[3]) if mm["bg"].startswith("rgba") else (0.0 if mm["bg"] == "transparent" else 1.0)
-                assert mm["border"] == "dashed" and alpha == 0, f"tallet mangler: stiplet, hul prikk - aldri den grå 0-prikken: {mm}"
+                assert mm["border"] == "dashed" and alpha <= 0.02, f"tallet mangler: stiplet, hul prikk - aldri den grå 0-prikken: {mm}"   # ≤ 0,02: toningens siste rest, ikke en grå prikk
                 assert "tallet mangler" in mm["aria"] and "tallet mangler" in mm["rowAria"] and mm["row"] == "–", f"tallet mangler: skjermleseren og lista skal si det: {mm}"
                 assert mm["note"], "et tall som mangler gir ingen «Flatt i hele …»-påstand på kartet"
                 shot("kart_mangler")

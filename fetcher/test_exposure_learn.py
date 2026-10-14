@@ -67,7 +67,11 @@ assert exposure_pairs_for_run([mk(dir_offshore=338)], "r", spot_fx) == []
 # brukt i p_ok over) blokkeres fortsatt ikke - sjekken er per retning, ikke
 # en sperre for hele spoten.
 assert len(exposure_pairs_for_run([mk(dir_offshore=295)], "r", spot_fx)) == 1
-print("3b: exposure_pairs_for_run() utelater par fra en nær, bred hindring (Nordneset-saken)")
+# 14.10.2026 (Theodor, punkt 4): utelatelsen telles, så den synes i kilderapporten
+st3 = {}
+assert len(exposure_pairs_for_run([mk(dir_offshore=338), mk(dir_offshore=295), mk(dir_offshore=338, swell_offshore=0.2)], "r", spot_fx, stats=st3)) == 1
+assert st3 == {"naer_hindring": 1, "lite_svell": 1, "par": 1}, st3
+print("3b: exposure_pairs_for_run() utelater par fra en nær, bred hindring (Nordneset-saken) - og teller dem (stats)")
 
 # 4: merge_pairs() - dedup og 120-dagers grense
 now = dt.datetime(2026, 9, 27, tzinfo=dt.timezone.utc)

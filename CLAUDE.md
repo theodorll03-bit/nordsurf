@@ -66,6 +66,7 @@ Gratisversjonen av Open-Meteo er bare for ikke-kommersiell bruk (under 10 000 ka
 - Nye eksterne tjenester, kontoer, kostnader eller hemmeligheter.
 - Sletting av data (logger, kalibreringsfiler).
 - Når en oppgave i ROADMAP.md er merket "Venter på Theodor".
+- Å koble lært eksponering (del B, `data/exposure.json`) inn i ratingen: `fetch.EXPOSURE_LEARNED_IN_RATING` står i skyggemodus (False) siden 14.10.2026 - læringen regnes ut og vises (kilderapport, Logger-fanen, testlabens variant `laert_eksponering`), men brukes ikke. Kriteriene for å slå den på står i ROADMAP oppgave O.
 
 ## Arbeidsmåte
 - Én oppgave av gangen fra ROADMAP.md, i rekkefølge.

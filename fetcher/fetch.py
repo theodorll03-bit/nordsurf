@@ -39,6 +39,16 @@ LEDGER = longrange.LEDGER
 # forsiktig Theodor-tall (se build_spot()).
 SWELL_SHARE_FALLBACK_ESTIMATE = 0.6
 REPORT = []  # kilderapport, vises i Actions
+# Del B i SKYGGEMODUS (Theodor 14.10.2026): eksponeringen lært fra BarentsWatch-
+# par (data/exposure.json - lagres i git fra 14.10.2026, før det startet hver
+# kjøring tom) regnes ut hver kjøring og vises i kilderapporten og Logger-fanen,
+# men kobles IKKE inn i ratingen før testlaben (variant laert_eksponering) viser
+# at den treffer observasjonene minst like godt som i dag, og de viktigste
+# retningene per spot har nok par - krever Theodors ja (ROADMAP oppgave O,
+# CLAUDE.md). Gjelder både den lærte kurven og transferen normaliseringen gir
+# (transfer_source «eksponering»). Testlabens grunnlinje følger denne bryteren.
+EXPOSURE_LEARNED_IN_RATING = False
+EXPOSURE_REPORT = []  # del B per spot: lært vs geometri per retning, med antall par (kilderapporten)
 # Advarsler om at retningskonvensjonen mot BarentsWatch kan ha blitt feil
 # igjen (se build_spot()) - vises ØVERST i kilderapporten, ikke i selve
 # tabellen, og endrer aldri ratingen automatisk.
@@ -360,6 +370,82 @@ def safe(spot, label, fn, *args, default=None):
         return {} if default is None else default
 
 
+def learned_exposure(pairs, exposure_smoothed, exposure_raw):
+    """Del B regnet ut, IKKE koblet inn: lærte, normaliserte bøtteverdier per
+    periodegruppe, transferen de ble normalisert mot, referansebøttene, antall
+    par per bøtte og de blandede kurvene (lært + geometri). Tomt når geometrisk
+    rå-eksponering mangler (ingen referansebøtter å normalisere mot). Brukes av
+    build_spot() OG testlabens prepare_spot() - én funksjon, så de aldri glir
+    fra hverandre."""
+    out = {"learned_lang": {}, "learned_kort": {}, "transfer_lang": None, "transfer_kort": None,
+           "ref_lang": set(), "ref_kort": set(), "counts_lang": {}, "counts_kort": {}, "curve_lang": None, "curve_kort": None}
+    if exposure_raw is None or exposure_smoothed is None:
+        return out
+    ll, tl, rl = exposure_learn.normalize_period_group(pairs, "lang", exposure_raw)
+    lk, tk, rk = exposure_learn.normalize_period_group(pairs, "kort", exposure_raw, borrow_from=(ll, tl, rl))
+    cl, ck = exposure_learn.bucket_pair_counts(pairs, "lang"), exposure_learn.bucket_pair_counts(pairs, "kort")
+    out.update(learned_lang=ll, learned_kort=lk, transfer_lang=tl, transfer_kort=tk, ref_lang=rl, ref_kort=rk, counts_lang=cl, counts_kort=ck)
+    if ll:
+        out["curve_lang"] = exposure_learn.blend_curve(ll, exposure_smoothed, cl)
+    if lk:
+        out["curve_kort"] = exposure_learn.blend_curve(lk, exposure_smoothed, ck)
+    return out
+
+
+def apply_learned_exposure(spot, le):
+    """Kobler del B inn i ratingen for denne spoten: de blandede kurvene rate()
+    leser (exposure_smoothed_lang/_kort). Returnerer transferen normaliseringen
+    ga ('lang') til transfer_source «eksponering», eller None. Kalles bare når
+    EXPOSURE_LEARNED_IN_RATING er på - eller av testlabens variant laert_eksponering."""
+    if le["curve_lang"] is not None:
+        spot["exposure_smoothed_lang"] = le["curve_lang"]
+    if le["curve_kort"] is not None:
+        spot["exposure_smoothed_kort"] = le["curve_kort"]
+    return le["transfer_lang"]
+
+
+def exposure_shadow_report(name, spot, le, exposure_smoothed, pairs_before, pairs_new, stats, transfer_used):
+    """Del B til kilderapporten (Theodor 14.10.2026, punkt 1): per retning
+    (10-graders bøtte) med par - geometrien (del C) ved siden av den lærte
+    verdien, med antall par og døgn - så det synes hva læringen ville sagt."""
+    def days(pg, b):
+        return len({q["t"][:10] for q in pairs_before if q["period_group"] == pg and q["bucket"] == b})
+    rows = []
+    for b in sorted(set(le["counts_lang"]) | set(le["counts_kort"])):
+        rows.append({"from": b * 10, "to": b * 10 + 9,
+                     "geometric": round(exposure_smoothed[b * 10 + 5], 3) if exposure_smoothed is not None else None,
+                     "learned_lang": le["learned_lang"].get(b), "pairs_lang": le["counts_lang"].get(b, 0), "days_lang": days("lang", b),
+                     "learned_kort": le["learned_kort"].get(b), "pairs_kort": le["counts_kort"].get(b, 0), "days_kort": days("kort", b)})
+    EXPOSURE_REPORT.append({"spot": name, "mode": "aktiv" if EXPOSURE_LEARNED_IN_RATING else "skyggemodus",
+                            "pairs": len(pairs_before), "new": len(pairs_new), "blocked_near": stats.get("naer_hindring", 0),
+                            "ref_lang": len(le["ref_lang"]), "ref_kort": len(le["ref_kort"]),
+                            "transfer_shadow": le["transfer_lang"], "transfer_used": transfer_used,
+                            "window": spot.get("swell_window"), "rows": rows})
+
+
+def exposure_report_text():
+    """Markdown for kilderapporten: del B per spot og retning."""
+    if not EXPOSURE_REPORT:
+        return ""
+    mode = EXPOSURE_REPORT[0]["mode"]
+    L = [f"### Eksponering lært fra BarentsWatch (del B) - {mode}"
+         + (" - IKKE i ratingen (ROADMAP oppgave O, krever Theodors ja)" if mode == "skyggemodus" else ""), ""]
+    f2 = lambda v: "–" if v is None else f"{v:.2f}"
+    for e in EXPOSURE_REPORT:
+        L.append(f"**{e['spot']}** - {e['pairs']} par (+{e['new']} nye denne kjøringen, {e['blocked_near']} utelatt: nær hindring), "
+                 f"referansebøtter lang/kort {e['ref_lang']}/{e['ref_kort']}, transfer lært {f2(e['transfer_shadow'])} (i bruk {f2(e['transfer_used'])}), vindu {e['window']}")
+        if not e["rows"]:
+            L += ["", f"ingen eksponeringsdata (del C) å normalisere mot - {e['pairs']} par venter" if e["pairs"] else "ingen par ennå", ""]
+            continue
+        L += ["", "| Retning | Geometri (del C) | Lært lang | Par lang (døgn) | Lært kort | Par kort (døgn) |", "|---|---|---|---|---|---|"]
+        for r in e["rows"]:
+            L.append(f"| {r['from']}–{r['to']}° | {f2(r['geometric'])} | {f2(r['learned_lang'])} | {r['pairs_lang']} ({r['days_lang']}) | "
+                     f"{f2(r['learned_kort'])} | {r['pairs_kort']} ({r['days_kort']}) |")
+        L.append("")
+    L.append("Lært = median av bw_height·svellandel/svell_ute i bøtta, delt på transferen fra referansebøttene (fri sikt i geometrien); «–» = færre enn 6 par over 2 døgn, eller ingen referansebøtter å normalisere mot. Par fra retninger med en nær, bred hindring (blocked_by_near_obstacle) tas aldri med.")
+    return "\n".join(L)
+
+
 def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_learned_data, ledger=None):
     name = spot["name"]
     ledger = ledger or {}
@@ -581,20 +667,13 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # exposure_learn.geometric_reference_buckets()) - ingen normalisering
     # uten den.
     exposure_pairs_existing = exposure_learned_data.get(spot["id"], [])
-    learned_lang = learned_kort = {}
-    counts_lang = counts_kort = {}
-    transfer_lang = transfer_kort = None
-    if exposure_raw is not None:
-        learned_lang, transfer_lang, ref_lang = exposure_learn.normalize_period_group(
-            exposure_pairs_existing, "lang", exposure_raw)
-        learned_kort, transfer_kort, ref_kort = exposure_learn.normalize_period_group(
-            exposure_pairs_existing, "kort", exposure_raw, borrow_from=(learned_lang, transfer_lang, ref_lang))
-        counts_lang = exposure_learn.bucket_pair_counts(exposure_pairs_existing, "lang")
-        counts_kort = exposure_learn.bucket_pair_counts(exposure_pairs_existing, "kort")
-        if learned_lang:
-            spot["exposure_smoothed_lang"] = exposure_learn.blend_curve(learned_lang, exposure_smoothed, counts_lang)
-        if learned_kort:
-            spot["exposure_smoothed_kort"] = exposure_learn.blend_curve(learned_kort, exposure_smoothed, counts_kort)
+    le = learned_exposure(exposure_pairs_existing, exposure_smoothed, exposure_raw)
+    learned_lang, learned_kort = le["learned_lang"], le["learned_kort"]
+    counts_lang, counts_kort = le["counts_lang"], le["counts_kort"]
+    transfer_kort = le["transfer_kort"]
+    # skyggemodus (Theodor 14.10.2026): kurvene og transferen kobles ikke inn -
+    # transfer_lang er da None for ratingen, men vises i kilderapporten (le)
+    transfer_lang = apply_learned_exposure(spot, le) if EXPOSURE_LEARNED_IN_RATING else None
 
     # Effektiv transfer for reserven brukes med kalibreringshistorikk FRA FØR
     # denne kjøringen - nye par fra akkurat nå legges til historikken lenger
@@ -604,6 +683,8 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # referansebøttene den lærte kurven normaliseres mot, se
     # exposure_learn.normalize_period_group()) er mer presis enn den gamle,
     # retningsløse bw_transfer() - brukes derfor FØR den når den finnes.
+    # 14.10.2026: i skyggemodus (EXPOSURE_LEARNED_IN_RATING = False) er
+    # transfer_lang None her - verdien vises bare (kilderapporten, Logger-fanen).
     # Bruker alltid "lang" periodegruppe her (samme antagelse som den
     # geometriske modellen sin bølgelengde, ~12 s) - "kort" sin transfer er
     # uansett lik "lang" sin med mindre "lang" ikke er lært ennå.
@@ -821,8 +902,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     # Del B: nye eksponeringspar bygges FRA hours (trenger swell_share,
     # sources_disagree osv. - rate() sitt resultat), og lagres for BRUK NESTE
     # KJØRING (se kommentaren over exposure_pairs_existing lenger opp).
-    new_exposure_pairs = exposure_learn.exposure_pairs_for_run(hours, run_id, spot)
+    pair_stats = {}
+    new_exposure_pairs = exposure_learn.exposure_pairs_for_run(hours, run_id, spot, stats=pair_stats)
     merged_exposure_pairs = exposure_learn.merge_pairs(exposure_pairs_existing, new_exposure_pairs, now)
+    exposure_shadow_report(name, spot, le, exposure_smoothed, exposure_pairs_existing, new_exposure_pairs, pair_stats, transfer_value)
     exposure_learned_data[spot["id"]] = merged_exposure_pairs
     exposure_override_suggestions = exposure_learn.override_removal_suggestions(
         spot.get("exposure_override"), learned_kort, learned_lang)
@@ -859,6 +942,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         "exposure_buckets_learned_lang": len(learned_lang),
         "exposure_buckets_learned_kort": len(learned_kort),
         "exposure_override_suggestions": exposure_override_suggestions,
+        # Theodor 14.10.2026: del B i skyggemodus - vises, påvirker ikke ratingen
+        "exposure_learned_mode": "aktiv" if EXPOSURE_LEARNED_IN_RATING else "skygge",
+        "exposure_transfer_shadow": round(le["transfer_lang"], 3) if le["transfer_lang"] is not None else None,
+        "exposure_pairs_new": len(new_exposure_pairs),
+        "exposure_pairs_blocked_near": pair_stats.get("naer_hindring", 0),
         # ROADMAP oppgave B: treffprosent per antall dager frem (Logger-fanen),
         # fra kjøringene FØR denne (denne kjøringens egen scoring skjer etter
         # at spotene er bygget, se main()).
@@ -1035,6 +1123,9 @@ def write_report():
     lines = ["| Spot | Kilde | Status | Detaljer |", "|---|---|---|---|"]
     lines += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in REPORT]
     text = "\n".join(lines)
+    expo = exposure_report_text()
+    if expo:
+        text += "\n\n" + expo
     all_warnings = CONVENTION_WARNINGS + LOW_ADJUSTMENT_WARNINGS + BW_LEE_WARNINGS
     if all_warnings:
         text = "\n".join(f"**{w}**" for w in all_warnings) + "\n\n" + text
