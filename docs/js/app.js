@@ -1,5 +1,5 @@
 /* Nordsurf: appens logikk (flyttet ut av index.html i designrunde 1, 09.10.2026).
-   Ren visning: ALLE tall kommer fra docs/data/forecast.json slik fetcher/rating.py
+   Ren visning: ALLE tall kommer fra varselet (docs/data/oversikt.json og spots/<id>.json, S2) slik fetcher/rating.py
    skrev dem - appen regner aldri stjerner eller høyder selv. Tekster i js/strings.js,
    forklaringer i js/explain.js, grafen i js/chart.js. Vanlig <script>, ikke modul -
    js/map.js bruker flere av funksjonene her (starsSVG, heightMForDisplay, openSheet ...). */
@@ -690,10 +690,65 @@ function exposureChartSVG(spotId, curve, logs){
   </svg>`;
 }
 
+/* ---------- Data (S2, 14.10.2026): oversikten ved åpning, én fil per spot når den åpnes ----------
+   data/oversikt.json har alle spots og timene i forsidens rekkevidde med bare
+   feltene forsiden leser (fetcher/publish.py). Spotarket, forklaringene og
+   loggarket trenger alle feltene: ensureSpot() henter data/spots/<id>.json og
+   bytter timene inn i SAMME spot-objekt (kartet og lista holder referanser
+   til det). s._full === false betyr «bare oversikten ennå»; et varsel lagt
+   inn helt (window.__FORECAST__, testene) har ikke feltet og regnes som fullt. */
+const _spotLoads = new Map();
+async function loadOverview(){
+  const o = await (await fetch("data/oversikt.json", {cache:"no-cache"})).json();
+  (o.spots||[]).forEach(s=>{ s._full = false; });
+  return o;
+}
+function spotIsFull(s){ return !!s && s._full !== false; }
+function ensureSpot(id, opts){
+  const reloadOk = !(opts && opts.reload === false);
+  const s = DATA && (DATA.spots||[]).find(x=>x.id===id);
+  if(!s) return Promise.reject(new Error(`ukjent spot ${id}`));
+  if(spotIsFull(s)) return Promise.resolve(s);
+  if(_spotLoads.has(id)) return _spotLoads.get(id);
+  const p = (async ()=>{
+    const r = await fetch(`data/spots/${encodeURIComponent(id)}.json`, {cache:"no-cache"});
+    if(!r.ok) throw new Error(`detaljfila for ${id}: HTTP ${r.status}`);
+    const d = await r.json();
+    // samme kjøring som oversikten? Ellers ville timeindeksene pekt på andre timer. «run» er et
+    // fingeravtrykk av varselet (publish.py) - to kjøringer i samme time har samme «generated»
+    if(d.run !== DATA.run || d.generated !== DATA.generated || !d.hours || !d.hours.length || !s.hours.length || d.hours[0].t !== s.hours[0].t){
+      // et nytt varsel er publisert siden oversikten ble lastet: last siden på nytt, én gang per kjøring
+      // (ikke midt i en lagring - loggarket bruker da den nye fila direkte, se forecastForLog)
+      if(reloadOk){ try{ if(sessionStorage.getItem("nordsurf.reloadFor") !== String(d.run)){ sessionStorage.setItem("nordsurf.reloadFor", String(d.run)); location.reload(); } }catch(e){} }
+      const err = new Error(`detaljfila for ${id} er fra en annen kjøring (${d.run}, ${d.generated}) enn oversikten (${DATA.run}, ${DATA.generated})`);
+      err.newRun = true; err.detail = d;
+      throw err;
+    }
+    s.hours = d.hours; s._full = true; _hourSpot = null;   // spotOfHour() bygger kartet over timene på nytt
+    return s;
+  })();
+  _spotLoads.set(id, p);
+  p.catch(()=>{ _spotLoads.delete(id); });
+  return p;
+}
+function ensureAll(){ return Promise.all((DATA.spots||[]).map(s=>ensureSpot(s.id))); }
+
+const hourKey = (t)=> new Date(Math.floor(t.getTime()/36e5)*36e5).toISOString().slice(0,13)+":00Z";
 function forecastAt(spotId, t){
   const s = DATA.spots.find(x=>x.id===spotId); if(!s) return null;
-  const key = new Date(Math.floor(t.getTime()/36e5)*36e5).toISOString().slice(0,13)+":00Z";
+  const key = hourKey(t);
   return s.hours.find(h=>h.t===key) || null;
+}
+async function forecastForLog(spotId, t){
+  // S2: loggen tar med varselets tall for timen (tidevann, energi, retning ...) fra spotens detaljfil.
+  // Er et nytt varsel publisert siden appen ble åpnet, brukes den nye fila - timen slås opp på
+  // tidspunktet, ikke indeksen, så kjøringene blandes ikke - og siden lastes ikke på nytt midt i
+  // lagringen. ok=false: fikk ikke hentet fila (uten nett) - loggen lagres uten tallene (de mangler, aldri 0).
+  try{ await ensureSpot(spotId, {reload:false}); return {f: forecastAt(spotId, t), ok: true}; }
+  catch(e){
+    if(e.newRun && e.detail){ const key = hourKey(t); return {f: e.detail.hours.find(h=>h.t===key) || null, ok: true}; }
+    console.error(e); return {f: null, ok: false};
+  }
 }
 
 function renderLogs(){
@@ -1198,10 +1253,10 @@ function closeBreakdown(){
   $("#bdSheet").classList.remove("open"); $("#bdScrim").classList.remove("open"); $("#bdSheet").setAttribute("aria-hidden","true");
 }
 $("#bdClose").onclick = closeBreakdown; $("#bdScrim").onclick = closeBreakdown;
-$("#saveLog").onclick = ()=>{
+$("#saveLog").onclick = async ()=>{
   const spot = $("#logSpot").value;
   const t = new Date($("#logTime").value);
-  const f = forecastAt(spot, t);
+  const {f, ok: full} = await forecastForLog(spot, t);   // S2: varselets tall for timen fra spotens detaljfil
   const entry = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot, t: t.toISOString(),
     stars: logDraft.stars, size: logDraft.size, wind: logDraft.wind,
     // Egen økt eller observert (sett selv/pålitelig kilde uten å surfe) -
@@ -1241,7 +1296,7 @@ $("#saveLog").onclick = ()=>{
     energySwellKj: f ? f.energy_swell_kj : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
-  toast(ok ? "Økt logget" : "Kunne ikke lagre. Sjekk at nettleseren tillater lagring.");
+  toast(!ok ? "Kunne ikke lagre. Sjekk at nettleseren tillater lagring." : full ? "Økt logget" : "Økt logget - uten varselets tall for timen (fikk ikke hentet dem)");
   syncLogs();
   Front.refresh();
 };
@@ -1263,7 +1318,7 @@ async function start(){
   // forklaringer, Detaljer-rutenettet og formateringen.
   const wm = $("#wordmark"); if(wm) wm.innerHTML = wordmarkSvg();
   try{
-    DATA = window.__FORECAST__ || await (await fetch("data/forecast.json",{cache:"no-cache"})).json();
+    DATA = window.__FORECAST__ || await loadOverview();
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
     const gen = new Date(DATA.generated);
     $("#updated").textContent = DATA.sample ? STR.exampleSub : STR.updated(relDay(gen), fmtTime.format(gen));
@@ -1338,9 +1393,9 @@ function maybeShowWitnessPrompt(){
   const when = new Date(entry.t);
   $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 stjerner.`;
   $("#witnessPick").innerHTML = PICK_WORDS.map((w,n)=>`<button data-n="${n}"><b>${n}</b>${w}</button>`).join("");
-  $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=async ()=>{
     const stars = +b.dataset.n;
-    const f = forecastAt(entry.spot, when);
+    const {f, ok: full} = await forecastForLog(entry.spot, when);   // S2: varselets tall for timen fra detaljfila
     const log = {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), spot: entry.spot, t: when.toISOString(),
       stars, size: null, wind: null, type: "observed", source: "Var du der?",
       forecastStars: entry.stars, forecastFaded: f ? f.faded : null, forecastHeight: f ? f.height : null,
@@ -1352,7 +1407,7 @@ function maybeShowWitnessPrompt(){
     saveLogs([...loadLogs(), log]);
     markWitnessAsked(entry);
     closeWitness();
-    toast("Takk! Lagret som økt.");
+    toast(full ? "Takk! Lagret som økt." : "Takk! Lagret som økt - uten varselets tall for timen (fikk ikke hentet dem).");
     syncLogs();
     Front.refresh();
   });

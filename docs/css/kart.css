@@ -224,6 +224,8 @@ input.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;
 .row .rt .lb{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .row.lit .rt .lb{color:var(--ink)}
 .row .rt .lb .num{font-family:var(--mono);font-size:12.5px}
+/* spotarket mens detaljfila hentes (S2) */
+.spot-loading{margin:22px 4px 12px;font-size:14px;color:#C5D3D8}
 
 /* spot */
 .spot{display:flex;flex-direction:column;gap:18px;padding:14px 20px 48px}

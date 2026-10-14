@@ -12,7 +12,8 @@
    som fortsatt brukes (forklaringsarkene, Detaljer-rutenettet, loggarket,
    breakdown, advarslene) kommer fra app.js/explain.js.
 
-   Ren visning: ingen rating regnes her - bare forecast.json sine felter. */
+   Ren visning: ingen rating regnes her - bare varselets felter (S2: oversikten
+   ved åpning, spotens detaljfil når spoten åpnes - se app.js ensureSpot). */
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
   const S = { idx:0, mode:"home", sheet:"half", spotId:null, view:"nord", playing:false, timeOpen:false,
@@ -632,12 +633,35 @@
         ${newDay ? `<span class="d">${esc(relDay(d))}</span>` : ""}</button>`;
     }).join("");
   }
+  const CLOSE_SVG = `<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  function loadSpot(id){
+    // S2: detaljfila hentes når spoten åpnes (app.js ensureSpot) - tegn spotarket når den er her,
+    // bare hvis spoten fortsatt er åpen; feiler den, sier arket det (aldri tall fra en halv fil)
+    ensureSpot(id).then(()=>{ if(S.mode==="spot" && S.spotId===id) renderAll(); })
+      .catch((e)=>{ console.error(e); const s = DATA.spots.find(x=>x.id===id); if(s) s._loadErr = e.newRun ? "ny" : true; if(S.mode==="spot" && S.spotId===id) renderSpot(false); });
+  }
   function renderSpot(lite){
     const s = DATA.spots.find(x=>x.id===S.spotId); if(!s) return;
+    const root = $("#spot");
+    if(!spotIsFull(s)){
+      // detaljfila er ikke her ennå: navnet og tiden, ingen tall
+      if(lite) return;
+      root.dataset.spot = "";
+      root.innerHTML = `
+        <div class="spot-head">
+          <div><div class="n">${esc(s.name)}</div><div class="s">${esc(s.area||"")} · ${esc(timeText(S.idx))}</div></div>
+          <div class="spot-tools"><button type="button" class="close" id="closeSpot" aria-label="Lukk spot">${CLOSE_SVG}</button></div>
+        </div>
+        <p class="spot-loading" role="status">${s._loadErr==="ny" ? "Et nytt varsel er publisert - last siden på nytt." : s._loadErr ? `Fikk ikke hentet detaljene for ${esc(s.name)}. Sjekk nettet og prøv igjen.` : "Henter detaljene …"}</p>
+        ${s._loadErr ? `<button type="button" class="btn ghost" id="retrySpot">${s._loadErr==="ny" ? "Last på nytt" : "Prøv igjen"}</button>` : ""}`;
+      $("#closeSpot").onclick = closeSpot;
+      const rb = $("#retrySpot"); if(rb) rb.onclick = ()=>{ if(s._loadErr==="ny"){ location.reload(); return; } s._loadErr = false; renderSpot(false); };
+      if(!s._loadErr) loadSpot(s.id);
+      return;
+    }
     const h = hourAt(s, S.idx); const t = T(S.idx) || new Date();
     const st = stars(h);
     const info = coastReady ? Kart.spotInfo(s.id) : null;
-    const root = $("#spot");
     if(lite && root.dataset.spot===s.id){
       // avspilling/glidebryter: oppdater bare tallene, ikke hele arket
       root.querySelector(".spot-head .s").textContent = `${s.area||""} · ${timeText(S.idx)} · ${lightWord(lightOf(h)).toLowerCase()}`;
@@ -657,7 +681,7 @@
     root.innerHTML = `
       <div class="spot-head rise">
         <div><div class="n">${esc(s.name)}</div><div class="s">${esc(s.area||"")} · ${esc(timeText(S.idx))} · ${esc(lightWord(lightOf(h)).toLowerCase())}</div></div>
-        <div class="spot-tools">${favBtnHtml(s.id, false)}<button type="button" class="btn ghost pc-only" id="logBtn">${esc(STR.log)}</button><button type="button" class="close" id="closeSpot" aria-label="Lukk spot"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+        <div class="spot-tools">${favBtnHtml(s.id, false)}<button type="button" class="btn ghost pc-only" id="logBtn">${esc(STR.log)}</button><button type="button" class="close" id="closeSpot" aria-label="Lukk spot">${CLOSE_SVG}</button></div>
       </div>
       <button type="button" class="now rise" id="bdOpen" aria-label="${esc(STR.whyRating)}" style="animation-delay:60ms"><span class="rating-line">${ratingLine(h)}</span></button>
       <div class="tiles rise" style="animation-delay:110ms">
