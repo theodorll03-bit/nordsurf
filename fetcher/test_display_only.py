@@ -59,8 +59,14 @@ def sha_file(path):
 ref = main_ref()
 assert ref, "fant ikke main (origin/main eller main) å sammenligne mot"
 head = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+# 14.10.2026: regelen gjelder DESIGNGRENER (design/*) og pull requests mot main (CI: HEAD er
+# flettecommiten, «HEAD»). En annen gren kan endre henteren med vilje (f.eks.
+# farstadsanden/transekt: skyggepunkt i spots.json/fetch.py) - der er det
+# fysikk-kontrolløren og stopp-regelen som gjelder, ikke denne sjekken.
 if head == "main":
     print(f"1-2: står på main selv ({ref}) - ingenting å sammenligne, hopper over hash-sjekken")
+elif head != "HEAD" and not head.startswith("design/"):
+    print(f"1-2: grenen «{head}» er ikke en designgren (design/*) - hopper over hash-sjekken (fysikk-kontrollør og stopp-regel gjelder i stedet)")
 else:
     bad = []
     for path in RATING_FILES + DATA_FILES:

@@ -614,6 +614,13 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if spot.get("barentswatch_point_near"):
         pn = spot["barentswatch_point_near"]
         bw_raw_near = safe(name, "BarentsWatch (150 m)", sources.barentswatch_point, pn["lat"], pn["lon"])
+    # 14.10.2026 (Theodors oppgave, Farstadsanden): et SKYGGEPUNKT (barentswatch_point_shadow,
+    # Theodors egen nål) hentes og logges bare - bw_height_shadow per time og én rad i
+    # kilderapporten mot punktet i bruk. Brukes ALDRI i ratingen eller kalibreringen.
+    bw_raw_shadow = {}
+    if spot.get("barentswatch_point_shadow"):
+        ps = spot["barentswatch_point_shadow"]
+        bw_raw_shadow = safe(name, "BarentsWatch (skyggepunkt)", sources.barentswatch_point, ps["lat"], ps["lon"])
 
     bw_fallback = not bw_raw and bool(bw_raw_near)
     bw_used = bw_raw_near if bw_fallback else bw_raw
@@ -622,6 +629,16 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
 
     bw_hourly = sources.bw_interpolate(bw_used)
     bw_hourly_near = sources.bw_interpolate(bw_raw_near)
+    bw_hourly_shadow = sources.bw_interpolate(bw_raw_shadow)
+    if bw_raw_shadow:
+        # skyggepunktet mot punktet i bruk: rå timer (ikke interpolerte) på samme tidspunkt
+        pairs_sh = [(bw_used[k]["height"], bw_raw_shadow[k]["height"]) for k in bw_raw_shadow
+                    if k in bw_used and bw_used[k].get("height") is not None and bw_raw_shadow[k].get("height") is not None]
+        if pairs_sh:
+            mu, ms = sum(a for a, _ in pairs_sh) / len(pairs_sh), sum(b for _, b in pairs_sh) / len(pairs_sh)
+            REPORT.append((name, "BarentsWatch skyggepunkt", "ok",
+                           f"{len(pairs_sh)} timer: i bruk snitt {mu:.2f} m (maks {max(a for a, _ in pairs_sh):.2f}), "
+                           f"skyggepunkt snitt {ms:.2f} m (maks {max(b for _, b in pairs_sh):.2f}) - brukes ikke i ratingen"))
     bw_until = max(bw_used) if bw_used else None
     if bw_used:
         REPORT.append((name, "BarentsWatch periode", "ok", f"{min(bw_used)} -> {max(bw_used)}, bw_until {bw_until}"))
@@ -738,6 +755,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         light = sun.light(s["lat"], s["lon"], t)
         bwk = bw_hourly.get(k)
         bwk_near = bw_hourly_near.get(k)
+        bwk_shadow = bw_hourly_shadow.get(k)
         hour = {
             "t": k,
             "height_offshore": pick((off or {}).get("height"), (mar or {}).get("height")),
@@ -768,6 +786,8 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             # 150 m-punktet, bare til sammenligning (Logger-fanen). Brukes
             # ALDRI i ratingen eller kalibreringen - bw_height (over) er det.
             "bw_height_near": bwk_near.get("height") if bwk_near else None,
+            # 14.10.2026: skyggepunktet (Theodors nål) - bare til sammenligning, aldri i ratingen
+            "bw_height_shadow": bwk_shadow.get("height") if bwk_shadow else None,
             "dir_offshore": dir_off,
             "dir_spot": dir_spot,
             "turn": turn,

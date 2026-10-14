@@ -346,7 +346,7 @@ function detailsGrid(s, h, t){
   const shareV = h.swell_model==="total_fallback" ? "–" : (h.swell_share!=null ? `${nf0.format(h.swell_share*100)} %` : "–");
   const shareN = h.swell_model==="total_fallback" ? esc(STR.totalFallback) : (h.height_offshore!=null ? esc(`av ${nf1.format(h.height_offshore)} m totalt`) : "");
   const dirV = h.directness!=null ? `${nf0.format(h.directness*100)} %` : "–";
-  const dirN = h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : esc(`${directionHitText(h)}${directionHitText(h)?" · ":""}${windowText(s)}`);
+  const dirN = h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : esc(`${directionHitText(h, s)}${directionHitText(h, s)?" · ":""}${windowText(s)}`);
   const windN = `${esc(windLabel(h))} ${esc(STR.fromDir(compass(h.wind_dir)))}${h.gust!=null?`, ${esc(STR.gust(nf0.format(h.gust)))}`:""}${h.wind_interpolated?` · ${esc(STR.windSmoothed)}`:""}${h.wind_source==="openmeteo"?` · ${esc(STR.windGfs)}`:""}`;
   const hsN = `${esc(surfSubtext(h))}${h.bw_height_max!=null?` · ${esc(STR.bwMax(nf1.format(h.bw_height_max)))}`:""}${surfAdjustmentLine(h)?`<br>${esc(surfAdjustmentLine(h))}`:""}`;
   const confN = h.confidence!=null ? esc(STR.confidenceSub(h.confidence_source==="målt", h.day, STR.zone[h.zone]||STR.zone.barentswatch)) : "";
@@ -399,17 +399,21 @@ function surfHeadline(h){
 }
 function surfSubtext(h){
   if(h.height==null) return "Ingen data";
+  // 14.10.2026 (Theodors rettelse, Farstadsanden): i BarentsWatch-linja sto perioden
+  // fra Open-Meteo (svellet ute) som om den var BarentsWatch sin. Nå BarentsWatch sin
+  // egen bw_period - og mangler den, perioden ute med kilden merket.
   const period = h.period!=null ? `${nf0.format(h.period)} s` : "ukjent periode";
   if(h.height_source==="barentswatch"){
     const interp = h.bw_interpolated ? " (interpolert)" : "";
+    const bwPeriod = h.bw_period!=null ? `periode ved punktet ${nf0.format(h.bw_period)} s` : `periode ute ${period} (Open-Meteo)`;
     // 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     // vi viser i "v" over (surfHeadline) er justert (svellandel, periode,
     // retning ved punktet) - skal ALDRI kalles "signifikant" alene, det
     // begrepet gjelder BarentsWatch sin EGNE totalhøyde (bw_height). Selve
     // justeringen vises i en egen linje, se surfAdjustmentLine().
     return h.bw_height!=null
-      ? `BarentsWatch ${nf1.format(h.bw_height)} m signifikant, ${period}${interp}`
-      : `${nf1.format(h.height)} m, ${period}, BarentsWatch${interp}`;
+      ? `BarentsWatch ${nf1.format(h.bw_height)} m signifikant, ${bwPeriod}${interp}`
+      : `${nf1.format(h.height)} m, ${bwPeriod}, BarentsWatch${interp}`;
   }
   return `${nf1.format(h.height)} m signifikant, ${period}, anslag`;
 }
@@ -473,11 +477,24 @@ function windowText(spot){
   const secs = Array.isArray(w[0]) ? w : [w];
   return "Vindu " + secs.map(([a,b])=>`${a}–${b}°`).join(", ");
 }
-function directionHitText(h){
+function inSwellWindow(dir, spot){
+  // ligger retningen (fra, 0 = nord) i spotens svellvindu? [a,b] eller [[a,b],[c,d]], med 360-overgang
+  if(dir==null || !spot || !spot.swell_window) return null;
+  const w = spot.swell_window, secs = Array.isArray(w[0]) ? w : [w];
+  return secs.some(([a,b])=> ((dir - a + 360) % 360) <= ((b - a + 360) % 360));
+}
+function directionHitText(h, spot){
+  // 14.10.2026 (Theodors rettelse, Farstadsanden 287° i vinduet 284–326°): tallet
+  // (h.directness) er EKSPONERINGEN fra retningen (rating.exposure(): glattet
+  // geometri med skygge og kant, 0-1), ikke en vindu-test - så «Utenfor vinduet»
+  // sto på retninger som faktisk lå i vinduet, men nær kanten/skjermet. Nå sies
+  // vinduet fra vinduet, og graden av treff fra eksponeringen. Fysikken er uendret.
   if(h.directness==null) return "";
-  if(h.directness < 0.667) return "Utenfor vinduet";
+  const inside = inSwellWindow(h.dir_offshore, spot);
+  if(inside===false) return "Utenfor vinduet";
   if(h.directness >= 0.999) return "Midt i vinduet";
-  return "I kanten av vinduet";
+  if(h.directness >= 0.667) return "I kanten av vinduet";
+  return inside ? "I vinduet, men skjermet" : "Utenfor vinduet";
 }
 function offshoreShareText(h){
   if(h.swell_offshore==null || !(h.height_offshore>0)) return "";
@@ -490,10 +507,12 @@ function offshoreShareText(h){
   return `, av ${nf1.format(h.height_offshore)} m totalt (${pct} %, resten vindsjø)`;
 }
 function uteDirectionText(h, spot){
-  const hit = directionHitText(h);
+  const hit = directionHitText(h, spot);
   if(!hit) return "";
   const deg = h.dir_offshore!=null ? Math.round(h.dir_offshore)+"°" : "";
-  return `Ute: ${hit.toLowerCase()}${deg?` (${deg}, ${windowText(spot).toLowerCase()})`:""}.`;
+  // skjermet i vinduet: si hvor mye som når inn, så tallet og ordet henger sammen
+  const pct = hit==="I vinduet, men skjermet" ? `, ${nf0.format(h.directness*100)} % når inn` : "";
+  return `Ute: ${hit.toLowerCase()}${deg?` (${deg}, ${windowText(spot).toLowerCase()}${pct})`:""}.`;
 }
 function vedSpotenDirectionText(h){
   if(h.height_source!=="barentswatch" || h.bw_dir==null || h.spot_direction_diff==null) return "";
@@ -1278,6 +1297,8 @@ $("#saveLog").onclick = async ()=>{
     // slik de sto på tidspunktet du logget - se "hvilket punkt treffer best"
     // i Logger-fanen.
     bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null,
+    // 14.10.2026: skyggepunktet (Theodors nål, Farstadsanden) - til å sammenligne observasjonene mot senere
+    bwHeightShadow: f ? (f.bw_height_shadow ?? null) : null,
     // Hvor mye av BarentsWatch-høyden som er reelt svell og hvor godt det
     // traff stranda, slik at Logger-fanen kan vise om sources_disagree-
     // regelen er for streng eller for snill.
@@ -1401,7 +1422,7 @@ function maybeShowWitnessPrompt(){
       stars, size: null, wind: null, type: "observed", source: "Var du der?",
       forecastStars: entry.stars, forecastFaded: f ? f.faded : null, forecastHeight: f ? f.height : null,
       swellOffshore: f ? f.swell_offshore : null, forecastPeriod: f ? f.period : null, directness: f ? f.directness : null,
-      dirOffshore: f ? f.dir_offshore : null, bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null,
+      dirOffshore: f ? f.dir_offshore : null, bwHeight: f ? f.bw_height : null, bwHeightNear: f ? f.bw_height_near : null, bwHeightShadow: f ? (f.bw_height_shadow ?? null) : null,
       swellShare: f ? f.swell_share : null, spotDirectionFactor: f ? f.spot_direction_factor : null,
       bwPeriod: f ? f.bw_period : null, bwDir: f ? f.bw_dir : null, sourcesDisagree: f ? !!f.sources_disagree : false,
       tideState: f && f.tide ? f.tide.state : null, energyTotalKj: f ? f.energy_total_kj : null, energySwellKj: f ? f.energy_swell_kj : null};

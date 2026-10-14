@@ -356,6 +356,8 @@
         "lat": 62.986025,
         "lon": 7.148566
       },
+      "barentswatch_point_shadow": {"lat": 62.986005, "lon": 7.147075},
+      "_skyggepunkt": "14.10.2026 (Theodors oppgave): nålen Theodor ba om først 06.10 (62°59,16027′N 7°08,82452′Ø = 62.986005/7.147075, 212 m fra pinnen i retning ca. 310) - han rettet den samme dag til dagens barentswatch_point (58 m fra pinnen), som snittet 14.10 viste ligger INNE i brytesonen (torsdag 15.10 kl. 14: 0,9 m der, 2,05 m ved nålen). Hentes hver kjøring og lagres BARE til sammenligning (bw_height_shadow, kilderapporten) - brukes ALDRI i ratingen eller kalibreringen. Bytte av punkt krever Theodors ja (se STATUS.md 14.10.2026).",
       "swell_window": [284, 326],
       "offshore_wind": [85, 175],
       "ideal_height": [1.0, 3.0],

@@ -897,6 +897,30 @@ def main():
                     rt = page.locator("#details .cell:has-text('Retningstreff') >> .v").inner_text()
                     assert rt == f"{r0(dn*100)} %", f"Retningstreff ({rt}) stemmer ikke med directness ({dn})"
                 shot("spot_detaljer")
+                # ---- 14.10.2026 (Theodors rettelser, Farstadsanden): to tekster i Detaljer ----
+                # (a) «Høyde på spoten»: perioden i BarentsWatch-linja er BarentsWatch sin egen (bw_period),
+                #     ikke perioden ute fra Open-Meteo; (b) «Retningstreff»: ordet sier vinduet fra VINDUET -
+                #     en retning i vinduet med lav eksponering er «i vinduet, men skjermet», ikke «utenfor».
+                win = s["swell_window"]; a0 = (win[0][0] if isinstance(win[0], list) else win[0])
+                inside, outside = (a0 + 3) % 360, (a0 - 10) % 360
+                page.evaluate(f"""() => {{ const h = DATA.spots.find(x => x.id === '{s['id']}').hours[{bidx}]; window.__bakT = {{...h}};
+                    Object.assign(h, {{height_source: 'barentswatch', bw_height: 1.0, height: 0.8, bw_period: 9.3, period: 21, bw_interpolated: false, dir_offshore: {inside}, directness: 0.6}}); Front.openSpot('{s['id']}', {bidx}); }}""")
+                page.wait_for_timeout(400); page.evaluate("document.getElementById('details').open = true")
+                hs_n = page.locator("#details .cell:has-text('Høyde på spoten') >> .n").inner_text()
+                assert "9 s" in hs_n and "BarentsWatch" in hs_n and "21 s" not in hs_n, f"«Høyde på spoten» skal vise BarentsWatch sin periode (9 s), ikke perioden ute (21 s): '{hs_n}'"
+                dir_n = page.locator("#details .cell:has-text('Retningstreff') >> .n").inner_text()
+                assert "i vinduet, men skjermet" in dir_n and "60 % når inn" in dir_n and "utenfor" not in dir_n, f"{inside}° ligger i vinduet {win}: '{dir_n}'"
+                page.evaluate(f"""() => {{ const h = DATA.spots.find(x => x.id === '{s['id']}').hours[{bidx}]; Object.assign(h, {{dir_offshore: {outside}, directness: 0.3}}); Front.openSpot('{s['id']}', {bidx}); }}""")
+                page.wait_for_timeout(400); page.evaluate("document.getElementById('details').open = true")
+                dir_n2 = page.locator("#details .cell:has-text('Retningstreff') >> .n").inner_text()
+                assert "utenfor vinduet" in dir_n2, f"{outside}° ligger utenfor vinduet {win}: '{dir_n2}'"
+                # uten bw_period: perioden ute, merket Open-Meteo
+                page.evaluate(f"""() => {{ const h = DATA.spots.find(x => x.id === '{s['id']}').hours[{bidx}]; h.bw_period = null; Front.openSpot('{s['id']}', {bidx}); }}""")
+                page.wait_for_timeout(400); page.evaluate("document.getElementById('details').open = true")
+                hs_n2 = page.locator("#details .cell:has-text('Høyde på spoten') >> .n").inner_text()
+                assert "periode ute 21 s (Open-Meteo)" in hs_n2, f"uten bw_period skal kilden merkes: '{hs_n2}'"
+                page.evaluate(f"() => {{ Object.assign(DATA.spots.find(x => x.id === '{s['id']}').hours[{bidx}], window.__bakT); Front.openSpot('{s['id']}', {bidx}); }}"); page.wait_for_timeout(400)
+                print(f"14.10 ({label}): «Høyde på spoten» viser BarentsWatch sin periode (kilden merket uten), «Retningstreff» sier vinduet fra vinduet - OK")
                 # flat spot
                 page.evaluate(f"Front.openSpot('{spots[fi]['id']}', 0)"); page.wait_for_timeout(1300)
                 fh = spots[fi]["hours"][0]

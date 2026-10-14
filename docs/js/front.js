@@ -720,7 +720,7 @@
     const fromTxt = sd!=null ? ` fra ${compass(sd)} (${Math.round(sd)}°)` : "";   // ingen grader når retningen mangler
     const swell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${fromTxt}` : (h && h.height_offshore!=null ? `${nf1.format(h.height_offshore)} m totalt${fromTxt}` : "Ingen svelldata");
     // samme ord som Retningstreff-cellen (app.js directionHitText: "" når tallet mangler)
-    const dh = h ? directionHitText(h) : "";
+    const dh = h ? directionHitText(h, s) : "";
     const hitText = dh ? `${dh}${cls!=="" ? ` ${winText(s.swell_window||[0,0])}` : ""}` : "";
     const wind = h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s ${windLabel(h)} fra ${compass(h.wind_dir)}` : "–";
     return `${discSvg(s, h)}<div class="disc-txt">

@@ -1,5 +1,55 @@
 # Nordsurf: status
 
+## Farstadsanden: BarentsWatch-punktet ligger i brytesonen (Theodor 14.10.2026, torsdag 15.10) - SNITT HENTET, VENTER PÅ THEODOR (ikke byttet punkt, ikke rørt rating)
+
+**Hvorfor punktet ble flyttet:** API-et snappet ikke. Både 06.10 og 14.10 returnerer BarentsWatch nøyaktig de koordinatene vi ber om (`requested` = `chosen_point` for alle punkter i `data/bw_point_search/result.json`). Nålen Theodor ba om først 06.10 var 62°59,16027′N 7°08,82452′Ø = **62.986005/7.147075** - samme dag rettet han den til 62°59,12781′N 7°08,99530′Ø = 62.985464/7.149922, og det er den rettede som står i spots.json (se `_barentswatch` der og STATUS 06.10, «rettet én gang samme dag»). Den rettede ligger 58 m fra pinnen, nesten i fjæra; nålen ligger 212 m ut. Nålen er nå lagt inn som **skyggepunkt** (`barentswatch_point_shadow`): hentes hver kjøring, `bw_height_shadow` per time, én rad i kilderapporten («BarentsWatch skyggepunkt»: snitt/maks i bruk vs skygge) - brukes aldri i ratingen eller kalibreringen.
+
+**Snittet fra stranda og ut (workflowen «Finn BarentsWatch-punkt» 14.10.2026 kl. 21:37Z, gren `farstadsanden/transekt`, `data/bw_point_search/result.json`):** langs facing 310° fra pinnen, pluss nålen og BarentsWatch-kartets 2 m-punkt ved Breivika. BarentsWatch er 3-timers; «torsdag 14» = 12Z, «fredag 16» finnes ikke - nærmeste er fredag kl. 17 (15Z), kl. 14 (12Z) i parentes.
+
+| Punkt | m fra pinnen | Tor 15.10 kl. 14: Hs | T | fra | Fre 16.10 kl. 17 (kl. 14): Hs | T | fra |
+|---|---|---|---|---|---|---|---|
+| Stranda (0 m@310) | 0 | 0,50 m | 13,1 s | 292° | 0,61 m | 11,2 s | 292° |
+| **Dagens barentswatch_point** | 58 | **0,90 m** | 13,1 s | 306° | **1,21 m** | 11,2 s | 304° |
+| 150 m@310 (= barentswatch_point_near) | 150 | 1,36 m | 13,1 s | 301° | 1,74 m | 11,2 s | 301° |
+| **Theodors nål 06.10 (skyggepunkt)** | 212 | **2,05 m** | 13,1 s | 298° | **1,87 m** | 11,1 s | 298° |
+| 300 m@310 | 300 | 2,05 m | 13,1 s | 298° | 1,87 m | 11,1 s | 298° |
+| Breivika (BW-kartet «2 m») | 392 | 1,99 m | 12,9 s | 304° | 1,86 m | 11,0 s | 304° |
+| 500 m@310 | 501 | 2,39 m | 13,1 s | 291° | 2,15 m | 11,1 s | 292° |
+| 800 m@310 | 801 | 2,59 m | 12,9 s | 303° | 2,15 m | 11,0 s | 304° |
+| 1000 m@310 | 1002 | 2,87 m | 12,8 s | 298° | 2,43 m | 10,9 s | 298° |
+
+Svell ute torsdag kl. 14: 4,7 m fra 294°, 19 s (GFS). Nålen og 300 m@310 gir identiske tall (samme 100 m-celle). Høyden faller bratt innenfor 300 m: 2,05 → 1,36 (150 m) → 0,90 (58 m) → 0,50 (stranda) - det er brytesonen på en 4,7 m-dag. Fra 500 m og utover er svellet ikke ferdig grunnet (høyden stiger videre til 2,87 m ved 1 km) og retningen ved 500 m (291°) avviker fra 298-304° nærmere land.
+
+**Anbefaling (krever Theodors ja - ingenting er byttet):** punktet like utenfor brytesonen er **nålen din (212 m, 62.986005/7.147075)** eller 300 m@310 (62.986897/7.146294) - samme tall, 2,05 m torsdag / 1,87 m fredag. Ikke 500 m eller lenger ut (ikke grunnet, retningen avviker), og ikke 150 m (1,36 m - allerede inne i brytingen torsdag). Bytter du: de 7 BarentsWatch-kalibreringsparene for Farstadsanden (`data/bw_calibration.json`) og eksponeringsparene er fra dagens punkt og bør nullstilles samtidig. Med nålen som punkt ville torsdag kl. 14 gitt Hs 2,05 × 0,758 = 1,55 m → surfehøyde ca. 2,8 m (mot 1,47 m i dag); stjernene står på 1 uansett den dagen - «Blåst ut» (8,7 m/s sidevind).
+
+**4. Transfer 0,6 - ganges den på BarentsWatch-høyden? NEI.** `rating.spot_height()`: BarentsWatch-sonen er `bw_height × min(svellandel, periodefaktor_BW) × retningsfaktor` (`barentswatch_height()`, ingen transfer); reservesonen (når BarentsWatch mangler) er `svell_ute × transfer × eksponering(retning, periode)`. Transfer for Farstadsanden er 0,6 = standardverdien (`transfer_source` «standard»: 7 BarentsWatch-par, for få til å lære). Timefeltet `transfer: 0.6` står i varselet også for BarentsWatch-timer - det er bare «verdien som ville vært brukt», ikke brukt. Regnet på varselet 14.10 kl. 20Z (`backtest.prepare_spot` + `rating.rate`):
+
+| | Tor 15.10 kl. 14 (12Z) | Fre 16.10 kl. 16 (14Z) |
+|---|---|---|
+| Inndata | BW 0,90 m, 13,1 s; svell ute 4,7 av 6,2 m fra 294°, 19 s; vind 8,7 m/s side | BW 1,21 m, 11,2 s; svell ute 2,8 av 3,9 m fra 320°, 13,6 s; vind 5,2 m/s onshore |
+| Svellandel / periodefaktor BW / eksponering ute | 0,758 / 1,00 / 0,854 | 0,718 / 1,00 / 0,774 |
+| **Som i dag** (BW-sonen, transfer 0,6 i spoten) | Hs 0,68 m → surf 1,47 m, 1★ Blåst ut | Hs 0,87 m → surf 1,56 m, 1★ Blåst ut |
+| BW-sonen med transfer 1,0 | **identisk** (0,68 m → 1,47 m) | **identisk** (0,87 m → 1,56 m) |
+| Uten BarentsWatch (reservesonen), transfer 0,6 | Hs 2,41 m → surf 4,03 m, 0★ Blåst ut | Hs 1,30 m → surf 2,15 m, 1★ Blåst ut |
+| Uten BarentsWatch (reservesonen), transfer 1,0 | Hs 4,01 m → surf 6,07 m, 0★ | Hs 2,17 m → surf 3,24 m, 0★ |
+| BW-sonen med 2,0 m ved punktet (som kartet 300 m ute) | Hs 1,52 m → surf 2,79 m, 1★ | Hs 1,44 m → surf 2,33 m, 1★ |
+
+Så: ingen dobbel demping fra transfer. Dempingen som faktisk er der, er (a) punktet inne i brytesonen (0,90 m mot 2,05 m 212-300 m ute) og (b) svellandelen 0,758 (BarentsWatch sin totalhøyde skalert til svell). (a) er det punktbyttet retter.
+
+**2. «BarentsWatch 0,5 m signifikant, 21 s» - rettet:** `surfSubtext()` i app.js satte perioden ute (Open-Meteo, `h.period`) inn i BarentsWatch-linja. Nå BarentsWatch sin egen `bw_period`; mangler den, «periode ute 21 s (Open-Meteo)». Test i `test_design_browser.py` (Detaljer, «Høyde på spoten»).
+
+**3. «Ute: utenfor vinduet (287°, vindu 284–326°)» - rettet (teksten, ikke fysikken):** ordet kom fra `directionHitText()`, som sammenligner **`h.directness`** - og det tallet er `rating.exposure(dir_offshore)`: del C sin glattede, geometriske eksponering (skygge og kant, 0-1) som `rate()` legger i feltet `directness` - ikke en test mot vinduet. 287° er 3° innenfor kanten av [284,326]; der er eksponeringen under 0,667 (kanten tapes), og ordet sa «utenfor». Nå sies vinduet fra vinduet (`inSwellWindow()`, også for todelte vinduer og 360-overgang) og graden av treff fra eksponeringen: «Midt i vinduet» (≥ 0,999), «I kanten av vinduet» (≥ 0,667), **«I vinduet, men skjermet»** (i vinduet, under 0,667 - med «NN % når inn» i Ute-linja), «Utenfor vinduet» (utenfor). Samme ord i Retningstreff-cella og kartets svell-tekst. Test: en retning 3° innenfor vinduet med eksponering 0,6 → «i vinduet, men skjermet, 60 % når inn»; 10° utenfor → «utenfor vinduet». *Spørsmål til Theodor:* kartets svellkile (`Kart.hitClass`, «treff/kant/bom») bruker de samme 0,667/0,999-grensene på `directness` (din godkjente regel fra «kart først») - kilen viser altså «bom» for 287° selv om pila ligger inne i den tegnede kilen. Skal kilen også skille «i vinduet, men skjermet» fra «utenfor»? Ikke endret.
+
+**Stopp-regelen:** ingen stjerne eller surfehøyde endres av denne commiten (tekst, skyggepunkt som bare logges, snitt-verktøyet). Alle faste observasjoner holder.
+
+**Fysikk-kontrollør (14.10.2026): MÅ RETTES (to, ingen fysikk) - rettet:**
+- Skyggepunktet havnet INNE i `barentswatch_point_near`-objektet i spots.json (feil innsetting), så det ville aldri blitt hentet. Flyttet til spot-nivå, og test_pipeline 9e sjekker nå at et skyggepunkt faktisk gir `bw_height_shadow` og raden i kilderapporten - og at stjerner og surfehøyde er uendret med og uten det.
+- `test_display_only.py` ble rød på denne grenen (henteren og spots.json er endret med vilje). Sjekken gjelder nå designgrener (`design/*`) og pull requests mot main; på andre grener gjelder fysikk-kontrolløren og stopp-regelen.
+- Bekreftet: stopp-regelen holder (ingenting i ratingen leser skyggefeltene, `bw_fallback` urørt, eksponeringens sjekksum løser fortsatt for alle 8 spots); lesningen av `directness` = `exposure()` er riktig og «i vinduet, men skjermet» er et dekkende ord (kantglatting = retningsspredning mot land, skygge fra odde, eller et `exposure_override`-tak); transfer-svaret og alle tallene i tabellen er etterregnet og stemmer; punktet 212-300 m ut er fysisk konsistent (dybdebegrenset bryting: H/d ≈ 0,78 gir ca. 1,2 m dyp ved 58 m og 2,6 m ved 300 m - en slak strand; på mindre dager flytter brytingen seg innover, så 212-300 m står utenfor og leser den ubrutte Hs, som er det Komar-Gaughan faktisk vil ha; på store dager dissiperer modellen allerede 500→300 m, så 300 m leser litt lavt - konservativt). Retningsfaktoren er 1,0 ved begge punkt (298° vs 306°, begge innen 30° av facing), så byttet endrer bare høyden.
+- Kontrollørens to råd til Theodor: kjør snittet på nytt en dag med ca. 1 m svell før punktet velges (én dag viser ikke småværsoppførselen), og nullstill BarentsWatch- og eksponeringsparene ved bytte.
+- Gjort fra forslagene: BarentsWatch-linja sier «periode ved punktet 13 s» (så den ikke forveksles med Periode-flisa, 19 s, formelens inndata); loggen tar med `bwHeightShadow` (så observasjonene kan sammenlignes mot skyggepunktet senere). SPØR THEODOR (står over): kilens aria-tekst i kart.js sier fortsatt «svellet treffer ikke vinduet» for 287° - samme 0,667-regel som kilen selv.
+- Merk: `data/bw_point_search/result.json` skrives helt på nytt av workflowen - 07.10-kjøringen for Unstad (ROADMAP N) ligger nå bare i git-historikken.
+
 ## Lært eksponering (del B) i skyggemodus, og data/exposure.json lagres (14.10.2026, Theodors svar på S2-spørsmålet) - FERDIG, på main
 
 **Theodors avgjørelse:** `data/exposure.json` lagres i git fra nå av, så læringen faktisk samler seg - men den skal ikke påvirke ratingen ennå. Fire punkter, alle gjort:
