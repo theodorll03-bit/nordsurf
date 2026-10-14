@@ -2,7 +2,7 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 FERDIG, neste er S2
+## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 FERDIG, S2 BYGGET 14.10.2026 (gren `s2/publisering`), neste er S3
 
 Målet: flere hundre spots langs hele norskekysten, samme rating (urørt), samme kilder. Appen og henteren er i dag bygget for 8. Tallene under er målt 09.10.2026 (forecast.json kl. 21Z, Actions-kjøring nr. 147, måleworkflowen «Mål skalering», kjøring 1). Fysikk-kontrollør 09.10.2026: fire antakelser rettet før commit (Open-Meteo er to HTTP-kall per havpunkt; deling bare på API-ets eget rutenettpunkt per modell, ikke egen 0,25°-avrunding; kortere tidsavbrudd må måles først fordi et feilet GFS-kall endrer svellmodellen for dag 1-9; detaljfila er de 53 feltene appen faktisk leser, `breakdown` inkludert) - se STATUS.md. Rating, spots.json og henterens tall er ikke rørt - `fetcher/measure_scale.py` og `.github/workflows/measure_scale.yml` er bare måleverktøy.
 
@@ -114,7 +114,7 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 5. Hemmelig: en statisk, offentlig side kan ikke holde noe hemmelig. `status: hemmelig` betyr at spoten ikke publiseres i det hele tatt, verken i oversikt eller detaljfiler, før appen har innlogging og server. Står i CLAUDE.md.
 
 - **S1. Open-Meteo - FERDIG 10.10.2026 (commit 5387aa8, se STATUS.md):** delt frist (5 s oppkobling/20 s svar) og korte pauser, samlekall for alle punkt før spot-løkka, mellomlager delt mellom spots. Før: 10 min 49 s hentesteg (11-18 min per kjøring). Etter: 52 s, 3 Open-Meteo-kall i stedet for 28, GFS-timer per spot uendret (sum 1 187 mot 1 179).
-- **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren.
+- **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren. **BYGGET 14.10.2026 (se STATUS.md):** `fetcher/publish.py`, `publiser.yml`, læringsdataene committes til main som før. NB for S4: oversikten har timene forsiden leser i 9 døgn (svarlinja og avspillingen fra 13.10 trenger dem) - 626 KiB rå for 8 spots; ved hundrevis av spots må forsiden bruke dagsoppsummering i stedet (punkt 4 under).
 - **S3. MapLibre-kart** med den mørke stilen fra dagens design, klynger med antall og beste rating, lapper bare der det er plass og alltid for favoritter, vind og svell som eget lag oppå.
 - **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
 - **S5. spots.json per region med status.**
