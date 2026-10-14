@@ -47,10 +47,22 @@ Skjermbildene lagres i docs/design/oversikt/etter/ (mobil og PC).
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5
 minutter (hardkill), testserveren stoppes uansett utfall.
 
-Klokka: siden kjører med Date fast på T0 (page.clock.set_fixed_time - tidtakerne
-går som vanlig), og testen regner selv fra samme T0. Uten det ga en kjøring over
-en timegrense ny nåtime midt i testen (CI 14.10.2026 kl. 13:00Z: «Tilbake til nå»
-gikk til den nye timen, testen ventet den gamle).
+Data og klokke (S2, 14.10.2026): testen bruker den faste testfila
+fetcher/fixtures/forecast.json (ekte varsel 14.10.2026 kl. 19Z) - ikke dagens
+varsel, som ikke ligger i git lenger - og serverer den slik appen får den:
+data/oversikt.json og data/spots/<id>.json laget av fetcher/publish.py. Siden
+kjører med Date fast på T0 = litt etter at varselet ble laget
+(page.clock.set_fixed_time - tidtakerne går som vanlig), og testen regner selv
+fra samme T0. Da avhenger testen verken av dagens data eller av en timegrense
+midt i kjøringen (CI 14.10.2026 kl. 13:00Z).
+
+0. S2: forsiden med bare oversikten er lik forsiden med hele varselet (svarlinja,
+   lista, merkene, kantpilene, teksten på kartet) i alle tre utsnitt og over
+   glidebryterens timer; forsiden laster aldri en detaljfil; en spot som åpnes
+   viser «Henter detaljene …» (ingen tall, ingen kile) til fila er her; svarer
+   detaljfila med feil, sier arket det og «Prøv igjen» henter på nytt; er
+   detaljfila fra en annen kjøring (nytt varsel publisert), lastes siden på
+   nytt én gang.
 
 Miljø: NORDSURF_CHROMIUM (sti til chromium, ellers Playwright sin),
 NORDSURF_AXE_PATH (lokal axe.min.js, ellers cdnjs).
@@ -77,7 +89,9 @@ FILE_TIMEOUT_S = 300
 AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 AXE_PATH = os.environ.get("NORDSURF_AXE_PATH")
 OSLO = ZoneInfo("Europe/Oslo")
-T0 = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)   # «nå» for hele kjøringen, i siden og i testen
+FIXTURE = ROOT / "fetcher" / "fixtures" / "forecast.json"   # fast varsel (14.10.2026 kl. 19Z), ikke dagens
+T0 = (dt.datetime.fromisoformat(json.loads(FIXTURE.read_text(encoding="utf-8"))["generated"].replace("Z", "+00:00"))
+      + dt.timedelta(minutes=70)).astimezone(dt.timezone.utc)   # «nå» for hele kjøringen, i siden og i testen
 TODAY = T0.astimezone(OSLO).date()
 DAY2 = ["ma", "ti", "on", "to", "fr", "lø", "sø"]   # mandag ... søndag (Theodor 13.10.2026)
 WD_SHORT = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
@@ -209,7 +223,13 @@ def span_text(a, b):
 def main():
     watchdog = _watchdog()
     srv, port = serve()
-    forecast = json.loads((DOCS / "data" / "forecast.json").read_text(encoding="utf-8"))
+    forecast = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    sys.path.insert(0, str(ROOT / "fetcher"))
+    import publish
+    overview, details = publish.split(forecast)
+    OV_BODY = json.dumps(overview, ensure_ascii=False)
+    DET_BODY = {sid: json.dumps(d, ensure_ascii=False) for sid, d in details.items()}
+    EXPECT_ERR = {"on": False}
     spots = forecast["spots"]
     LOW = {"flat": "Flatt", "blown_out": "Blåst ut", "stormsjo": "Stormsjø", "treffer_ikke": "Treffer ikke"}
     STARW = ["Flatt", "Dårlig", "Ok", "Bra", "Veldig bra", "Rått"]
@@ -258,9 +278,27 @@ def main():
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS)
                 page.clock.set_fixed_time(T0)
                 page.on("pageerror", lambda e, label=label: errors.append(f"{label}: {e}"))
-                page.on("console", lambda m, label=label: errors.append(f"{label} console: {m.text}") if m.type == "error" and "ERR_FAILED" not in m.text and "404" not in m.text else None)
+                page.on("console", lambda m, label=label: errors.append(f"{label} console: {m.text}") if m.type == "error" and "ERR_FAILED" not in m.text and "404" not in m.text and not EXPECT_ERR["on"] else None)
                 route(page)
-                page.add_init_script(f"window.__FORECAST__ = {json.dumps(forecast)};")
+                # S2: varselet slik appen får det - oversikten og én fil per spot (publish.split på testfila)
+                HOLD = {"on": False, "fail": set(), "newrun": set(), "routes": [], "count": {}}
+                def data_route(rt, req, HOLD=HOLD):
+                    path = req.url.split("?")[0]
+                    key = "oversikt" if path.endswith("/data/oversikt.json") else path.rsplit("/", 1)[-1][:-5]
+                    HOLD["count"][key] = HOLD["count"].get(key, 0) + 1
+                    if key == "oversikt":
+                        return rt.fulfill(status=200, content_type="application/json", body=OV_BODY)
+                    if key in HOLD["fail"]:
+                        HOLD["fail"].discard(key)
+                        return rt.fulfill(status=500, body="feil")
+                    if key in HOLD["newrun"]:   # som om et nytt varsel er publisert etter at oversikten ble lastet
+                        HOLD["newrun"].discard(key)
+                        return rt.fulfill(status=200, content_type="application/json", body=json.dumps(dict(json.loads(DET_BODY[key]), run="annen-kjoring"), ensure_ascii=False))
+                    if HOLD["on"]:
+                        HOLD["routes"].append((rt, key)); return
+                    rt.fulfill(status=200, content_type="application/json", body=DET_BODY[key])
+                page.route("**/data/oversikt.json", data_route)
+                page.route("**/data/spots/*.json", data_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html")
                 page.wait_for_function("typeof DATA !== 'undefined' && DATA != null && window.Front && document.querySelectorAll('.mk').length > 0")
                 if AXE_PATH:
@@ -300,6 +338,78 @@ def main():
                     assert not small, f"knapper under 44 px ({label}, {name}): {small}"
                     unnamed = page.evaluate("""() => [...document.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width > 0 && !(b.getAttribute('aria-label') || b.textContent.trim() || b.title)).map(b => b.className).slice(0, 5)""")
                     assert not unnamed, f"knapper uten tilgjengelig navn ({label}, {name}): {unnamed}"
+
+                # ---- 0. S2: oversikten ved åpning, detaljfila når en spot åpnes ----
+                SNAP = """() => { const txt = el => el ? el.textContent.replace(/\\s+/g, ' ').trim() : null;
+                  const snap = () => ({
+                    ans: (b => b ? [b.tagName, b.className, b.dataset.spot || '', b.dataset.idx || '', b.getAttribute('aria-label') || '', txt(b)] : null)(document.getElementById('ansBtn')),
+                    heads: [...document.querySelectorAll('#list .rows-head')].map(txt),
+                    rows: [...document.querySelectorAll('#list .row')].map(r => [r.dataset.spot, r.className, r.getAttribute('aria-label'), r.querySelector('.rt').innerHTML, [...r.querySelectorAll('.wc')].map(w => w.className).join(' ')]),
+                    mks: [...document.querySelectorAll('.mk')].map(m => [m.dataset.id, m.className, m.hidden, txt(m.querySelector('.mk-label')), m.getAttribute('aria-label')]),
+                    edges: [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).map(e => [e.dataset.id || '', e.className, txt(e.querySelector('.mk-label')), e.getAttribute('aria-label')]),
+                    note: (n => n.hidden ? null : n.textContent)(document.getElementById('mapNote')),
+                    pill: document.getElementById('timePillT').textContent, col: txt(document.getElementById('colNow')) });
+                  const out = [], mx = Front.state.maxIdx;
+                  for(const v of ['nord', 'lofoten', 'alle']){
+                    document.querySelector(`.seg button[data-view='${v}']`).click();
+                    for(let i = Front.state.w0; i <= mx; i += 7){ Front.setIdx(i); Front.refresh(); out.push([v, i, snap()]); }
+                  }
+                  document.querySelector(".seg button[data-view='nord']").click(); Front.backToNow();
+                  return out; }"""
+                snap_ov = page.evaluate(SNAP)
+                n_det = sum(v for k, v in HOLD["count"].items() if k != "oversikt")
+                assert HOLD["count"].get("oversikt") == 1 and n_det == 0, f"forsiden skal bare laste oversikten (én gang), ingen detaljfil: {HOLD['count']}"
+                assert page.evaluate("DATA.spots.every(s => s._full === false && s.hours.length < 200)"), "oversikten har bare forsidens timer"
+                # en spot som åpnes: «Henter detaljene …» (ingen tall, ingen kile) til detaljfila er her
+                X = spots[2]["id"]
+                HOLD["on"] = True
+                page.evaluate(f"Front.openSpot('{X}')"); page.wait_for_timeout(500)
+                assert [k for _, k in HOLD["routes"]] == [X], f"åpnet {X}: forventet nøyaktig én henting av dens detaljfil, fikk {[k for _, k in HOLD['routes']]}"
+                ld = page.evaluate("({txt: (document.querySelector('#spot .spot-loading') || {}).textContent || null, tiles: !!document.querySelector('#spot #tHeight'), wedge: document.querySelectorAll('#wedgeG .wedge').length, n: document.querySelector('#spot .spot-head .n').textContent})")
+                assert ld["txt"] == "Henter detaljene …" and not ld["tiles"] and ld["wedge"] == 0 and ld["n"] == spots[2]["name"], f"mens detaljfila hentes: navnet, ingen tall, ingen kile: {ld}"
+                rt0, key0 = HOLD["routes"].pop(); HOLD["on"] = False
+                rt0.fulfill(status=200, content_type="application/json", body=DET_BODY[key0])
+                page.wait_for_function("!!document.querySelector('#spot #tHeight')")
+                assert page.evaluate(f"DATA.spots.find(s => s.id === '{X}')._full") is True and page.evaluate(f"DATA.spots.find(s => s.id === '{X}').hours.length") == len(spots[2]["hours"])
+                # detaljfila svarer med feil: arket sier det (ingen tall), «Prøv igjen» henter på nytt
+                Y = spots[4]["id"]
+                HOLD["fail"].add(Y); EXPECT_ERR["on"] = True
+                page.evaluate("Front.go('home')"); page.wait_for_timeout(300)
+                page.evaluate(f"Front.openSpot('{Y}')")
+                page.wait_for_function("!!document.getElementById('retrySpot')")
+                bad = page.evaluate("({txt: document.querySelector('#spot .spot-loading').textContent, tiles: !!document.querySelector('#spot #tHeight')})")
+                assert bad["txt"].startswith("Fikk ikke hentet detaljene") and not bad["tiles"], f"feil i detaljfila: {bad}"
+                page.wait_for_timeout(200); EXPECT_ERR["on"] = False
+                page.locator("#retrySpot").click()
+                page.wait_for_function("!!document.querySelector('#spot #tHeight')")
+                page.evaluate("Front.go('home')"); page.wait_for_timeout(400)
+                # nytt varsel publisert mens appen er åpen (detaljfila har et annet «run» enn oversikten):
+                # siden lastes på nytt én gang - aldri tall fra to kjøringer blandet
+                Z = spots[6]["id"]
+                HOLD["newrun"].add(Z); EXPECT_ERR["on"] = True
+                with page.expect_navigation(timeout=ELEMENT_TIMEOUT_MS):
+                    page.evaluate(f"Front.openSpot('{Z}')")
+                page.wait_for_function("window.Front && document.querySelectorAll('.mk').length > 0")
+                page.wait_for_timeout(600); EXPECT_ERR["on"] = False
+                assert HOLD["count"]["oversikt"] == 2 and page.evaluate("sessionStorage.getItem('nordsurf.reloadFor')") == "annen-kjoring", f"annen kjøring i detaljfila: siden skal lastes på nytt én gang ({HOLD['count']})"
+                # etter ny lasting åpnes spoten igjen fra adressen (#/spot/<id>) - nå med detaljfila fra samme kjøring
+                page.wait_for_function("!!document.querySelector('#spot #tHeight')")
+                after = page.evaluate(f"({{spot: Front.state.spotId, full: DATA.spots.filter(s => s._full !== false).map(s => s.id)}})")
+                assert after == {"spot": Z, "full": [Z]}, f"etter ny lasting: {Z} åpen med detaljene, de andre bare oversikten: {after}"
+                page.evaluate("Front.go('home')"); page.wait_for_timeout(400)
+                if AXE_PATH:
+                    page.add_script_tag(path=AXE_PATH)
+                else:
+                    page.add_script_tag(url=AXE_URL)
+                page.wait_for_function("typeof axe !== 'undefined'")
+                # alle spots fulle: forsiden skal se HELT lik ut som med bare oversikten
+                assert page.evaluate("ensureAll().then(() => DATA.spots.every(s => s._full === true))")
+                snap_full = page.evaluate(SNAP)
+                if snap_ov != snap_full:
+                    diff = next((a, b) for a, b in zip(snap_ov, snap_full) if a != b)
+                    key = next(k for k in diff[0][2] if diff[0][2][k] != diff[1][2][k])
+                    raise AssertionError(f"forsiden er ulik med bare oversikten og med hele varselet ({label}, {diff[0][0]}, time {diff[0][1]}, {key}):\n  oversikt: {diff[0][2][key]}\n  hele:     {diff[1][2][key]}")
+                print(f"0 ({label}): forsiden lik med bare oversikten og med hele varselet ({len(snap_ov)} tilstander), bare oversikten lastet ved åpning, detaljfila ved åpnet spot - OK")
 
                 st = page.evaluate("({w0: Front.state.w0, w3: Front.state.w3, maxIdx: Front.state.maxIdx})")
                 w0, w3, max_idx = st["w0"], st["w3"], st["maxIdx"]
@@ -853,7 +963,19 @@ def main():
                 page.evaluate(f"Front.openSpot('{s['id']}', {bidx}); openSheet('{s['id']}', new Date())"); page.wait_for_timeout(700)
                 assert page.locator("#sheet #logFromPhotoBtn").count() == 1
                 tt = page.locator("#logTimeText").inner_text(); assert "kl." in tt and "PM" not in tt
-                shot("logg"); axe_check("logg"); page.evaluate("closeSheet()")
+                shot("logg"); axe_check("logg")
+                # S2: lagret logg tar med varselets tall for timen fra spotens detaljfil (slått opp på tidspunktet)
+                n_logs = page.evaluate("loadLogs().length")
+                page.evaluate("document.querySelector('#starPick button[data-n=\"3\"]').click()")
+                page.locator("#saveLog").click(); page.wait_for_timeout(600)
+                saved = page.evaluate("loadLogs()")
+                assert len(saved) == n_logs + 1, f"loggen skal være lagret ({n_logs} -> {len(saved)})"
+                e = saved[-1]
+                hk = next(x for x in s["hours"] if x["t"] == e["t"][:13] + ":00Z")
+                assert e["spot"] == s["id"] and e["stars"] == 3, f"lagret logg: {e}"
+                for k_log, k_fc in (("forecastPeriod", "period"), ("directness", "directness"), ("energySwellKj", "energy_swell_kj"), ("dirOffshore", "dir_offshore")):
+                    assert e.get(k_log) == hk.get(k_fc), f"loggens {k_log} ({e.get(k_log)}) skal være varselets {k_fc} for timen ({hk.get(k_fc)})"
+                page.evaluate(f"saveLogs(loadLogs().slice(0, {n_logs}))")   # testloggen ut igjen
                 page.evaluate(f"openExplain('surf_height', DATA.spots[{bi}].hours[{bidx}], DATA.spots[{bi}])"); page.wait_for_timeout(700)
                 body = page.locator("#exSheet").inner_text()
                 if h.get("surf_height"):
@@ -908,6 +1030,7 @@ def main():
         watchdog.cancel()
     assert not errors, "JavaScript-feil i nettleseren:\n  " + "\n  ".join(e[:300] for e in errors[:10])
     print(f"Skjermbilder i {SHOT_DIR}")
+    print("0: S2 - forsiden lik med bare oversikten og med hele varselet; detaljfila hentes når en spot åpnes («Henter detaljene …», feil med «Prøv igjen»)")
     print("1: kart, merker, kantpiler, ark/panel, loggark, forklaring, Logger og Innstillinger rendres uten JavaScript-feil (mobil og PC)")
     print("2: merker, stjerner, surfehøyde, periode, energi og Retningstreff er forecast.json sine tall")
     print("3: svellkilen klassifiseres bare fra h.directness, bølgefronter bare ved treff/kant")

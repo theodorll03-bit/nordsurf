@@ -595,6 +595,9 @@
   function drawWedge(){
     const p = state.spotId ? spots.find(q=>q.id===state.spotId) : null;
     if(!p || p.offMap || state.sheetMode!=="spot"){ wedgeG.innerHTML = ""; return; }
+    // S2: spotens detaljfil er ikke lastet ennå (oversikten har ikke retningen) - ingen kile,
+    // ikke en grå «bom»-kile som ville sett ut som et svar
+    if(p.s._full === false){ wedgeG.innerHTML = ""; return; }
     wedgeG.innerHTML = wedgeMarkup(p, hourOf(p.s, state.idx));
   }
 

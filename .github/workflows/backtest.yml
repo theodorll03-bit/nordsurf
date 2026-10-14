@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: read      # S2: hente siste varsel (artifact)
 
 jobs:
   backtest:
@@ -34,6 +35,10 @@ jobs:
           UA_CONTACT: ${{ secrets.UA_CONTACT }}
           LOGS_REPO: ${{ secrets.LOGS_REPO }}
           LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
+      - name: Hent siste varsel (S2 - varselet ligger ikke lenger i git)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash fetcher/hent_varsel.sh
       - name: Inndata-bilde av dagens varsel
         run: timeout 60 python fetcher/backtest_inputs.py
       - name: Testlab

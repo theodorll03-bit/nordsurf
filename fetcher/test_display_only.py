@@ -8,8 +8,10 @@ bekrefter at ingenting som lager tallene er endret på designgrenen:
    main lokalt). Går main videre mens grenen lever (henteren pusher «Nytt
    varsel» hver tredje time), er det fortsatt bare grenens EGNE endringer
    som telles.
-2. docs/data/forecast.json er ikke rørt av designgrenen: fila er lik main
-   sin (henteren skriver den, aldri designarbeidet).
+2. (Til 14.10.2026: docs/data/forecast.json lik main sin. Fra S2 ligger
+   varselet ikke lenger i git - det publiseres via Pages-artifact - så det er
+   ingen varselfil å sammenligne. Testenes faste varsel,
+   fetcher/fixtures/forecast.json, endres bare med vilje.)
 3. Tallene i ratingen er uendret: alle faste observasjoner (test_rating.py)
    gir samme stjerner og surfehøyde som før - kjøres som en del av den
    vanlige testkjøringen, men sjekkes her én gang til mot en fast tabell.
@@ -25,7 +27,7 @@ sys.path.insert(0, str(ROOT / "fetcher"))
 
 RATING_FILES = ["fetcher/rating.py", "fetcher/fetch.py", "fetcher/sources.py", "fetcher/calibrate.py", "fetcher/exposure_learn.py",
                 "fetcher/exposure.py", "fetcher/longrange.py", "fetcher/tide.py", "fetcher/sun.py", "fetcher/notify.py", "spots.json"]
-DATA_FILES = ["docs/data/forecast.json"]
+DATA_FILES = []   # S2: varselet ligger ikke i git lenger (publiseres via Pages-artifact)
 
 
 def git(*args):

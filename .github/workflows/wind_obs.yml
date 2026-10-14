@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: read      # S2: hente siste varsel (artifact)
 
 jobs:
   wind:
@@ -28,6 +29,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
+      - name: Hent siste varsel (S2 - varselet ligger ikke lenger i git)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash fetcher/hent_varsel.sh
       - name: Hent målinger og sammenlign med varselet
         run: timeout 300 python fetcher/wind_obs.py --days 2 --dates "${{ github.event.inputs.dates }}"
         env:

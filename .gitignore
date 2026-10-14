@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 fetcher/test_screenshots/
+# S2 (14.10.2026): varselet ligger ikke i git - det publiseres via Pages-artifact (publiser.yml).
+# Lokalt: python fetcher/fetch.py (eller kopier fetcher/fixtures/forecast.json hit) og python fetcher/publish.py
+docs/data/forecast.json
+docs/data/oversikt.json
+docs/data/spots/
+docs/data/.publish-tmp/
