@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read      # S2: hente siste varsel (artifact)
 
 jobs:
   diagnose:
@@ -17,6 +18,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
+      - name: Hent siste varsel (S2 - varselet ligger ikke lenger i git)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash fetcher/hent_varsel.sh
       - name: Sammenlign BarentsWatch- og Open-Meteo-retning
         run: python fetcher/diagnose_bw_direction.py
         env:

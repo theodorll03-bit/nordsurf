@@ -1,0 +1,94 @@
+name: Publiser appen
+
+# S2 (ROADMAP oppgave S, Theodors ja 10.10.2026): GitHub Pages bygges fra en
+# artifact, ikke fra docs/ på main, og varselet committes ikke lenger.
+# Siden = docs/ fra main (alltid NYESTE main - samme som før, da Pages viste
+# main/docs) + siste varsel (artifact «varsel»: forecast.json uten hemmelige
+# spots, oversikt.json, spots/<id>.json - laget av fetch.py og publish.py).
+# Kjøres
+#   - av «Hent varsel» etter hver henting (samme kjøring, nytt varsel),
+#   - ved push til main som endrer docs/ (ny app, siste varsel),
+#   - manuelt fra Actions-fanen.
+# Læringsdataene (data/) ligger fortsatt i git - se STATUS.md (S2).
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**"]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      samme_kjoring:
+        description: "Varselet er lastet opp i samme kjøring (kalt fra «Hent varsel»)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+# én publisering av gangen; en ny venter på den som pågår (avbrytes ikke)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # alltid nyeste main: en publisering som startet før en push til docs/ skal
+      # ikke legge ut den gamle appen igjen (fysikk-kontrollør 14.10.2026)
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Varselet fra denne kjøringen
+        if: inputs.samme_kjoring
+        uses: actions/download-artifact@v4
+        with:
+          name: varsel
+          path: docs/data
+      - name: Siste publiserte varsel (fra main)
+        id: hent
+        if: ${{ !inputs.samme_kjoring }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if bash fetcher/hent_varsel.sh; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Fant ikke noe varsel å publisere - siden står som den er til neste «Hent varsel»"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Sjekk at varselet er med
+        id: klar
+        if: inputs.samme_kjoring || steps.hent.outputs.ok == 'true'
+        run: |
+          test -s docs/data/oversikt.json
+          test -n "$(ls docs/data/spots/*.json)"
+          python3 -c "import json; o = json.load(open('docs/data/oversikt.json')); print('Publiserer varselet fra', o['generated'], '(run', o.get('run'), ') med', len(o['spots']), 'spots')"
+      - if: steps.klar.outcome == 'success'
+        uses: actions/configure-pages@v5
+      - if: steps.klar.outcome == 'success'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        if: steps.klar.outcome == 'success'
+        uses: actions/deploy-pages@v4
+      - name: Varsle Theodor hvis publiseringen feilet
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -sS -H "Title: Nordsurf: publiseringen feilet" -H "Priority: high" -H "Tags: warning" \
+              -H "Click: $RUN_URL" -d "Siden ble ikke oppdatert. Se loggen: $RUN_URL" \
+              "https://ntfy.sh/$NTFY_TOPIC" || true
+          fi
