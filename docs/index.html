@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0A1822">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2F5F6">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A1822">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Nordsurf">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -13,56 +15,47 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
 <title>Nordsurf</title>
 <link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/kart.css">
+<link rel="stylesheet" href="css/ui.css">
 </head>
 <body>
-<div class="stage" id="stage">
-  <div class="kart" id="kart" aria-label="Kart over spots"></div>
-  <p class="loading" id="loading">Henter varselet …</p>
-  <header class="top-bar">
-    <div class="brand"><a class="wm" href="#/" id="wordmark" aria-label="Nordsurf, til kartet"></a><span class="upd" id="updated"></span></div>
-    <div class="top-btns">
-      <button type="button" class="icon-btn" id="btnLogg" aria-label="Logg økt" title="Logg økt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
-      <button type="button" class="icon-btn" id="btnLogger" aria-label="Logger" title="Logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg></button>
-      <button type="button" class="icon-btn" id="btnSettings" aria-label="Innstillinger" title="Innstillinger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.1 6.8l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg></button>
-    </div>
-    <div class="ctrl">
-      <div class="seg" role="group" aria-label="Område">
-        <button type="button" data-view="nord" aria-pressed="true">Troms</button>
-        <button type="button" data-view="lofoten" aria-pressed="false">Lofoten</button>
-        <button type="button" data-view="alle" aria-pressed="false">Alle</button>
-      </div>
-      <div class="tctl">
-        <button type="button" class="tpill" id="timePill" aria-expanded="false" aria-controls="timePanel"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.6V8l2.3 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="timePillT">Nå</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button type="button" class="backnow pc-back" id="backNow" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.6v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Tilbake til nå</button>
-      </div>
-    </div>
-    <div class="time-panel" id="timePanel" role="group" aria-label="Velg tidspunkt" hidden>
-      <div class="time">
-        <button type="button" class="play" id="play" aria-label="Spill av varselet"></button>
-        <div class="time-text"><div class="t"><span id="timeT"></span><span class="now-badge" id="timeNow">Nå</span></div><span class="l" id="timeL"></span></div>
-      </div>
-      <input type="range" class="range" id="tid" min="0" max="0" step="1" value="0" aria-label="Velg tidspunkt">
-      <div class="ticks" id="ticks" aria-hidden="true"></div>
-    </div>
-  </header>
-  <div class="legend" aria-label="Fargene">
-    <span class="r-1"><i></i>Dårlig</span><span class="r-2"><i></i>Ok</span><span class="r-3"><i></i>Bra</span><span class="r-4"><i></i>Veldig bra</span><span class="r-5"><i></i>Rått</span>
-    <span class="hint">Strekene på kartet viser vinden</span>
+<!-- Søk først, kartet er «Utforsk», spotsiden over fanen du kom fra (Theodor 14.10.2026, skissen i docs/design/spotside/skisse/). -->
+<a class="skip" href="#main">Hopp til innholdet</a>
+<header class="topbar pc-only">
+  <a class="wm" href="#hjem" id="wordmark" aria-label="Nordsurf, til Hjem"></a>
+  <div class="topsok">
+    <label class="sok-field" for="sokPC"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr">Søk etter spot eller område</span><input id="sokPC" type="search" placeholder="Søk etter spot eller område" autocomplete="off" aria-controls="sokDrop" aria-expanded="false"></label>
+    <div class="sok-drop" id="sokDrop" hidden></div>
   </div>
-  <section class="ark" id="ark" aria-label="Varsel">
-    <button type="button" class="ark-handle" aria-label="Vis mer av lista"><span></span></button>
-    <div id="banners"></div>
-    <button type="button" class="backnow m-back" id="backNowM" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.6v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Tilbake til nå</button>
-    <div class="answer" id="answer"></div>
-    <div class="ark-scroll">
-      <div class="page rows" id="list" data-page="home"></div>
-      <div class="page spot" id="spot" data-page="spot"></div>
-      <div class="page" data-page="side"><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></div>
-    </div>
+  <nav class="topnav" aria-label="Hovedmeny">
+    <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg>Hjem</a>
+    <a href="#utforsk" data-nav="utforsk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zm6 0v12m6-10v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Utforsk</a>
+    <a href="#logger" data-nav="logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>Logger</a>
+  </nav>
+</header>
+<main id="main">
+  <section class="view" id="viewHjem" data-view="hjem" aria-label="Hjem"></section>
+  <section class="view" id="viewSok" data-view="sok" aria-label="Søk" hidden></section>
+  <section class="view" id="viewUtforsk" data-view="utforsk" aria-label="Utforsk" hidden>
+    <div class="utforsk-top"><h1 class="h1">Utforsk</h1><div class="chips" id="utforskChips" role="group" aria-label="Utsnitt"></div></div>
+    <div class="kart" id="kart" aria-label="Kart over spots"></div>
+    <div class="chips dagchips" id="dagChips" role="group" aria-label="Dag"></div>
+    <div class="kartkort" id="kartKort" hidden></div>
+    <div class="utforsk-liste pc-only" id="utforskListe"></div>
   </section>
-</div>
-
+  <section class="view" id="viewSide" data-view="side" hidden><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></section>
+  <section class="view" id="viewSpot" data-view="spot" aria-label="Spot" hidden></section>
+</main>
+<nav class="tabbar pc-hide" aria-label="Hovedmeny">
+  <div class="tabs glass">
+    <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg><span>Hjem</span></a>
+    <a href="#utforsk" data-nav="utforsk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zm6 0v12m6-10v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Utforsk</span></a>
+    <a href="#logger" data-nav="logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg><span>Logger</span></a>
+  </div>
+  <a class="sokknapp glass" href="#sok" aria-label="Søk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></a>
+</nav>
+<p class="loading" id="loading" role="status">Henter varselet …</p>
+<div class="feil" id="feil" role="alert" hidden><h2>Fikk ikke hentet varselet</h2><p>Sjekk at du er på nett, og prøv igjen.</p><button type="button" class="primary" id="feilRetry">Prøv igjen</button></div>
+<span id="updated" hidden></span>
 <div class="scrim" id="scrim"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
   <div class="grabber" aria-hidden="true"></div>
@@ -115,13 +108,15 @@
   <div class="starpick" id="witnessPick"></div>
 </section>
 <div class="toast" id="toast" role="status"></div>
-
 <script src="js/strings.js"></script>
 <script src="js/wordmark.js"></script>
 <script src="js/explain.js"></script>
 <script src="js/app.js"></script>
 <script src="js/kart.js"></script>
-<script src="js/front.js"></script>
+<script src="js/minikart.js"></script>
+<script src="js/spot.js"></script>
+<script src="js/utforsk.js"></script>
+<script src="js/ui.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/auth.js"></script>
 </body>

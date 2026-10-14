@@ -1350,7 +1350,9 @@ async function start(){
     maybeShowWitnessPrompt();
   }catch(e){
     console.error(e);
-    $("#loading").textContent = STR.noData; $("#loading").hidden = false;
+    // HIG 12: «Fikk ikke hentet varselet» med «Prøv igjen» (index.html #feil)
+    $("#loading").hidden = true;
+    const f = $("#feil"); if(f) f.hidden = false; else { $("#loading").textContent = STR.noData; $("#loading").hidden = false; }
   }
 }
 // start() kalles fra js/front.js når kartmotoren er lastet (kart først, 09.10.2026).
