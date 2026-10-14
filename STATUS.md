@@ -1,5 +1,17 @@
 # Nordsurf: status
 
+## CI: test_display_only mot riktig merge-base (14.10.2026, Theodors oppgave) - FERDIG, på main
+
+**Feilen:** testene i CI hentet bare siste commit (`actions/checkout`, dybde 1) og main med `--depth=1`. Da fantes ikke den felles historikken, `git merge-base HEAD origin/main` feilet, og `test_display_only.py` falt tilbake til å sammenligne mot main sin NYESTE commit. Push-kjøringen på en designgren ble dermed rød hver gang henteren hadde pushet et nytt varsel etter grenens siste synk (PR #4, kjøring 38569044100).
+
+**Rettet (commit 2719b36):** `fetch-depth: 0` på checkout, og main hentes uten `--depth` i display-only-steget. Hele repoet er ca. 110 MB (11 s å klone).
+
+**Bevist med en ekte kjøring:** testgren laget fra main (f48d1d1), så kjørte henteren manuelt (`gh workflow run`, 64 s) og pushet et nytt varsel til main (c5cf8f9). Ny commit på testgrenen + utkast-PR #5: push-kjøringen sammenlignet mot grenens utgangspunkt **f48d1d1** (før rettelsen: mot main sin nyeste), pull_request-kjøringen mot c5cf8f9 (main da GitHub laget flettecommiten) - begge grønne. PR #5 lukket uten merge, testgrenen slettet.
+
+**Fysikk-kontrollør:** GODKJENT. Kan vurderes senere: `filter: blob:none` på checkout holder klonen liten når historikken vokser (ca. 8 varsel-commits i døgnet - S2 fjerner varselfila fra git uansett).
+
+**ROADMAP (commit f48d1d1):** to små punkter fra PR #4 lagt inn som lav prioritet under seksjon C - «Neste mulighet» ved manglende data 4 til 6 dager frem, og en test for at i dag-ringen flytter seg ved midnatt (sideklokka må flyttes i testen, ikke `currentHour` - kontrollørens retting).
+
 ## Oversikt (13.10.2026, Theodors oppdrag «hvor og når bør jeg surfe? på to sekunder») - PR #4 på gren `design/oversikt`; runde 2 (Theodors fem punkter) gjort 14.10.2026; Theodors ja: merges når CI er grønn
 
 **Rammen holdt:** bare visning - `fetcher/test_display_only.py` passerer (de 11 rating-/hentefilene, spots.json og forecast.json byte for byte like grenens utgangspunkt). Endret: docs/js/front.js, docs/js/kart.js, docs/css/kart.css, docs/index.html, docs/sw.js (hash), fetcher/test_design_browser.py, test.yml (skjermbilde-mappa). Skjermbilder før/etter i docs/design/oversikt/for/ og docs/design/oversikt/etter/ (dagens varsel, samme data begge veier).
