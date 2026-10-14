@@ -9,6 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Hele historikken (Theodor 14.10.2026): test_display_only sammenligner
+          # mot grenens felles utgangspunkt med main (merge-base). Med standard
+          # dybde 1 fantes ikke den felles historikken i CI, merge-base feilet, og
+          # testen sammenlignet mot main sin NYESTE commit - rødt på push-kjøringen
+          # hver gang henteren hadde pushet et nytt varsel etter grenens siste synk
+          # (PR #4, kjøring 38569044100). Hele repoet er ca. 110 MB (11 s å klone).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -33,7 +41,8 @@ jobs:
         run: python fetcher/test_disc_browser.py
       - name: Designrunde 1 - bare visning (rating-/hentefiler og forecast.json lik main)
         run: |
-          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+          # uten --depth: en grunn henting av main ville kuttet den felles historikken igjen
+          git fetch --no-tags origin main:refs/remotes/origin/main
           python fetcher/test_display_only.py
       - name: Kart først - nettleser-test av kartet, arket/panelet, spot, loggark, forklaring (Playwright + axe)
         run: timeout 330 python fetcher/test_design_browser.py
