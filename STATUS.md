@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## S2: publisering via Pages-artifact og delte datafiler (14.10.2026, ROADMAP oppgave S, Theodors ja 10.10.2026) - BYGGET på gren `s2/publisering`
+## S2: publisering via Pages-artifact og delte datafiler (14.10.2026, ROADMAP oppgave S, Theodors ja 10.10.2026) - MERGET (PR #6) og I DRIFT 14.10.2026 kl. 20:49Z
 
 **Rammen holdt:** rating og henter er urørt - `fetch.py` og de andre ti rating-/hentefilene er byte for byte like main (`test_display_only.py`), alle faste observasjoner uendret. Ingenting synlig er endret: nettlesertesten sjekker at forsiden er HELT lik med bare oversikten og med hele varselet (svarlinja, lista med uka, merkene, kantpilene, teksten på kartet - 24 timer × 3 utsnitt, mobil og PC).
 
@@ -25,7 +25,9 @@
 - forecast.json publiseres fortsatt i overgangen - kan fjernes fra artifacten når alle har fått ny app (sw.js oppdaterer seg selv ved neste åpning).
 - Ved hundrevis av spots blir oversikten for stor (626 KiB rå for 8 spots, anslagsvis 40 MB for 500): ROADMAP punkt 4 regnet med «nå + beste per dag», men svarlinja og avspillingen som kom 13.10 leser timene. Forsiden (S4) må da bruke dagsoppsummering - notert i ROADMAP.
 
-**Overgangen ved merge:** repo-innstillingen for GitHub Pages må byttes fra «gren main, /docs» til «GitHub Actions» (`gh api -X PUT repos/theodorll03-bit/nordsurf/pages -f build_type=workflow`). Rekkefølge: (1) bytt kilden, (2) merge, (3) kjør «Hent varsel» manuelt - den henter, lager filene, laster opp og publiserer; (4) sjekk den publiserte siden (oversikt.json, en spotfil, index.html). Den gamle siden står til første publisering er ferdig. Tilbake om noe svikter: bytt kilden tilbake til «gren main, /docs» og revert merge-commiten.
+**Overgangen - gjort 14.10.2026:** Theodor byttet Pages-kilden til «GitHub Actions», PR #6 merget kl. 20:46Z, «Hent varsel» kjørt manuelt (henting 66 s, publisering 16 s). Bekreftet på den publiserte siden: `oversikt.json` og `spots/unstad.json` fra samme kjøring (generated 20:00Z, run 409e48708735), `forecast.json` i overgangen, sw.js-hashen lik main, `index.html` med den nye appen. I en ekte nettleser: forsiden lastet bare oversikten (alle spots `_full=false`), svarlinja og 8 rader på plass; Unstad åpnet med nøyaktig én henting av `spots/unstad.json` (200 timer, 55 felt), fliser, 48 søyler og kilen tegnet, service worker registrert. Publiseringen som push-en til main utløste FØR første artifact fantes, hoppet riktig over («Fant ikke noe varsel å publisere», siden sto). «Tester» på main grønn. Varselet er ute av git (`docs/data/` finnes ikke i main-treet), læringsdataene committet som før («Nytt varsel (læringsdata)»).
+
+**Overgangen slik den var planlagt:** repo-innstillingen for GitHub Pages må byttes fra «gren main, /docs» til «GitHub Actions» (`gh api -X PUT repos/theodorll03-bit/nordsurf/pages -f build_type=workflow`). Rekkefølge: (1) bytt kilden, (2) merge, (3) kjør «Hent varsel» manuelt - den henter, lager filene, laster opp og publiserer; (4) sjekk den publiserte siden (oversikt.json, en spotfil, index.html). Den gamle siden står til første publisering er ferdig. Tilbake om noe svikter: bytt kilden tilbake til «gren main, /docs» og revert merge-commiten.
 
 **Fysikk-kontrollør (14.10.2026): MÅ RETTES (fire, tre i workflowene) - alle rettet:**
 - `hent_varsel.sh` tok nyeste artifact fra hvilken som helst gren - nå bare fra main, og publiseringsjobben i «Hent varsel» kjører bare på main.
