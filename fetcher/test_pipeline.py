@@ -741,6 +741,37 @@ finally:
     fetch.EXPOSURE_REPORT.clear()
 print("9d: med bryteren på: transfer_source «eksponering» (0,6) og lært kurve blandet inn (6 par: vekt 6/16) - av igjen etterpå")
 
+# ---------- 9e: skyggepunkt (Theodor 14.10.2026, Farstadsanden) - hentes og logges,
+# påvirker ALDRI ratingen. Fysikk-kontrollør 14.10.2026: ville fanget at nøkkelen
+# først havnet inne i barentswatch_point_near-objektet i spots.json. ----------
+_saved_bw_9e = sources.barentswatch_point
+def bw_shadow_mock(la, lo):
+    now2 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    hgt = 2.0 if abs(la - 62.986005) < 1e-5 else 0.9   # nålen (skyggepunktet) 2,0 m, punktet i bruk 0,9 m
+    return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": hgt, "dir": 300.0, "period": 12.0} for i in (0, 3, 6, 9)}
+sources.barentswatch_point = bw_shadow_mock
+try:
+    fs_cfg = next(s for s in spots_cfg if s["id"] == "farstadsanden")
+    assert fs_cfg.get("barentswatch_point_shadow") == {"lat": 62.986005, "lon": 7.147075}, "skyggepunktet skal ligge på spot-nivå i spots.json"
+    assert "barentswatch_point_shadow" not in fs_cfg["barentswatch_point_near"]
+    fetch.REPORT.clear()
+    with_sh = fetch.build_spot(json.loads(json.dumps(fs_cfg)), now9, {}, {}, "test-run-9e", exposure_baseline_real, {})
+    rows_sh = [r for r in fetch.REPORT if r[1] == "BarentsWatch skyggepunkt"]
+    no_cfg = json.loads(json.dumps(fs_cfg)); no_cfg.pop("barentswatch_point_shadow")
+    fetch.REPORT.clear()
+    without = fetch.build_spot(no_cfg, now9, {}, {}, "test-run-9e2", exposure_baseline_real, {})
+    assert not [r for r in fetch.REPORT if r[1] == "BarentsWatch skyggepunkt"]
+finally:
+    sources.barentswatch_point = _saved_bw_9e
+    fetch.REPORT.clear()
+sh_vals = [h["bw_height_shadow"] for h in with_sh["hours"] if h.get("bw_height_shadow") is not None]
+assert sh_vals and all(abs(v - 2.0) < 1e-9 for v in sh_vals), sh_vals[:3]
+assert all(h.get("bw_height_shadow") is None for h in without["hours"])
+assert rows_sh and "skyggepunkt snitt 2.00 m" in rows_sh[0][3] and "i bruk snitt 0.90 m" in rows_sh[0][3], rows_sh
+_k9e = ("t", "stars", "surf_height", "height", "height_source", "bw_height", "low_reason", "faded")
+assert [tuple(h.get(k) for k in _k9e) for h in with_sh["hours"]] == [tuple(h.get(k) for k in _k9e) for h in without["hours"]], "skyggepunktet skal ikke endre noe i ratingen"
+print(f"9e: skyggepunktet hentes ({len(sh_vals)} timer, 2,0 m mot 0,9 m i bruk), rad i kilderapporten, stjerner/surfehøyde/høyde uendret - OK")
+
 # ---------- 10: ROADMAP oppgave B - langtid 16 dager med sikkerhet ----------
 import longrange
 
