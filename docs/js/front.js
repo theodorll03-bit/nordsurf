@@ -1,16 +1,23 @@
-/* Nordsurf: forsiden «kart først» (09.10.2026, Theodors skisse i
-   docs/design/kart-forst/). Kartet er forsiden; arket (mobil: kikk/liste/
-   spot, dras med fingeren) eller panelet (PC) viser tid, «Beste neste 48
-   timer», lista med minigrafer og spotdetaljene. Logg, Logger og
-   Innstillinger er knapper i toppen, ikke faner. Alt fra designrunde 1 som
-   fortsatt brukes (forklaringsarkene, Detaljer-rutenettet, loggarket,
+/* Nordsurf: forsiden («kart først» 09.10.2026, «oversikt» 13.10.2026).
+
+   Theodors hovedregel (13.10.2026): appen skal svare på «hvor og når bør jeg
+   surfe?» på to sekunder - kartet støtter svaret, det er ikke svaret.
+   Arket (mobil) og panelet (PC) har svarlinja øverst («Neste gode økt: …»
+   eller «Ingen surf de neste 3 dagene i …»), så favorittene og lista med
+   ukeoversikt (7 dager, farget etter dagens beste rating i lyse timer).
+   Mobil: arket starter i halv høyde - dras ned for mer kart, opp for mer
+   liste. Tiden er en liten pille i topplinja («Nå» / «Tor 17:00»); trykk
+   åpner glidebryter og play, og står tiden ikke på nå, vises «Tilbake til nå».
+   Logg, Logger og Innstillinger er knapper i toppen. Alt fra designrunde 1
+   som fortsatt brukes (forklaringsarkene, Detaljer-rutenettet, loggarket,
    breakdown, advarslene) kommer fra app.js/explain.js.
 
    Ren visning: ingen rating regnes her - bare forecast.json sine felter. */
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
-  const S = { idx:0, mode:"peek", spotId:null, view:"nord", playing:false, maxIdx:0, h48:0, drag:null };
-  let timer = null, coastReady = false;
+  const S = { idx:0, mode:"home", sheet:"half", spotId:null, view:"nord", playing:false, timeOpen:false,
+              maxIdx:0, now:-1, w0:0, w1:0, w3:0, days:[], fullTop:110, back:null, others:null };
+  let timer = null, coastReady = false, justDragged = false;
 
   const COL = (st)=> (window.Kart ? Kart.COL : {})[Math.min(5, st||0)] || "#617480";
   const T = (i)=> DATA.spots[0].hours[i] ? new Date(DATA.spots[0].hours[i].t) : null;
@@ -18,6 +25,10 @@
   const stars = (h)=> h ? (h.stars||0) : 0;
   const lightOf = (h)=> window.Kart ? Kart.lightOf(h) : (h && h.light) || null;   // null = ukjent, aldri "dag"
   const lightWord = (l)=> l==="mørkt" ? "Mørkt" : l==="skumring" ? "Skumring" : l==="dag" ? "Dagslys" : "–";
+  // Brukbart lys = dag eller skumring (samme som henterens `daylight`, fetch.py) - ukjent lys teller ikke.
+  const usable = (h)=>{ const l = lightOf(h); return l==="dag" || l==="skumring"; };
+  // Tallet finnes (ikke «–»): samme regel som ratingWord() i app.js. Mangler er aldri 0.
+  const known = (h)=> !!h && !(!h.stars && !h.low_reason && h.surf_height==null);
   const tileHeight = (h)=>{
     // Flisa: "1,3–1,7 m" (kort form, får alltid plass). Ordet («Flatt»,
     // «Treffer ikke» ...) når surfehøyden er 0 eller low_reason mangler tall -
@@ -31,39 +42,90 @@
     return b!=null && b!==a ? `${a}–${b} m` : `${a} m`;
   };
   const markLabel = (h)=> stars(h) >= 1 && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : ratingWord(h);
-  const markAria = (s, h)=> `${s.name}, ${stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h)}`;
+  const rateAria = (h)=> !known(h) ? "tallet mangler" : stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h);
+  const markAria = (s, h)=> `${s.name}, ${rateAria(h)}`;
   const timeText = (i)=>{ const t = T(i); return t ? `${cap(relDay(t))} ${fmtHour.format(t)}:00` : ""; };
+  const pillText = (i)=>{ const t = T(i); return t ? `${cap(relDayShort(t))} ${fmtHour.format(t)}:00` : ""; };
   const starsRow = (st, big)=> starsSVG(st, 0, big);
   const fmtWd = new Intl.DateTimeFormat("nb-NO", {weekday:"short", timeZone:TZ});
+  // Tall i Geist Mono, ord i Geist (Theodor 13.10.2026): bare sifrene pakkes inn
+  const numHtml = (t)=> esc(t).replace(/\d[\d,.–]*/g, m=>`<span class="num">${m}</span>`);
+  const segName = (view)=>{ const b = document.querySelector(`.seg button[data-view="${view}"]`); return b ? b.textContent.trim() : view; };
+  const nowIdx = ()=> Math.max(0, Math.min(S.maxIdx, currentHour(DATA.spots[0])));
+  const DK = new Map();
+  const dkOf = (t)=>{ let k = DK.get(t); if(k===undefined){ k = dayKey(new Date(t)); DK.set(t, k); } return k; };
+  const isDesktop = ()=> matchMedia("(min-width: 900px)").matches;
+
+  /* ---------- tidsvinduer: alltid fra NÅTIMEN, ikke henterens kjøretid ---------- */
+  function refreshWindows(){
+    const n = nowIdx(); if(n===S.now) return false;
+    S.now = n; S.w0 = n;
+    const H = DATA.spots[0].hours, t0 = new Date(H[n].t).getTime();
+    const firstAt = (ms)=>{ for(let i=n+1;i<H.length;i++) if(new Date(H[i].t).getTime() >= ms) return i; return H.length; };
+    S.w1 = firstAt(t0 + 48*36e5);   // 48 timer: søylene i spotarket
+    S.w3 = firstAt(t0 + 72*36e5);   // «de neste 3 dagene»: svarlinja og sorteringen av lista
+    // ukeoversikten: 7 kalenderdager fra i dag, norsk tid (kl. 11 UTC er samme dato i Oslo hele året);
+    // to bokstaver per dag (Theodor 13.10.2026): ma ti on to fr lø sø
+    const [y, m, d] = dayKey(new Date()).split("-").map(Number);
+    S.days = Array.from({length:7}, (_, k)=>{
+      const at = new Date(Date.UTC(y, m-1, d+k, 11));
+      return {key: dayKey(at), letter: fmtDayShort.format(at).replace(/\.$/, "").slice(0, 2).toLowerCase(), name: fmtDay.format(at)};
+    });
+    return true;
+  }
 
   /* ---------- oppstart ---------- */
   async function start(data){
-    // tidsakse: glidebryteren dekker de første 7 døgnene, "48 timer" lista/søylene
+    // tidsakse: glidebryteren dekker de første 7 døgnene
     const H = data.spots[0].hours; const t0 = new Date(H[0].t).getTime();
     S.maxIdx = 0;
     H.forEach((h,i)=>{ const dt = new Date(h.t).getTime() - t0; if(dt <= 7*24*3600e3) S.maxIdx = i; });
-    // «Neste 48 timer» regnes fra NÅTIMEN (ikke henterens kjøretid, som kan
-    // ligge opptil 3-6 timer bak - fysikk-kontrollør 09.10.2026): w0..w1
-    S.w0 = Math.max(0, Math.min(S.maxIdx, currentHour(data.spots[0])));
-    const tw = new Date(H[S.w0].t).getTime();
-    S.w1 = H.length; H.forEach((h,i)=>{ if(i > S.w0 && S.w1===H.length && new Date(h.t).getTime() >= tw + 48*3600e3) S.w1 = i; });
+    S.now = -1; refreshWindows();
     S.idx = S.w0;
     let coast = window.__COAST__;
     if(!coast){ try{ coast = await (await fetch("geo/coast.json",{cache:"force-cache"})).json(); }catch(e){ coast = null; } }
     if(coast){
       Kart.init($("#kart"), data, coast, { onPick: (id)=>openSpot(id), hourOf: hourAt, labelOf: markLabel, ariaOf: markAria,
-        onCluster: ()=>{ S.view = "alle"; S.spotId = null; S.mode = isDesktop() ? "list" : "peek"; renderAll(); } });
+        isFav: (id)=>isFavSpot(id), noteOf: mapNote,
+        onCluster: ()=>{ S.view = "alle"; S.spotId = null; S.mode = "home"; renderAll(); } });
       coastReady = true;
     }
     $("#loading").hidden = true;
+    // eldre nettlesere uten overflow:clip: scenen og arket skal aldri scrolles (bare lista inni arket)
+    for(const el of [$("#stage"), $("#ark")]) el.addEventListener("scroll", ()=>{ if(el.scrollTop || el.scrollLeft){ el.scrollTop = 0; el.scrollLeft = 0; } });
     wireTop(); wireSheet(); wireTime();
     parseRoute();
-    if(isDesktop() && S.mode==="peek") S.mode = "list";
-    layout(false);
     renderAll();
     window.addEventListener("hashchange", ()=>{ parseRoute(); renderAll(); });
-    window.addEventListener("resize", ()=>layout(false));
-    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && S.mode==="spot") closeSpot(); });
+    window.addEventListener("resize", ()=>{ layout(false); if(S.timeOpen) positionPanel(); });
+    // nåtimen flytter seg mens appen står åpen eller ligger i bakgrunnen
+    document.addEventListener("visibilitychange", tickNow);
+    setInterval(tickNow, 60e3);
+    document.addEventListener("keydown", (e)=>{
+      if(e.key!=="Escape") return;
+      if(S.timeOpen){ setTimeOpen(false); return; }
+      if(S.mode==="spot") closeSpot();
+    });
+  }
+
+  function tickNow(){
+    // Ny time (eller appen kommer tilbake fra bakgrunnen): svarlinja, uka, sorteringen
+    // og «Nå» regnes fra den nye nåtimen. Sto tiden på nå, følger den med; har brukeren
+    // flyttet tiden, blir den stående. Lista beholder scrollen, og Logger/Innstillinger
+    // tegnes ikke på nytt (et skjema der skal ikke miste det som er skrevet).
+    if(document.hidden || !DATA || $("#ark").classList.contains("dragging")) return;
+    const was = S.now;
+    if(nowIdx() === was) return;
+    const follow = S.idx === was && !S.playing;
+    if(S.mode !== "home"){
+      refreshWindows(); if(follow) setIdx(S.now); else renderTime();
+      $("#banners").innerHTML = `${sampleBanner()}${staleBanner()}`;   // «gammelt varsel» følger klokka i alle moduser
+      return;
+    }
+    if(follow) S.idx = nowIdx();
+    const sc = $("#ark .ark-scroll"), top = sc.scrollTop;
+    renderAll();
+    sc.scrollTop = top;
   }
 
   /* ---------- ruter ---------- */
@@ -71,44 +133,64 @@
     let hash = "#/";
     if(S.mode==="spot" && S.spotId) hash = `#/spot/${S.spotId}`;
     else if(S.mode==="logger" || S.mode==="innstillinger") hash = `#/${S.mode}`;
-    else if(S.mode==="list") hash = "#/liste";
+    else if(S.mode==="home" && S.sheet==="full" && !isDesktop()) hash = "#/liste";
     if(location.hash !== hash) history.replaceState(null, "", hash);
   }
   function parseRoute(){
     const m = location.hash.match(/^#\/(spot\/([^/?#]+)|liste|logger|innstillinger)?/);
-    if(!m || !m[1]){ if(S.mode!=="peek" && S.mode!=="list") S.mode = "peek"; return; }
+    if(!m || !m[1]){ if(S.mode!=="home") S.mode = "home"; return; }
     if(m[2]){ const id = decodeURIComponent(m[2]); if(DATA.spots.some(s=>s.id===id)){ S.spotId = id; S.mode = "spot"; } }
-    else if(m[1]==="liste") S.mode = "list";
+    else if(m[1]==="liste"){ S.mode = "home"; S.sheet = "full"; }
     else S.mode = m[1];
   }
 
-  /* ---------- oppsett av kartets synlige område ---------- */
-  const isDesktop = ()=> matchMedia("(min-width: 900px)").matches;
-  function sheetY(){
-    // mobil: hvor langt ned arket er skjøvet (px) per tilstand
-    const H = window.innerHeight, top = 110, h = H - top;
-    if(S.mode==="list" || S.mode==="logger" || S.mode==="innstillinger") return 0;
-    if(S.mode==="spot") return Math.max(0, h - Math.min(620, Math.round(H*0.72)));
-    return Math.max(0, h - 300);  // kikk
+  /* ---------- arkets høyde (mobil) og kartets synlige område ---------- */
+  function mapPeek(){
+    // kartmodus: bare håndtaket, «Tilbake til nå» og svarlinja stikker opp
+    const ans = $("#answer");
+    return ans.hidden ? 140 : ans.offsetTop + ans.offsetHeight + 12;
+  }
+  function sheetTops(){
+    const H = window.innerHeight, full = S.fullTop;
+    const half = Math.max(full, Math.round(H * 0.5));   // Theodor 13.10.2026: arket starter i halv høyde
+    return { full, half, map: Math.max(half, H - mapPeek()), spot: Math.max(full, H - Math.min(620, Math.round(H*0.72))) };
+  }
+  function sheetTop(){
+    const t = sheetTops();
+    if(S.mode==="spot") return t.spot;
+    if(S.mode!=="home") return t.full;
+    return t[S.sheet] ?? t.half;
   }
   function layout(animate){
     if(!coastReady) return;
     const W = window.innerWidth, H = window.innerHeight;
-    const topBar = $(".top-bar").getBoundingClientRect();
+    const ark = $("#ark");
     if(isDesktop()){
+      ark.style.removeProperty("--sheet-y");
       Kart.setArea({x:0, y:0, w: W - 420 - 32, h: H}, animate);
-    } else {
-      const y = sheetY();
-      $("#ark").style.setProperty("--sheet-y", y+"px");
-      const visBottom = 110 + y;
-      const top = Math.round(topBar.bottom) + 8;   // under topplinja (merke, knapper, regionvalg)
-      Kart.setArea({x:0, y: top, w: W, h: Math.max(120, visBottom - top)}, animate);
+      return;
     }
+    const ctrl = $(".top-bar .ctrl").getBoundingClientRect();
+    S.fullTop = Math.round(ctrl.bottom) + 10;
+    ark.style.setProperty("--sheet-top", S.fullTop + "px");
+    const top = sheetTop();
+    ark.style.setProperty("--sheet-y", (top - S.fullTop) + "px");
+    const mapTop = Math.round(ctrl.bottom) + 8;   // under topplinja (merke, knapper, område, tid)
+    // sideOnly: kartets underkant er arket, midt på skjermen - kantpilene skal ligge
+    // langs sidekantene, ikke over arket (Theodor 13.10.2026)
+    Kart.setArea({x:0, y: mapTop, w: W, h: Math.max(120, top - mapTop), sideOnly: true}, animate);
   }
+  const kartMode = ()=> isDesktop() ? "peek" : (S.mode==="home" && S.sheet!=="full") ? "peek" : "list";   // «list»: kartet ligger bak arket
 
   /* ---------- hendelser ---------- */
   function wireTop(){
-    document.querySelectorAll(".seg button[data-view]").forEach(b=>b.onclick = ()=>{ S.view = b.dataset.view; S.spotId = null; S.mode = isDesktop() ? "list" : "peek"; if(coastReady) Kart.setView(S.view, true); renderAll(); });
+    document.querySelectorAll(".seg button[data-view]").forEach(b=>b.onclick = ()=>{
+      S.view = b.dataset.view; S.spotId = null; S.mode = "home";
+      // mobil: et nytt område skal synes - lista i full høyde senkes til halv (kartmodus står)
+      if(!isDesktop() && S.sheet==="full") S.sheet = "half";
+      if(coastReady) Kart.setView(S.view, true);
+      renderAll();
+    });
     $("#btnLogg").onclick = ()=> openSheet(S.spotId || DATA.spots[0].id, T(S.idx) || new Date());
     $("#btnLogger").onclick = ()=>{ S.mode = "logger"; renderAll(); };
     $("#btnSettings").onclick = ()=>{ S.mode = "innstillinger"; renderAll(); };
@@ -116,102 +198,139 @@
   function wireTime(){
     $("#play").onclick = ()=> setPlaying(!S.playing);
     $("#tid").oninput = (e)=>{ setIdx(+e.target.value); };
+    $("#timePill").onclick = ()=> setTimeOpen(!S.timeOpen);
+    document.querySelectorAll(".backnow").forEach(b=> b.onclick = ()=>{ if(!justDragged) backToNow(); });
+    // trykk utenfor panelet lukker det (avspillingen fortsetter)
+    document.addEventListener("pointerdown", (e)=>{ if(S.timeOpen && !e.target.closest("#timePanel, #timePill")) setTimeOpen(false); }, true);
+  }
+  function setTimeOpen(on){
+    S.timeOpen = on;
+    $("#timePanel").hidden = !on;
+    $("#timePill").setAttribute("aria-expanded", String(on));
+    renderTime();
+    if(on) positionPanel();
+  }
+  function positionPanel(){
+    // PC: panelet henger under pillen (aldri inn under sidepanelet); mobil: full bredde (CSS)
+    const p = $("#timePanel");
+    if(!isDesktop()){ p.style.removeProperty("--tp-left"); return; }
+    const bar = $(".top-bar").getBoundingClientRect(), pill = $("#timePill").getBoundingClientRect();
+    const maxLeft = window.innerWidth - (420 + 16) - 16 - 420 - bar.left;
+    p.style.setProperty("--tp-left", Math.max(0, Math.min(pill.left - bar.left, maxLeft)) + "px");
   }
   function setPlaying(on){
     if(timer){ clearInterval(timer); timer = null; }
     S.playing = on;
-    if(on) timer = setInterval(()=>{ setIdx(S.idx >= S.maxIdx ? S.w0 : S.idx + 1); }, 240);  // starter på nytt fra nåtimen
+    if(on) timer = setInterval(()=>{ setIdx(S.idx >= S.maxIdx ? nowIdx() : S.idx + 1); }, 240);  // starter på nytt fra nåtimen
     renderTime();
   }
   function setIdx(i){
     S.idx = Math.max(0, Math.min(S.maxIdx, i));
     if(coastReady) Kart.setHour(S.idx);
     renderTime();
-    // under avspilling oppdateres bare det som endrer seg: merker (i Kart), tid, og spotens tall
+    // under avspilling oppdateres bare det som endrer seg: merker (i Kart), tid, og ratingen nå
     if(S.mode==="spot") renderSpot(true);
-    else if(S.mode==="list" || S.mode==="peek") renderListLite();
+    else if(S.mode==="home") renderListLite();
   }
+  function backToNow(){ setPlaying(false); setIdx(nowIdx()); }
   function openSpot(id, idx){
     const s = DATA.spots.find(x=>x.id===id); if(!s) return;
     S.spotId = id; S.mode = "spot";
-    if(idx!=null) S.idx = idx;
+    // fra svarlinja: spoten åpnes på svarets time, og kartet viser samme time
+    if(idx!=null) S.idx = Math.max(0, Math.min(S.maxIdx, idx));
+    if(S.timeOpen) setTimeOpen(false);
     renderAll();
   }
-  function closeSpot(){ S.spotId = null; S.mode = isDesktop() ? "list" : "peek"; renderAll(); }
+  function closeSpot(){ S.spotId = null; S.mode = "home"; renderAll(); }
 
-  /* ---------- arket dras med fingeren (mobil) ---------- */
+  /* ---------- arket dras med fingeren (mobil): kart / halv / liste ---------- */
   function wireSheet(){
     const ark = $("#ark");
-    const handle = ark.querySelector(".ark-handle"), head = ark.querySelector(".ark-head");
-    let startY = 0, baseY = 0, curY = 0, moved = false;
-    const onDown = (e)=>{
-      if(isDesktop() || e.pointerType==="mouse" && e.target.closest("input,button:not(.ark-handle)")) return;
-      startY = e.clientY; baseY = sheetY(); curY = baseY; moved = false;
-      ark.classList.add("dragging");
-      (e.currentTarget).setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId);
-    };
-    const onMove = (e)=>{
-      if(!ark.classList.contains("dragging")) return;
-      const dy = e.clientY - startY; if(Math.abs(dy) > 4) moved = true;
-      const H = window.innerHeight - 110;
-      curY = Math.max(0, Math.min(H - 80, baseY + dy));
-      ark.style.setProperty("--sheet-y", curY+"px");
-    };
-    const onUp = ()=>{
-      if(!ark.classList.contains("dragging")) return;
+    const ZONES = ".ark-handle, #banners, #backNowM, #answer, #spot .spot-head";
+    let startY = 0, baseTop = 0, curTop = 0, moved = false, active = false;
+    ark.addEventListener("pointerdown", (e)=>{
+      if(isDesktop() || !e.target.closest(ZONES)) return;
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      startY = e.clientY; baseTop = sheetTop(); curTop = baseTop; moved = false; active = true;
+    });
+    window.addEventListener("pointermove", (e)=>{
+      if(!active) return;
+      const dy = e.clientY - startY;
+      if(!moved && Math.abs(dy) < 6) return;
+      if(!moved){ moved = true; ark.classList.add("dragging"); }
+      curTop = Math.max(S.fullTop, Math.min(window.innerHeight - 80, baseTop + dy));
+      ark.style.setProperty("--sheet-y", (curTop - S.fullTop) + "px");
+    });
+    const end = ()=>{
+      if(!active) return;
+      active = false;
+      if(!moved) return;
       ark.classList.remove("dragging");
-      if(!moved){ layout(true); return; }
-      // snapp til nærmeste tilstand
-      const H = window.innerHeight - 110;
-      const cands = [["list", 0], ["peek", Math.max(0, H - 300)]];
-      if(S.spotId) cands.push(["spot", Math.max(0, H - Math.min(620, Math.round(window.innerHeight*0.72)))]);
-      cands.sort((a,b)=>Math.abs(a[1]-curY) - Math.abs(b[1]-curY));
+      // et drag skal ikke også bli et trykk på det det startet på
+      justDragged = true; setTimeout(()=>{ justDragged = false; }, 60);
+      const t = sheetTops();
+      const cands = [["full", t.full], ["half", t.half], ["map", t.map]];
+      if(S.mode==="spot") cands.push(["spot", t.spot]);
+      cands.sort((a, b)=> Math.abs(a[1]-curTop) - Math.abs(b[1]-curTop));
       const next = cands[0][0];
-      if(next!==S.mode){ S.mode = next; if(next!=="spot") { /* beholder spotId for å kunne dra tilbake */ } renderAll(); }
-      else layout(true);
+      if(next==="spot"){ layout(true); return; }
+      S.spotId = null; S.mode = "home"; S.sheet = next;
+      renderAll();
     };
-    for(const el of [handle, head]){
-      el.addEventListener("pointerdown", onDown);
-      el.addEventListener("pointermove", onMove);
-      el.addEventListener("pointerup", onUp);
-      el.addEventListener("pointercancel", onUp);
-    }
-    handle.onclick = ()=>{ if(moved) return; S.mode = S.mode==="peek" ? "list" : "peek"; renderAll(); };
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    ark.addEventListener("click", (e)=>{ if(justDragged){ e.stopPropagation(); e.preventDefault(); } }, true);
+    ark.querySelector(".ark-handle").addEventListener("click", ()=>{
+      if(isDesktop()) return;
+      if(S.mode!=="home"){ S.spotId = null; S.mode = "home"; S.sheet = "half"; }
+      else S.sheet = S.sheet==="half" ? "full" : "half";
+      renderAll();
+    });
   }
 
   /* ---------- rendering ---------- */
   function renderAll(){
+    refreshWindows();
     setRoute();
+    const home = S.mode==="home", side = S.mode==="logger" || S.mode==="innstillinger";
     document.querySelectorAll(".seg button[data-view]").forEach(b=>b.setAttribute("aria-pressed", String(S.view===b.dataset.view && S.mode!=="spot")));
-    if(coastReady){
-      if(S.mode==="spot" && S.spotId) Kart.setSpot(S.spotId, "spot", true);
-      else { Kart.setSpot(null, (isDesktop() && S.mode==="list") ? "peek" : S.mode, true); Kart.setView(S.view, true); }  // PC: lista er i panelet, merkene står
-      Kart.setHour(S.idx);
-    }
-    layout(true);
-    for(const p of document.querySelectorAll(".page")) p.classList.toggle("on", p.dataset.page === (S.mode==="logger"||S.mode==="innstillinger" ? "side" : S.mode));
-    $("#ark").querySelector(".ark-handle").setAttribute("aria-label", S.mode==="peek" ? "Vis alle spots" : "Vis kartet");
-    $("#ark").classList.toggle("side", S.mode==="logger" || S.mode==="innstillinger");
-    $("#ark").dataset.mode = S.mode;
+    $("#stage").dataset.mode = S.mode;
+    for(const p of document.querySelectorAll(".page")) p.classList.toggle("on", p.dataset.page === (side ? "side" : S.mode));
+    const ark = $("#ark");
+    ark.classList.toggle("side", side);
+    ark.dataset.mode = S.mode; ark.dataset.sheet = home ? S.sheet : "";
+    ark.querySelector(".ark-handle").setAttribute("aria-label", home && S.sheet==="full" ? "Vis mer av kartet" : "Vis mer av lista");
     $("#banners").innerHTML = `${sampleBanner()}${staleBanner()}`;
-    renderTime();
-    if(S.mode==="peek") renderPeek();
-    else if(S.mode==="list") renderList();
+    $("#answer").hidden = !home;
+    if(home){ renderAnswer(); renderList(); }
     else if(S.mode==="spot") renderSpot(false);
     else if(S.mode==="logger"){ renderPageBar("Logger"); renderLogs(); }
     else if(S.mode==="innstillinger"){ renderPageBar("Innstillinger"); renderSettings(); }
+    if(coastReady){
+      if(S.mode==="spot" && S.spotId) Kart.setSpot(S.spotId, "spot", true);
+      else { Kart.setSpot(null, kartMode(), true); Kart.setView(S.view, true); }
+      Kart.setHour(S.idx);
+    }
+    renderTime();
+    layout(true);
     if(S.mode!=="spot") $("#ark .ark-scroll").scrollTop = 0;
   }
   function renderPageBar(title){
     $("#pageBar").innerHTML = `<button type="button" class="back" id="pageBack"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M8.5 3 4.5 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Kartet</button>`;
-    $("#pageBack").onclick = ()=>{ S.mode = isDesktop() ? "list" : "peek"; renderAll(); };
+    $("#pageBack").onclick = ()=>{ S.mode = "home"; renderAll(); };
   }
   function renderTime(){
-    const t = T(S.idx);
     const f = coastReady ? Kart.focusSpot() : null;
     const h = f ? hourAt(f.s, S.idx) : hourAt(DATA.spots[0], S.idx);
+    const atNow = S.idx === nowIdx();
+    $("#timePillT").textContent = atNow ? "Nå" : pillText(S.idx);
+    const pill = $("#timePill");
+    pill.classList.toggle("away", !atNow);
+    pill.setAttribute("aria-label", `Tidspunkt: ${atNow ? "nå" : timeText(S.idx)}. ${S.timeOpen ? "Trykk for å lukke" : "Trykk for å velge tid og spille av"}`);
+    const back = !atNow && (S.mode==="home" || S.mode==="spot");
+    document.querySelectorAll(".backnow").forEach(b=>{ b.hidden = !back; });
     $("#timeT").textContent = timeText(S.idx);
-    $("#timeNow").hidden = S.idx !== currentHour(DATA.spots[0]);
+    $("#timeNow").hidden = !atNow;
     $("#timeL").textContent = lightWord(lightOf(h));
     const tid = $("#tid"); tid.max = S.maxIdx; if(+tid.value !== S.idx) tid.value = S.idx;
     tid.setAttribute("aria-valuetext", timeText(S.idx));
@@ -224,56 +343,223 @@
       H.forEach((hh,i)=>{ if(i > S.maxIdx) return; const d = dayKey(new Date(hh.t)); if(last!==null && d!==last && i>0) out += `<span style="left:calc(12px + (100% - 24px) * ${(i/S.maxIdx).toFixed(4)})">${esc(fmtWd.format(new Date(hh.t)).replace(/\.$/,""))}</span>`; last = d; });
       $("#ticks").innerHTML = out; $("#ticks").dataset.done = "1";
     }
+    // «Tilbake til nå» i arket (mobil) endrer hvor mye som stikker opp i kartmodus
+    if(back !== S.back){ S.back = back; if(coastReady && !isDesktop()) layout(true); }
   }
 
-  /* beste neste 48 timer: høyeste stjerner i lyse timer */
-  function best48(){
-    let best = null;
-    DATA.spots.forEach(s=>{ for(let i=S.w0;i<S.w1;i++){ const h = s.hours[i]; if(!h || lightOf(h)==="mørkt") continue; const st = stars(h); if(!best || st > best.st) best = {s, i, st}; } });
-    if(!best || best.st < 1) return null;
-    let j = best.i; while(j+1 < S.w1 && stars(best.s.hours[j+1])===best.st && lightOf(best.s.hours[j+1])!=="mørkt") j++;
-    const a = new Date(best.s.hours[best.i].t), b = new Date(best.s.hours[j].t);
-    return { ...best, when: `${cap(relDay(a))} ${fmtHour.format(a)}–${String((+fmtHour.format(b)+1)%24).padStart(2,"0")} · ${best.s.area||""}` };
+  /* ---------- svarlinja: «hvor og når bør jeg surfe?» ---------- */
+  function regionSpots(view){
+    // «området i utsnittet»: de samme spotene som kartets utsnitt rammer inn;
+    // «Alle» er alle spots, også de som ligger utenfor kystkartet
+    if(view==="alle" || !coastReady) return DATA.spots;
+    const ids = Kart.viewSpotIds(view);
+    return DATA.spots.filter(s=>ids.has(s.id));
   }
-  function bestCard(){
-    const b = best48(); if(!b) return `<div class="note">${esc(STR.bestNone)}</div>`;
-    const h = b.s.hours[b.i];
-    return `<button type="button" class="best r-${b.st} rise" data-spot="${b.s.id}" data-idx="${b.i}" aria-label="Beste neste 48 timer: ${esc(b.s.name)}, ${esc(STR.starsAria(b.st, 0))}">
-      <span class="l"><span class="k">Beste neste 48 timer</span><br><span class="n">${esc(b.s.name)}</span><br><span class="w">${esc(b.when)}</span></span>
-      <span class="r">${starsRow(b.st)}<span class="h">${esc(heightRangeText(h))}</span></span></button>`;
+  function sessionAt(s, i){
+    // fra time i og fremover så lenge stjernene er de samme og lyset brukbart
+    // (samme regel som det gamle «Beste»-kortet) - spoten åpnes på time i
+    const st = stars(s.hours[i]); let j = i;
+    while(j+1 <= S.maxIdx && s.hours[j+1] && usable(s.hours[j+1]) && stars(s.hours[j+1])===st) j++;
+    return {s, i, j, st};
   }
-  function renderPeek(){
-    $("#peek").innerHTML = `${bestCard()}<button type="button" class="btn-row" id="openList"><span>Alle spots</span><span class="m">${DATA.spots.length} steder<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 9 7 5.5 10.5 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>`;
-    $("#openList").onclick = ()=>{ S.mode = "list"; renderAll(); };
-    wireBest($("#peek"));
+  function firstHour(spots, lo, hi, minSt){
+    // første (tidligste) time med minst minSt stjerner i brukbart lys; samme
+    // time hos flere spots: flest stjerner, så favoritt, så rekkefølgen i spots.json
+    for(let i=lo; i<hi; i++){
+      let best = null;
+      for(const s of spots){
+        const h = s.hours[i]; if(!h || !usable(h) || stars(h) < minSt) continue;
+        const c = {s, st: stars(h), fav: isFavSpot(s.id)};
+        if(!best || c.st > best.st || (c.st===best.st && c.fav && !best.fav)) best = c;
+      }
+      if(best) return sessionAt(best.s, i);
+    }
+    return null;
   }
-  function wireBest(root){ const b = root.querySelector(".best"); if(b) b.onclick = ()=>openSpot(b.dataset.spot, +b.dataset.idx); }
-  function rowsSorted(){
-    return DATA.spots.map(s=>{ let mx = 0; for(let i=S.w0;i<S.w1;i++) mx = Math.max(mx, stars(s.hours[i])); return {s, mx}; }).sort((a,b)=>b.mx - a.mx);
+  function answer(){
+    // Theodor 13.10.2026: finnes en time med 2 stjerner eller mer i dagslys de
+    // neste 3 dagene (72 t fra nå) i området i utsnittet, er det neste gode økt;
+    // ellers «Ingen surf …» og den neste dagen med stjerner, hvis den finnes
+    const spots = regionSpots(S.view), hi = Math.min(S.w3, S.maxIdx + 1);
+    const good = firstHour(spots, S.w0, hi, 2);
+    if(good) return {kind:"good", ...good};
+    return {kind:"none", next: firstHour(spots, S.w0, S.maxIdx + 1, 1), gaps: windowGaps(spots, S.w0, hi)};
   }
-  function rowHtml(s, k){
+  function windowGaps(spots, lo, hi){
+    // Grunnregelen (fysikk-kontrollør 13.10.2026): «Ingen surf …» er en påstand om
+    // HELE vinduet. Den holder ikke hvis en time som kan være lys mangler tallet,
+    // en time med 2 stjerner eller mer har ukjent lys, eller varselet slutter før
+    // 72 timer - da sier svarlinja i tillegg at noen timer mangler data.
+    if(hi < S.w3 || S.w3 >= DATA.spots[0].hours.length) return true;
+    for(const s of spots) for(let i=lo; i<hi; i++){
+      const h = s.hours[i];
+      if(!h) return true;
+      const l = lightOf(h);
+      if(l==="mørkt") continue;
+      if(!known(h)) return true;                    // lys eller ukjent lys, og tallet mangler
+      if(l==null && stars(h) >= 2) return true;     // stjerner, men vi vet ikke om det er lyst
+    }
+    return false;
+  }
+  function spanText(s, i, j){
+    // «17–19»; går økta over midnatt (midnattssol), står sluttdagen med: «22–fre 03»
+    const a = new Date(s.hours[i].t), b = new Date(s.hours[j].t);
+    const end = String((+fmtHour.format(b) + 1) % 24).padStart(2, "0");
+    if(dkOf(s.hours[i].t) === dkOf(s.hours[j].t)) return `${fmtHour.format(a)}–${end}`;
+    return `${fmtHour.format(a)}–${relDayShort(new Date(b.getTime() + 36e5))} ${end}`;
+  }
+  const CHEV = `<svg class="ans-chev" viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  function answerHtml(){
+    const a = answer();
+    if(a.kind==="good"){
+      const day = cap(relDay(new Date(a.s.hours[a.i].t))), span = spanText(a.s, a.i, a.j);
+      const aria = `Neste gode økt: ${a.s.name}, ${day} ${span}, ${STR.starsAria(a.st, 0)}. Trykk for å åpne`;
+      return `<button type="button" class="ans r-${Math.min(5, a.st)}" id="ansBtn" data-spot="${esc(a.s.id)}" data-idx="${a.i}" aria-label="${esc(aria)}">
+        <span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n">${esc(a.s.name)}</span><span class="ans-w">${esc(day)} ${numHtml(span)}${a.s.area ? ` · ${esc(a.s.area)}` : ""}</span></span>
+        <span class="ans-r">${starsRow(a.st)}${CHEV}</span></button>`;
+    }
+    // Theodor 13.10.2026 (svar på kontrollørens spørsmål): «Ingen gode økter i [område] de neste 3 dagene»
+    const head = `Ingen gode økter ${S.view==="alle" ? "på noen spot" : `i ${segName(S.view)}`} de neste 3 dagene`;
+    // mangler noen timer data, står det rett under påstanden (stiplet = mangler, som i uka)
+    const q = a.gaps ? `<span class="ans-q"><i aria-hidden="true"></i>Noen timer mangler data</span>` : "";
+    const headAria = head + (a.gaps ? ", men noen timer mangler data" : "");
+    if(!a.next) return `<div class="ans none r-0" id="ansBtn"><span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n none">${esc(head)}</span>${q}</span></div>`;
+    const n = a.next, where = `${relDay(new Date(n.s.hours[n.i].t))} · ${n.s.name}`;
+    const aria = `${headAria}. Neste mulighet: ${where}, ${STR.starsAria(n.st, 0)}. Trykk for å åpne`;
+    return `<button type="button" class="ans none r-0" id="ansBtn" data-spot="${esc(n.s.id)}" data-idx="${n.i}" aria-label="${esc(aria)}">
+      <span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n none">${esc(head)}</span>${q}<span class="ans-w">Neste mulighet: <span class="nw">${esc(where)} ${miniStars(n.st)}</span></span></span>
+      <span class="ans-r">${CHEV}</span></button>`;
+  }
+  function miniStars(st){
+    // bare de fylte stjernene, i ratingfargen - til tekstlinjer der fem stjerner ikke får plass
+    let out = ""; for(let k=0;k<st;k++) out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="st" d="${STAR_PATH}"/></svg>`;
+    return `<span class="stars mini r-${Math.min(5, st)}" aria-hidden="true">${out}</span>`;
+  }
+  function renderAnswer(){
+    $("#answer").innerHTML = answerHtml();
+    const b = $("#answer").querySelector("button.ans");
+    if(b) b.onclick = ()=>{ if(!justDragged) openSpot(b.dataset.spot, +b.dataset.idx); };
+  }
+
+  /* ---------- teksten på kartet når hele utsnittet er 0 stjerner ---------- */
+  function mapNote(){
+    if(S.mode!=="home") return null;
+    const spots = regionSpots(S.view); if(!spots.length) return null;
+    let top = 0;
+    for(const s of spots){
+      const h = hourAt(s, S.idx);
+      if(!known(h) || stars(h) >= 1) return null;   // et tall som mangler gir ingen påstand
+      const k = ZERO_WORDS.indexOf(ratingWord(h));
+      top = (k < 0 || top < 0) ? -1 : Math.max(top, k);
+    }
+    // samme regel som klyngepila: «Flatt» bare når alle er ekte flate
+    const word = top < 0 ? "Ingen surf" : top===1 ? "Bare smått" : "Flatt";
+    const where = S.view==="alle" ? "på alle spots" : `i hele ${segName(S.view)}`;
+    const t = T(S.idx);
+    const when = S.idx===nowIdx() ? "nå" : `${relDayShort(t)} ${fmtHour.format(t)}:00`;
+    return `${word} ${where} ${when}`;
+  }
+
+  /* ---------- ukeoversikten: 7 dager, beste rating i lyse timer ---------- */
+  function dayBest(s, day){
+    // i dag: bare timene fra nå. «dark»: kjent mørke hele resten av dagen;
+    // «miss»: tallet mangler (stiplet ramme) - aldri tolket som 0 stjerner.
+    // Ukjent lys er ikke mørkt: en time med ukjent lys og stjerner eller uten
+    // tall gjør dagen usikker, og en dag med bare ukjent lys er «miss».
+    let any = false, light = false, unk = false, miss = false, best = -1;
+    for(let i = S.w0; i < s.hours.length; i++){
+      const h = s.hours[i], k = dkOf(h.t);
+      if(k > day.key) break;
+      if(k !== day.key) continue;
+      any = true;
+      const l = lightOf(h);
+      if(l==null){ unk = true; if(!known(h) || stars(h) >= 1) miss = true; continue; }
+      if(l!=="dag" && l!=="skumring") continue;
+      light = true;
+      if(!known(h)){ miss = true; continue; }
+      best = Math.max(best, stars(h));
+    }
+    if(!any) return {cls:"miss", st:null};
+    if(best >= 1) return {cls:`r-${Math.min(5, best)}`, st:best};
+    if(miss || (!light && unk)) return {cls:"miss", st:null};
+    if(!light) return {cls:"dark", st:null};
+    return {cls:"r-0", st:0};
+  }
+  function weekText(week){
+    const st = week.filter(w=>w.st>=1).map(w=>`${w.d.name} ${w.st}`);
+    const miss = week.filter(w=>w.cls==="miss").map(w=>w.d.name);
+    return (st.length ? `Stjerner i uka: ${st.join(", ")}` : "Ingen stjerner i uka") + (miss.length ? `. Mangler data: ${miss.join(", ")}` : "");
+  }
+
+  /* ---------- lista: favoritter øverst, så beste de neste 3 dagene ---------- */
+  function best3(s){
+    let mx = -1;
+    for(let i=S.w0; i<S.w3 && i<s.hours.length; i++){ const h = s.hours[i]; if(usable(h) && known(h)) mx = Math.max(mx, stars(h)); }
+    return mx;
+  }
+  function listSections(){
+    // Theodor 13.10.2026: favoritter alltid øverst (uansett region), så spotene i
+    // valgt region, så «Andre områder». «Alle» viser alle sortert som før. Innenfor
+    // hver gruppe: beste rating de neste 3 dagene, så rekkefølgen i spots.json.
+    const order = (arr)=> arr.map((s, k)=>({s, k, b: best3(s)})).sort((x, y)=> y.b - x.b || x.k - y.k).map(x=>x.s);
+    const favs = order(DATA.spots.filter(s=>isFavSpot(s.id)));
+    const rest = DATA.spots.filter(s=>!isFavSpot(s.id));
+    if(S.view==="alle") return {favs, own: order(rest), others: []};
+    const ids = new Set(regionSpots(S.view).map(s=>s.id));
+    return {favs, own: order(rest.filter(s=>ids.has(s.id))), others: order(rest.filter(s=>!ids.has(s.id)))};
+  }
+  // «Andre områder»: lukket som standard på mobil, åpen på PC - til brukeren trykker
+  const othersOpen = ()=> S.others ?? isDesktop();
+  // Kolonnen til høyre gjelder valgt time - «nå», eller tidspunktet når tiden er flyttet
+  const whenLabel = ()=>{ if(S.idx===nowIdx()) return "nå"; const t = T(S.idx); return t ? `${relDayShort(t)} ${fmtHour.format(t)}:00` : ""; };
+  const rowAria = (s, h, wt)=> `Åpne ${s.name}. ${cap(whenLabel())}: ${rateAria(h)}. ${wt}`;
+  function rtHtml(h){
+    // ratingen i valgt time: stjerner og høyde, eller ordet ved 0 stjerner
+    const st = stars(h);
+    return `${st ? starsRow(st) : ""}<span class="lb">${numHtml(markLabel(h))}</span>`;
+  }
+  function rowHtml(s){
     const h = hourAt(s, S.idx); const st = stars(h);
-    let spark = "";
-    for(let i=S.w0;i<S.w1;i+=2){ const x = s.hours[i]; const s2 = stars(x); spark += `<i style="height:${s2 ? 6 + s2*4 : 2}px;${s2?`--sc:${COL(s2)}`:""}"></i>`; }
     const kj = kjText(h);
-    return `<button type="button" class="row r-${st}${st?" lit":""} rise" data-spot="${s.id}" style="animation-delay:${k*40}ms" aria-label="Åpne ${esc(s.name)}: ${esc(markAria(s, h))}">
-      <span class="dot"></span>
-      <span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}${isDesktop() && kj ? ` · ${esc(kj)}` : ""}</small></span>
-      <span class="spark" aria-hidden="true">${spark}</span>
-      <span class="rt"><span class="lb">${esc(markLabel(h))}</span><small>${esc(windShorter(h))}</small></span></button>`;
+    const week = S.days.map(d=>({d, ...dayBest(s, d)}));
+    const wt = weekText(week);
+    return `<button type="button" class="row r-${Math.min(5, st)}${st?" lit":""}" data-spot="${esc(s.id)}" data-week="${esc(wt)}" aria-label="${esc(rowAria(s, h, wt))}">
+      <span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}${isDesktop() && kj ? ` · ${numHtml(kj)}` : ""}</small></span>
+      <span class="week" aria-hidden="true">${week.map((w, k)=>`<span class="wd${k===0 ? " today" : ""}" data-day="${w.d.key}"><i class="wc ${w.cls}"></i><b>${esc(w.d.letter)}</b></span>`).join("")}</span>
+      <span class="rt">${rtHtml(h)}</span></button>`;
   }
+  const CHEV_DOWN = `<svg class="rh-chev" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   function renderList(){
-    const rows = rowsSorted();
-    $("#list").innerHTML = `${isDesktop() ? bestCard() : ""}<div class="rows-head"><span>Alle spots</span><small>Neste 48 timer</small></div>${rows.map((r,k)=>rowHtml(r.s, k)).join("")}`;
+    const {favs, own, others} = listSections();
+    let out = "", first = true;
+    // første overskrift får kolonnetittelen over ratingen («nå» / tidspunktet)
+    const head = (label)=>{ const col = first ? `<span class="col-now" id="colNow">${esc(whenLabel())}</span>` : ""; first = false; return `<div class="rows-head"><span class="rh-l">${esc(label)}</span>${col}</div>`; };
+    if(favs.length) out += head("Favoritter") + favs.map(rowHtml).join("");
+    if(S.view==="alle") out += head(favs.length ? "Andre spots" : "Alle spots") + own.map(rowHtml).join("");
+    else {
+      if(own.length || first) out += head(segName(S.view)) + own.map(rowHtml).join("");
+      if(others.length){
+        const open = othersOpen();
+        out += `<button type="button" class="rows-head rows-toggle" id="othersBtn" aria-expanded="${open}" aria-controls="othersRows"><span class="rh-l">Andre områder</span><span class="rh-n">${others.length} ${others.length===1 ? "spot" : "spots"}</span>${CHEV_DOWN}</button>
+          <div class="rows-group" id="othersRows"${open ? "" : " hidden"}>${others.map(rowHtml).join("")}</div>`;
+      }
+    }
+    $("#list").innerHTML = out;
     $("#list").querySelectorAll(".row").forEach(b=>b.onclick = ()=>openSpot(b.dataset.spot));
-    wireBest($("#list"));
+    const ob = $("#othersBtn");
+    if(ob) ob.onclick = ()=>{
+      const open = ob.getAttribute("aria-expanded") !== "true";
+      S.others = open; ob.setAttribute("aria-expanded", String(open)); $("#othersRows").hidden = !open;
+    };
   }
   function renderListLite(){
-    // under avspilling: bare etikett, farge og vind per rad
+    // under avspilling: bare ratingen i valgt time per rad - uka og rekkefølgen regnes fra nå
+    const col = $("#colNow"); if(col) col.textContent = whenLabel();
     $("#list").querySelectorAll(".row").forEach(b=>{
       const s = DATA.spots.find(x=>x.id===b.dataset.spot); const h = hourAt(s, S.idx); const st = stars(h);
-      b.className = `row r-${st}${st?" lit":""}`;
-      b.querySelector(".lb").textContent = markLabel(h); b.querySelector(".rt small").textContent = windShorter(h);
+      b.className = `row r-${Math.min(5, st)}${st?" lit":""}`;
+      b.querySelector(".rt").innerHTML = rtHtml(h);
+      b.setAttribute("aria-label", rowAria(s, h, b.dataset.week));
     });
   }
 
@@ -417,9 +703,16 @@
       <button type="button" class="tap" data-explain="wind" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:1px"><span class="k">Vind</span><span class="v">${esc(wind)}</span></button></div>`;
   }
 
-  function go(mode){ S.mode = mode; renderAll(); }
+  function go(mode){
+    // «list»/«peek» fra før: hjemmesiden med arket helt oppe / i halv høyde
+    if(mode==="list"){ S.mode = "home"; S.sheet = "full"; }
+    else if(mode==="peek" || mode==="half"){ S.mode = "home"; S.sheet = "half"; }
+    else if(mode==="map"){ S.mode = "home"; S.sheet = "map"; }
+    else S.mode = mode;
+    renderAll();
+  }
   function refresh(){ if(DATA) renderAll(); }
-  window.Front = { start, openSpot, setIdx, go, refresh, state: S };
+  window.Front = { start, openSpot, setIdx, go, refresh, backToNow, state: S };
   // app.js sin start() (global) kjøres først nå, når kartmotoren og fronten er lastet
   window.start();
 })();

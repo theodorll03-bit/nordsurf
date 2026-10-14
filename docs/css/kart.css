@@ -35,8 +35,10 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 /* ---------- kart ---------- */
-.stage{position:fixed;inset:0;overflow:hidden;background:#0A1822}
-.kart{position:absolute;inset:0;overflow:hidden}
+/* overflow:clip, ikke bare hidden: en hidden-flate kan fortsatt scrolles av fokus/scrollIntoView
+   (arket stikker ut under skjermen), og da forskyves topplinja og hele oppsettet */
+.stage{position:fixed;inset:0;overflow:hidden;overflow:clip;background:#0A1822}
+.kart{position:absolute;inset:0;overflow:hidden;overflow:clip}
 .map-layer{position:absolute;left:0;top:0;width:1000px;height:844px;transform-origin:0 0}
 .map-layer .grid line{stroke:rgba(160,205,220,.07);stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:2 6}
 .map-layer .coast-glow{fill:none;stroke:rgba(120,210,225,.10);stroke-width:4;vector-effect:non-scaling-stroke;stroke-linejoin:round}
@@ -51,7 +53,9 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .wind{position:absolute;left:50%;top:50%;width:2000px;height:2000px;margin:-1000px 0 0 -1000px;pointer-events:none;opacity:0;transition:transform 1.4s cubic-bezier(.2,.8,.2,1),opacity .8s ease;will-change:transform}
 .wind svg{display:block}
 .wind line{stroke-linecap:round;animation-name:ns-blow;animation-timing-function:linear;animation-iteration-count:infinite}
-.night{position:absolute;inset:0;pointer-events:none;background:#020910;opacity:0;transition:opacity .8s ease}
+/* kartets nattlag - id, ikke klassen .night: søylene i spotarket bruker klassen «night» for mørke timer,
+   og den gamle regelen gjorde dem usynlige og umulige å trykke på (opacity 0, pointer-events none) */
+#nightLayer{position:absolute;inset:0;pointer-events:none;background:#020910;opacity:0;transition:opacity .8s ease}
 .markers{position:absolute;inset:0;pointer-events:none}
 
 /* merker */
@@ -65,7 +69,16 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .mk.lit .mk-dot{box-shadow:0 0 0 3px rgba(10,24,34,.9),0 0 16px 3px var(--mc)}
 .mk.sel .mk-dot{width:14px;height:14px}
 .mk-dot.small{width:8px;height:8px;box-shadow:none}
-.lead{position:absolute;left:11px;top:11px;height:1px;background:rgba(234,242,244,.45);transform-origin:0 50%;pointer-events:none}
+/* rolig kart (13.10.2026): uten lapp er merket bare prikken, midt i en 44 px trykkflate;
+   0 stjerner = liten grå prikk */
+.mk.bare{width:44px;margin-left:-22px;justify-content:center}
+.mk.bare .mk-pill{display:none}
+.mk.bare.r-0:not(.sel) .mk-dot{width:7px;height:7px;box-shadow:0 0 0 2px rgba(10,24,34,.85)}
+/* tallet mangler: stiplet, hul prikk (samme tegn for «mangler» som i ukeoversikten) - aldri den grå 0-prikken */
+.mk.miss .mk-dot,.mk-edge.miss .mk-dot{background:transparent;border:1.5px dashed rgba(234,242,244,.7);box-sizing:border-box;box-shadow:none}
+.mk.bare.miss:not(.sel) .mk-dot{width:10px;height:10px;box-shadow:none}
+/* favoritt: nøytral stjerne, så den ikke leses som en rating (gul = 2 stjerner) */
+.mk.fav .mk-name::before{content:"★";margin-right:5px;color:#C5D3D8;font-size:11px}
 .mk-edge.cluster .mk-name{font-size:12px}
 .rip{position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;border:2px solid var(--mc);box-sizing:border-box;opacity:0;pointer-events:none}
 .mk.lit .rip{animation:ns-ripple var(--pulse,2.6s) cubic-bezier(.2,.6,.3,1) infinite}
@@ -79,8 +92,11 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .mk.vert .mk-pill{position:absolute;left:22px;top:22px;transform:translate(var(--lx,0px),var(--ly,0px))}
 .mk.vert:hover .mk-pill{transform:translate(var(--lx,0px),var(--ly,0px)) scale(1.07)}
 .mk-name{font-weight:600;font-size:13px;letter-spacing:-.01em;color:var(--ink)}
-.mk-label{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted)}
+/* én skrift i lappen: navn og ord i Geist, bare tall i Geist Mono (.num) */
+.mk-label{font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--muted)}
+.mk-label .num{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
 .mk.lit .mk-label,.mk-edge.lit .mk-label{color:var(--mc)}
+.map-note{position:absolute;left:0;top:0;margin:0;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;color:#C5D3D8;background:rgba(10,24,34,.62);border:1px solid rgba(255,255,255,.07);white-space:nowrap;pointer-events:none;z-index:2;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .mk-edge{height:44px;padding:0 14px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(10,24,34,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .mk-edge .mk-name{font-size:12px}
 .mk-arrow{flex:none}
@@ -88,8 +104,21 @@ body{margin:0;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:an
 .mk:focus-visible .mk-pill,.mk-edge:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
 /* ---------- topp ---------- */
-.top-bar{position:absolute;left:0;right:0;top:0;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 0;display:grid;grid-template-columns:1fr auto;grid-template-areas:"brand btns" "seg seg";gap:10px 10px;pointer-events:none;z-index:6}
-.brand{grid-area:brand}.top-btns{grid-area:btns;display:flex;align-items:center;gap:8px}.seg{grid-area:seg;justify-self:start}
+.top-bar{position:absolute;left:0;right:0;top:0;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 0;display:grid;grid-template-columns:1fr auto;grid-template-areas:"brand btns" "ctrl ctrl" "panel panel";gap:10px 10px;pointer-events:none;z-index:6}
+.brand{grid-area:brand}.top-btns{grid-area:btns;display:flex;align-items:center;gap:8px}
+.ctrl{grid-area:ctrl;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.ctrl > *{pointer-events:auto}
+.tctl{display:flex;align-items:center;gap:8px;flex:none}
+/* tiden som en liten pille («Nå» / «Tor 17:00»); trykk åpner glidebryter og play */
+.tpill{height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 14px;border-radius:999px;border:1px solid var(--glass-edge);background:var(--glass-light);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tpill svg{width:15px;height:15px;flex:none}
+.tpill .chev{width:11px;height:11px;transition:transform .25s ease}
+.tpill[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.tpill.away{background:#F2F7F8;color:#0A1822;border-color:#F2F7F8}
+.backnow{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;border:0;background:#F2F7F8;color:#0A1822;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.backnow svg{width:15px;height:15px}
+.pc-back{display:none!important}
+.time-panel{grid-area:panel;pointer-events:auto;padding:12px 16px 4px;border-radius:22px;background:var(--glass);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:0 18px 50px rgba(0,0,0,.4)}
 .top-bar > *{pointer-events:auto}
 .brand{display:flex;flex-direction:column;gap:3px;min-width:0}
 .brand .wm{height:28px;color:#F2F7F8}
@@ -107,14 +136,37 @@ button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{o
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:9px;height:9px;border-radius:50%;background:var(--rc);display:inline-block}
 .legend .hint{color:#7E939E}
+.stage:not([data-mode="spot"]) .legend .hint{display:none}   /* vindstrekene vises bare når en spot er valgt */
 
 /* ---------- ark (mobil) / panel (PC) ---------- */
-.ark{position:absolute;left:0;right:0;top:var(--sheet-top);height:calc(100% - var(--sheet-top));border-radius:30px 30px 0 0;background:var(--glass);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -18px 50px rgba(0,0,0,.35);transform:translateY(var(--sheet-y,0px));transition:transform .65s cubic-bezier(.22,1,.28,1);z-index:5;display:flex;flex-direction:column;overflow:hidden;will-change:transform}
+.ark{position:absolute;left:0;right:0;top:var(--sheet-top);height:calc(100% - var(--sheet-top));border-radius:30px 30px 0 0;background:var(--glass);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -18px 50px rgba(0,0,0,.35);transform:translateY(var(--sheet-y,0px));transition:transform .65s cubic-bezier(.22,1,.28,1);z-index:5;display:flex;flex-direction:column;overflow:hidden;overflow:clip;will-change:transform}
 .ark.dragging{transition:none}
 .ark-handle{display:block;width:100%;height:44px;margin-bottom:-18px;border:0;background:transparent;padding:0;cursor:grab;touch-action:none;flex:none}
 .ark-handle span{display:block;width:40px;height:5px;border-radius:3px;background:rgba(234,242,244,.28);margin:10px auto 0;position:relative;top:0}
-.ark-head{padding:0 20px;flex:none;touch-action:none}
-.ark-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-top:1px solid rgba(255,255,255,.06);margin-top:6px}
+#banners,.answer,.m-back{touch-action:none}
+/* skjult del av arket (under skjermkanten i halv/kart-høyde) kan scrolles opp */
+.ark-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-bottom:var(--sheet-y,0px)}
+.m-back{flex:none;margin:6px 16px 0;width:calc(100% - 32px)}
+/* svarlinja øverst i arket/panelet */
+.answer{flex:none;padding:8px 16px 2px}
+.ans{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:76px;box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:20px;text-align:left;font:inherit;color:var(--ink);border:1px solid color-mix(in srgb,var(--rc) 38%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--rc) 17%,transparent),rgba(242,247,248,.04) 62%);box-shadow:0 10px 30px -14px color-mix(in srgb,var(--rc) 55%,transparent);cursor:pointer}
+button.ans:hover{background:linear-gradient(135deg,color-mix(in srgb,var(--rc) 24%,transparent),rgba(242,247,248,.07) 62%)}
+.ans.none{border-color:rgba(255,255,255,.09);background:rgba(242,247,248,.05);box-shadow:none}
+div.ans{cursor:default}
+.ans-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ans-k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ans-n{font-size:23px;font-weight:700;letter-spacing:-.02em;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ans-n.none{font-size:17px;font-weight:650;letter-spacing:-.01em;line-height:1.25;white-space:normal;color:#D4E0E4}
+.ans-w{font-size:13px;color:#C5D3D8}
+.ans-w .num{font-family:var(--mono);font-size:12.5px}
+.ans-w .nw{white-space:nowrap}
+.ans-q{display:flex;align-items:center;gap:6px;font-size:13px;color:#C5D3D8}
+.ans-q i{width:9px;height:9px;flex:none;box-sizing:border-box;border:1px dashed rgba(234,242,244,.6);border-radius:2px}
+.stars.mini{gap:1px;vertical-align:-1px}
+.stars.mini svg{width:11px;height:11px}
+.ans-r{display:flex;align-items:center;gap:10px;flex:none}
+.ans-r .stars svg{width:15px;height:15px}
+.ans-chev{width:14px;height:14px;color:var(--muted)}
 .ark-scroll::-webkit-scrollbar{display:none}
 .page:not(.on){display:none!important}
 .banner{margin:0 16px 8px;padding:10px 14px;border-radius:14px;background:rgba(236,106,67,.18);color:#FFD9CC;font-size:13px}
@@ -136,36 +188,42 @@ input.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;
 .ticks{position:relative;height:16px;margin-top:-6px}
 .ticks span{position:absolute;transform:translateX(-50%);font-size:11px;color:#7E939E;white-space:nowrap}
 
-/* kikk */
-.peek{padding:14px 16px 0;display:flex;flex-direction:column;gap:10px}
-.best{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:16px;border-radius:20px;text-align:left;border:1px solid color-mix(in srgb,var(--rc) 33%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--rc) 15%,transparent),rgba(242,247,248,.04) 60%);box-shadow:0 10px 30px -12px color-mix(in srgb,var(--rc) 50%,transparent);color:var(--ink);font:inherit;cursor:pointer}
-.best .k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.best .n{font-size:24px;font-weight:700;letter-spacing:-.02em}
-.best .w{font-size:13px;color:#C5D3D8}
-.best .h{font-family:var(--mono);font-size:15px;font-weight:600}
-.best .stars svg{width:15px;height:15px}
-.best .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.btn-row{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(242,247,248,.05);font:inherit;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;width:100%}
-.btn-row .m{display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:500;font-size:13px}
-.btn-row svg{width:14px;height:14px}
-
-/* liste */
-.rows{display:flex;flex-direction:column;gap:6px;padding:12px 12px 40px}
-.rows-head{display:flex;justify-content:space-between;align-items:baseline;padding:14px 4px 4px;font-size:15px;font-weight:600}
-.rows-head small{font-size:12px;color:var(--muted);font-weight:500}
-.row{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;border-radius:16px;border:0;background:rgba(242,247,248,.045);text-align:left;color:var(--ink);font:inherit;cursor:pointer;transition:background .2s ease}
+/* liste: navn og område | ukeoversikt | rating nå */
+.rows{display:flex;flex-direction:column;gap:6px;padding:4px 12px 40px}
+.rows-head{display:flex;justify-content:space-between;align-items:baseline;padding:12px 4px 2px;font-size:13px;font-weight:600;color:#C5D3D8;letter-spacing:.01em}
+/* kolonnetittel over ratingen til høyre: «nå» (eller tidspunktet når tiden er flyttet) - høyrekant = radens høyrekant */
+.rows-head .col-now{margin-right:10px;font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--muted);white-space:nowrap}
+/* «Andre områder»: lukket som standard på mobil, åpen på PC */
+.rows-toggle{width:100%;min-height:44px;margin-top:4px;padding:8px 4px;align-items:center;justify-content:flex-start;gap:8px;border:0;border-radius:12px;background:none;font:inherit;font-size:13px;font-weight:600;color:#C5D3D8;cursor:pointer;text-align:left}
+.rows-toggle:hover{background:rgba(242,247,248,.04)}
+.rows-toggle .rh-n{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted)}
+.rows-toggle .rh-chev{width:14px;height:14px;flex:none;margin-right:10px;color:var(--muted);transition:transform .2s ease}
+.rows-toggle[aria-expanded="true"] .rh-chev{transform:rotate(180deg)}
+.rows-group{display:flex;flex-direction:column;gap:6px}
+.rows-group[hidden]{display:none}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto 76px;align-items:center;column-gap:12px;width:100%;min-height:60px;padding:9px 14px;border-radius:16px;border:0;background:rgba(242,247,248,.045);text-align:left;color:var(--ink);font:inherit;cursor:pointer;transition:background .2s ease}
 .row:hover{background:rgba(242,247,248,.09)}
-.row .dot{width:10px;height:10px;border-radius:50%;background:var(--rc);flex:none}
-.row.lit .dot{box-shadow:0 0 10px var(--rc)}
-.row .nm{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;flex:1}
-.row .nm b{font-size:15px;font-weight:600}
-.row .nm small{font-size:12px;color:var(--muted)}
-.spark{display:flex;align-items:flex-end;gap:1.5px;height:22px;width:96px;flex:none}
-.spark i{flex:1;border-radius:1px;background:var(--sc,rgba(234,242,244,.16));display:block}
-.row .rt{display:flex;flex-direction:column;align-items:flex-end;gap:1px;width:92px;flex:none}
-.row .rt .lb{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
-.row.lit .rt .lb{color:var(--rc)}
-.row .rt small{font-size:11px;color:var(--muted)}
+.row .nm{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+.row .nm b{font-size:15px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm small{font-size:12px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm small .num{font-family:var(--mono);font-size:11.5px}
+/* ukeoversikten: 7 felt, farget etter dagens beste rating i lyse timer */
+.week{display:grid;grid-template-columns:repeat(7,var(--wc,12px));column-gap:4px}   /* 4 px: to bokstaver og ringen rundt i dag får luft */
+.wd{display:flex;flex-direction:column;align-items:center;gap:3px}
+.wc{display:block;width:var(--wc,12px);height:var(--wc,12px);border-radius:3px;box-sizing:border-box;background:var(--rc)}
+.wc.r-0{background:rgba(147,167,177,.26)}
+.wc.miss{background:transparent;border:1px dashed rgba(234,242,244,.5)}
+.wc.dark{background:transparent;border:1px solid rgba(234,242,244,.12)}
+.wd b{font-size:10px;font-weight:600;line-height:1;color:var(--muted);white-space:nowrap}
+/* i dag: tynn ring rundt feltet (Theodor 13.10.2026) */
+.wd.today .wc{outline:1px solid rgba(234,242,244,.85);outline-offset:1.5px}
+.wd.today b{color:var(--ink)}
+.row .rt{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;min-width:0}
+.row .rt .stars svg{width:11px;height:11px}
+.row .rt .stars{gap:1.5px}
+.row .rt .lb{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.row.lit .rt .lb{color:var(--ink)}
+.row .rt .lb .num{font-family:var(--mono);font-size:12.5px}
 
 /* spot */
 .spot{display:flex;flex-direction:column;gap:18px;padding:14px 20px 48px}
@@ -186,7 +244,6 @@ input.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;
 .tile .k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .tile .v{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink);white-space:nowrap;overflow:hidden}
 .pc-only{display:none}
-.ark.side .ark-head{display:none}
 .tile .s{font-size:12px;color:var(--muted)}
 .disc-box{display:flex;align-items:center;gap:16px;padding:14px;border-radius:20px;background:rgba(242,247,248,.05)}
 .disc-box svg.disc{width:112px;height:112px;flex:none;overflow:visible}
@@ -249,21 +306,24 @@ input.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;
   .map-layer,.mk,.mk-edge,.wind,.night,.ark,.mk-pill{transition:none!important}
 }
 @media (prefers-reduced-transparency: reduce){
-  .ark,.seg,.icon-btn,.legend,.mk-pill,.mk-edge{backdrop-filter:none;-webkit-backdrop-filter:none;background:#0D1B24}
+  .ark,.seg,.icon-btn,.legend,.mk-pill,.mk-edge,.tpill:not(.away),.time-panel,.map-note{backdrop-filter:none;-webkit-backdrop-filter:none;background:#0D1B24}
 }
 
 /* ---------- PC: panel til høyre ---------- */
 @media (min-width: 900px){
   .top-bar{left:28px;top:24px;right:auto;padding:0;display:flex;gap:22px;align-items:center}
-  .seg{justify-self:auto}
+  .ctrl{gap:12px}
   .brand .wm{height:36px}
+  .pc-back{display:inline-flex!important}
+  .pc-back[hidden],.m-back{display:none!important}
+  .time-panel{position:absolute;left:var(--tp-left,0px);top:calc(100% + 12px);width:420px;box-sizing:border-box}
   .legend{display:flex}
   .ark{left:auto;right:16px;top:16px;bottom:16px;height:auto;width:var(--panel-w);border-radius:28px;transform:none!important;border:1px solid rgba(255,255,255,.09);box-shadow:var(--shadow)}
   .ark-handle{display:none}
-  .ark-head{padding:20px 22px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .ark-scroll{border-top:0;margin-top:0}
-  .peek{padding:14px 14px 0}
-  .rows{padding:14px 14px 28px}
+  .answer{padding:16px 14px 4px}
+  .ark-scroll{border-top:0;margin-top:0;padding-bottom:0}
+  .rows{padding:6px 14px 28px}
+  .row{--wc:14px}
   .spot{padding:18px 22px 32px}
   .spot-head .n{font-size:34px}
   .tiles{grid-template-columns:1.35fr 1fr 1fr}
@@ -273,10 +333,7 @@ input.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;
   .tile.pc-only{display:flex}
   .pc-hide{display:none}
   .bars{height:116px}
-  .row .nm small{white-space:nowrap}
-  .row .rt{width:100px}
-  .spark{width:104px;height:24px}
 }
 @media (max-width: 899px){
-  .top-right .seg button{padding:0 10px}
+  .seg button{padding:0 12px}
 }

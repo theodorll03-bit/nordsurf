@@ -26,20 +26,18 @@
       <button type="button" class="icon-btn" id="btnLogger" aria-label="Logger" title="Logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg></button>
       <button type="button" class="icon-btn" id="btnSettings" aria-label="Innstillinger" title="Innstillinger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.1 6.8l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg></button>
     </div>
-    <div class="seg" role="group" aria-label="Område">
-      <button type="button" data-view="nord" aria-pressed="true">Troms</button>
-      <button type="button" data-view="lofoten" aria-pressed="false">Lofoten</button>
-      <button type="button" data-view="alle" aria-pressed="false">Alle</button>
+    <div class="ctrl">
+      <div class="seg" role="group" aria-label="Område">
+        <button type="button" data-view="nord" aria-pressed="true">Troms</button>
+        <button type="button" data-view="lofoten" aria-pressed="false">Lofoten</button>
+        <button type="button" data-view="alle" aria-pressed="false">Alle</button>
+      </div>
+      <div class="tctl">
+        <button type="button" class="tpill" id="timePill" aria-expanded="false" aria-controls="timePanel"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.6V8l2.3 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="timePillT">Nå</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="backnow pc-back" id="backNow" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.6v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Tilbake til nå</button>
+      </div>
     </div>
-  </header>
-  <div class="legend" aria-label="Fargene">
-    <span class="r-1"><i></i>Dårlig</span><span class="r-2"><i></i>Ok</span><span class="r-3"><i></i>Bra</span><span class="r-4"><i></i>Veldig bra</span><span class="r-5"><i></i>Rått</span>
-    <span class="hint">Strekene på kartet viser vinden</span>
-  </div>
-  <section class="ark" id="ark" aria-label="Varsel">
-    <button type="button" class="ark-handle" aria-label="Vis alle spots"><span></span></button>
-    <div id="banners"></div>
-    <div class="ark-head">
+    <div class="time-panel" id="timePanel" role="group" aria-label="Velg tidspunkt" hidden>
       <div class="time">
         <button type="button" class="play" id="play" aria-label="Spill av varselet"></button>
         <div class="time-text"><div class="t"><span id="timeT"></span><span class="now-badge" id="timeNow">Nå</span></div><span class="l" id="timeL"></span></div>
@@ -47,9 +45,18 @@
       <input type="range" class="range" id="tid" min="0" max="0" step="1" value="0" aria-label="Velg tidspunkt">
       <div class="ticks" id="ticks" aria-hidden="true"></div>
     </div>
+  </header>
+  <div class="legend" aria-label="Fargene">
+    <span class="r-1"><i></i>Dårlig</span><span class="r-2"><i></i>Ok</span><span class="r-3"><i></i>Bra</span><span class="r-4"><i></i>Veldig bra</span><span class="r-5"><i></i>Rått</span>
+    <span class="hint">Strekene på kartet viser vinden</span>
+  </div>
+  <section class="ark" id="ark" aria-label="Varsel">
+    <button type="button" class="ark-handle" aria-label="Vis mer av lista"><span></span></button>
+    <div id="banners"></div>
+    <button type="button" class="backnow m-back" id="backNowM" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.6v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Tilbake til nå</button>
+    <div class="answer" id="answer"></div>
     <div class="ark-scroll">
-      <div class="page peek" id="peek" data-page="peek"></div>
-      <div class="page rows" id="list" data-page="list"></div>
+      <div class="page rows" id="list" data-page="home"></div>
       <div class="page spot" id="spot" data-page="spot"></div>
       <div class="page" data-page="side"><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></div>
     </div>
