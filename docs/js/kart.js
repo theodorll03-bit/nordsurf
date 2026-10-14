@@ -332,8 +332,10 @@
       for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i, c)) || null;
     }
     markersEl.dataset.pills = pass;
+    inside.forEach(m=>{ m._pill = null; });
     mks.forEach((mk, i)=>{
       const c = chosen[i];
+      mk._pill = c ? c.r : null;   // lappens endelige plass (kantpilene legger seg utenom)
       if(!c){ mk.classList.add("bare"); mk.classList.remove("left","vert"); mk.dataset.label = "dense"; return; }
       mk.classList.toggle("left", c.side==="left");
       mk.classList.toggle("vert", !!c.vert);
@@ -405,8 +407,27 @@
       const g = groups.find(gr=> Math.abs(((it.ang - gr.ang + 540) % 360) - 180) < 30);
       if(g){ g.items.push(it); g.ang = (g.ang*(g.items.length-1) + it.ang)/g.items.length; } else groups.push({ang: it.ang, items:[it]});
     });
-    const obs = obstacles(); const placed = [];
+    // hindre: knappene, forklaringen og teksten på kartet - og spotene i utsnittet
+    // (prikken og lappen), så en kantpil aldri dekker en spot (Theodor 13.10.2026)
+    const obs = obstacles().concat(...[...markersEl.querySelectorAll(".mk")].filter(m=>m._inside).map(m=>
+      [{x: m._sx - 9, y: m._sy - 9, w: 18, h: 18}, ...(m._pill ? [m._pill] : [])]));
+    const placed = [];
+    const rectAt = (x, y, w)=>({x: x - w/2, y: y - 22, w, h: 44});
     const findSpot = (ex, ey, w)=>{
+      // Mobil (sideOnly): kartets underkant er toppen av arket, midt på skjermen. En spot
+      // som ligger under kartet får pila langs en SIDEKANT i stedet for midt i kartet like
+      // over arket (Theodor 13.10.2026): nærmeste side først, nedenfra og opp, så den andre
+      // siden - første ledige plass. Pila peker fortsatt mot spoten.
+      if(a.sideOnly && ey > a.y + a.h - 24){
+        const lo = a.x + w/2 + 6, hi = a.x + a.w - w/2 - 6, top = a.y + 24, bot = a.y + a.h - 24;
+        const sides = ex < ox ? [lo, hi] : [hi, lo];
+        for(const x of sides) for(let y = bot; y >= top; y -= 46){
+          const r = rectAt(x, y, w);
+          if(!hitRect(r, obs) && !hitRect(r, placed)){ placed.push(r); return [x, y]; }
+        }
+        placed.push(rectAt(sides[0], bot, w));   // alt opptatt: nederst ved nærmeste side
+        return [sides[0], bot];
+      }
       ex = Math.max(a.x + w/2 + 6, Math.min(a.x + a.w - w/2 - 6, ex));
       ey = Math.max(a.y + 24, Math.min(a.y + a.h - 24, ey));
       const r = ()=>({x: ex - w/2, y: ey - 22, w, h: 44});
@@ -429,17 +450,23 @@
         el.onclick = ()=>onCluster(g.items.map(it=>it.p.id));
         markersEl.appendChild(el);
         const c = {el, items: g.items}; clusters.push(c); colorCluster(c);
-        const rad = g.ang*Math.PI/180, w = 150;
+        const rad = g.ang*Math.PI/180, w = el.offsetWidth || 150;   // målt bredde: pila ligger helt inntil kanten
         const [ex, ey] = findSpot(ox + Math.cos(rad)*a.w, oy + Math.sin(rad)*a.h, w);
         el.style.transform = `translate3d(${ex.toFixed(1)}px, ${ey.toFixed(1)}px, 0) translate(-50%,-50%)`;
-        el.querySelector(".mk-arrow").style.transform = `rotate(${g.ang.toFixed(0)}deg)`;
+        // pila peker fra der den står mot spotenes midtpunkt (som enkeltpilene) - også når
+        // mobilregelen har flyttet den til en sidekant (fysikk-kontrollør 14.10.2026)
+        const pts = g.items.filter(it=>!it.p.offMap && Number.isFinite(it.sx) && Number.isFinite(it.sy));
+        const ang = pts.length ? Math.atan2(pts.reduce((v, it)=>v + it.sy, 0)/pts.length - ey, pts.reduce((v, it)=>v + it.sx, 0)/pts.length - ex)*180/Math.PI : g.ang;
+        el.querySelector(".mk-arrow").style.transform = `rotate(${ang.toFixed(0)}deg)`;
       } else g.items.forEach(it=>{
         const ed = markersEl.querySelector(`.mk-edge[data-id="${it.p.id}"]`);
-        const w = 60 + it.p.name.length*7.2 + ed.querySelector(".mk-label").textContent.length*7.2;
-        let ex = it.p.offMap ? a.x + a.w - 110 : it.sx, ey = it.p.offMap ? a.y + a.h - 44 : it.sy;
+        ed.hidden = false;   // synlig før målingen (samme oppgave - ingen tegning i mellom)
+        const w = ed.offsetWidth || (60 + it.p.name.length*7.2 + ed.querySelector(".mk-label").textContent.length*7.2);
+        // utenfor kystkartet (sørvest): nederst til høyre på PC; på mobil som en spot under
+        // kartet mot venstre (langs sidekanten, se findSpot)
+        let ex = it.p.offMap ? (a.sideOnly ? a.x : a.x + a.w - 110) : it.sx, ey = it.p.offMap ? (a.sideOnly ? a.y + a.h + 100 : a.y + a.h - 44) : it.sy;
         [ex, ey] = findSpot(ex, ey, w);
         const ang = it.p.offMap ? 135 : Math.atan2(it.sy-ey, it.sx-ex)*180/Math.PI;
-        ed.hidden = false;
         if(animate === true) ed.style.transition = `transform 1s ${EASE}`;
         else if(animate === false || !wasShown.has(it.p.id)) ed.style.transition = "none";
         ed.style.transform = `translate3d(${ex.toFixed(1)}px, ${ey.toFixed(1)}px, 0) translate(-50%,-50%)`;

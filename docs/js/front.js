@@ -16,7 +16,7 @@
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
   const S = { idx:0, mode:"home", sheet:"half", spotId:null, view:"nord", playing:false, timeOpen:false,
-              maxIdx:0, now:-1, w0:0, w1:0, w3:0, days:[], fullTop:110, back:null };
+              maxIdx:0, now:-1, w0:0, w1:0, w3:0, days:[], fullTop:110, back:null, others:null };
   let timer = null, coastReady = false, justDragged = false;
 
   const COL = (st)=> (window.Kart ? Kart.COL : {})[Math.min(5, st||0)] || "#617480";
@@ -42,7 +42,8 @@
     return b!=null && b!==a ? `${a}–${b} m` : `${a} m`;
   };
   const markLabel = (h)=> stars(h) >= 1 && h.surf_height!=null ? `${nf1.format(h.surf_height)} m` : ratingWord(h);
-  const markAria = (s, h)=> `${s.name}, ${!known(h) ? "tallet mangler" : stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h)}`;
+  const rateAria = (h)=> !known(h) ? "tallet mangler" : stars(h) ? STR.starsAria(h.stars, h.faded) + ", " + markLabel(h) : ratingWord(h);
+  const markAria = (s, h)=> `${s.name}, ${rateAria(h)}`;
   const timeText = (i)=>{ const t = T(i); return t ? `${cap(relDay(t))} ${fmtHour.format(t)}:00` : ""; };
   const pillText = (i)=>{ const t = T(i); return t ? `${cap(relDayShort(t))} ${fmtHour.format(t)}:00` : ""; };
   const starsRow = (st, big)=> starsSVG(st, 0, big);
@@ -63,11 +64,12 @@
     const firstAt = (ms)=>{ for(let i=n+1;i<H.length;i++) if(new Date(H[i].t).getTime() >= ms) return i; return H.length; };
     S.w1 = firstAt(t0 + 48*36e5);   // 48 timer: søylene i spotarket
     S.w3 = firstAt(t0 + 72*36e5);   // «de neste 3 dagene»: svarlinja og sorteringen av lista
-    // ukeoversikten: 7 kalenderdager fra i dag, norsk tid (kl. 11 UTC er samme dato i Oslo hele året)
+    // ukeoversikten: 7 kalenderdager fra i dag, norsk tid (kl. 11 UTC er samme dato i Oslo hele året);
+    // to bokstaver per dag (Theodor 13.10.2026): ma ti on to fr lø sø
     const [y, m, d] = dayKey(new Date()).split("-").map(Number);
     S.days = Array.from({length:7}, (_, k)=>{
       const at = new Date(Date.UTC(y, m-1, d+k, 11));
-      return {key: dayKey(at), letter: fmtDayShort.format(at).charAt(0).toUpperCase(), name: fmtDay.format(at)};
+      return {key: dayKey(at), letter: fmtDayShort.format(at).replace(/\.$/, "").slice(0, 2).toLowerCase(), name: fmtDay.format(at)};
     });
     return true;
   }
@@ -174,7 +176,9 @@
     const top = sheetTop();
     ark.style.setProperty("--sheet-y", (top - S.fullTop) + "px");
     const mapTop = Math.round(ctrl.bottom) + 8;   // under topplinja (merke, knapper, område, tid)
-    Kart.setArea({x:0, y: mapTop, w: W, h: Math.max(120, top - mapTop)}, animate);
+    // sideOnly: kartets underkant er arket, midt på skjermen - kantpilene skal ligge
+    // langs sidekantene, ikke over arket (Theodor 13.10.2026)
+    Kart.setArea({x:0, y: mapTop, w: W, h: Math.max(120, top - mapTop), sideOnly: true}, animate);
   }
   const kartMode = ()=> isDesktop() ? "peek" : (S.mode==="home" && S.sheet!=="full") ? "peek" : "list";   // «list»: kartet ligger bak arket
 
@@ -414,15 +418,16 @@
         <span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n">${esc(a.s.name)}</span><span class="ans-w">${esc(day)} ${numHtml(span)}${a.s.area ? ` · ${esc(a.s.area)}` : ""}</span></span>
         <span class="ans-r">${starsRow(a.st)}${CHEV}</span></button>`;
     }
-    const head = `Ingen surf de neste 3 dagene ${S.view==="alle" ? "på noen spot" : `i ${segName(S.view)}`}`;
+    // Theodor 13.10.2026 (svar på kontrollørens spørsmål): «Ingen gode økter i [område] de neste 3 dagene»
+    const head = `Ingen gode økter ${S.view==="alle" ? "på noen spot" : `i ${segName(S.view)}`} de neste 3 dagene`;
     // mangler noen timer data, står det rett under påstanden (stiplet = mangler, som i uka)
     const q = a.gaps ? `<span class="ans-q"><i aria-hidden="true"></i>Noen timer mangler data</span>` : "";
     const headAria = head + (a.gaps ? ", men noen timer mangler data" : "");
     if(!a.next) return `<div class="ans none r-0" id="ansBtn"><span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n none">${esc(head)}</span>${q}</span></div>`;
     const n = a.next, where = `${relDay(new Date(n.s.hours[n.i].t))} · ${n.s.name}`;
-    const aria = `${headAria}. Neste dag med stjerner: ${where}, ${STR.starsAria(n.st, 0)}. Trykk for å åpne`;
+    const aria = `${headAria}. Neste mulighet: ${where}, ${STR.starsAria(n.st, 0)}. Trykk for å åpne`;
     return `<button type="button" class="ans none r-0" id="ansBtn" data-spot="${esc(n.s.id)}" data-idx="${n.i}" aria-label="${esc(aria)}">
-      <span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n none">${esc(head)}</span>${q}<span class="ans-w">Neste dag med stjerner: <span class="nw">${esc(where)} ${miniStars(n.st)}</span></span></span>
+      <span class="ans-txt"><span class="ans-k">Neste gode økt</span><span class="ans-n none">${esc(head)}</span>${q}<span class="ans-w">Neste mulighet: <span class="nw">${esc(where)} ${miniStars(n.st)}</span></span></span>
       <span class="ans-r">${CHEV}</span></button>`;
   }
   function miniStars(st){
@@ -492,12 +497,24 @@
     for(let i=S.w0; i<S.w3 && i<s.hours.length; i++){ const h = s.hours[i]; if(usable(h) && known(h)) mx = Math.max(mx, stars(h)); }
     return mx;
   }
-  function rowsSorted(){
+  function listSections(){
+    // Theodor 13.10.2026: favoritter alltid øverst (uansett region), så spotene i
+    // valgt region, så «Andre områder». «Alle» viser alle sortert som før. Innenfor
+    // hver gruppe: beste rating de neste 3 dagene, så rekkefølgen i spots.json.
     const order = (arr)=> arr.map((s, k)=>({s, k, b: best3(s)})).sort((x, y)=> y.b - x.b || x.k - y.k).map(x=>x.s);
-    return { favs: order(DATA.spots.filter(s=>isFavSpot(s.id))), rest: order(DATA.spots.filter(s=>!isFavSpot(s.id))) };
+    const favs = order(DATA.spots.filter(s=>isFavSpot(s.id)));
+    const rest = DATA.spots.filter(s=>!isFavSpot(s.id));
+    if(S.view==="alle") return {favs, own: order(rest), others: []};
+    const ids = new Set(regionSpots(S.view).map(s=>s.id));
+    return {favs, own: order(rest.filter(s=>ids.has(s.id))), others: order(rest.filter(s=>!ids.has(s.id)))};
   }
+  // «Andre områder»: lukket som standard på mobil, åpen på PC - til brukeren trykker
+  const othersOpen = ()=> S.others ?? isDesktop();
+  // Kolonnen til høyre gjelder valgt time - «nå», eller tidspunktet når tiden er flyttet
+  const whenLabel = ()=>{ if(S.idx===nowIdx()) return "nå"; const t = T(S.idx); return t ? `${relDayShort(t)} ${fmtHour.format(t)}:00` : ""; };
+  const rowAria = (s, h, wt)=> `Åpne ${s.name}. ${cap(whenLabel())}: ${rateAria(h)}. ${wt}`;
   function rtHtml(h){
-    // ratingen nå: stjerner og høyde, eller ordet ved 0 stjerner
+    // ratingen i valgt time: stjerner og høyde, eller ordet ved 0 stjerner
     const st = stars(h);
     return `${st ? starsRow(st) : ""}<span class="lb">${numHtml(markLabel(h))}</span>`;
   }
@@ -506,26 +523,43 @@
     const kj = kjText(h);
     const week = S.days.map(d=>({d, ...dayBest(s, d)}));
     const wt = weekText(week);
-    return `<button type="button" class="row r-${Math.min(5, st)}${st?" lit":""}" data-spot="${esc(s.id)}" data-week="${esc(wt)}" aria-label="${esc(`Åpne ${s.name}: ${markAria(s, h)}. ${wt}`)}">
+    return `<button type="button" class="row r-${Math.min(5, st)}${st?" lit":""}" data-spot="${esc(s.id)}" data-week="${esc(wt)}" aria-label="${esc(rowAria(s, h, wt))}">
       <span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}${isDesktop() && kj ? ` · ${numHtml(kj)}` : ""}</small></span>
-      <span class="week" aria-hidden="true">${week.map(w=>`<span class="wd" data-day="${w.d.key}"><i class="wc ${w.cls}"></i><b>${esc(w.d.letter)}</b></span>`).join("")}</span>
+      <span class="week" aria-hidden="true">${week.map((w, k)=>`<span class="wd${k===0 ? " today" : ""}" data-day="${w.d.key}"><i class="wc ${w.cls}"></i><b>${esc(w.d.letter)}</b></span>`).join("")}</span>
       <span class="rt">${rtHtml(h)}</span></button>`;
   }
+  const CHEV_DOWN = `<svg class="rh-chev" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   function renderList(){
-    const {favs, rest} = rowsSorted();
-    let out = "";
-    if(favs.length) out += `<div class="rows-head"><span>Favoritter</span></div>${favs.map(rowHtml).join("")}`;
-    out += `<div class="rows-head"><span>${favs.length ? "Andre spots" : "Alle spots"}</span></div>${rest.map(rowHtml).join("")}`;
+    const {favs, own, others} = listSections();
+    let out = "", first = true;
+    // første overskrift får kolonnetittelen over ratingen («nå» / tidspunktet)
+    const head = (label)=>{ const col = first ? `<span class="col-now" id="colNow">${esc(whenLabel())}</span>` : ""; first = false; return `<div class="rows-head"><span class="rh-l">${esc(label)}</span>${col}</div>`; };
+    if(favs.length) out += head("Favoritter") + favs.map(rowHtml).join("");
+    if(S.view==="alle") out += head(favs.length ? "Andre spots" : "Alle spots") + own.map(rowHtml).join("");
+    else {
+      if(own.length || first) out += head(segName(S.view)) + own.map(rowHtml).join("");
+      if(others.length){
+        const open = othersOpen();
+        out += `<button type="button" class="rows-head rows-toggle" id="othersBtn" aria-expanded="${open}" aria-controls="othersRows"><span class="rh-l">Andre områder</span><span class="rh-n">${others.length} ${others.length===1 ? "spot" : "spots"}</span>${CHEV_DOWN}</button>
+          <div class="rows-group" id="othersRows"${open ? "" : " hidden"}>${others.map(rowHtml).join("")}</div>`;
+      }
+    }
     $("#list").innerHTML = out;
     $("#list").querySelectorAll(".row").forEach(b=>b.onclick = ()=>openSpot(b.dataset.spot));
+    const ob = $("#othersBtn");
+    if(ob) ob.onclick = ()=>{
+      const open = ob.getAttribute("aria-expanded") !== "true";
+      S.others = open; ob.setAttribute("aria-expanded", String(open)); $("#othersRows").hidden = !open;
+    };
   }
   function renderListLite(){
-    // under avspilling: bare ratingen nå per rad - uka og rekkefølgen regnes fra nå
+    // under avspilling: bare ratingen i valgt time per rad - uka og rekkefølgen regnes fra nå
+    const col = $("#colNow"); if(col) col.textContent = whenLabel();
     $("#list").querySelectorAll(".row").forEach(b=>{
       const s = DATA.spots.find(x=>x.id===b.dataset.spot); const h = hourAt(s, S.idx); const st = stars(h);
       b.className = `row r-${Math.min(5, st)}${st?" lit":""}`;
       b.querySelector(".rt").innerHTML = rtHtml(h);
-      b.setAttribute("aria-label", `Åpne ${s.name}: ${markAria(s, h)}. ${b.dataset.week}`);
+      b.setAttribute("aria-label", rowAria(s, h, b.dataset.week));
     });
   }
 

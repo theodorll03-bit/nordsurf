@@ -20,17 +20,21 @@ mobil (390x844) og PC (1440x900), og sjekker at
 Oversikt (Theodor 13.10.2026), egne sjekker:
 8. svarlinja velger riktig time: tidligste time med minst 2 stjerner i lyse
    timer de neste 72 timene i området i utsnittet (flest stjerner, så
-   favoritt, ved samme time), ellers «Ingen surf de neste 3 dagene i …» og
-   neste dag med stjerner - og trykk åpner spoten på SAMME time som kartet viser;
+   favoritt, ved samme time), ellers «Ingen gode økter i … de neste 3 dagene»
+   og «Neste mulighet: …» - og trykk åpner spoten på SAMME time som kartet viser;
    mangler noen timer data i vinduet, sier svarlinja det (grunnregelen);
 9. flate spots (0 stjerner) har ingen lapp på kartet - bare spots med
    stjerner, favoritter og valgt spot; ingen streker fra prikk til lapp;
    kantpiler bare for stjerner og favoritter; én tekst på kartet når hele
    utsnittet er 0 stjerner; en spot der tallet MANGLER er aldri den grå
-   0-prikken (stiplet prikk og lappen «–»);
+   0-prikken (stiplet prikk og lappen «–»); på mobil ligger kantpilene langs
+   kanten av kartet, ikke midt i kartet over arket;
 10. ukeoversikten har riktig farge per dag (beste rating i lyse timer, grå
-    for 0, stiplet når tallet mangler eller lyset er ukjent) og riktige
-    dagsbokstaver;
+    for 0, stiplet når tallet mangler eller lyset er ukjent), to bokstaver per
+    dag (ti on to …), ring rundt i dag, og alt får plass på 390 px; lista følger
+    regionvalget (favoritter øverst, så regionen, så «Andre områder» - lukket
+    på mobil, åpen på PC; «Alle» som før); kolonnen til høyre har tittelen
+    «nå» (eller tidspunktet når tiden er flyttet);
 11. tiden er en pille («Nå» / «Tor 17:00»), trykk åpner glidebryter og play,
     og «Tilbake til nå» vises når tiden ikke står på nå;
 12. vindstrekene vises bare når en spot er valgt, og flate merker og
@@ -68,7 +72,7 @@ FILE_TIMEOUT_S = 300
 AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 AXE_PATH = os.environ.get("NORDSURF_AXE_PATH")
 OSLO = ZoneInfo("Europe/Oslo")
-LETTERS = "MTOTFLS"   # mandag ... søndag
+DAY2 = ["ma", "ti", "on", "to", "fr", "lø", "sø"]   # mandag ... søndag (Theodor 13.10.2026)
 WD_SHORT = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
 
 
@@ -96,6 +100,12 @@ def route(page):
     # tredjepart som ikke finnes i testmiljøet: avbryt stille (appen tåler det)
     for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"):
         page.route(pat, lambda r, req: r.abort())
+
+
+def r0(v):
+    """hele tall som appens nf0 (Intl.NumberFormat, halfExpand): ,5 rundes bort fra null.
+    Pythons round() runder ,5 til nærmeste partall (74,5 -> 74) og bommer på appen (75)."""
+    return int(v + 0.5) if v >= 0 else -int(-v + 0.5)
 
 
 def nf1(v):
@@ -255,6 +265,24 @@ def main():
                 def shot(name):
                     page.screenshot(path=str(SHOT_DIR / f"{name}_{label}.png"), full_page=False)
 
+                def edges_on_edge(where):
+                    # mobil: kantpilene ligger langs kanten av kartet (side- eller overkant), aldri midt i kartet over arket
+                    ed = page.evaluate("""() => { const top = document.querySelector('.top-bar .ctrl').getBoundingClientRect().bottom + 8;
+                        return [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).map(e => { const r = e.getBoundingClientRect();
+                            return {id: e.dataset.id || e.textContent.trim(), l: Math.round(r.left), r: Math.round(r.right), t: Math.round(r.top), top: Math.round(top), W: innerWidth}; }); }""")
+                    off = [e for e in ed if not (e["l"] <= 12 or e["r"] >= e["W"] - 12 or e["t"] <= e["top"] + 12)]
+                    assert not off, f"mobil ({where}): kantpilene skal ligge langs kanten av kartet, ikke midt i kartet over arket: {off}"
+                    return ed
+
+                def edges_clear(where):
+                    # en kantpil skal aldri dekke en spot på kartet (prikken eller en synlig lapp)
+                    bad = page.evaluate("""() => { const box = el => el.getBoundingClientRect();
+                        const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+                        const mks = [...document.querySelectorAll('.mk')].filter(m => !m.hidden && box(m.querySelector('.mk-dot')).width > 0);
+                        const tg = mks.flatMap(m => [{id: m.dataset.id, r: box(m.querySelector('.mk-dot'))}].concat(m.classList.contains('bare') ? [] : [{id: m.dataset.id + ' (lapp)', r: box(m.querySelector('.mk-pill'))}]));
+                        return [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).flatMap(e => tg.filter(t => hit(box(e), t.r)).map(t => [e.dataset.id || 'klynge', t.id])); }""")
+                    assert not bad, f"kantpil som dekker en spot ({label}, {where}): {bad}"
+
                 def axe_check(name):
                     res = page.evaluate("async () => { const r = await axe.run(document, {runOnly: ['color-contrast']}); return r.violations.map(v => ({id: v.id, n: v.nodes.length, ex: v.nodes.slice(0,3).map(x => x.html.slice(0,120))})); }")
                     assert not res, f"axe fant kontrastbrudd ({label}, {name}): {res}"
@@ -299,15 +327,15 @@ def main():
                         assert info["tag"] == "BUTTON" and info["spot"] == sid and info["idx"] == i, f"svarlinja ({view}) valgte {info}, forventet {sid} time {i}"
                         assert info["text"].startswith("Neste gode økt") and name in info["text"] and span in info["text"], f"svarlinja ({view}) sier '{info['text']}', forventet {name} {span}"
                     else:
-                        assert f"Ingen surf de neste 3 dagene {area}" in info["text"], f"svarlinja ({view}) sier '{info['text']}'"
+                        assert f"Ingen gode økter {area} de neste 3 dagene" in info["text"], f"svarlinja ({view}) sier '{info['text']}'"
                         gaps = mirror_gaps(reg, w0, w3, max_idx, len(data[0]["hours"]))
                         assert ("Noen timer mangler data" in info["text"]) == gaps, f"svarlinja ({view}) sier '{info['text']}' - forecast.json {'mangler' if gaps else 'mangler ikke'} data i vinduet"
                         if ans:
                             sid, i, _, _ = ans
                             name = next(s["name"] for s in spots if s["id"] == sid)
-                            assert info["tag"] == "BUTTON" and info["spot"] == sid and info["idx"] == i and "Neste dag med stjerner" in info["text"] and name in info["text"], f"neste dag med stjerner ({view}): {info}, forventet {sid} time {i}"
+                            assert info["tag"] == "BUTTON" and info["spot"] == sid and info["idx"] == i and "Neste mulighet: " in info["text"] and name in info["text"], f"neste mulighet ({view}): {info}, forventet {sid} time {i}"
                         else:
-                            assert info["tag"] == "DIV" and "Neste dag med stjerner" not in info["text"], f"ingen stjerner i uka: svarlinja skal ikke peke noe sted ({view}): {info}"
+                            assert info["tag"] == "DIV" and "Neste mulighet" not in info["text"], f"ingen stjerner i uka: svarlinja skal ikke peke noe sted ({view}): {info}"
                     return kind, ans
                 for v in ("nord", "lofoten", "alle"):
                     page.evaluate(f"document.querySelector(\".seg button[data-view='{v}']\").click()"); page.wait_for_timeout(250)
@@ -439,9 +467,9 @@ def main():
                 fav = nord[4]["id"]
                 page.evaluate(f"Auth.state.favorites.add('{fav}'); Front.refresh();"); page.wait_for_timeout(400)
                 assert not page.evaluate(f"document.querySelector(\".mk[data-id='{fav}']\").classList.contains('bare')"), "favoritt skal ha lapp selv med 0 stjerner"
-                heads = page.evaluate("[...document.querySelectorAll('#list .rows-head span')].map(s => s.textContent)")
+                heads = page.evaluate("[...document.querySelectorAll('#list .rows-head .rh-l')].map(s => s.textContent)")
                 first_row = page.evaluate("document.querySelector('#list .row').dataset.spot")
-                assert heads[:2] == ["Favoritter", "Andre spots"] and first_row == fav, f"favoritter øverst i lista: {heads}, første rad {first_row}"
+                assert heads == ["Favoritter", "Troms", "Andre områder"] and first_row == fav, f"favoritter øverst i lista: {heads}, første rad {first_row}"
                 # kantpiler bare for stjerner/favoritter: utenfor Troms-utsnittet
                 outside = [s for s in spots if s["id"] not in region["nord"]]
                 for s in outside:
@@ -451,6 +479,10 @@ def main():
                 page.evaluate(f"Auth.state.favorites.add('{outside[-1]['id']}'); Front.refresh();"); page.wait_for_timeout(400)
                 assert not page.evaluate(f"document.querySelector(\".mk-edge[data-id='{outside[-1]['id']}']\").hidden"), f"{outside[-1]['id']} er favoritt - skal ha kantpil"
                 shot("kart_stjerner")
+                edges_clear("Troms, stjerner og favoritt utenfor")
+                if mobile:
+                    ed = edges_on_edge("Troms, stjerner og favoritt utenfor")
+                    assert len(ed) >= 2, f"to kantpiler (stjerner + favoritt) forventet: {ed}"
                 page.evaluate(f"Auth.state.favorites.clear(); {restore}"); page.wait_for_timeout(500)
 
                 # ---- 9b. lappene i alle tre utsnitt når ALLE har stjerner (tettest mulig) ----
@@ -477,6 +509,9 @@ def main():
                     overl = page.evaluate("""() => { const obs = [...document.querySelectorAll('.top-bar .icon-btn, .top-bar .seg, .top-bar .tctl, .legend, .map-note')].filter(e => !e.hidden && getComputedStyle(e).display !== 'none').map(e => e.getBoundingClientRect());
                         return [...document.querySelectorAll('.mk-edge')].filter(e => !e.hidden).map(e => e.getBoundingClientRect()).filter(r => obs.some(o => r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top)).length; }""")
                     assert overl == 0, f"{overl} kantpil(er) overlapper en knapp, pillen eller forklaringen i utsnitt {view}"
+                    edges_clear(f"alle med stjerner, {view}")
+                    if mobile:
+                        edges_on_edge(f"alle med stjerner, {view}")
                     # klyngepil («N spots»): farge og etikett = beste rating i valgt time blant spotene i klynga
                     if page.locator(".mk-edge.cluster:visible").count():
                         info = page.evaluate("""() => { const c = document.querySelector('.mk-edge.cluster'); return {label: c.querySelector('.mk-label').textContent, cls: c.className}; }""")
@@ -492,12 +527,29 @@ def main():
                 def check_week(where):
                     data = page_data()
                     for s in data:
-                        cells = page.evaluate(f"[...document.querySelectorAll(\"#list .row[data-spot='{s['id']}'] .wd\")].map(w => ({{day: w.dataset.day, cls: w.querySelector('.wc').className.replace('wc', '').trim(), letter: w.querySelector('b').textContent}}))")
+                        cells = page.evaluate(f"[...document.querySelectorAll(\"#list .row[data-spot='{s['id']}'] .wd\")].map(w => ({{day: w.dataset.day, cls: w.querySelector('.wc').className.replace('wc', '').trim(), letter: w.querySelector('b').textContent, today: w.classList.contains('today')}}))")
                         assert [c["day"] for c in cells] == [d.isoformat() for d in days], f"{s['id']}: dagene i ukeoversikten {[c['day'] for c in cells]}"
-                        assert [c["letter"] for c in cells] == [LETTERS[d.weekday()] for d in days], f"{s['id']}: dagsbokstaver {[c['letter'] for c in cells]}"
+                        assert [c["letter"] for c in cells] == [DAY2[d.weekday()] for d in days], f"{s['id']}: dagsbokstaver {[c['letter'] for c in cells]}"
+                        assert [c["today"] for c in cells] == [True] + [False] * 6, f"{s['id']}: bare dagens felt skal være markert {[c['today'] for c in cells]}"
                         exp = [day_best(s["hours"], w0, d.isoformat()) for d in days]
                         assert [c["cls"] for c in cells] == exp, f"{s['id']} ({where}): ukeoversikten {[c['cls'] for c in cells]}, forecast.json gir {exp}"
                 check_week("dagens data")
+                ring = page.evaluate("(() => { const w = [...document.querySelectorAll('#list .row')[0].querySelectorAll('.wd')]; return w.map(x => getComputedStyle(x.querySelector('.wc')).outlineStyle); })()")
+                assert ring[0] == "solid" and all(r == "none" for r in ring[1:]), f"tynn ring rundt dagens felt, ingen andre: {ring}"
+                if mobile:
+                    # 390 px: navnene får plass, og dagsbokstavene overlapper ikke (alle rader, også «Andre områder»)
+                    page.evaluate("Front.state.others = true; Front.refresh()"); page.wait_for_timeout(300)
+                    fit = page.evaluate("""() => [...document.querySelectorAll('#list .row')].map(r => { const b = r.querySelector('.nm b');
+                        const labs = [...r.querySelectorAll('.wd b')].map(x => x.getBoundingClientRect());
+                        let ovl = 0; for(let i = 1; i < labs.length; i++) if(labs[i].left < labs[i-1].right) ovl++;
+                        const row = r.getBoundingClientRect(), wk = r.querySelector('.week').getBoundingClientRect();
+                        return {id: r.dataset.spot, trunc: b.scrollWidth > b.clientWidth + 0.5, ovl, inside: wk.left >= row.left && wk.right <= row.right, w: innerWidth}; })""")
+                    bad = [f for f in fit if f["trunc"] or f["ovl"] or not f["inside"]]
+                    assert fit and fit[0]["w"] == 390 and not bad, f"390 px: navn avkortet eller dagsbokstaver som overlapper: {bad}"
+                    page.evaluate("Front.state.others = null; Front.refresh()"); page.wait_for_timeout(300)
+                # kolonnetittelen «nå» over ratingen til høyre (første rad), høyrekant mot høyrekant
+                cn = page.evaluate("(() => { const c = document.getElementById('colNow'), r = document.querySelector('#list .row .rt'); const a = c.getBoundingClientRect(), b = r.getBoundingClientRect(); return {text: c.textContent, dx: Math.abs(a.right - b.right), above: a.bottom <= b.top}; })()")
+                assert cn["text"] == "nå" and cn["dx"] <= 2 and cn["above"], f"«nå» skal stå over ratingen i første rad: {cn}"
                 # en dag der tallet mangler i alle lyse timer: stiplet ramme, aldri grå (0 stjerner)
                 k_miss, sid = 4, spots[0]["id"]
                 page.evaluate(f"(() => {{ const s = DATA.spots.find(x => x.id === '{sid}'); s.hours.forEach(h => {{ if(dayKey(new Date(h.t)) === '{days[k_miss].isoformat()}') {{ h.stars = 0; h.low_reason = null; h.surf_height = null; }} }}); Front.refresh(); }})()")
@@ -519,13 +571,40 @@ def main():
                 assert col == "rgb(45, 195, 211)", f"4 stjerner skal være turkis (#2DC3D3), var {col}"
                 shot("uke")
                 page.evaluate(restore); page.wait_for_timeout(400)
-                # sortering: favoritter øverst, så beste rating de neste 3 dagene (lyse timer)
+                # ---- 10b. lista følger regionvalget (Theodor 13.10.2026) ----
+                # favoritter øverst uansett region, så spotene i regionen, så «Andre områder»
+                # (lukket på mobil, åpen på PC); «Alle» som før. Hver gruppe: beste rating de
+                # neste 3 dagene (lyse timer), så rekkefølgen i spots.json.
                 data = page_data()
                 def best3(s):
                     return max([(h.get("stars") or 0) for h in s["hours"][w0:w3] if usable(h) and known(h)] or [-1])
-                order = page.evaluate("[...document.querySelectorAll('#list .row')].map(r => r.dataset.spot)")
-                exp_order = [s["id"] for s in sorted(data, key=lambda s: -best3(s))]
-                assert order == exp_order, f"lista skal sorteres etter beste rating de neste 3 dagene: {order}, forventet {exp_order}"
+                def sorted_ids(ss):
+                    return [s["id"] for s in sorted(ss, key=lambda s: -best3(s))]   # stabil sortering = spots.json ved likt
+                def list_heads():
+                    return page.evaluate("[...document.querySelectorAll('#list .rows-head')].map(h => ({label: h.querySelector('.rh-l').textContent, btn: h.tagName === 'BUTTON', open: h.getAttribute('aria-expanded')}))")
+                def list_order():
+                    return page.evaluate("[...document.querySelectorAll('#list .row')].map(r => r.dataset.spot)")
+                for view, name in (("nord", "Troms"), ("lofoten", "Lofoten")):
+                    page.locator(f".seg button[data-view='{view}']").click(); page.wait_for_timeout(900)
+                    own = [x for x in data if x["id"] in region[view]]; oth = [x for x in data if x["id"] not in region[view]]
+                    heads = list_heads()
+                    assert [h["label"] for h in heads] == [name, "Andre områder"], f"lista i {view}: {heads}"
+                    assert heads[1]["btn"] and heads[1]["open"] == ("false" if mobile else "true"), f"«Andre områder» skal være lukket på mobil og åpen på PC: {heads[1]}"
+                    assert page.evaluate("document.getElementById('othersRows').hidden") == mobile
+                    assert list_order() == sorted_ids(own) + sorted_ids(oth), f"rekkefølgen i {view}: {list_order()}, forventet {sorted_ids(own) + sorted_ids(oth)}"
+                page.locator("#othersBtn").click(); page.wait_for_timeout(300)
+                assert page.evaluate("document.getElementById('othersRows').hidden") != mobile and page.locator("#othersBtn").get_attribute("aria-expanded") == ("true" if mobile else "false"), "trykk på «Andre områder» åpner/lukker gruppa"
+                page.locator("#othersBtn").click(); page.wait_for_timeout(300)
+                page.locator(".seg button[data-view='alle']").click(); page.wait_for_timeout(900)
+                assert [h["label"] for h in list_heads()] == ["Alle spots"] and page.locator("#othersBtn").count() == 0, f"«Alle»: alle spots sortert som før: {list_heads()}"
+                assert list_order() == sorted_ids(data), f"«Alle»: {list_order()}, forventet {sorted_ids(data)}"
+                page.locator(".seg button[data-view='nord']").click(); page.wait_for_timeout(900)
+                fo = [x for x in data if x["id"] not in region["nord"]][0]["id"]
+                page.evaluate(f"Auth.state.favorites.add('{fo}'); Front.refresh();"); page.wait_for_timeout(400)
+                assert [h["label"] for h in list_heads()][:2] == ["Favoritter", "Troms"] and list_order()[0] == fo, f"en favoritt utenfor regionen skal stå øverst: {list_heads()}, {list_order()[:2]}"
+                assert fo not in page.evaluate("[...document.querySelectorAll('#othersRows .row')].map(r => r.dataset.spot)"), "favoritten skal ikke også stå under «Andre områder»"
+                shot("liste_favoritt")
+                page.evaluate("Auth.state.favorites.clear(); Front.refresh();"); page.wait_for_timeout(400)
 
                 # ---- 1. kart + liste ----
                 page.evaluate("Front.go('home')")
@@ -595,6 +674,7 @@ def main():
                 t30 = oslo(spots[0]["hours"][w0 + 30]["t"])
                 wd = "I dag" if t30.date() == dt.datetime.now(OSLO).date() else WD_SHORT[t30.weekday()]
                 assert page.locator("#timePillT").text_content() == f"{wd} {t30.hour:02d}:00", page.locator("#timePillT").text_content()
+                assert page.locator("#colNow").text_content() == f"{wd.lower()} {t30.hour:02d}:00", f"kolonnetittelen skal følge tiden: {page.locator('#colNow').text_content()}"
                 page.keyboard.press("Escape"); page.wait_for_timeout(300)
                 assert page.locator("#timePanel").is_hidden(), "Escape lukker tidspanelet"
                 assert page.locator(back_sel).is_visible(), "tiden står ikke på nå: «Tilbake til nå» skal synes"
@@ -603,6 +683,7 @@ def main():
                 axe_check("tilbake"); buttons_ok("tilbake")
                 page.locator(back_sel).click(); page.wait_for_timeout(400)
                 assert page.evaluate("Front.state.idx") == w0 and page.locator("#timePillT").text_content() == "Nå" and page.locator(back_sel).is_hidden(), "«Tilbake til nå» setter tiden til nå"
+                assert page.locator("#colNow").text_content() == "nå"
 
                 # ---- 12. animasjon bare der det er noe å vise ----
                 assert page.evaluate("getComputedStyle(document.getElementById('windLayer')).opacity") == "0", "vindstrekene skal ikke vises før en spot er valgt"
@@ -639,11 +720,11 @@ def main():
                     assert nf1(h["surf_height"]) in hv, f"surfehøyde-flisa ({hv}) stemmer ikke med forecast.json ({h['surf_height']})"
                 pv = page.locator("#tPeriod .v").text_content()
                 if h.get("period") is not None:
-                    assert pv.startswith(f"{round(h['period'])} s"), f"periode-flisa ({pv}) stemmer ikke ({h['period']})"
+                    assert pv.startswith(f"{r0(h['period'])} s"), f"periode-flisa ({pv}) stemmer ikke ({h['period']})"
                 kj = h.get("energy_swell_kj") if h.get("swell_offshore") is not None else h.get("energy_total_kj")
                 if kj:
                     kv = page.locator("#tKjSmall" if mobile else "#tKj .v").text_content()
-                    assert "kJ" in kv and f"{round(kj):,}".replace(",", " ") in kv.replace(" ", " ").replace(" ", " "), f"energi-flisa ({kv}) stemmer ikke ({kj})"
+                    assert "kJ" in kv and f"{r0(kj):,}".replace(",", " ") in kv.replace(" ", " ").replace(" ", " "), f"energi-flisa ({kv}) stemmer ikke ({kj})"
                 # svellkilen på kartet: klasse fra directness alene
                 dn = h.get("directness"); on_map = page.locator("#wedgeG .wedge").count() == 1
                 if on_map:
@@ -674,6 +755,9 @@ def main():
                     page.evaluate(f"Front.openSpot('{s['id']}', {bidx})"); page.wait_for_timeout(800)
                 assert page.locator("#bars .hbar").count() == min(48, len(s["hours"])), "48 søyler i spotarket"
                 shot("spot"); axe_check("spot"); buttons_ok("spot")
+                # søyler for mørke timer er synlige og kan trykkes (kartets nattlag-regel traff dem før: opacity 0, pointer-events none)
+                nb = page.evaluate("[...document.querySelectorAll('#bars .hbar.night')].map(b => getComputedStyle(b).opacity + '/' + getComputedStyle(b).pointerEvents)")
+                assert all(x == "1/auto" for x in nb), f"søyler for mørke timer skal synes og kunne trykkes: {sorted(set(nb))}"
                 # søyle-trykk velger time
                 bar = page.locator("#bars .hbar").nth(5); want = int(bar.get_attribute("data-i"))
                 bar.click(); page.wait_for_timeout(300)
@@ -683,7 +767,7 @@ def main():
                 page.evaluate("document.getElementById('details').open = true"); page.wait_for_timeout(300)
                 if dn is not None:
                     rt = page.locator("#details .cell:has-text('Retningstreff') >> .v").inner_text()
-                    assert rt == f"{round(dn*100)} %", f"Retningstreff ({rt}) stemmer ikke med directness ({dn})"
+                    assert rt == f"{r0(dn*100)} %", f"Retningstreff ({rt}) stemmer ikke med directness ({dn})"
                 shot("spot_detaljer")
                 # flat spot
                 page.evaluate(f"Front.openSpot('{spots[fi]['id']}', 0)"); page.wait_for_timeout(1300)
@@ -823,8 +907,9 @@ def main():
     print("6: axe color-contrast: ingen brudd, alle knapper minst 44 px med tilgjengelig navn")
     print("7: prefers-reduced-motion skrur av animasjonene")
     print("8: svarlinja velger tidligste gode time i området (speilet i Python), og trykk åpner spoten på samme time som kartet")
-    print("9: flate spots har ingen lapp, ingen streker, kantpiler bare for stjerner/favoritter, tekst når hele utsnittet er 0 stjerner")
-    print("10: ukeoversikten har riktig farge og bokstav per dag, stiplet når tallet mangler")
+    print("9: flate spots har ingen lapp, ingen streker, kantpiler bare for stjerner/favoritter (på mobil langs kanten av kartet), tekst når hele utsnittet er 0 stjerner")
+    print("10: ukeoversikten har riktig farge og to bokstaver per dag, ring rundt i dag, stiplet når tallet mangler, får plass på 390 px; kolonnetittelen «nå»")
+    print("10b: lista følger regionvalget - favoritter øverst, så regionen, så «Andre områder» (lukket på mobil, åpen på PC); «Alle» som før")
     print("11: tidspillen («Nå»/«Tor 17:00») åpner glidebryter og play, «Tilbake til nå» når tiden ikke står på nå")
     print("12: vindstrekene bare ved valgt spot, flate merker og listerader står stille")
     print("13: ny time: svarlinja, uka og «Nå» følger nåtimen, en flyttet tid blir stående")
