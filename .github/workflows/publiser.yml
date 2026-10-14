@@ -29,15 +29,15 @@ permissions:
   id-token: write
   actions: read
 
-# én publisering av gangen; en ny venter på den som pågår (avbrytes ikke)
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # én publisering av gangen; en ny venter på den som pågår (avbrytes ikke).
+    # På jobben, ikke workflowen: workflowen kalles også fra «Hent varsel».
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
