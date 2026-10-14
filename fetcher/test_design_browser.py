@@ -47,6 +47,11 @@ Skjermbildene lagres i docs/design/oversikt/etter/ (mobil og PC).
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5
 minutter (hardkill), testserveren stoppes uansett utfall.
 
+Klokka: siden kjører med Date fast på T0 (page.clock.set_fixed_time - tidtakerne
+går som vanlig), og testen regner selv fra samme T0. Uten det ga en kjøring over
+en timegrense ny nåtime midt i testen (CI 14.10.2026 kl. 13:00Z: «Tilbake til nå»
+gikk til den nye timen, testen ventet den gamle).
+
 Miljø: NORDSURF_CHROMIUM (sti til chromium, ellers Playwright sin),
 NORDSURF_AXE_PATH (lokal axe.min.js, ellers cdnjs).
 Kjør: python fetcher/test_design_browser.py"""
@@ -72,6 +77,8 @@ FILE_TIMEOUT_S = 300
 AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 AXE_PATH = os.environ.get("NORDSURF_AXE_PATH")
 OSLO = ZoneInfo("Europe/Oslo")
+T0 = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)   # «nå» for hele kjøringen, i siden og i testen
+TODAY = T0.astimezone(OSLO).date()
 DAY2 = ["ma", "ti", "on", "to", "fr", "lø", "sø"]   # mandag ... søndag (Theodor 13.10.2026)
 WD_SHORT = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
 
@@ -195,7 +202,7 @@ def span_text(a, b):
     end = f"{(b.hour + 1) % 24:02d}"
     if a.date() == b.date(): return f"{a.hour:02d}–{end}"
     e = b + dt.timedelta(hours=1)
-    day = "i dag" if e.date() == dt.datetime.now(OSLO).date() else WD_SHORT[e.weekday()].lower()
+    day = "i dag" if e.date() == TODAY else WD_SHORT[e.weekday()].lower()
     return f"{a.hour:02d}–{day} {end}"
 
 
@@ -249,6 +256,7 @@ def main():
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="dark", locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS)
+                page.clock.set_fixed_time(T0)
                 page.on("pageerror", lambda e, label=label: errors.append(f"{label}: {e}"))
                 page.on("console", lambda m, label=label: errors.append(f"{label} console: {m.text}") if m.type == "error" and "ERR_FAILED" not in m.text and "404" not in m.text else None)
                 route(page)
@@ -373,7 +381,7 @@ def main():
                 page.evaluate("document.getElementById('ansBtn').click()"); page.wait_for_timeout(1300)
                 opened = page.evaluate("({mode: Front.state.mode, spot: Front.state.spotId, idx: Front.state.idx, pill: document.getElementById('timePillT').textContent, head: document.querySelector('#spot .spot-head .s').textContent})")
                 t_a = oslo(spots[0]["hours"][hA]["t"])
-                wd = "I dag" if t_a.date() == dt.datetime.now(OSLO).date() else WD_SHORT[t_a.weekday()]
+                wd = "I dag" if t_a.date() == TODAY else WD_SHORT[t_a.weekday()]
                 assert opened["mode"] == "spot" and opened["spot"] == A["id"] and opened["idx"] == hA, f"trykk på svarlinja skal åpne {A['id']} på time {hA}: {opened}"
                 assert opened["pill"] == f"{wd} {t_a.hour:02d}:00", f"tidspillen ({opened['pill']}) skal vise svarets time {wd} {t_a.hour:02d}:00"
                 assert f"{t_a.hour:02d}:00" in opened["head"], f"spotarket ({opened['head']}) skal vise svarets time"
@@ -522,7 +530,7 @@ def main():
                 page.locator(".seg button[data-view='nord']").click(); page.wait_for_timeout(1200)
 
                 # ---- 10. ukeoversikten: riktig farge og bokstav per dag ----
-                today = dt.datetime.now(OSLO).date()
+                today = TODAY
                 days = [(today + dt.timedelta(days=k)) for k in range(7)]
                 def check_week(where):
                     data = page_data()
@@ -672,7 +680,7 @@ def main():
                 shot("tid")
                 page.evaluate(f"Front.setIdx({w0 + 30})"); page.wait_for_timeout(300)
                 t30 = oslo(spots[0]["hours"][w0 + 30]["t"])
-                wd = "I dag" if t30.date() == dt.datetime.now(OSLO).date() else WD_SHORT[t30.weekday()]
+                wd = "I dag" if t30.date() == TODAY else WD_SHORT[t30.weekday()]
                 assert page.locator("#timePillT").text_content() == f"{wd} {t30.hour:02d}:00", page.locator("#timePillT").text_content()
                 assert page.locator("#colNow").text_content() == f"{wd.lower()} {t30.hour:02d}:00", f"kolonnetittelen skal følge tiden: {page.locator('#colNow').text_content()}"
                 page.keyboard.press("Escape"); page.wait_for_timeout(300)
@@ -886,6 +894,7 @@ def main():
             # ---- 7. prefers-reduced-motion ----
             ctx = browser.new_context(viewport={"width": 390, "height": 844}, color_scheme="dark", reduced_motion="reduce", is_mobile=True, has_touch=True)
             page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); route(page)
+            page.clock.set_fixed_time(T0)
             page.add_init_script(f"window.__FORECAST__ = {json.dumps(forecast)};")
             page.goto(f"http://127.0.0.1:{port}/index.html")
             page.wait_for_function("window.Front && document.querySelectorAll('.mk').length > 0")
