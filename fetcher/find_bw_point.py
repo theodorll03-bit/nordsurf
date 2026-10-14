@@ -41,6 +41,38 @@ def pt(lat, lon, bearing, d):
             lon + d * math.sin(math.radians(bearing)) / (111.32 * math.cos(math.radians(lat))))
 
 
+# 14.10.2026, Theodors oppgave (Farstadsanden torsdag 15.10): et SNITT fra
+# stranda og ut mot NV langs facing (0/150/300/500/800 m), pluss nålen Theodor
+# ba om først 06.10 (62.986005/7.147075 - rettet av ham samme dag til dagens
+# punkt) og BarentsWatch-kartets 2 m-punkt ved Breivika (62.98688/7.14407).
+# Målet: finne punktet like utenfor brytesonen - dagens punkt (58 m fra
+# pinnen) ligger nesten i fjæra, der 100 m-modellen allerede har brukket
+# bølgene (0,9 m der mot 2 m 280 m lenger ute).
+TRANSECTS = {
+    "farstadsanden": {
+        "bearing": 310,
+        "dists_m": [0, 150, 300, 500, 800],
+        "extra": {"Theodors nål 06.10 (skygge)": {"lat": 62.986005, "lon": 7.147075},
+                  "Breivika (BW-kartet 2 m)": {"lat": 62.98688, "lon": 7.14407}},
+    },
+}
+
+
+def transect_points(spot):
+    """Snittpunktene for spoten (se TRANSECTS), eller tomt."""
+    tr = TRANSECTS.get(spot["id"])
+    if not tr:
+        return {}
+    s = spot["spot"]
+    out = {}
+    for d in tr["dists_m"]:
+        la, lo = pt(s["lat"], s["lon"], tr["bearing"], d / 1000)
+        out[f"snitt {d}m@{tr['bearing']}"] = {"lat": round(la, 6), "lon": round(lo, 6), "bearing": tr["bearing"], "dist_m": d}
+    for label, q in tr["extra"].items():
+        out[f"snitt {label}"] = {"lat": q["lat"], "lon": q["lon"], "bearing": None, "dist_m": None}
+    return out
+
+
 def grid_points(spot):
     """Rutenett (facing, facing-20, facing+20) x (150/250/500/1000/2000 m),
     pluss dagens to punkter (barentswatch_point/_near) til sammenligning."""
@@ -62,6 +94,7 @@ def grid_points(spot):
         p = spot.get(key)
         if p:
             points[label] = {"lat": p["lat"], "lon": p["lon"], "bearing": None, "dist_m": None}
+    points.update(transect_points(spot))
     return points
 
 
