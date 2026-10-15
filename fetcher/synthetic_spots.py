@@ -55,7 +55,8 @@ def make(forecast, n=100, seed=1):
         spots.append(src)
     out["spots"] = spots
     regions = []
-    for name in dict.fromkeys(s["region"] for s in spots):
+    # rekkefølgen som i spots.json sin «regions»: nord til sør (nattjobben 15.10, PR #12 punkt a)
+    for name in [r for _, r in sorted(REGIONS, reverse=True) if any(s["region"] == r for s in spots)]:
         regions.append({"name": name, "order": len(regions) + 1})
     return out, regions
 

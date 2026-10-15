@@ -63,26 +63,32 @@
     if(!h || h.wind_speed==null) return null;
     return `${nf0.format(h.wind_speed)} m/s${h.wind_type ? " " + windLabel(h) : ""}`;
   }
+  // Dagens lys er over (Theodor 15.10, PR #12 punkt c): «over» fra henteren, eller klokka har passert
+  // siste lyse time (lys_til) siden oversikten ble laget. Da vises ingenting for dagen.
+  const dayOver = (d)=> !!d && (d.status==="over" || (!!d.lys_til && Date.now() >= new Date(d.lys_til).getTime() + 36e5));
+  const UKE_DAGER = 7;
   function weekDays(){
-    // de 7 døgnene oversikten har sammendrag for (fra i dag, norsk tid)
+    // 7 døgn fra i dag (norsk tid); er dagens lys over for alle spots, starter ukeradene på i morgen
     const base = (DATA.spots[0] && DATA.spots[0].dager) || [];
-    return base.map((d, k)=>{ const at = new Date(d.d + "T11:00:00Z"); return {key: d.d, kort: fmtDayShort.format(at).replace(/\.$/, "").slice(0, 2).toLowerCase(), dato: at.getUTCDate(), lang: fmtDay.format(at), idag: k===0}; });
+    const skip = base.length > UKE_DAGER && DATA.spots.every(s=> dayOver((s.dager || [])[0])) ? 1 : 0;
+    return base.slice(skip, skip + UKE_DAGER).map((d, j)=>{ const k = j + skip; const at = new Date(d.d + "T11:00:00Z"); return {key: d.d, kort: fmtDayShort.format(at).replace(/\.$/, "").slice(0, 2).toLowerCase(), dato: at.getUTCDate(), lang: fmtDay.format(at), idag: k===0}; });
   }
   function dayBest(s, key){
-    // dagssammendraget fra publish.best_hour(): «miss» = tallet/lyset mangler, «dark» = mørkt hele dagen
+    // dagssammendraget fra publish.best_hour(): «miss» = tallet/lyset mangler, «dark» = mørkt hele dagen, «over» = dagens lys er over
     const d = (s.dager || []).find(x=>x.d===key);
+    if(dayOver(d)) return {cls:"over", st:null, h:null, t:null};
     if(d && d.status==="dark") return {cls:"dark", st:null, h:null, t:null};   // før !d.h - en mørk dag har ingen time
     if(!d || d.status==="miss" || !d.h) return {cls:"miss", st:null, h:null, t:null};
     const st = stars(d.h);
     return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, start:d.start || d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
   }
   function ukeHtml(s, days, withLetters){
-    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
-    const letters = withLetters ? days.map((d, k)=>`<b class="${k===0?"idag":""}">${esc(d.kort)}</b>`).join("") : "";
+    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
+    const letters = withLetters ? days.map((d, k)=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("") : "";
     return `<span class="uke" aria-hidden="true">${letters}${cells}</span>`;
   }
   function ukeAria(s, days){
-    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${b.st} ${b.st===1?"stjerne":"stjerner"}`; }).join(", ");
+    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="over" ? `${cap(d.lang)}: dagens lys er over` : b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${b.st} ${b.st===1?"stjerne":"stjerner"}`; }).join(", ");
   }
   function bestNow(s){ const h = naaOf(s); return {st: stars(h), hh: h ? (h.surf_height||0) : 0}; }
   const byRatingNow = (a, b)=>{ const x = bestNow(a), y = bestNow(b); return y.st - x.st || y.hh - x.hh || a.name.localeCompare(b.name, "nb"); };
@@ -101,6 +107,7 @@
     let best = null;
     for(const s of spots) for(const [k, d] of (s.dager || []).slice(0, 3).entries()){
       if(d.status!=="ok" || !d.h || stars(d.h) < 1) continue;
+      if(new Date(d.slutt || d.h.t).getTime() + 36e5 <= Date.now()) continue;   // vinduet er over siden oversikten ble laget (fysikk-kontrollør 15.10)
       const c = {s, d, st: stars(d.h), hh: d.h.surf_height||0, k};
       if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c;
     }
@@ -108,7 +115,7 @@
   }
   function nextPossibility(spots){
     let first = null;
-    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
+    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1 && new Date(d.slutt || d.h.t).getTime() + 36e5 > Date.now()){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
     return first;
   }
   function nextBest(spots, exclude, n){
@@ -172,7 +179,7 @@
     const sorted = [...g.spots].sort(byRatingNow);
     const shown = all ? sorted : sorted.slice(0, 5);
     const id = "reg-" + norm(g.region).replace(/[^a-z0-9]+/g, "-");
-    return `<section class="gruppe" id="${id}"><div class="gruppe-topp"><h3>${esc(g.region)}<small>${n} ${n===1?"spot":"spots"}</small></h3><span class="uke" aria-hidden="true">${days.map((d, k)=>`<b class="${k===0?"idag":""}">${esc(d.kort)}</b>`).join("")}</span></div>
+    return `<section class="gruppe" id="${id}"><div class="gruppe-topp"><h3>${esc(g.region)}<small>${n} ${n===1?"spot":"spots"}</small></h3><span class="uke" aria-hidden="true">${days.map(d=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("")}</span></div>
       <div class="rader">${shown.map(s=>radHtml(s, days)).join("")}</div>
       ${!all ? `<button type="button" class="ghost visalle" data-region="${esc(g.region)}">Vis alle ${n}</button>` : ""}</section>`;
   }
@@ -185,7 +192,7 @@
   function tabellHtml(days){
     // nett: regionfilter over tabellen, grupper per region med «Vis alle» per gruppe, overskriftsraden står fast
     const filt = S.tabellRegion;
-    const head = `<thead><tr><th>Spot</th><th>Nå</th>${days.map((d, k)=>`<th class="dag">${k===0 ? "I dag" : esc(cap(d.kort))}<small>${d.dato}.</small></th>`).join("")}</tr></thead>`;
+    const head = `<thead><tr><th>Spot</th><th>Nå</th>${days.map(d=>`<th class="dag">${d.idag ? "I dag" : esc(cap(d.kort))}<small>${d.dato}.</small></th>`).join("")}</tr></thead>`;
     const body = groups().filter(g=> !filt || g.region===filt).map(g=>{
       const n = g.spots.length, all = S.visAlle[g.region] || n <= 8;
       const rows = [...g.spots].sort(byRatingNow).slice(0, all ? n : 5);
@@ -193,9 +200,15 @@
         rows.map(s=>{
           const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h);
           const cells = days.map(d=>{ const b = dayBest(s, d.key);
+            if(b.cls==="over") return `<td class="c"><span class="celle over" title="${esc(d.lang)}: dagens lys er over"></span></td>`;
             if(b.cls==="miss") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mangler data">–</span></td>`;
             if(b.cls==="dark") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mørkt">–</span></td>`;
-            const hv = b.hi!=null ? b.hi : (b.h && b.h.surf_height!=null ? b.h.surf_height : null); const hh = hv!=null ? nf1.format(hv) : "–";
+            // grunnregelen (PR #12 punkt b): tallet mangler → «–»; ekte 0 (flatt, treffer ikke …) → ordet i grå rute, aldri «0,0»
+            const v = b.hi!=null && b.hi > 0 ? {a: b.hi} : (window.Spot ? Spot.visHoyde(b.h) : (b.h && b.h.surf_height!=null ? {a: b.h.surf_height} : null));
+            // som Surf-kortet på spotsiden: «–» bare når surf_height mangler; kjent høyde uten pålitelig tall (regel (c): flatt, treffer ikke) → ordet
+            if(!v && (!b.h || b.h.surf_height==null)) return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mangler høyde">–</span></td>`;
+            if(!v || (!(v.a > 0) && !(b.st >= 1))){ const ord = ratingWord(b.h); return `<td class="c"><span class="celle null" title="${esc(`${d.lang}: ${ord}`)}">${esc(ord)}</span></td>`; }
+            const hh = nf1.format(v.a);
             return `<td class="c"><span class="celle r-${min5(b.st)}" title="${esc(`${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}, ${hh} m`)}">${esc(hh)}${b.st>=1 ? `<small>★${b.st}</small>` : ""}</span></td>`; }).join("");
           return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
         }).join("");
@@ -222,6 +235,8 @@
     $$(".visalle", root).forEach(b=> b.onclick = ()=>{ S.visAlle[b.dataset.region] = true; renderHome(); });
     $$("[data-region]", root).forEach(b=>{ if(b.classList.contains("chip")) b.onclick = ()=>{ setRegion(b.dataset.region); renderHome(); }; });
     $$("[data-tabellregion]", root).forEach(b=> b.onclick = ()=>{ S.tabellRegion = b.dataset.tabellregion || null; renderHome(); });
+    // valgt regionbrikke alltid synlig (PR #12 punkt a): rull brikkeraden sidelengs, aldri siden
+    $$(".regionvelger", root).forEach(row=>{ const c = row.querySelector('[aria-pressed="true"]'); if(c && row.scrollWidth > row.clientWidth){ row.scrollLeft = Math.max(0, c.offsetLeft - row.offsetLeft - (row.clientWidth - c.offsetWidth) / 2); } });
     $$("table.spots tr.s", root).forEach(tr=>{ tr.onclick = ()=> openSpot(tr.dataset.spot); tr.onkeydown = (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); openSpot(tr.dataset.spot); } }; });
   }
 

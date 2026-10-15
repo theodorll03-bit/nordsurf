@@ -342,7 +342,7 @@ def main():
                     miss_cells = page.evaluate("""() => { const rad = [...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr')].find(r => r.textContent.includes('Steinkrøssa'));
                         return rad ? [...rad.querySelectorAll('.uke i, td.celle, .celle')].map(c => ({cls: c.className, txt: c.textContent.trim()})) : null; }""")
                     assert miss_cells, "fant ikke Steinkrøssa på Hjem"
-                    cell = miss_cells[5]
+                    cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert "miss" in cell["cls"] and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     shot("hjem", scheme); audit("hjem")
                     # ---- 5. søk ----

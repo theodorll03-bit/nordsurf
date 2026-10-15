@@ -85,7 +85,7 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone")
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
-SUMMARY_DAYS = 7
+SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
 META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled", "local_rules", "calibration")
@@ -214,7 +214,18 @@ def summarise(hours, now, days=SUMMARY_DAYS):
     for k in range(days):
         d = today + timedelta(days=k)
         hs = [h for h in by_day.get(d, []) if _t(h) + timedelta(hours=1) > now]
-        summ = day_summary(hs) if hs else {"status": "miss"}
+        lyse = lambda hh: [h for h in hh if _light(h) not in (None, "mørkt")]
+        if k == 0 and hs and all(_light(h) == "mørkt" for h in hs) and lyse(by_day.get(d + timedelta(days=1), [])):
+            # dagens lys er over (Theodor 15.10, PR #12 punkt c): alle timene igjen i dag er mørke (hull eller
+            # ukjent lys er fortsatt «miss» - grunnregelen, fysikk-kontrollør 15.10), og i morgen
+            # har lys (ikke mørketid - da er dagen «mørkt» som før). Varselet starter ved kjøringen, så
+            # dagens tidligere lyse timer finnes ikke i dataene. «over», ikke «mørkt»/«mangler» - appen
+            # viser ingenting for dagen og starter på neste dag med dagslys.
+            summ = {"status": "over"}
+        else:
+            summ = day_summary(hs) if hs else {"status": "miss"}
+            if k == 0 and lyse(hs):
+                summ["lys_til"] = lyse(hs)[-1]["t"]   # siste lyse time i dag - appen regner dagen som over etter den
         summ["d"] = d.isoformat()
         dager.append(summ)
     return {"naa": [_naa_hour(h) for h in naa], "dager": dager}

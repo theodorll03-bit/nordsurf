@@ -89,7 +89,22 @@ def main():
         for day in o["dager"]:
             hs = [h for h in s["hours"] if t_of(h).astimezone(OSLO).date().isoformat() == day["d"] and t_of(h) + dt.timedelta(hours=1) > now]
             b, st = publish.best_hour(hs) if hs else (None, "miss")
+            if day["status"] == "over":   # dagens lys er over (PR #12 punkt c): bare i dag, ingen lyse timer igjen, lys i morgen
+                assert day["d"] == o["dager"][0]["d"] and st == "dark" and o["dager"][1]["status"] != "dark", (s["id"], day)
+                continue
             assert day["status"] == st and (b is None or day["h"]["t"] == b["t"]), (s["id"], day["d"], st, b and b["t"])
+    over = sum(1 for o in overview["spots"] if o["dager"][0]["status"] == "over")
+    assert over == len(overview["spots"]), f"varselet starter kl. 21 norsk tid 14.10 - dagens lys er over for alle spots ({over})"
+    # mørketid: ingen lys i dag eller i morgen → «dark», ikke «over»
+    dark_fc = {**fc, "spots": [{**fc["spots"][0], "hours": [{**h, "light": "mørkt", "daylight": False} for h in fc["spots"][0]["hours"]]}]}
+    d0dark = publish.summarise(dark_fc["spots"][0]["hours"], now)["dager"][0]
+    assert d0dark["status"] == "dark", d0dark
+    # hull eller ukjent lys resten av dagen er «miss», aldri «over» (grunnregelen)
+    unk_hours = [{**h, "light": None, "daylight": None} if t_of(h).astimezone(OSLO).date() == now.astimezone(OSLO).date() else h for h in fc["spots"][0]["hours"]]
+    assert publish.summarise(unk_hours, now)["dager"][0]["status"] == "miss"
+    gap_hours = [h for h in fc["spots"][0]["hours"] if t_of(h).astimezone(OSLO).date() != now.astimezone(OSLO).date()]
+    assert publish.summarise(gap_hours, now)["dager"][0]["status"] == "miss"
+    print("2b: dagens lys er over → «over» (alle spots kl. 21), mørketid → «dark» - OK")
     print("2: best_hour()/day_summary() - flest stjerner, likt -> høyest surf, bare lys, ukjent lys teller ikke, miss/dark, spenn bare fra timer over 0 - OK")
 
     # 3. detaljfilene: hele meta + alle timene

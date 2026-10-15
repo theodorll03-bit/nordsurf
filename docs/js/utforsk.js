@@ -15,7 +15,12 @@
   const min5 = (n)=> Math.min(5, n||0);
 
   function dayChips(){
-    return H().weekDays().map((d, k)=>({key: k===0 ? null : d.key, label: k===0 ? "Nå" : k===1 ? "I morgen" : `${cap(fmtWd.format(new Date(d.key + "T11:00:00Z")).replace(/\.$/, ""))} ${d.dato}.`, lang: d.lang}));
+    // «Nå» er alltid første brikke; «I morgen» og datoene settes ut fra datoen, ikke posisjonen - etter mørket
+    // starter weekDays() på i morgen (PR #12 punkt c; fysikk-kontrollør 15.10)
+    const days = H().weekDays(), base = (DATA.spots[0] && DATA.spots[0].dager) || [];
+    const tomorrow = base[1] && base[1].d;
+    const out = days.length && days[0].idag ? [] : [{key: null, label: "Nå", lang: "nå"}];
+    return out.concat(days.map(d=>({key: d.idag ? null : d.key, label: d.idag ? "Nå" : d.key===tomorrow ? "I morgen" : `${cap(fmtWd.format(new Date(d.key + "T11:00:00Z")).replace(/\.$/, ""))} ${d.dato}.`, lang: d.lang})));
   }
   // verdi per spot for valgt dag: nå = nå-timen; ellers dagens beste dagslystime (publish.best_hour)
   function valueFor(s, dayKeyOrNull){
@@ -70,6 +75,7 @@
       + [...offBy.entries()].map(([k, ps])=>`<button type="button" class="chip dashed" data-off="${esc(k)}" aria-label="${esc(`${k}: ${ps.length} ${ps.length===1 ? "spot" : "spots"} utenfor kartet - vis lista`)}"><span aria-hidden="true">↓</span> ${esc(k)}${ps.length > 1 ? ` <span class="num">${ps.length}</span>` : ""}</button>`).join("");
     $$("#utforskChips [data-view]").forEach(b=> b.onclick = ()=>{ S.utforskView = b.dataset.view || null; S.picked = null; renderChips(); const e = viewExtent(); if(e) Kart.setExtent(e, true); Kart.setSelected(null); renderKort(); renderListe(); });
     $$("#utforskChips [data-off]").forEach(b=> b.onclick = ()=>{ S.offRegion = b.dataset.off; renderKort(); });
+    { const row = $("#utforskChips"), c = row && row.querySelector('[aria-pressed="true"]'); if(c && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, c.offsetLeft - row.offsetLeft - (row.clientWidth - c.offsetWidth) / 2); }   // valgt brikke synlig (PR #12 punkt a)
     const chips = dayChips();
     $("#dagChips").innerHTML = chips.map(c=>`<button type="button" class="chip" data-day="${c.key||""}" aria-pressed="${(S.utforskDay||"")===(c.key||"")}" aria-label="${esc(c.key ? cap(c.lang) : "Nå")}">${esc(c.label)}</button>`).join("");
     $$("#dagChips .chip").forEach(b=> b.onclick = ()=>{ S.utforskDay = b.dataset.day || null; $$("#dagChips .chip").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); Kart.redraw(); renderKort(); renderListe(); });

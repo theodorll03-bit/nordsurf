@@ -130,6 +130,19 @@ def main():
                 if mobile:
                     assert n_rows == min(troms, 5) or n_rows == troms, (n_rows, troms)
                     assert page.text_content("#viewHjem").count("Spots i Troms") == 1
+                # PR #12 punkt a: valgt regionbrikke synlig, rekkefølge som oversikt.regions (spots.json, nord til sør)
+                chip = page.evaluate("""() => { const row = document.querySelector('#viewHjem .regionvelger'); const c = row && row.querySelector('[aria-pressed="true"]');
+                    if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
+                    return {txt: c.textContent.trim(), inside: b.left >= r.left - 1 && b.right <= r.right + 1,
+                            order: [...row.querySelectorAll('.chip')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")
+                assert chip and (mobile and chip["txt"] == "Troms" or not mobile) and chip["inside"], f"valgt regionbrikke ikke synlig ({label}): {chip}"
+                assert chip["order"] == [r["name"] for r in overview["regions"]] and chip["order"][0] == "Finnmark", chip["order"]
+                # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag»-kolonne
+                txt = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i, #viewHjem .celle, #viewHjem .rad .na, #viewHjem td.na')].map(e => e.textContent.trim())")
+                assert not any(t in ("0,0", "0") or t.startswith("0,0") for t in txt), [t for t in txt if t.startswith("0")][:5]
+                heads = page.evaluate("[...document.querySelectorAll('#viewHjem table.spots thead th.dag, #viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
+                assert heads and not any(h.startswith("I dag") for h in heads) and not page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over"), heads[:8]
+                print(f"PR #12 a-c ({label}): valgt brikke «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
                 shot("hjem")
                 # 8. nett-tabellen: regionfilter, «Vis alle», sticky
                 if not mobile:
@@ -165,6 +178,10 @@ def main():
                         const out = []; for(let i=0;i<els.length;i++) for(let j=i+1;j<els.length;j++){ const a = els[i].r, c = els[j].r;
                           if(a.left < c.right - 2 && a.right > c.left + 2 && a.top < c.bottom - 2 && a.bottom > c.top + 2) out.push([els[i].id, els[j].id]); } return out; }""")
                     assert not bad, f"overlappende merkelapper ({label}, {where}): {bad[:6]}"
+                # dagbrikkene etter mørket (T0 kl. 22:10): «Nå» først, så «I morgen» = dagen etter oversiktens første dag
+                dchips = page.evaluate("[...document.querySelectorAll('#dagChips .chip')].map(b => [b.textContent.trim(), b.dataset.day])")
+                d1 = overview["spots"][0]["dager"][1]["d"]
+                assert dchips[0] == ["Nå", ""] and dchips[1] == ["I morgen", d1] and len(dchips) == 8, dchips
                 page.click("#utforskChips [data-view='']"); page.wait_for_timeout(900); pills_ok("hele kartet"); shot("utforsk-hele")
                 n_cl = int(page.evaluate("document.querySelector('#markersLayer').dataset.clusters || '0'"))
                 reg_chip = page.query_selector("#utforskChips [data-view='Troms']")
