@@ -16,7 +16,8 @@
   const fmtWdShort = new Intl.DateTimeFormat("nb-NO", {weekday:"short", timeZone:TZ});
   const fmtDayNum = new Intl.DateTimeFormat("nb-NO", {day:"numeric", timeZone:TZ});
   const fmtHM = new Intl.DateTimeFormat("nb-NO", {hour:"2-digit", minute:"2-digit", timeZone:TZ, hour12:false});
-  let kystCache = null, kystLoading = null;
+  // minikart: én fil per spot (data/minikart/<id>.json, Tillegg 2) - hentes når spoten åpnes
+  const kystCache = {}, kystLoading = {};
   let H = null;   // hjelpere fra ui.js (nowIdx, usable, known, stars, dkOf, heightText, regionOf, close, isDesktop)
 
   /* ---------- tekster som tolker tall ---------- */
@@ -155,10 +156,10 @@
   }
   function minikartHtml(s, h){
     const inside = h && h.dir_offshore!=null && s.swell_window ? inSwellWindow(h.dir_offshore, s) : null;
-    const kyst = kystCache && kystCache.spots && kystCache.spots[s.id];
+    const kyst = kystCache[s.id] && kystCache[s.id].land ? kystCache[s.id] : null;
     const vt = vinduTekst(h, s);
     const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null, vinduTekst: vt ? vt.txt : null});
-    return `<div class="kort mini" id="miniKort"><div>${svg}${!kyst ? `<p class="muted" style="text-align:center;font-size:var(--fs-caption);margin:6px 0 0">${kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}</div>
+    return `<div class="kort mini" id="miniKort"><div>${svg}${!kyst ? `<p class="muted" style="text-align:center;font-size:var(--fs-caption);margin:6px 0 0">${s.id in kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}</div>
       <div class="forkl">
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 9q3-5 6-2t6-2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>Svell<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : "–"}${h && h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : ""}</b>${vt ? esc(vt.txt) : ""}</div>
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 7h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>Vind<b>${h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</b>${h && h.wind_speed!=null ? esc(cap(windLabel(h))) : ""}</div>
@@ -219,9 +220,9 @@
       S.idx = i; render(root, s, S, H);
       window.scrollTo(0, y); const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
     });
-    if(!kystCache){
-      kystLoading = kystLoading || fetch("data/minikart.json", {cache:"force-cache"}).then(r=> r.ok ? r.json() : {spots:{}}).catch(()=>({spots:{}}));
-      kystLoading.then(k=>{ kystCache = k; const el = $("#miniKort", root); if(el && S.view==="spot" && S.spotId===s.id){ el.outerHTML = minikartHtml(s, h); } });
+    if(!(s.id in kystCache)){
+      kystLoading[s.id] = kystLoading[s.id] || fetch(`data/minikart/${encodeURIComponent(s.id)}.json`, {cache:"force-cache"}).then(r=> r.ok ? r.json() : {}).catch(()=>({}));
+      kystLoading[s.id].then(k=>{ kystCache[s.id] = k || {}; const el = $("#miniKort", root); if(el && S.view==="spot" && S.spotId===s.id){ el.outerHTML = minikartHtml(s, h); } });
     }
     if(!pc) root.scrollTop = 0;
   }

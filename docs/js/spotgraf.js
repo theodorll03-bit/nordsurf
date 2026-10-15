@@ -120,7 +120,7 @@
       // tallet mangler (også for en «kjent» time med low_reason men uten høyde): stiplet, aldri en 0-søyle
       const miss = !known || h.surf_height==null;
       // tallet på valgt søyle følger regel (c) (Spot.visHoyde: blåst ut/stormsjø viser BarentsWatch-høyden) - samme tall som aria og topptekst
-      const vh = h ? Spot.visHoyde(h) : null; const tall = vh ? nf1.format(vh.b!=null ? vh.b : vh.a) : null;
+      const vh = h ? Spot.visHoyde(h) : null; const tv = vh ? (vh.b!=null ? vh.b : vh.a) : null; const tall = tv!=null && tv > 0 ? nf1.format(tv) : null;   // aldri «0,0» (PR #12 punkt b)
       const hs = h && h.surf_height!=null ? h.surf_height : 0, sets = h && h.surf_height_sets!=null ? Math.max(0, h.surf_height_sets - hs) : 0;
       const bar = !h ? "" : miss ? `<span class="b miss" style="height:3px"></span>`
         : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx && tall ? `<span class="tall">${tall}</span>` : ""}</span>`;

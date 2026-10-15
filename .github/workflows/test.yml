@@ -46,10 +46,14 @@ jobs:
         run: python tools/kontrast.py -q
       - name: Nettlesertest for søk, Utforsk og spotsiden (design/spotside, Playwright)
         run: timeout 330 python fetcher/test_spotside_browser.py
+      - name: Skalering til 100+ spots (Tillegg 2, Playwright med 100 syntetiske spots)
+        run: timeout 330 python fetcher/test_skalering_browser.py
       - name: Last opp designskjermbilder (til feilsøking, selv om testen bestod)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: design-screenshots
-          path: docs/design/spotside/etter/
+          path: |
+            docs/design/spotside/etter/
+            docs/design/skalering/etter/
           if-no-files-found: ignore

@@ -1,10 +1,18 @@
 {
   "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten). 26.09.2026: ideal_height og max_height er SURFEHØYDE (høyden der bølgene brekker, se rating.breaking_height) for alle spots, ikke Hs - Tromsø-spotene beholder samme tall som før ([0.8,2.0]/3.5), bare tolkningen er ny; Unstad er justert opp ([1.5,3.5]/5.5, tåler mer).",
+  "regions": [
+    {"name": "Troms", "order": 1},
+    {"name": "Lofoten", "order": 2},
+    {"name": "Møre og Romsdal", "order": 3}
+  ],
+  "_regions": "15.10.2026 (Tillegg 2): regionnavn og rekkefølge for Hjem/Utforsk/søk - ingen hardkodede lister i JS. Hver spot har «region» (og valgfritt «aliases» for søk). Kartutsnittet per region regnes av publish.py: rammen rundt spotene i regionen pluss margin.",
   "spots": [
     {
       "id": "grotfjord",
       "name": "Grøtfjord",
       "area": "Kvaløya",
+      "region": "Troms",
+      "aliases": ["Grøtfjorden"],
       "enabled": true,
       "spot": {
         "lat": 69.77881795520848,
@@ -57,6 +65,7 @@
       "id": "tromvik",
       "name": "Tromvik",
       "area": "Kvaløya",
+      "region": "Troms",
       "enabled": true,
       "spot": {
         "lat": 69.77765713046004,
@@ -98,6 +107,8 @@
       "id": "ersfjordstranda",
       "name": "Ersfjordstranda",
       "area": "Senja",
+      "region": "Troms",
+      "aliases": ["Ersfjord"],
       "enabled": true,
       "spot": {
         "lat": 69.48391859134674,
@@ -143,6 +154,7 @@
       "id": "russelv",
       "name": "Russelv",
       "area": "Lyngen",
+      "region": "Troms",
       "enabled": true,
       "spot": {
         "lat": 69.94838010045854,
@@ -198,6 +210,7 @@
       "id": "lenangsoyra",
       "name": "Lenangsøyra",
       "area": "Lyngen",
+      "region": "Troms",
       "enabled": true,
       "spot": {
         "lat": 69.84748282299432,
@@ -252,6 +265,7 @@
       "id": "steinkrossa",
       "name": "Steinkrøssa",
       "area": "Senja",
+      "region": "Troms",
       "enabled": true,
       "spot": {
         "lat": 69.49170665860727,
@@ -297,6 +311,8 @@
       "id": "unstad",
       "name": "Unstad",
       "area": "Lofoten",
+      "region": "Lofoten",
+      "aliases": ["Unstadbukta"],
       "enabled": true,
       "spot": {
         "lat": 68.26921573424642,
@@ -353,6 +369,8 @@
       "id": "farstadsanden",
       "name": "Farstadsanden",
       "area": "Hustadvika",
+      "region": "Møre og Romsdal",
+      "aliases": ["Farstad", "Farstadstranda"],
       "enabled": true,
       "spot": {
         "lat": 62.98515302271424,

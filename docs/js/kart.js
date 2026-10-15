@@ -1,52 +1,63 @@
-/* Nordsurf: kartmotoren for Utforsk (Theodor 14.10.2026, punkt 3; bygget om
-   fra «kart først» 09.10.2026).
+/* Nordsurf: kartlaget og merkene for Utforsk (Tillegg 2, Theodor 15.10.2026).
 
-   Vektorkyst (docs/geo/coast.json, forenklet GSHHS for Nord-Norge - MapLibre
-   og Kartverkets/OSM-kyst hører til S3) tegnet som SVG i ett lag som flyttes/
-   zoomes med CSS-transform. Merkene ligger i skjermrommet som ekte knapper:
-   hele merket (prikk og lapp) er én 44 px høy knapp, lappen «Navn Ord» er
-   28 px. Lappene kolliderer ikke (venstre/høyre/forskjøvet per spot); blir det
-   trangt, vises bare prikker - valgt spot beholder navnet.
+   Kartlaget ligger bak et lite grensesnitt (Kart.lag): setExtent(ramme), toScreen(lat, lon),
+   drawCoast(). I dag: vektorkysten i docs/geo/coast.json (GSHHS, Nord-Norge) som SVG, flyttet
+   og zoomet med CSS-transform. S3 kan bytte laget til MapLibre/PMTiles for hele Norge uten å
+   røre merker, klynger og kort (Kart.markers bruker bare toScreen/extent).
 
-   Ren visning: fargen og ordet per merke kommer fra utforsk.js (valgt dag),
-   aldri regnet her. Mangler tallet: stiplet prikk og «–». */
+   Merker: prikk + lapp «Navn Ord», lappen prøver høyre, venstre, over og under - er det ikke
+   plass, bare prikken. Klynging: merker nærmere hverandre enn CLUSTER_PX på skjermen slås
+   sammen til én sirkel med antall og farge etter beste vurdering; trykk zoomer inn. Bare merker
+   i utsnittet tegnes. Ren visning: verdi/ord per spot kommer fra utforsk.js. */
 (function(){
   const VW = 1000, VH = 844;
   const EASE = "cubic-bezier(.2,.8,.2,1)";
+  const CLUSTER_PX = 48, PH = 28, GAP = 12;
   const merc = (lat)=> Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
-  const PH = 28, GAP = 14;   // lappens høyde, avstand prikksentrum -> lappekant
-  let root, mapLayer, svg, markersEl;
-  let coast = null, spots = [], proj = null;
-  let state = { view:"nord", selected:null, area:{x:0, y:0, w:390, h:600} };
-  let cur = { cx:0, cy:0, sc:1 }, prevT = null, crisp = false;
-  let valueOf = (p)=>({st:0, word:"", miss:false, aria:p.name});
-  let onPick = ()=>{};
   const esc = (s)=> String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const reduced = ()=> matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let root, mapLayer, svg, markersEl, coast = null, proj = null;
+  let area = {x:0, y:0, w:390, h:600}, cur = {cx:0, cy:0, sc:1}, prevT = null, crisp = false;
+  let spots = [], valueOf = ()=>({st:0, word:"", miss:false, aria:""}), onPick = ()=>{}, onCluster = ()=>{};
+  let selected = null;
 
-  /* ---------- projeksjon og utsnitt ---------- */
-  function makeProj(c){
-    const [w0, s0, e0, n0] = c.bbox, mN = merc(n0), mS = merc(s0);
-    return { x: (lon)=> (lon - w0) / (e0 - w0) * c.vw, y: (lat)=> (mN - merc(lat)) / (mN - mS) * c.vh, bbox: c.bbox };
-  }
-  const onMap = (p)=> p.x >= 0 && p.x <= VW && p.y >= 0 && p.y <= VH;
-  function fit(points, pad){
-    const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
-    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const a = state.area, w = Math.max(60, x1 - x0), hgt = Math.max(60, y1 - y0);
-    const sc = Math.min((a.w - 2*pad) / w, (a.h - 2*pad) / hgt);
-    return { cx: (x0+x1)/2, cy: (y0+y1)/2, sc: Math.max(0.3, Math.min(8, sc)) };
-  }
-  function viewPoints(view){
-    const on = spots.filter(p=>!p.offMap);
-    const lof = on.filter(p=>/lofoten/i.test(p.area)), nord = on.filter(p=>!/lofoten/i.test(p.area));
-    if(view==="lofoten" && lof.length) return lof;
-    if(view==="alle") return on;
-    return nord.length ? nord : on;
-  }
-  const viewSpotIds = (view)=> new Set(viewPoints(view).map(p=>p.id));
-  const viewFor = (view)=> fit(viewPoints(view), Math.min(120, state.area.w*0.18));
-  function cssTransform(){ const a = state.area, ox = a.x + a.w/2, oy = a.y + a.h/2; return { tx: ox - cur.cx*cur.sc, ty: oy - cur.cy*cur.sc, sc: cur.sc }; }
+  /* ---------- kartlaget (grensesnittet S3 bytter ut) ---------- */
+  const Lag = {
+    init(el, coastJson){
+      root = el; coast = coastJson;
+      const [w0, s0, e0, n0] = coast.bbox, mN = merc(n0), mS = merc(s0);
+      proj = { x: (lon)=> (lon - w0) / (e0 - w0) * coast.vw, y: (lat)=> (mN - merc(lat)) / (mN - mS) * coast.vh,
+               lon: (x)=> w0 + x / coast.vw * (e0 - w0), lat: (y)=> Math.atan(Math.sinh(mN - y / coast.vh * (mN - mS))) * 180 / Math.PI };
+      root.innerHTML = `<div class="map-layer" id="mapLayer"><svg id="mapSvg" width="${VW}" height="${VH}" viewBox="0 0 ${VW} ${VH}" aria-hidden="true" style="overflow:visible;display:block"><path class="coast" d="${coast.d}"/></svg></div><div class="markers" id="markersLayer"></div>`;
+      mapLayer = root.querySelector("#mapLayer"); svg = root.querySelector("#mapSvg"); markersEl = root.querySelector("#markersLayer");
+      mapLayer.addEventListener("transitionend", (e)=>{ if(e.target===mapLayer && e.propertyName==="transform") crispen(); });
+    },
+    covers(lat, lon){ const [w0, s0, e0, n0] = coast.bbox; return lat >= s0 && lat <= n0 && lon >= w0 && lon <= e0; },
+    // ramme [latMin, lonMin, latMax, lonMax] -> utsnitt som fyller det synlige området (med kant)
+    setExtent(ext, animate){
+      const x0 = proj.x(ext[1]), x1 = proj.x(ext[3]), y0 = proj.y(ext[2]), y1 = proj.y(ext[0]);
+      const pad = Math.min(60, area.w * 0.08);
+      const w = Math.max(40, x1 - x0), h = Math.max(40, y1 - y0);
+      cur = { cx: (x0+x1)/2, cy: (y0+y1)/2, sc: Math.max(0.3, Math.min(12, Math.min((area.w - 2*pad) / w, (area.h - 2*pad) / h))) };
+      applyTransform(animate);
+    },
+    toScreen(lat, lon){ const ox = area.x + area.w/2, oy = area.y + area.h/2; return {x: ox + (proj.x(lon) - cur.cx)*cur.sc, y: oy + (proj.y(lat) - cur.cy)*cur.sc}; },
+    extent(){ // synlig ramme i lat/lon
+      const ox = area.x + area.w/2, oy = area.y + area.h/2;
+      const px = (sx)=> cur.cx + (sx - ox)/cur.sc, py = (sy)=> cur.cy + (sy - oy)/cur.sc;
+      return [proj.lat(py(area.y + area.h)), proj.lon(px(area.x)), proj.lat(py(area.y)), proj.lon(px(area.x + area.w))];
+    },
+    drawCoast(){ /* kysten ligger alt i SVG-en - S3 tegner fliser her */ },
+    thumbSvg(points, colorOf){
+      if(!coast) return "";
+      const pts = points.filter(p=> Lag.covers(p.lat, p.lon)).map(p=>({...p, x: proj.x(p.lon), y: proj.y(p.lat)}));
+      if(!pts.length) return "";
+      const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+      const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90, y0 = Math.min(...ys) - 70, y1 = Math.max(...ys) + 70;
+      return `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1-x0).toFixed(0)} ${(y1-y0).toFixed(0)}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="coast" d="${coast.d}"/>${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" class="r-${Math.min(5, colorOf(p))}" style="fill:var(--rc);stroke:var(--raised);stroke-width:2"/>`).join("")}</svg>`;
+    },
+  };
+  function cssTransform(){ const ox = area.x + area.w/2, oy = area.y + area.h/2; return { tx: ox - cur.cx*cur.sc, ty: oy - cur.cy*cur.sc, sc: cur.sc }; }
   function uncrispen(){
     if(!crisp) return;
     crisp = false;
@@ -57,7 +68,6 @@
     void mapLayer.offsetWidth;
   }
   function crispen(){
-    // skarp tegning når kartet står stille: utsnittet i viewBox i stedet for CSS-skalering
     const t = cssTransform(), W = root.clientWidth || 390, H = root.clientHeight || 600;
     crisp = true;
     mapLayer.style.transition = "none"; mapLayer.style.transform = "none";
@@ -70,122 +80,86 @@
     const same = prevT && Math.abs(prevT.tx-t.tx) < 0.5 && Math.abs(prevT.ty-t.ty) < 0.5 && Math.abs(prevT.sc-t.sc) < 1e-4;
     if(animate && !reduced() && !same){
       uncrispen();
-      mapLayer.style.transition = `transform .9s ${EASE}`;
+      mapLayer.style.transition = `transform .7s ${EASE}`;
       mapLayer.style.transform = `translate(${t.tx.toFixed(1)}px, ${t.ty.toFixed(1)}px) scale(${t.sc.toFixed(4)})`;
     } else { prevT = t; crispen(); }
     prevT = t;
-    placeMarkers(animate && !reduced());
+    draw(animate && !reduced());
   }
 
-  /* ---------- oppsett ---------- */
-  function init(el, data, coastJson, o){
-    root = el; coast = coastJson; proj = makeProj(coast);
-    valueOf = o.valueOf || valueOf; onPick = o.onPick || onPick;
-    spots = data.spots.map(s=>{
-      const lat = s.spot && s.spot.lat, lon = s.spot && s.spot.lon;
-      const p = { s, id:s.id, name:s.name, area:s.area||"", x: lon!=null ? proj.x(lon) : -9999, y: lat!=null ? proj.y(lat) : -9999 };
-      p.offMap = !(lat!=null && lon!=null && onMap(p));
-      return p;
-    });
-    root.innerHTML = `<div class="map-layer" id="mapLayer"><svg id="mapSvg" width="${VW}" height="${VH}" viewBox="0 0 ${VW} ${VH}" aria-hidden="true" style="overflow:visible;display:block"><path class="coast" d="${coast.d}"/></svg></div><div class="markers" id="markersLayer"></div>`;
-    mapLayer = root.querySelector("#mapLayer"); svg = root.querySelector("#mapSvg"); markersEl = root.querySelector("#markersLayer");
-    markersEl.innerHTML = spots.filter(p=>!p.offMap).map(p=>`<button type="button" class="mk bare" data-id="${esc(p.id)}" aria-label="${esc(p.name)}"><span class="mk-dot"></span><span class="mk-pill"><span class="nm">${esc(p.name)}</span><span class="ord"></span></span></button>`).join("");
-    markersEl.querySelectorAll(".mk").forEach(b=> b.onclick = ()=> onPick(b.dataset.id));
-    mapLayer.addEventListener("transitionend", (e)=>{ if(e.target===mapLayer && e.propertyName==="transform") crispen(); });
+  /* ---------- merker og klynger ---------- */
+  function init(el, coastJson, list, o){
+    Lag.init(el, coastJson);
+    spots = list.map(s=>({s, id: s.id, name: s.name, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon}))
+      .map(p=>({...p, offMap: !(p.lat!=null && p.lon!=null && Lag.covers(p.lat, p.lon))}));
+    valueOf = o.valueOf || valueOf; onPick = o.onPick || onPick; onCluster = o.onCluster || onCluster;
   }
-  function setArea(area, animate){ state.area = area; recenter(animate); }
-  function setView(view, animate){ state.view = view; recenter(animate); }
-  function recenter(animate){ cur = viewFor(state.view); applyTransform(animate!==false); }
-  function setSelected(id){ state.selected = id; recolor(); }
-
-  /* ---------- merkene ---------- */
-  function recolor(){
-    spots.forEach(p=>{
-      const mk = markersEl.querySelector(`.mk[data-id="${p.id}"]`); if(!mk) return;
-      const v = valueOf(p);
-      const sel = state.selected===p.id;
-      mk.classList.remove("r-0","r-1","r-2","r-3","r-4","r-5");
-      mk.classList.add(`r-${Math.min(5, v.st||0)}`);
-      mk.classList.toggle("miss", !!v.miss);
-      mk.classList.toggle("sel", sel);
-      mk.querySelector(".ord").textContent = v.miss ? "–" : (v.word || "");
-      mk.setAttribute("aria-label", v.aria || p.name);
-      mk.setAttribute("aria-pressed", String(sel));
-      mk._st = v.st||0; mk._sel = sel;
-    });
-    layoutPills();
-  }
-  const prio = (mk)=> (mk._sel ? 1000 : 0) + (mk._st || 0);
-  const hitRect = (r, list)=> list.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
-  const pillWidth = (mk)=> 22 + mk.querySelector(".nm").textContent.length*7.6 + Math.max(0, mk.querySelector(".ord").textContent.length*6.6 + 6);
-  function layoutPills(){
-    // alle merker vil ha lapp; et lite søk finner en plassering uten kollisjon for alle samlet
-    // (andre prikker er hindre, lappen nærmere egen prikk enn noen annen). Går det ikke:
-    // de viktigste først (valgt, flest stjerner), resten som prikk uten lapp.
-    const a = state.area;
-    const inside = [...markersEl.querySelectorAll(".mk")].filter(m=>m._inside);
-    const mks = [...inside].sort((x, y)=> prio(y) - prio(x));
-    const dots = inside.map(m=>({id: m.dataset.id, x: m._sx-7, y: m._sy-7, w: 14, h: 14}));
-    const distRP = (r, x, y)=> Math.hypot(Math.max(r.x - x, 0, x - (r.x + r.w)), Math.max(r.y - y, 0, y - (r.y + r.h)));
-    const cands = mks.map(mk=>{
-      const w = pillWidth(mk);
-      let preferLeft = mk._sx > a.x + a.w*0.62;
-      const near = dots.filter(d=> d.id!==mk.dataset.id && Math.abs(d.y + 7 - mk._sy) < PH + 12 && Math.abs(d.x + 7 - mk._sx) < w + 2*GAP + 12);
-      if(near.length){ const east = near.some(d=>d.x + 7 > mk._sx), west = near.some(d=>d.x + 7 < mk._sx); if(east && !west) preferLeft = true; else if(west && !east) preferLeft = false; }
-      const sides = preferLeft ? ["left","right"] : ["right","left"];
-      const out = [];
-      for(const dy of [0, -14, 14, -24, 24]) for(const side of sides){
-        const x = side==="right" ? mk._sx + GAP : mk._sx - GAP - w;
-        if(x < a.x + 4 || x + w > a.x + a.w - 4) continue;
-        out.push({side, r:{x, y: mk._sy - PH/2 + dy, w, h: PH}});
-      }
-      for(const dy of [-(PH/2 + 12), PH/2 + 12]){ const x = Math.max(a.x + 4, Math.min(a.x + a.w - 4 - w, mk._sx - w/2)); out.push({side:"vert", r:{x, y: mk._sy - PH/2 + dy, w, h: PH}}); }
-      return out;
-    });
-    const chosen = new Array(mks.length).fill(null); let nodes = 0;
-    const ok = (i, c)=>{
-      const others = dots.filter(d=>d.id!==mks[i].dataset.id);
-      if(hitRect(c.r, others)) return false;
-      const own = distRP(c.r, mks[i]._sx, mks[i]._sy);
-      if(others.some(d=> distRP(c.r, d.x + 7, d.y + 7) <= own)) return false;
-      for(let j=0;j<i;j++) if(chosen[j] && hitRect(c.r, [chosen[j].r])) return false;
-      return true;
-    };
-    const dfs = (i)=>{ if(i===mks.length) return true; for(const c of cands[i]){ if(++nodes > 20000) return false; if(!ok(i, c)) continue; chosen[i] = c; if(dfs(i+1)) return true; chosen[i] = null; } return false; };
-    let pass = mks.length ? "strict" : "none";
-    if(mks.length && !dfs(0)){ pass = "dense"; chosen.fill(null); for(let i=0;i<mks.length;i++) chosen[i] = cands[i].find(c=>ok(i, c)) || (mks[i]._sel ? cands[i][0] : null); }
-    markersEl.dataset.pills = pass;
-    mks.forEach((mk, i)=>{
-      const c = chosen[i];
-      mk.classList.toggle("bare", !c);
-      mk.classList.toggle("left", !!c && c.side==="left");
-      mk.classList.toggle("vert", !!c && c.side==="vert");
-      if(c){ mk.style.setProperty("--lx", (c.r.x - (mk._sx - 22)).toFixed(1)+"px"); mk.style.setProperty("--ly", (c.r.y - (mk._sy - 22)).toFixed(1)+"px"); }
-    });
-  }
-  function placeMarkers(animate){
-    const a = state.area, ox = a.x + a.w/2, oy = a.y + a.h/2;
-    spots.forEach(p=>{
-      const mk = markersEl.querySelector(`.mk[data-id="${p.id}"]`); if(!mk) return;
-      const sx = ox + (p.x - cur.cx)*cur.sc, sy = oy + (p.y - cur.cy)*cur.sc;
-      const inside = sx >= a.x+12 && sx <= a.x+a.w-12 && sy >= a.y+12 && sy <= a.y+a.h-12;
-      mk.hidden = !inside;
-      mk.style.transition = animate ? `transform .9s ${EASE}` : "none";
-      mk.style.transform = `translate3d(${(sx-22).toFixed(1)}px, ${(sy-22).toFixed(1)}px, 0)`;
-      mk._sx = sx; mk._sy = sy; mk._inside = inside;
-    });
-    layoutPills();
-  }
-  const screenOf = (id)=>{ const mk = markersEl && markersEl.querySelector(`.mk[data-id="${id}"]`); return mk ? {x: mk._sx, y: mk._sy, inside: mk._inside} : null; };
-  const spotInfo = (id)=> spots.find(p=>p.id===id) || null;
+  function setArea(a){ area = a; }
+  function setSelected(id){ selected = id; draw(false); }
   const offMapSpots = ()=> spots.filter(p=>p.offMap);
-  // lite oversiktskart til Hjem på nett: kysten og prikkene i ratingfargen nå
-  function thumb(colorOf){
-    if(!coast) return "";
-    const pts = spots.filter(p=>!p.offMap);
-    const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
-    const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90, y0 = Math.min(...ys) - 70, y1 = Math.max(...ys) + 70;
-    return `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1-x0).toFixed(0)} ${(y1-y0).toFixed(0)}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="coast" d="${coast.d}"/>${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" class="r-${Math.min(5, colorOf(p))}" style="fill:var(--rc);stroke:var(--raised);stroke-width:2"/>`).join("")}</svg>`;
+  const screenOf = (id)=>{ const p = spots.find(x=>x.id===id); return p && !p.offMap ? Lag.toScreen(p.lat, p.lon) : null; };
+  function clusters(){
+    // enkel greedy klynging: merker innenfor CLUSTER_PX av hverandre på skjermen slås sammen
+    const inside = [];
+    for(const p of spots){
+      if(p.offMap) continue;
+      const sc = Lag.toScreen(p.lat, p.lon);
+      if(sc.x < area.x + 10 || sc.x > area.x + area.w - 10 || sc.y < area.y + 10 || sc.y > area.y + area.h - 10) continue;
+      inside.push({p, x: sc.x, y: sc.y, v: valueOf(p)});
+    }
+    const groups = [];
+    for(const m of inside){
+      let g = groups.find(g=> Math.hypot(g.x - m.x, g.y - m.y) < CLUSTER_PX);
+      if(g){ g.members.push(m); g.x = g.members.reduce((a, b)=>a + b.x, 0) / g.members.length; g.y = g.members.reduce((a, b)=>a + b.y, 0) / g.members.length; }
+      else groups.push({x: m.x, y: m.y, members: [m]});
+    }
+    return groups;
   }
-  window.Kart = { init, setArea, setView, setSelected, recolor, viewSpotIds, spotInfo, screenOf, offMapSpots, thumb, relayout: ()=>placeMarkers(false) };
+  function draw(animate){
+    if(!markersEl) return;
+    const groups = clusters();
+    const html = [];
+    const placed = [];   // lapper plassert, til kollisjonssjekk
+    // hindre for lappene: prikker (14 px) og klyngeringer (34 px)
+    const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 17, y: g.y - 17, w: 34, h: 34} : {x: g.x - 7, y: g.y - 7, w: 14, h: 14});
+    const hit = (r)=> placed.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y) || dots.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
+    // valgt først (beholder lappen), så flest stjerner
+    const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.st||0)));
+    for(const {g} of order){
+      if(g.members.length > 1){
+        const best = g.members.reduce((a, b)=> (b.v.st||0) > (a.v.st||0) ? b : a);
+        const ids = g.members.map(m=>m.p.id).join(",");
+        html.push(`<button type="button" class="klynge r-${Math.min(5, best.v.st||0)}" style="transform:translate3d(${(g.x-22).toFixed(1)}px,${(g.y-22).toFixed(1)}px,0)" data-ids="${esc(ids)}" aria-label="${esc(`${g.members.length} spots, beste ${best.v.word || "–"}. Zoom inn`)}"><span class="ring"><b>${g.members.length}</b></span></button>`);
+        continue;
+      }
+      const m = g.members[0], sel = m.p.id===selected;
+      const txt = `${m.p.name} ${m.v.miss ? "–" : (m.v.word || "")}`.trim();
+      const w = 22 + txt.length * 7.4;
+      const cands = [["right", m.x + GAP, m.y - PH/2], ["left", m.x - GAP - w, m.y - PH/2], ["over", m.x - w/2, m.y - GAP - PH - 2], ["under", m.x - w/2, m.y + GAP + 2]];
+      let pos = null;
+      for(const [side, x, y] of cands){
+        const r = {x, y, w, h: PH};
+        if(x < area.x + 4 || x + w > area.x + area.w - 4 || y < area.y + 2 || y + PH > area.y + area.h - 2) continue;
+        if(hit(r)) continue;
+        pos = {side, r}; break;
+      }
+      if(!pos && sel) pos = {side: "right", r: {x: Math.max(area.x + 4, Math.min(area.x + area.w - 4 - w, m.x + GAP)), y: m.y - PH/2, w, h: PH}};
+      if(pos) placed.push(pos.r);
+      html.push(`<button type="button" class="mk r-${Math.min(5, m.v.st||0)}${m.v.miss ? " miss" : ""}${sel ? " sel" : ""}${pos ? "" : " bare"}" style="transform:translate3d(${(m.x-22).toFixed(1)}px,${(m.y-22).toFixed(1)}px,0)" data-id="${esc(m.p.id)}" aria-label="${esc(m.v.aria || m.p.name)}" aria-pressed="${sel}">
+        <span class="mk-dot"></span>${pos ? `<span class="mk-pill" style="left:${(pos.r.x - (m.x-22)).toFixed(1)}px;top:${(pos.r.y - (m.y-22)).toFixed(1)}px"><span class="nm">${esc(m.p.name)}</span><span class="ord">${esc(m.v.miss ? "–" : (m.v.word || ""))}</span></span>` : ""}</button>`);
+    }
+    markersEl.innerHTML = html.join("");
+    markersEl.querySelectorAll(".mk").forEach(b=> b.onclick = ()=> onPick(b.dataset.id));
+    markersEl.querySelectorAll(".klynge").forEach(b=> b.onclick = ()=> onCluster(b.dataset.ids.split(",")));
+    markersEl.dataset.clusters = String(groups.filter(g=>g.members.length > 1).length);
+  }
+  function extentOf(ids){
+    const pts = spots.filter(p=> ids.includes(p.id) && !p.offMap);
+    if(!pts.length) return null;
+    const la = pts.map(p=>p.lat), lo = pts.map(p=>p.lon);
+    const dl = Math.max(0.03, (Math.max(...la) - Math.min(...la)) * 0.6), dn = Math.max(0.08, (Math.max(...lo) - Math.min(...lo)) * 0.6);
+    return [Math.min(...la) - dl, Math.min(...lo) - dn, Math.max(...la) + dl, Math.max(...lo) + dn];
+  }
+  function thumb(colorOf){ return Lag.thumbSvg(spots.filter(p=>!p.offMap), (p)=> colorOf(p)); }
+  window.Kart = { lag: Lag, init, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(false), offMapSpots, screenOf, extentOf, thumb, covers: (la, lo)=> Lag.covers(la, lo) };
 })();

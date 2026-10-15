@@ -171,6 +171,7 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 
 - **S1. Open-Meteo - FERDIG 10.10.2026 (commit 5387aa8, se STATUS.md):** delt frist (5 s oppkobling/20 s svar) og korte pauser, samlekall for alle punkt før spot-løkka, mellomlager delt mellom spots. Før: 10 min 49 s hentesteg (11-18 min per kjøring). Etter: 52 s, 3 Open-Meteo-kall i stedet for 28, GFS-timer per spot uendret (sum 1 187 mot 1 179).
 - **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren. **FERDIG og i drift 14.10.2026 (PR #6, se STATUS.md):** `fetcher/publish.py`, `publiser.yml`, læringsdataene committes til main som før. NB for S4: oversikten har timene forsiden leser i 9 døgn (svarlinja og avspillingen fra 13.10 trenger dem) - 626 KiB rå for 8 spots; ved hundrevis av spots må forsiden bruke dagsoppsummering i stedet (punkt 4 under).
+- **Tillegg 2 (15.10.2026, gren `skalering/oversikt`, PR åpen):** oversikt-2 (nå-time + dagssammendrag, regioner fra spots.json), app mot sammendrag, klynger/lapper/regionbrikker, 100-spot-test. Kartlaget ligger bak `Kart.lag` - S3 bytter laget.
 - **S3. MapLibre-kart** med den mørke stilen fra dagens design, klynger med antall og beste rating, lapper bare der det er plass og alltid for favoritter, vind og svell som eget lag oppå.
 - **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
 - **S5. spots.json per region med status.**
