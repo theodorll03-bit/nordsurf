@@ -1,6 +1,24 @@
 # Nordsurf: status
 
-## 5 stjerner («Rått») - bevisst definisjon (Theodor 15.10.2026, punkt 3) - gren `fiks/fem-stjerner`, PR åpen, IKKE merget
+## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG
+
+Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste steg».
+
+| Del | Status | Gren / PR |
+|---|---|---|
+| Plan i ROADMAP (K) + privat/ i .gitignore | ferdig | main |
+| 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | ferdig, merget | fiks/fem-stjerner, #11 |
+| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | venter | skalering/oversikt, #12 |
+| 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
+| 0.4 Steinkrøssa nytt snitt automatisk | venter | - |
+| A kandidatimport | venter | - |
+| A2 koordinatjakt | venter | - |
+| B S3 MapLibre | venter | - |
+| C spotfabrikken | venter | - |
+
+**Neste steg:** Del 0.2 (PR #12, arbeidskopi ../nordsurf-12).
+
+## 5 stjerner («Rått») - bevisst definisjon (Theodor 15.10.2026, punkt 3) - gren `fiks/fem-stjerner`, PR #11, Theodor sa JA 15.10 kveld (merget i nattjobben)
 
 **Problemet:** `potential = int(5·score)` og `height_score` (1,0 bare nøyaktig midt i ideal_height) gjorde 4 til toppen i praksis - 0 av 1 600 timer i varselet 15.10 hadde 5. **Løsningen (fysikk-kontrollørens forslag):** formelen gir aldri 5 selv (`potential = min(4, …)`); den femte stjernen gis av en port der ALT er kjent og oppfylt (manglende ≠ oppfylt):
 - A (svellsiden, `rating.five_star_swell_gate`): dagens regning gir potensial 4; ikke `uncertain`/`sources_disagree`; høyden fra BarentsWatch (kystmodellen, dag 1-3) med `bw_confirms`; `height_score(surf_height) ≥ 0,85` (= |h − mid| ≤ 0,375·(hi − lo); 0,9 ville vært «midterste halvdel» men utelukker Farstadsanden 15.10 kl. 17, 2,53 m i [1,0, 3,0] - det eneste observerte 4-5-tilfellet modellen når); middelperioden ute ≥ 13 s; svellenergi kjent, energifaktor full OG ≥ 2 000 kJ (gulv, så Unstads lokale 400 ikke definerer Rått); svellretning i vinduet med minst min(5°, bredde/4) margin og eksponering ≥ 0,667; tidevann kjent når spoten har preferanse. `exposure ≥ 0,999` kunne ikke brukes: glattet eksponering når aldri 1,0 for 6 av 8 spots.
@@ -12,6 +30,14 @@
 **Fysikk-kontrollør (15.10.2026): GODKJENT** - koden følger forslaget 1:1; rettet etter funn: ukjent vindretning med kjent fart under 3 m/s kunne gi 5 (nå kreves wind_dir kjent), STATUS-setningen om de 17 timene, forklaringslinja for tilbakeholdt femte stjerne. Kosmetisk, pre-eksisterende: «Tidevann: spoten tåler alt» for Farstadsanden (bare lokal preferanse).
 
 **Faste observasjoner:** alle uendret, unntatt Unstad 26.09-rekonstruksjonen (test 16.1, Theodor: 4 stjerner) som oppfyller alle vilkår (2,42 m, 15 s, 8 350 kJ, 3 m/s offshore, 300° = 35° inn i vinduet, BW bekrefter) og får 5 - ingen fysisk begrunnet skrue gir 4 der uten ren konstantjustering (fixturens vind og bw_dir er rekonstruerte antagelser). **Krever Theodors ja** - tabellen i test_display_only er satt til 5 med merknad; merge = ja. Syntetiske fixturer «Alt perfekt»/«Liker lavt vann» fikk kjent svellenergi (2,0 m ute, 2 760 kJ) - under porten teller manglende energi ikke som oppfylt. Tester: 28 (alt oppfylt → 5; hvert vilkår brutt → høyst 4; sidevind 4 m/s → 4 + 1 blass; flo/ukjent tidevann med preferanse → 4; høydegrensen; Farstadsanden 15.10 kl. 17 med 3 m/s offshore → 5).
+
+**Nattjobben (Theodors ja, ROADMAP K del 0.1):** (a) Unstad 26.09 (test 16.1, observert 4, porten gir 5) står som kjent avvik under «Venter på Theodor» i ROADMAP - neste observerte 5-dag avgjør om porten er for raus. (b) `notify.five_star_alerts()`: ett ntfy-varsel per spot når varselet har minst én time med 5 i dagslys de neste 7 dagene (spot, dag, tidsrom, antall vinduer til), maks ett per spot per rullerende døgn (nøkkel `five:<id>` i data/notified.json), uavhengig av notify.json sin spots-liste. Test 6h2. Fysikk-kontrollør: GODKJENT. Merknader: en 5-er innen 36 t gir også det vanlige ≥3-varselet (to meldinger, med vilje: den ene sier «sjekk og logg»); samme vindu kan varsles igjen neste døgn mens det står i varselet (1-3 ganger i praksis, BarentsWatch-horisonten); før første spot får status `hemmelig` må notify utelate den (navnet går til ntfy.sh, id-en til data/notified.json) - gjelder også det vanlige varselet fra før.
+
+## Skyggemodus for BarentsWatch-punktene, 14 dager (Theodor 15.10.2026, punkt 2) - gren `skygge/bw-punkter`
+
+De sju andre spotene flyttes IKKE nå. Henteren henter BarentsWatch både for dagens punkt og for snittregelens punkt (`barentswatch_point_shadow` i spots.json, med `_skyggepunkt`-notat) og rater timen med begge: `bw_height_shadow`, `surf_height_shadow`, `stars_shadow` i forecast.json og arkivet (`[stjerner, surf, surf_skygge, surf_skygge_uten_prior, stjerner_skygge]` per time - lesere bruker [0]/[1] som før), ikke i detaljfilene (DETAIL_EXCLUDE). Appen viser fortsatt dagens punkt; kalibreringen rører ikke skyggen. Unstad: `surf_height_shadow_noprior` (surf_factor 1,0) i tillegg - HYPOTESE: prioren 1,45 kompenserer for at punktet lå i brytesonen (700 m ute viste 3,06 m mot 0,68 m 15.10). Fysikk-kontrollør: forholdet er tilstandsavhengig (brytesone bare på store dager, små dager gir forhold ca. 1), så rapporten deler i små/store dager; om prioren fjernes ved flytting avgjøres av dataene (ROADMAP). `tools/skygge_rapport.py` (ukentlig i Testlab, data/backtest/skygge_latest.md) sammenligner i bruk mot skygge time for time og mot logger/benchmarks etter hvert som de kommer.
+
+Skyggepunktene (fra snittet 15.10, data/bw_point_search/snitt_2026-10-15.md): regelens valg for ersfjordstranda (500 m, 14 m dyp), steinkrossa (1 400 m, 29 m - langt ute) og unstad (700 m, 8,5 m); for grotfjord (400 m), tromvik (100 m), russelv (600 m) og lenangsoyra (200 m) fant regelen ingen punkt 15.10 (dagen var vindsjø fra SSV i Troms - BarentsWatch-retning 60-80° fra svellet ute, perioder 1-7 s), så første punkt med ≥ 8 m dyp er brukt. Farstadsanden beholder Theodors nål som skyggepunkt (punktet i bruk er alt flyttet, PR #9). Tester: test_pipeline 9f (skyggerating, None aldri 0, Unstad uten prior = med/1,45).
 
 ## Farstadsanden 15.10.2026: observasjon, nytt BarentsWatch-punkt og ny vindregel (Theodor 15.10) - BYGGET på gren `fiks/farstad-vind`, PR åpen, IKKE merget (Theodor vil se tabellene)
 
