@@ -142,14 +142,14 @@
     const g = energiGrenser(); const kj = h ? h.energy_swell_kj : null; const eo = energiOrd(kj);
     const ticks = g.slice(0, 2).map(v=>`<span class="tick" style="left:${(logPos(v)*100).toFixed(1)}%"></span>`).join("");
     return `<div class="kort4">
-      <div class="kort"><div class="k">Surf</div><div class="v">${ekteNull ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `${esc(hoyde)}<small>m</small>` : "–"}</div><div class="l">${ekteNull ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
-      <div class="kort"><div class="k">Svell ute</div><div class="v">${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)}<small>m</small>` : "–"}${h && h.period!=null ? `<span class="sep">·</span>${nf0.format(h.period)}<small>s</small>` : ""}</div>
+      <div class="kort"><div class="k">Surf</div><div class="v">${ekteNull ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `<span class="tall">${esc(hoyde)}</span><small>m</small>` : "–"}</div><div class="l">${ekteNull ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
+      <div class="kort"><div class="k">Svell ute</div><div class="v">${h && h.swell_offshore!=null ? `<span class="tall">${nf1.format(h.swell_offshore)}</span><small>m</small>` : "–"}${h && h.period!=null ? `<span class="sep">·</span><span class="tall">${nf0.format(h.period)}</span><small>s</small>` : ""}</div>
         <div class="l">${h && h.dir_offshore!=null ? `fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : "retning mangler"}</div>
         <div class="m">${!vt ? "" : `<span class="vindu-${vt.ikon}">${vt.ikon==="ja" ? CHECK : vt.ikon==="nei" ? CROSS : TILDE}${esc(vt.txt)}</span>`}</div></div>
-      <div class="kort"><div class="k">Vind</div><div class="v">${h && h.wind_speed!=null ? `${h.wind_dir!=null ? vindPil(h.wind_dir) : ""}${nf0.format(h.wind_speed)}<small>m/s</small>` : "–"}</div>
+      <div class="kort"><div class="k">Vind</div><div class="v">${h && h.wind_speed!=null ? `${h.wind_dir!=null ? vindPil(h.wind_dir) : ""}<span class="tall">${nf0.format(h.wind_speed)}</span><small>m/s</small>` : "–"}</div>
         <div class="l">${h && h.wind_speed!=null ? `<b>${esc(cap(windLabel(h)))}</b>${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</div>
         <div class="m">${h && h.gust!=null ? `Kast ${nf0.format(h.gust)} m/s` : ""}</div></div>
-      <div class="kort"><div class="k">Energi</div><div class="v">${kj!=null ? `<span class="num">${kjFmt(kj)}</span><small>kJ</small>` : "–"}</div><div class="l">${esc(eo || "–")}</div>
+      <div class="kort"><div class="k">Energi</div><div class="v">${kj!=null ? `<span class="num tall">${kjFmt(kj)}</span><small>kJ</small>` : "–"}</div><div class="l">${esc(eo || "–")}</div>
         <div class="m"><div class="energi-bar" aria-hidden="true">${kj!=null ? `<div class="fyll" style="width:${(logPos(kj)*100).toFixed(1)}%"></div>` : ""}${ticks}</div><div class="energi-txt"><span>svak</span><span>kraftig fra ${kjFmt(g[1], true)}</span></div></div></div>
     </div>`;
   }
@@ -198,7 +198,10 @@
       <div class="naa"><span>${tid}</span>${atNow ? "" : `<button type="button" class="tilbakena" id="tilbakeNa">Tilbake til nå</button>`}</div>`;
     const vurdering = `<div class="vurdering"><div class="r-${Math.min(5,st)}">${st ? starsSVG(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;
     const venstre = `${vurdering}${kortHtml(s, h)}`;
-    const langtid = `<div class="sek-spot"><h2 class="h2">Langtidsvarsel</h2><p class="sub">16 dager</p></div><div id="langtid">${window.SpotGraf ? SpotGraf.html(s, idx, H) : ""}</div>`;
+    // åpnet på «nå» (S.idx null): grafen viser i dag bare hvis det er minst 2 lyse timer igjen, ellers i morgen -
+    // kortene øverst viser fortsatt nå (Theodor 15.10, punkt 3)
+    const grafDag = S.idx==null && window.SpotGraf ? SpotGraf.defaultDay(s, n, H) : null;
+    const langtid = `<div class="sek-spot"><h2 class="h2">Langtidsvarsel</h2><p class="sub">16 dager</p></div><div id="langtid">${window.SpotGraf ? SpotGraf.html(s, idx, H, grafDag) : ""}</div>`;
     const resten = `${minikartHtml(s, h)}${tideHtml(s, t, h)}${vaerHtml(s, t, h)}${hvorforHtml(h)}
       <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
       <p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p>`;

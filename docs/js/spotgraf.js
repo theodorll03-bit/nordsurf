@@ -23,9 +23,21 @@
     const today = dayKey(new Date());
     // steget leses av avstanden mellom timene (ikke antallet: «i dag» har færre enn 20 timer fra kjøringen)
     const stepOf = (idxs)=> idxs.length >= 2 && (new Date(s.hours[idxs[1]].t) - new Date(s.hours[idxs[0]].t)) >= 2*36e5 ? 6 : 1;
-    return [...by.entries()].filter(([key])=> key >= today).map(([key, idxs])=>({key, idxs, step: stepOf(idxs)}));
+    // «I dag» vises bare så lenge det er lys igjen (light ikke «mørkt»); etter mørkets frembrudd starter rekka på i morgen
+    const n = H.nowIdx(s);
+    const lysIgjen = (idxs)=> idxs.some(i=> i >= n && lightOf(s.hours[i]) !== "mørkt");
+    return [...by.entries()].filter(([key, idxs])=> key > today || (key===today && lysIgjen(idxs))).map(([key, idxs])=>({key, idxs, step: stepOf(idxs)}));
   }
+  const lightOf = (h)=> h ? (h.light || (h.daylight===false ? "mørkt" : h.daylight===true ? "dag" : null)) : null;
   function dayOf(s, idx){ return H.dkOf(s.hours[idx].t); }
+  function defaultDay(s, n, helpers){
+    if(helpers) H = helpers;   // kalles før html() første gang
+    // dagen grafen viser når siden åpnes på «nå»: i dag hvis minst 2 timer igjen med lys, ellers i morgen (Theodor 15.10)
+    const today = dayKey(new Date()); const ds = days(s); if(!ds.length) return null;
+    const left = s.hours.filter((h, i)=> i >= n && H.dkOf(h.t)===today && lightOf(h) !== "mørkt").length;
+    if(left >= 2 && ds[0].key===today) return today;
+    return (ds.find(d=> d.key > today) || ds[0]).key;
+  }
   function bestOfDay(s, d){
     // beste time i dagslys: flest stjerner, ved likt høyest surf_height; ellers kl. 12 (nærmeste), ellers første
     let best = null;
@@ -36,14 +48,14 @@
     return noon;
   }
   function spanOfDay(s, d){
-    // surfespennet i dagslys: laveste surf_height til høyeste sets (eller ordet hvis 0)
+    // surfespennet i dagslys: laveste surf_height blant timer med surf OVER 0, til høyeste sets. Er alle timene 0:
+    // ingen spenn - ordet vises i stedet (Theodor 15.10, punkt 2). Aldri «0,0–x».
     let lo = null, hi = null, word = null, wst = -1;
     for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h) || h.surf_height==null) continue;
-      lo = lo==null ? h.surf_height : Math.min(lo, h.surf_height);
-      const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top);
+      if(h.surf_height > 0){ lo = lo==null ? h.surf_height : Math.min(lo, h.surf_height);
+        const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top); }
       const st = H.stars(h); if(st > wst || (st===wst && word==null)){ wst = st; word = ratingWord(h); } }
-    if(lo==null) return {txt: null, word: null};
-    if(hi <= 0) return {txt: null, word};
+    if(lo==null || !(hi > 0)) return {txt: null, word};
     const a = nf1.format(lo), b = nf1.format(hi);
     return {txt: a===b ? `${a} m` : `${a}–${b} m`, word};
   }
@@ -70,26 +82,26 @@
   }
   const ARROW = (deg, cls)=> deg==null ? "" : `<svg class="${cls||""}" viewBox="0 0 16 16" aria-hidden="true" style="transform:rotate(${(((deg + 180) % 360)).toFixed(0)}deg)"><path d="M8 2 12 13 8 10 4 13z" fill="currentColor"/></svg>`;   // peker dit det går (fra + 180)
 
-  function tabsHtml(s, selIdx){
-    const selKey = dayOf(s, selIdx); const today = dayKey(new Date());
+  function tabsHtml(s, selIdx, dayOverride){
+    const selKey = dayOverride || dayOf(s, selIdx); const today = dayKey(new Date()); const tomorrow = dayKey(new Date(Date.now()+864e5));
     return `<div class="dagfaner" role="tablist" aria-label="Dager">${days(s).map((d, k)=>{
       const t = new Date(s.hours[d.idxs[0]].t); const span = spanOfDay(s, d);
       const felt = [[6,10],[10,14],[14,19]].map(([a,b])=>{ const r = slotBest(s, d, a, b); return `<i class="${r.cls}" title="${a}–${b}: ${r.st!=null ? r.st + " stjerner" : r.cls==="dark" ? "mørkt" : "mangler"}"></i>`; }).join("");
       const noon = nearestTo(s, d, 12); const hn = noon >= 0 ? s.hours[noon] : null;
       const usikker = d.idxs.every(i=> s.hours[i].zone==="langtid");
       const wordCls = (()=>{ const i = bestOfDay(s, d); return `r-${Math.min(5, H.stars(s.hours[i]))}`; })();
-      const navn = d.key===today ? "I dag" : k===1 && d.key===dayKey(new Date(Date.now()+864e5)) ? "I morgen" : cap(fmtWd.format(t).replace(/\.$/, ""));
+      const navn = d.key===today ? "I dag" : d.key===tomorrow ? "I morgen" : cap(fmtWd.format(t).replace(/\.$/, ""));
       const aria = `${cap(fmtDato.format(t))}: ${span.txt || span.word || "–"}${usikker ? ", usikker (langtidsmodell)" : ""}`;
       return `<button type="button" class="dagfane${usikker ? " usikker" : ""}" role="tab" data-day="${d.key}" aria-pressed="${d.key===selKey}" aria-selected="${d.key===selKey}" aria-label="${esc(aria)}">
         <span class="d"><span>${esc(navn)}</span><small>${fmtDayNum.format(t).replace(/\.$/, "")}.</small></span>
-        <span class="h">${span.txt ? esc(span.txt).replace(" m", "<small>m</small>") : (span.word ? "–" : "–")}</span>
-        <span class="o ${wordCls}">${esc(span.word || "–")}</span>
+        <span class="h${span.txt ? "" : " ord " + wordCls}">${span.txt ? `<span class="tall">${esc(span.txt.replace(" m", ""))}</span><small>m</small>` : esc(span.word || "–")}</span>
+        <span class="o ${wordCls}">${span.txt ? esc(span.word || "–") : ""}</span>
         <span class="felt" aria-hidden="true">${felt}</span>
         <span class="piler" aria-hidden="true">${hn && hn.dir_offshore!=null ? ARROW(hn.dir_offshore) : ""}${hn && hn.wind_dir!=null ? ARROW(hn.wind_dir) : ""}${usikker ? `<span class="us">Usikker</span>` : ""}</span></button>`; }).join("")}</div>`;
   }
 
-  function grafHtml(s, selIdx){
-    const key = dayOf(s, selIdx); const d = days(s).find(x=>x.key===key) || days(s)[0]; if(!d) return "";
+  function grafHtml(s, selIdx, dayOverride){
+    const key = dayOverride || dayOf(s, selIdx); const d = days(s).find(x=>x.key===key) || days(s)[0]; if(!d) return "";
     const t0 = new Date(s.hours[d.idxs[0]].t);
     const firstHH = osloHour(t0);   // i dag: timer før første time i varselet har vært; senere hull er 6-timers steg
     // kolonner: 24 timer (timer som har vært i dag står tomme) eller 4 ved 6-timers steg
@@ -119,7 +131,8 @@
     const every3 = cols.filter((c, k)=> d.step===6 || c.hh % 3===0);
     const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${nf0.format(h.wind_speed)}</span>` : "<small>–</small>"}</div>`; }).join("");
     const svell = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.swell_offshore!=null ? `${ARROW(h.dir_offshore)}<span class="b">${nf1.format(h.swell_offshore)}</span><small>${h.period!=null ? nf0.format(h.period) + "s" : "–"}</small>` : "<small>–</small>"}</div>`; }).join("");
-    const tide = (s.tide_events||[]).length ? Spot.tideSvg(s.tide_events, new Date(s.hours[selIdx].t), true) : "";
+    const tideT = d.idxs.includes(selIdx) ? new Date(s.hours[selIdx].t) : new Date(s.hours[d.idxs[0]].t);
+    const tide = (s.tide_events||[]).length ? Spot.tideSvg(s.tide_events, tideT, true) : "";
     return `<div class="kort graf" id="graf" data-day="${key}" data-n="${n}">
       <div class="graf-topp"><h3>${esc(cap(fmtDato.format(t0)))}</h3><span class="best">${topTxt}</span></div>
       <div class="plot" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${kol}</div>
@@ -129,7 +142,7 @@
       ${tide ? `<div class="grafrad"><div class="k">Tidevann</div>${tide}</div>` : ""}
     </div>`;
   }
-  function html(s, selIdx, helpers){ H = helpers; return tabsHtml(s, selIdx) + grafHtml(s, selIdx); }
+  function html(s, selIdx, helpers, dayOverride){ H = helpers; return tabsHtml(s, selIdx, dayOverride) + grafHtml(s, selIdx, dayOverride); }
 
   function wire(root, s, S, helpers, onPick){
     H = helpers;
@@ -145,5 +158,5 @@
     plot.addEventListener("pointerup", up); plot.addEventListener("pointercancel", up); plot.addEventListener("pointerleave", up);
     const sel = $(".dagfane[aria-pressed='true']", root); if(sel && sel.scrollIntoView) sel.scrollIntoView({block:"nearest", inline:"center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
   }
-  window.SpotGraf = { html, wire, days, bestOfDay, spanOfDay, slotBest };
+  window.SpotGraf = { html, wire, days, defaultDay, bestOfDay, spanOfDay, slotBest };
 })();

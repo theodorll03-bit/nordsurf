@@ -211,6 +211,7 @@ AUDIT_JS = r"""() => {
   for(let i = 0; i < leaves.length; i++) for(let j = i + 1; j < leaves.length; j++){
     const a = leaves[i], b = leaves[j];
     if(a.layer !== b.layer || a.el.contains(b.el) || b.el.contains(a.el)) continue;
+    if(a.el.parentElement === b.el.parentElement) continue;   // linjebrudd i samme blokk (linjehøyde 1,05) er ikke kollisjon
     const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
     if(w > 3 && h > 3) overlap.push(`${name(a)} × ${name(b)}`);
   }
@@ -412,6 +413,15 @@ def main():
                         assert energi_ord(kj) in kort4[3], kort4[3]
                     assert sikkerhet(h["confidence"], h["zone"]) == page.text_content("#viewSpot .sikker").strip()
                     shot("unstad-na", scheme); audit("unstad-na")
+                    # punkt 1 (Theodor 15.10): tallspenn på én linje (kortene og dagfanene), tallet aldri brutt
+                    brudd = page.evaluate("""() => [...document.querySelectorAll('#viewSpot .kort4 .v, #viewSpot .dagfane .h')].filter(el => el.getBoundingClientRect().height > 1.5 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '» ' + el.getBoundingClientRect().height.toFixed(0) + 'px')
+                        .concat([...document.querySelectorAll('#viewSpot .tall')].filter(el => el.getClientRects().length > 1).map(el => 'brutt tall «' + el.textContent.trim() + '»'))""")
+                    assert not brudd, f"tallspenn over flere linjer ({label}, {scheme}): {brudd}"
+                    # punkt 3: åpnet på «nå» kl. 22 (mørkt) viser grafen i morgen, kortene nå
+                    assert page.evaluate("document.querySelector('.dagfane[aria-selected=\"true\"]').dataset.day") == (TODAY + dt.timedelta(days=1)).isoformat()
+                    assert page.evaluate("[...document.querySelectorAll('.dagfane')].map(b => b.dataset.day)")[0] > TODAY.isoformat(), "«I dag» skal ikke vises når det er mørkt resten av dagen"
+                    # punkt 2: aldri «0,0–» i et spenn
+                    assert not [x for x in page.evaluate("[...document.querySelectorAll('.dagfane .h')].map(e => e.textContent.trim())") if x.startswith("0,0")]
                     # ---- 9. sommertiden slutter 25.10: 6-timers dager med riktige Oslo-timer ----
                     for d in (24, 25, 26):
                         key = f"2026-10-{d}"
@@ -459,6 +469,8 @@ def main():
                         page.evaluate("document.documentElement.style.fontSize = '200%'")
                         go("#hjem", "#viewHjem:not([hidden]) #bestKort"); shot("hjem-200", scheme); audit("hjem-200")
                         go("#spot=unstad", "#viewSpot:not([hidden]) .vurdering .ord"); page.wait_for_timeout(300); shot("unstad-200", scheme); audit("unstad-200")
+                        brutt = page.evaluate("[...document.querySelectorAll('#viewSpot .tall')].filter(el => el.getClientRects().length > 1).map(el => el.textContent.trim())")
+                        assert not brutt, f"tall brutt over to linjer ved 200 %: {brutt}"
                         page.evaluate("document.documentElement.style.fontSize = ''")
                     media(scheme, "more")
                     go("#hjem", "#viewHjem:not([hidden]) #bestKort"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")

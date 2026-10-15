@@ -287,8 +287,11 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .vurdering .ord.r-0{color:var(--muted)}
 .vurdering .sikker{text-align:right;color:var(--muted);font-size:var(--fs-secondary);max-width:46%}
 .kort4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.kort4 .kort{display:flex;flex-direction:column;gap:6px;min-height:150px}
-.kort4 .v{font-family:var(--mono);font-size:1.875rem;font-weight:500;line-height:1.05}
+.kort4 .kort{display:flex;flex-direction:column;gap:6px;min-height:150px;container-type:inline-size}
+/* tallet brekker aldri (Theodor 15.10, punkt 1): skriften skaleres etter kortets bredde (14 cqw: 24 px på 173 px, 22 px
+   på 154 px), tallet i .tall er nowrap - enheten kan gå på egen linje ved 200 % tekst */
+.kort4 .v{font-family:var(--mono);font-size:clamp(1rem, 14cqw, 1.875rem);font-weight:500;line-height:1.05}
+.kort4 .v .tall{white-space:nowrap}
 .kort4 .v .sep{display:inline-block;margin:0 .15em}   /* inline-block gir et bruddpunkt rundt «·» ved 200 % tekst */
 .kort4 .v small{font-family:var(--body);font-size:0.875rem;color:var(--muted);margin-left:4px;font-weight:500}
 .kort4 .v .sep{color:var(--muted);margin:0 6px}
@@ -309,10 +312,12 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 /* dagfaner */
 .dagfaner{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;scroll-snap-type:x proximity}
 .dagfaner::-webkit-scrollbar{display:none}
-.dagfane{all:unset;box-sizing:border-box;flex:none;width:88px;scroll-snap-align:start;display:flex;flex-direction:column;gap:5px;padding:10px 10px 10px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer}
+.dagfane{all:unset;box-sizing:border-box;flex:none;width:5.5rem;container-type:inline-size;scroll-snap-align:start;display:flex;flex-direction:column;gap:5px;padding:10px 10px 10px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer}
 .dagfane .d{display:flex;flex-direction:column;font-weight:700;font-size:var(--fs-secondary);line-height:1.2}   /* navn over dato: «I morgen» får ikke plass ved siden av «16.» på 88 px */
 .dagfane .d small{color:var(--muted);font-weight:500;font-size:var(--fs-caption)}
-.dagfane .h{font-family:var(--mono);font-size:0.9375rem}
+.dagfane .h{font-family:var(--mono);font-size:clamp(0.8125rem, 15cqw, 0.9375rem)}   /* 5,5 rem bred fane: 13,2 px, «1,0–3,4» på én linje */
+.dagfane .h .tall{white-space:nowrap}
+.dagfane .h.ord{font-family:var(--body);font-weight:700;color:var(--rc-ink)}   /* alle timene 0: ordet i stedet for spenn */
 .dagfane .h small{font-family:var(--body);font-size:0.75rem;color:var(--muted)}
 .dagfane .o{color:var(--rc-ink);font-weight:700;font-size:var(--fs-caption);min-height:1.2em}
 .dagfane .felt{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
@@ -433,7 +438,16 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .utforsk-liste{display:block;grid-column:2;grid-row:2/4}
   .hjem-topp{margin:0}
   .sokfelt{display:none}
-  .hjem-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:32px;align-items:start}
+  .hjem-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:32px;align-items:stretch}
+  .hjem-venstre{display:flex;flex-direction:column}
+  .neste{flex:1;margin-top:12px;display:flex;flex-direction:column;gap:2px}   /* fyller høyden ved siden av kartet med de tre neste beste (Theodor 15.10, punkt 4) */
+  .neste h3{font-size:var(--fs-secondary);font-weight:700;color:var(--muted);margin:0 0 6px}
+  .nrad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:48px;padding:6px 10px;border-radius:12px;cursor:pointer}
+  .nrad:hover{background:var(--sunken)}
+  .nrad .prikk{width:12px;height:12px;border-radius:50%;background:var(--rc)}
+  .nrad .nm b{display:block;font-weight:700}
+  .nrad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption)}
+  .nrad .na{color:var(--rc-ink);font-weight:600;font-size:var(--fs-secondary)}
   .favrad{margin:0;padding:4px 0 8px;flex-wrap:wrap}
   .favkort{width:270px}
   .sok-field input{font-size:var(--fs-secondary)}
@@ -462,7 +476,6 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .utforskkort .knapp{position:absolute;left:14px;bottom:14px}
   .utforskkort svg{width:100%;height:100%;display:block}
   .utforskkort svg .coast{fill:var(--land);stroke:var(--coast);stroke-width:1;vector-effect:non-scaling-stroke}   /* samme farger som kartet (uten regelen ble landet svart) */
-  .kort4 .v{font-size:1.5rem}   /* kortene er smalere på PC (154 px) enn på mobil (173 px): «1,5–1,9» skal stå på én linje */
   /* spotsiden på nett: venstre kolonne 320 px, høyre resten */
   #viewSpot{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px 32px;align-items:start}
   .spot-topp{grid-column:1/-1;position:static;margin:0;padding:0;border:0;background:transparent}
@@ -471,7 +484,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .spot-venstre{grid-column:1;display:flex;flex-direction:column;gap:16px}
   .spot-hoyre{grid-column:2;display:flex;flex-direction:column;gap:16px}
   .kort4 .kort{min-height:0}
-  .dagfane{width:98px}
+  .dagfane{width:6.125rem}
   .logg-her .primary{width:auto}
 }
 

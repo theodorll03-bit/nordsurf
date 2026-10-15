@@ -128,6 +128,16 @@
     }
     return first;
   }
+  function nextBest(spots, exclude, n){
+    // de neste beste øktene (én per spot, de neste tre dagene i dagslys): flest stjerner, likt → høyest surf_height
+    return spots.filter(s=> !exclude || s.id!==exclude.id).map(s=> bestSession([s])).filter(Boolean)
+      .sort((a, b)=> b.st - a.st || b.hh - a.hh || a.s.name.localeCompare(b.s.name, "nb")).slice(0, n);
+  }
+  function nesteHtml(best){
+    const rows = nextBest(DATA.spots, best && best.s, 3);
+    if(!rows.length) return `<div class="kort neste"><h3>Neste beste</h3><p class="muted">Ingen andre økter med stjerner de neste tre dagene.</p></div>`;
+    return `<div class="kort neste"><h3>Neste beste</h3>${rows.map(r=>{ const h = r.s.hours[r.i]; return `<a class="nrad r-${Math.min(5, r.st)}" href="#spot=${esc(r.s.id)}&t=${r.a}" aria-label="${esc(`${r.s.name}, ${spanText(r.s, r.a, r.b)}, ${STR.starsAria(r.st, 0)}, ${ratingWord(h)}`)}"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(r.s.name)}</b><small>${esc(spanText(r.s, r.a, r.b))}</small></span><span class="na">${esc(ratingWord(h))}</span></a>`; }).join("")}</div>`;
+  }
   function spanText(s, a, b){
     const ta = new Date(s.hours[a].t), tb = new Date(s.hours[b].t);
     const end = (+fmtHour.format(tb) + 1) % 24;
@@ -208,7 +218,7 @@
         ${pc ? `<div class="chips" aria-label="Områder"><span class="muted" style="align-self:center;font-size:var(--fs-caption)">Områder</span>${regions.map(g=>`<a class="chip" href="#reg-${norm(g.region).replace(/[^a-z0-9]+/g, "-")}">${esc(g.region)}</a>`).join("")}</div>` : `<a class="iconbtn" href="#innstillinger" aria-label="Innstillinger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.6 4.8-1.9-.3a7 7 0 0 1-.6 1.5l1.1 1.6-1.7 1.7-1.6-1.1a7 7 0 0 1-1.5.6l-.3 1.9h-2.4l-.3-1.9a7 7 0 0 1-1.5-.6l-1.6 1.1-1.7-1.7 1.1-1.6a7 7 0 0 1-.6-1.5l-1.9-.3v-2.4l1.9-.3a7 7 0 0 1 .6-1.5L5.6 7.3l1.7-1.7 1.6 1.1a7 7 0 0 1 1.5-.6l.3-1.9h2.4l.3 1.9a7 7 0 0 1 1.5.6l1.6-1.1 1.7 1.7-1.1 1.6a7 7 0 0 1 .6 1.5l1.9.3z"/></svg></a>`}</div>
       <a class="sokfelt" href="#sok" role="button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Søk etter spot eller område</a>
       <div class="${pc ? "hjem-grid" : ""}">
-        <div><section class="sek"><h2 class="h2">Beste økt</h2><p class="sub">De neste tre dagene, i dagslys</p></section>${bestHtml()}</div>
+        <div class="${pc ? "hjem-venstre" : ""}"><section class="sek"><h2 class="h2">Beste økt</h2><p class="sub">De neste tre dagene, i dagslys</p></section>${bestHtml()}${pc ? nesteHtml(bestSession(DATA.spots)) : ""}</div>
         ${pc ? `<div><section class="sek"><h2 class="h2">Utforsk</h2><p class="sub">${DATA.spots.length} spots, farget etter vurdering nå</p></section><a class="kort tap utforskkort" href="#utforsk" aria-label="Utforsk kartet">${window.Utforsk && Utforsk.thumb ? Utforsk.thumb() : ""}<span class="primary knapp" aria-hidden="true">Åpne kartet</span></a></div>` : ""}
       </div>
       ${favHtml(days)}
