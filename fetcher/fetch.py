@@ -805,6 +805,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         }
         if sanitize_hour_fields(hour):
             gust_lower_than_wind += 1
+        hour_inn = dict(hour)   # inndata FØR ratingen - skyggeratingen under skal ikke arve i-bruk-ratingens utdata
         hour.update(rate(hour, spot))
         # 15.10.2026 (Theodors oppgave, skyggemodus 14 dager for BarentsWatch-punktene): ratingen
         # regnet med SKYGGEPUNKTET sine BarentsWatch-tall (høyde, retning, periode, maks) - lagres
@@ -814,7 +815,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         # skyggepunktet tall for timen: None, aldri 0.
         hour["surf_height_shadow"] = hour["stars_shadow"] = hour["surf_height_shadow_noprior"] = None
         if bwk_shadow and bwk_shadow.get("height") is not None:
-            hour_sh = {**hour, "bw_height": bwk_shadow.get("height"), "bw_dir": bwk_shadow.get("dir"),
+            hour_sh = {**hour_inn, "bw_height": bwk_shadow.get("height"), "bw_dir": bwk_shadow.get("dir"),
                        "bw_dir_raw": bwk_shadow.get("dir_raw"), "bw_period": bwk_shadow.get("period"),
                        "bw_height_max": bwk_shadow.get("max_height"), "bw_interpolated": bwk_shadow.get("interpolated")}
             r_sh = rate(hour_sh, spot)

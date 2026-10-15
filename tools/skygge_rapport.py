@@ -43,27 +43,35 @@ def main():
     out = [f"# Skyggemodus for BarentsWatch-punktene - {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC", "",
            f"{len(runs)} kjøringer i arkivet. Skyggeverdier finnes fra 15.10.2026 (kjøringer uten dem telles ikke).", ""]
     # ---- 1. time for time, per spot ----
-    out += ["## 1. Surfehøyde fra dagens punkt mot skyggepunktet (alle arkiverte timer)", "",
-            "| Spot | timer | snitt i bruk | snitt skygge | median forhold skygge/i bruk | timer der skyggen gir ≥ 1 stjerne mer | uten prior (Unstad) |", "|---|---|---|---|---|---|---|"]
+    out += ["## 1. Surfehøyde fra dagens punkt mot skyggepunktet (alle arkiverte timer der i bruk kom fra BarentsWatch)", "",
+            "Små dager: skyggen under 1,5 m surf; store: 1,5 m og over (forholdet mellom punktene er tilstandsavhengig - brytesone bare på store dager).", "",
+            "| Spot | timer | i bruk flatt, skygge ikke | små dager: median skygge/i bruk (n) | store dager: median (n) | skygge ≥ 1 stjerne mer | uten prior, store dager (Unstad) |", "|---|---|---|---|---|---|---|"]
     for sid, sp in spots.items():
         if not sp.get("enabled") or not sp.get("barentswatch_point_shadow"):
             continue
-        pairs, more, nop = [], 0, []
+        pairs, flat, more, nop = [], 0, 0, []
         for issued, data in runs:
             for t, v in (data.get(sid) or {}).items():
                 if len(v) < 3 or v[2] is None or v[1] is None:
                     continue
+                if len(v) > 5 and v[5] == 0:
+                    continue   # i bruk kom fra reservemodellen den timen - epler mot pærer
+                if v[1] <= 0 and v[2] > 0:
+                    flat += 1   # brytesone-timene: stranda «flat» i bruk, skyggen ikke
                 pairs.append((v[1], v[2]))
-                if len(v) > 3 and v[3] is not None:
-                    nop.append(v[3])
+                if len(v) > 3 and v[3] is not None and v[2] >= 1.5:
+                    nop.append(v[3] / v[2] if v[2] else None)
                 if len(v) > 4 and v[4] is not None and v[0] is not None and v[4] >= v[0] + 1:
                     more += 1
         if not pairs:
             out.append(f"| {sid} | 0 | – | – | – | – | – |"); continue
-        ratios = sorted(b / a for a, b in pairs if a and a > 0)
-        med = ratios[len(ratios) // 2] if ratios else None
-        mu_a = sum(a for a, _ in pairs) / len(pairs); mu_b = sum(b for _, b in pairs) / len(pairs)
-        out.append(f"| {sid} | {len(pairs)} | {fm(mu_a)} m | {fm(mu_b)} m | {fm(med, 2)} | {more} | {fm(sum(nop)/len(nop)) + ' m' if nop else '–'} |")
+        def med(xs):
+            xs = sorted(x for x in xs if x is not None); return (xs[len(xs) // 2] if xs else None), len(xs)
+        small = [b / a for a, b in pairs if a and a > 0 and b < 1.5]
+        large = [b / a for a, b in pairs if a and a > 0 and b >= 1.5]
+        ms, ns = med(small); ml, nl = med(large); mn, nn = med(nop)
+        rolle = " (rollene snudd: skyggen er nålen i brytesonen)" if sid == "farstadsanden" else ""
+        out.append(f"| {sid}{rolle} | {len(pairs)} | {flat} | {fm(ms)} ({ns}) | {fm(ml)} ({nl}) | {more} | {fm(mn) + ' × skygge (' + str(nn) + ')' if nn else '–'} |")
     out.append("")
     # ---- 2. mot logger og benchmarks ----
     logs = []
@@ -94,10 +102,12 @@ def main():
             if not best or len(best) < 3:
                 out.append(f"| {sid} | {t} | {fm(size_m)} m | – | – | – | – | {src} |"); continue
             a, b, c = best[1], best[2], (best[3] if len(best) > 3 else None)
-            near = "–" if a is None or b is None else ("skygge" if abs(b - size_m) < abs(a - size_m) else "i bruk")
+            cands = [(abs(a - size_m), "i bruk") if a is not None else None, (abs(b - size_m), "skygge") if b is not None else None, (abs(c - size_m), "skygge uten prior") if c is not None else None]
+            cands = [x for x in cands if x]
+            near = min(cands)[1] if cands else "–"
             out.append(f"| {sid} | {t} | {fm(size_m)} m | {fm(a)} m | {fm(b)} m | {fm(c)} m | {near} | {src} |")
     out.append("")
-    out.append("Ingen spot flyttes før Theodor sier ja for akkurat den spoten. Unstad: når punktet flyttes, fjernes surf_factor_prior samtidig (ROADMAP).")
+    out.append("Ingen spot flyttes før Theodor sier ja for akkurat den spoten. Unstad: om surf_factor_prior fjernes ved flytting avgjøres av små/store-delingen over (ROADMAP). Se etter: (1) Unstad - er forholdet ca. 1 på små dager? Da er prioren ikke et brytesone-artefakt. (2) Steinkrøssa - timer der skyggen gir stjerner mens stranda er flat tyder på at punktet ligger utenfor skjermingen. (3) Andelen timer der skyggepunktet mangler tall mens i bruk har.")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(out), encoding="utf-8")
     print("\n".join(out))
