@@ -28,7 +28,9 @@
   }
   function setRegion(r){ try{ localStorage.setItem(REGION_KEY, r); }catch(e){} S.region = r; }
   // nå-timen: klokkas time blant de fire publiserte (henteren kjører hver 3. time), ellers den siste
-  const naaOf = (s)=>{ const list = s.naa || []; const now = Date.now(); return list.find(h=> new Date(h.t).getTime() + 36e5 > now) || list[list.length-1] || null; };
+  // dekker ingen av de fire klokka (oversikten er over 4 t gammel - henteren har feilet): null → «–», aldri en time
+  // som er over vist som «nå» (fysikk-kontrollør 15.10.2026); staleBanner() øverst på Hjem sier fra
+  const naaOf = (s)=>{ const list = s.naa || []; const now = Date.now(); const h = list.find(h=> new Date(h.t).getTime() + 36e5 > now); if(h) return h; const last = list[list.length-1]; return last && now - new Date(last.t).getTime() < 36e5 ? last : null; };
   const stars = (h)=> h ? (h.stars||0) : 0;
   const known = (h)=> !!h && !(!h.stars && !h.low_reason && h.surf_height==null);
   const lightOf = (h)=> h ? (h.light || (h.daylight===false ? "mørkt" : h.daylight===true ? "dag" : null)) : null;
@@ -69,10 +71,10 @@
   function dayBest(s, key){
     // dagssammendraget fra publish.best_hour(): «miss» = tallet/lyset mangler, «dark» = mørkt hele dagen
     const d = (s.dager || []).find(x=>x.d===key);
+    if(d && d.status==="dark") return {cls:"dark", st:null, h:null, t:null};   // før !d.h - en mørk dag har ingen time
     if(!d || d.status==="miss" || !d.h) return {cls:"miss", st:null, h:null, t:null};
-    if(d.status==="dark") return {cls:"dark", st:null, h:null, t:null};
     const st = stars(d.h);
-    return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
+    return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, start:d.start || d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
   }
   function ukeHtml(s, days, withLetters){
     const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
@@ -114,7 +116,7 @@
       .sort((a, b)=> b.st - a.st || b.hh - a.hh || a.s.name.localeCompare(b.s.name, "nb")).slice(0, n);
   }
   function spanText(d){
-    const ta = new Date(d.h.t), tb = new Date(d.slutt || d.h.t);
+    const ta = new Date(d.start || d.h.t), tb = new Date(d.slutt || d.h.t);
     const end = (+fmtHour.format(tb) + 1) % 24;
     return `${cap(relDay(ta))} kl. ${fmtHour.format(ta)}–${String(end).padStart(2, "0")}`;
   }
@@ -206,6 +208,7 @@
     const dato = `${cap(fmtDato.format(new Date()))} · oppdatert ${fmtTime.format(gen)}`;
     const sc = scope(); const best = bestSession(sc.spots);
     root.innerHTML = `
+      ${typeof staleBanner==="function" ? staleBanner() : ""}
       <div class="hjem-topp"><div>${pc ? `<h1 class="h1">Hvor skal du surfe?</h1>` : `<a class="wm" href="#hjem" aria-label="Nordsurf">${wordmarkSvg()}</a>`}<p class="dato">${esc(dato)}</p></div>
         ${pc ? "" : `<a class="iconbtn" href="#innstillinger" aria-label="Innstillinger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.6 3.5-1.9-.5a6.9 6.9 0 0 0-.6-1.5l1-1.7-1.9-1.9-1.7 1a6.9 6.9 0 0 0-1.5-.6L13.5 3.4h-3l-.5 1.9a6.9 6.9 0 0 0-1.5.6l-1.7-1-1.9 1.9 1 1.7a6.9 6.9 0 0 0-.6 1.5L3.4 10.5v3l1.9.5c.1.5.4 1 .6 1.5l-1 1.7 1.9 1.9 1.7-1c.5.3 1 .5 1.5.6l.5 1.9h3l.5-1.9c.5-.1 1-.4 1.5-.6l1.7 1 1.9-1.9-1-1.7c.3-.5.5-1 .6-1.5l1.9-.5v-3Z" fill="currentColor"/></svg></a>`}</div>
       <a class="sokfelt" href="#sok" role="button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Søk etter spot eller område</a>

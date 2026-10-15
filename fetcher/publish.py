@@ -82,18 +82,25 @@ HOME_DAYS = 9   # (oversikt-1) glidebryteren dekket 7 døgn; to døgns margin
 # svellet ute og lyset. bw_height bare der regel (c) krever det (Blåst ut/Stormsjø).
 NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_height_sets", "low_reason",
               "zero_losses", "faded_wind", "faded_tide", "sources_disagree", "period", "energy_swell_kj",
+              "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone")
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 7
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
-META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled")
+META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled", "local_rules", "calibration")
+# kalibreringen i oversikten uten de tunge delene (eksponeringskurven 4 KiB og accuracy 1 KiB per spot) -
+# Logger-siden viser transfer/surf-faktor/par for alle spots uten å laste detaljfilene (fysikk-kontrollør
+# 15.10.2026: ellers vises standardverdier som fakta); kurven tegnes når spoten er åpnet (detaljfila)
+CALIBRATION_DROP = ("exposure_curve", "accuracy")
 OSLO = ZoneInfo("Europe/Oslo")
 REGION_MARGIN_DEG = (0.15, 0.4)   # (lat, lon) rundt rammen av spotene i regionen
 
 
-ROUND = {"surf_height": 2, "surf_height_sets": 2, "period": 1, "wind_speed": 1, "wind_dir": 0, "swell_offshore": 2,
-         "dir_offshore": 0, "gust": 1, "energy_swell_kj": 0, "bw_height": 2}
+# avrunding uten å flytte grenser appen bruker (period < 9 s i zeroCause, nf0 på vind): period og vind to
+# desimaler, aldri én (fysikk-kontrollør 15.10.2026: 1 desimal + nf0 ga dobbel avrunding)
+ROUND = {"surf_height": 2, "surf_height_sets": 2, "period": 2, "wind_speed": 2, "wind_dir": 0, "swell_offshore": 2,
+         "dir_offshore": 0, "gust": 2, "energy_swell_kj": 0, "energy_total_kj": 0, "bw_height": 2}
 
 
 def _naa_hour(h):
@@ -133,10 +140,11 @@ def best_hour(hours):
     timer der lyset ikke er «mørkt» (ukjent lys teller ikke) og tallet finnes. Samme regel som
     appen bruker (dayBest/bestOfDay i ui.js/spotgraf.js) - flyttet hit og testet her (Tillegg 2).
     Returnerer (time, status): status «ok», «miss» (en lys time mangler tall) eller «dark»."""
-    best, miss, light = None, False, False
+    best, miss, light, unk = None, False, False, False
     for h in hours:
         l = _light(h)
         if l is None:
+            unk = True
             if not known(h) or (h.get("stars") or 0) >= 1:
                 miss = True
             continue
@@ -151,7 +159,7 @@ def best_hour(hours):
             best = h
     if best is not None and (best.get("stars") or 0) >= 1:
         return best, "ok"
-    if miss:
+    if miss or (not light and unk):   # bare ukjent lys hele dagen er «mangler», ikke «mørkt» (som dayBest på main)
         return None, "miss"
     if not light:
         return None, "dark"
@@ -169,10 +177,13 @@ def day_summary(hours):
     out["h"] = _naa_hour(b)
     st = b.get("stars") or 0
     idx = next(i for i, h in enumerate(hours) if h is b)
-    end = idx
-    while end + 1 < len(hours) and _light(hours[end + 1]) not in (None, "mørkt") and (hours[end + 1].get("stars") or 0) == st and known(hours[end + 1]):
+    same = lambda h: _light(h) not in (None, "mørkt") and (h.get("stars") or 0) == st and known(h)
+    start, end = idx, idx
+    while start - 1 >= 0 and same(hours[start - 1]):
+        start -= 1
+    while end + 1 < len(hours) and same(hours[end + 1]):
         end += 1
-    out["slutt"] = hours[end]["t"]
+    out["start"], out["slutt"] = hours[start]["t"], hours[end]["t"]   # vinduet: sammenhengende lyse timer med samme stjerner
     lys = [h for h in hours if _light(h) not in (None, "mørkt") and known(h)]
     over0 = [h["surf_height"] for h in lys if h.get("surf_height") is not None and h["surf_height"] > 0]
     sets = [h.get("surf_height_sets") if h.get("surf_height_sets") is not None else h.get("surf_height") for h in lys]
@@ -287,6 +298,8 @@ def split(forecast, exclude=DETAIL_EXCLUDE, now=None, regions_cfg=None, days=SUM
             if k not in meta_all and cfg.get(k) is not None:
                 meta_all[k] = cfg[k]
         meta = {k: v for k, v in meta_all.items() if k in META_FIELDS}
+        if isinstance(meta.get("calibration"), dict):
+            meta["calibration"] = {k: v for k, v in meta["calibration"].items() if k not in CALIBRATION_DROP}
         if "region" not in meta and s.get("area"):
             meta["region"] = s["area"]
         overview["spots"].append(dict(meta, **summarise(hours, now, days)))

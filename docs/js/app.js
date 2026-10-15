@@ -125,7 +125,8 @@ let _hourSpot = null;
 function spotOfHour(h){
   // spoten en time-post hører til (samme objekt som i DATA) - til lokale regler
   if(!_hourSpot || _hourSpot.data!==DATA){
-    const m = new WeakMap(); (DATA.spots||[]).forEach(s=>(s.hours||[]).forEach(x=>m.set(x, s)));
+    // oversikt-2: også nå-timene og dagenes beste time (ingen hours i oversikten)
+    const m = new WeakMap(); (DATA.spots||[]).forEach(s=>{ (s.hours||[]).forEach(x=>m.set(x, s)); (s.naa||[]).forEach(x=>m.set(x, s)); (s.dager||[]).forEach(d=>{ if(d && d.h) m.set(d.h, s); }); });
     _hourSpot = {data: DATA, map: m};
   }
   return _hourSpot.map.get(h) || null;
@@ -1392,7 +1393,7 @@ function recordWitness(){
     if(!favs.has(s.id)) continue;
     // Bare timer som allerede har startet (nåværende time og evt. én til som
     // fortsatt henger med fra forrige kjøring) - aldri fremtidige anslag.
-    for(const h of (s.hours||[]).slice(0,2)){
+    for(const h of (s.hours||s.naa||[]).slice(0,2)){
       if(new Date(h.t).getTime() > Date.now()) continue;
       const key = s.id+"|"+h.t;
       if(seen.has(key)) continue;

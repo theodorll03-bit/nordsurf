@@ -44,6 +44,9 @@ def main():
     for o, s in zip(overview["spots"], fc["spots"]):
         assert "hours" not in o, f"{s['id']}: oversikten skal ikke ha timer"
         assert set(o) - {"naa", "dager"} <= set(publish.META_FIELDS), f"{s['id']}: ekstra meta i oversikten {set(o) - {'naa', 'dager'} - set(publish.META_FIELDS)}"
+        if isinstance(s.get("calibration"), dict):
+            assert "transfer_used" in o["calibration"] and "exposure_curve" not in o["calibration"], "kalibreringen uten kurven i oversikten"
+        assert o.get("local_rules") == s.get("local_rules")
         assert o["region"] and o["spot"]["lat"] and o["name"] == s["name"]
         # nå-timen = den første timen som ikke er over ved «generated», og de tre neste
         want = [h for h in s["hours"] if t_of(h) + dt.timedelta(hours=1) > now][:publish.NAA_HOURS]
@@ -55,6 +58,7 @@ def main():
                 assert abs(oh["surf_height"] - h["surf_height"]) < 0.006, "surfehøyden avrundet til 2 desimaler, ikke endret"
             assert ("bw_height" in oh) == (h.get("low_reason") in publish.BW_WHEN and h.get("bw_height") is not None), "bw_height bare der regel (c) krever det"
             assert "daylight" not in oh or oh.get("light") is None
+        assert all(("local_rules" in oh) == (h.get("local_rules") is not None) for oh, h in zip(o["naa"], want)), "local_rules følger nå-timen når den finnes (ordet ved 0 stjerner)"
         assert len(o["dager"]) == publish.SUMMARY_DAYS and o["dager"][0]["d"] == now.astimezone(OSLO).date().isoformat()
     print(f"1: oversikt-2 med {len(overview['spots'])} spots: meta ({len(publish.META_FIELDS)} felt), {publish.NAA_HOURS} nå-timer og {publish.SUMMARY_DAYS} dager per spot, ingen timer - OK")
 
@@ -72,6 +76,10 @@ def main():
     assert b is None and st == "miss", "ukjent lys med stjerner -> miss, ikke dagslys"
     b, st = publish.best_hour([H("a", 3, 1.0, light="mørkt"), H("b", 2, 1.0, light="mørkt")])
     assert b is None and st == "dark"
+    b, st = publish.best_hour([H("a", 0, 0.1, light=None), H("b", 0, 0.2, light=None)])
+    assert b is None and st == "miss", "bare ukjent lys hele dagen er «mangler», ikke «mørkt»"
+    d2 = publish.day_summary([H("a", 3, 1.0), H("b", 3, 1.2), H("c", 3, 1.1), H("d", 2, 0.9)])
+    assert d2["h"]["t"] == "b" and d2["start"] == "a" and d2["slutt"] == "c", "vinduet går både bakover og fremover fra beste time"
     d = publish.day_summary([H("a", 1, 0.0), H("b", 2, 1.0, surf_height_sets=1.3), H("c", 2, 0.9, surf_height_sets=1.1), H("d", 1, 1.4, surf_height_sets=1.8), H("e", 3, 0.5, light="mørkt")])
     assert d["status"] == "ok" and d["h"]["t"] == "b" and d["slutt"] == "c" and d["lo"] == 0.9 and d["hi"] == 1.8, d
     d0 = publish.day_summary([H("a", 0, 0.0), H("b", 0, 0.0)])
