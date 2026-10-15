@@ -636,7 +636,7 @@ def five_star_swell_gate(hour, spot, *, source, bw_detail, surf_height, period, 
 
 def five_star_losses(hour, spot, wind_parts, local_wind_raw, tide_pen, local_tide_raw):
     """Del B: hva som holder den femte stjernen tilbake - «wind», «tide» eller None."""
-    if (hour.get("wind_speed") is None or wind_parts["pen"] > 0 or local_wind_raw > 0
+    if (hour.get("wind_speed") is None or hour.get("wind_dir") is None or wind_parts["pen"] > 0 or local_wind_raw > 0
             or not (wind_parts["kind"] == "offshore" or (wind_parts["eff"] is not None and wind_parts["eff"] < FIVE_STAR_CALM_MS))):
         return "wind"
     prefer = _tide_prefer(spot)
@@ -1058,7 +1058,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     if five_open:
         items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter - 5 mulig")
         if five_lost == "wind":
-            items.append("Femte stjerne holdes tilbake: vinden er ikke offshore eller nesten blank")
+            items.append("Femte stjerne holdes tilbake: vinden er ikke ren (offshore eller nesten blank uten straff)")
         elif five_lost == "tide":
             items.append("Femte stjerne holdes tilbake: tidevannet er ikke det spoten liker")
     elif five_fails:

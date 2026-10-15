@@ -1607,6 +1607,7 @@ cases = {
     "reservemodellen (ingen BarentsWatch)": dict({k: v for k, v in EPIC_H.items() if k not in ("bw_height", "bw_dir")}, height_spot_model=1.0),
     "sidevind 4 m/s (straff 0, men ikke offshore)": dict(EPIC_H, wind_speed=4, wind_dir=30),
     "offshore 11 m/s (straff 0,25)": dict(EPIC_H, wind_speed=11, wind_dir=120),
+    "vindretning ukjent (fart 1 m/s)": {k: v for k, v in EPIC_H.items() if k != "wind_dir"},   # kontrollør: ukjent retning skal ikke gi 5
 }
 for navn, h in cases.items():
     r = rate(dict(h), G)
