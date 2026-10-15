@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-428a9ef1f0f5";
+const CACHE = "nordsurf-e8b980d34af3";
 const TILES = CACHE + "-fliser";   // detaljflisene (range-biter), eget tak - byttes sammen med CACHE
 const TILES_MAX_ENTRIES = 600;      // ca. 600 range-biter à 1-60 KB: under ca. 15 MB
 // S3 (16.10.2026): listen hadde to filer som ikke finnes (css/kart.css, js/front.js) - da feiler
@@ -48,7 +48,8 @@ async function rangeFromWhole(req, range) {
 async function rangeCached(req, range) {
   const key = `${req.url.split("?")[0]}?r=${range[0]}-${range[1] === null ? "" : range[1]}`;
   const c = await caches.open(TILES);
-  const hit = await c.match(key);
+  // PMTiles ber om cache: "reload" når fila er byttet (ny ETag) - da aldri en gammel bit fra lageret (kontrollør 16.10)
+  const hit = (req.cache === "reload" || req.cache === "no-store") ? null : await c.match(key);
   if (hit) {
     const h = new Headers(hit.headers);
     return new Response(await hit.arrayBuffer(), { status: 206, headers: h });

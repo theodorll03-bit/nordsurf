@@ -34,8 +34,8 @@
     return {
       version: 8,
       sources: {
-        lav: {type: "vector", url: abs("norge-oversikt.pmtiles"), attribution: "© OpenStreetMap-bidragsytere"},
-        hoy: {type: "vector", url: abs("norge-detalj.pmtiles"), attribution: "© OpenStreetMap-bidragsytere"},
+        lav: {type: "vector", url: abs("norge-oversikt.pmtiles"), attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bidragsytere</a>'},
+        hoy: {type: "vector", url: abs("norge-detalj.pmtiles"), attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bidragsytere</a>'},
       },
       layers: [
         {id: "hav", type: "background", paint: {"background-color": c.sea}},
