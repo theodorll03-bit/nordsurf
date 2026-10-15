@@ -559,7 +559,7 @@ function wireFavButtons(){
 
 /* ---------- Beste vindu ---------- */
 function bestWindow(spot){
-  const hrs = spot.hours.filter(h => h.daylight !== false && new Date(h.t) >= new Date(Date.now()-36e5));
+  const hrs = (spot.hours||[]).filter(h => h.daylight !== false && new Date(h.t) >= new Date(Date.now()-36e5));
   if(!hrs.length) return null;
   // Timer der kildene er uenige (BarentsWatch-høyde, men trolig vindsjø
   // eller feil retning) skal ikke bli "beste time" hvis det finnes andre
@@ -581,7 +581,7 @@ function bestWindow(spot){
 function toHourKey(d){ return d.toISOString().slice(0,13)+":00Z"; }
 function currentHour(spot){
   const now = Date.now();
-  let idx = spot.hours.findIndex(h => new Date(h.t).getTime() + 36e5 > now);
+  let idx = (spot.hours||[]).findIndex(h => new Date(h.t).getTime() + 36e5 > now);
   return Math.max(0, idx);
 }
 
@@ -735,7 +735,8 @@ function ensureSpot(id, opts){
     const d = await r.json();
     // samme kjøring som oversikten? Ellers ville timeindeksene pekt på andre timer. «run» er et
     // fingeravtrykk av varselet (publish.py) - to kjøringer i samme time har samme «generated»
-    if(d.run !== DATA.run || d.generated !== DATA.generated || !d.hours || !d.hours.length || !s.hours.length || d.hours[0].t !== s.hours[0].t){
+    // oversikt-2 (Tillegg 2): oversikten har ingen timer - samme kjøring sjekkes på run/generated
+    if(d.run !== DATA.run || d.generated !== DATA.generated || !d.hours || !d.hours.length){
       // et nytt varsel er publisert siden oversikten ble lastet: last siden på nytt, én gang per kjøring
       // (ikke midt i en lagring - loggarket bruker da den nye fila direkte, se forecastForLog)
       if(reloadOk){ try{ if(sessionStorage.getItem("nordsurf.reloadFor") !== String(d.run)){ sessionStorage.setItem("nordsurf.reloadFor", String(d.run)); location.reload(); } }catch(e){} }
@@ -743,6 +744,8 @@ function ensureSpot(id, opts){
       err.newRun = true; err.detail = d;
       throw err;
     }
+    // detaljfila (spot-2) har spotens hele meta (svellvindu, tidevann, lys, kalibrering ...) - oversikten bare det forsiden trenger
+    for(const k of Object.keys(d)){ if(!(k in {hours:1, format:1, generated:1, run:1})) s[k] = d[k]; }
     s.hours = d.hours; s._full = true; _hourSpot = null;   // spotOfHour() bygger kartet over timene på nytt
     return s;
   })();
@@ -756,7 +759,7 @@ const hourKey = (t)=> new Date(Math.floor(t.getTime()/36e5)*36e5).toISOString().
 function forecastAt(spotId, t){
   const s = DATA.spots.find(x=>x.id===spotId); if(!s) return null;
   const key = hourKey(t);
-  return s.hours.find(h=>h.t===key) || null;
+  return (s.hours||[]).find(h=>h.t===key) || null;
 }
 async function forecastForLog(spotId, t){
   // S2: loggen tar med varselets tall for timen (tidevann, energi, retning ...) fra spotens detaljfil.
@@ -786,7 +789,7 @@ function renderLogs(){
   // som ikke skal blandes - se README "Surfehøyde".
   const heightCal = DATA.spots.map(s=>{
     const cal = s.calibration || {};
-    const transferPct = nf0.format((cal.transfer_used ?? (s.hours[0]||{}).transfer ?? 0.6) * 100);
+    const transferPct = nf0.format((cal.transfer_used ?? ((s.hours||[])[0]||{}).transfer ?? 0.6) * 100);
     const transferSrcTxt = cal.transfer_source==="eksponering" ? `Lært fra eksponeringen per retning (del B, ${cal.exposure_buckets_learned_lang} bøtter)`
       : cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
       : cal.transfer_source==="spots.json" ? "Satt i spots.json"
@@ -1077,6 +1080,11 @@ function renderSettings(){
     : cfg.last ? `Sist synket ${relDay(new Date(cfg.last))} kl. ${fmtTime.format(new Date(cfg.last))}` : "Ikke synket ennå";
   $("#detailPane").innerHTML = `<header class="top"><h1>Innstillinger</h1></header>
     ${accountSectionHtml()}
+    <h2 class="sec">Område</h2>
+    <div class="form">
+      <p>Hjem viser «Beste økt» og «Spots i …» for dette området når du ikke har favoritter.</p>
+      <label class="felt"><span>Område</span><select id="omrade">${(Front.helpers.regions()).map(r=>`<option value="${esc(r)}"${r===Front.helpers.chosenRegion() ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></label>
+    </div>
     <h2 class="sec">Varsler</h2>
     <div class="form">
       <p>Du får varsel når en spot får <b>${n.min_stars??3} stjerner eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
@@ -1093,6 +1101,7 @@ function renderSettings(){
     <h2 class="sec">Eksport</h2>
     <div class="form"><p>${loadLogs().length} økter på denne telefonen.</p>
       <div class="row-btns"><button class="ghost" id="export">Eksporter logger</button></div></div>`;
+  const om = $("#omrade"); if(om) om.onchange = ()=>{ Front.helpers.setRegion(om.value); toast(`Område: ${om.value}`); };
   $("#saveSync").onclick = ()=>{
     saveSync({...loadSync(), repo:$("#syncRepo").value.trim(), token:$("#syncToken").value.trim(), error:null});
     syncLogs(true);
@@ -1383,7 +1392,7 @@ function recordWitness(){
     if(!favs.has(s.id)) continue;
     // Bare timer som allerede har startet (nåværende time og evt. én til som
     // fortsatt henger med fra forrige kjøring) - aldri fremtidige anslag.
-    for(const h of s.hours.slice(0,2)){
+    for(const h of (s.hours||[]).slice(0,2)){
       if(new Date(h.t).getTime() > Date.now()) continue;
       const key = s.id+"|"+h.t;
       if(seen.has(key)) continue;

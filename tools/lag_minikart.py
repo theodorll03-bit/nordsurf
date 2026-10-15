@@ -1,6 +1,6 @@
 """Minikart per spot (Theodor 14.10.2026, punkt 4c): den lokale kystlinjen i en
 sirkel med radius 3,5 km rundt spoten, som forenklede SVG-stier, lagret i
-docs/data/minikart.json (lastes bare på spotsiden).
+docs/data/minikart/<id>.json (én fil per spot, lastes bare på spotsiden - Tillegg 2 15.10.2026).
 
 Kilde: OpenStreetMap sin kystlinje (natural=coastline) via Overpass API -
 samme kilde som S3 skal bruke (ROADMAP oppgave S, Theodors svar 2: ikke
@@ -29,7 +29,7 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import linemerge, split, unary_union
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "docs" / "data" / "minikart.json"
+OUT = ROOT / "docs" / "data" / "minikart"   # én fil per spot (Tillegg 2: ikke én felles fil)
 PREVIEW_DIR = ROOT / "docs" / "design" / "spotside" / "minikart"
 RADIUS_KM = 3.5
 SCALE = 100 / RADIUS_KM
@@ -196,25 +196,23 @@ def main():
         CACHE_DIR = Path(a.cache); CACHE_DIR.mkdir(parents=True, exist_ok=True)
     spots = [s for s in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]
              if s.get("enabled") and s.get("status") != "hemmelig" and (not a.spot or s["id"] == a.spot)]
-    out_path = Path(a.out)
-    existing = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else {}
-    result = {"generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "radius_km": RADIUS_KM,
-              "source": "OpenStreetMap-bidragsytere (ODbL), natural=coastline via Overpass API", "viewbox": [-100, 100],
-              "spots": dict(existing.get("spots", {}))}
+    out_dir = Path(a.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
     PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    meta = {"generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "radius_km": RADIUS_KM,
+            "source": "OpenStreetMap-bidragsytere (ODbL), natural=coastline via Overpass API", "viewbox": [-100, 100]}
     for s in spots:
         t0 = time.time()
         mk = build(s)
-        result["spots"][s["id"]] = mk
         (PREVIEW_DIR / f"{s['id']}.svg").write_text(preview_svg(s, mk), encoding="utf-8")
         print(f"{s['name']:16} {mk['n_ways']:3} ways, {len(mk['coast'])} kystlinjer, {mk['_faces']} flater dekker {mk['_face_cover']*100:.0f} %, "
               f"{len(mk['land'])} landflater = {mk['land_share']*100:.0f} % av sirkelen, pinnen på land: {mk['_spot_on_land']} ({time.time()-t0:.1f} s)")
         for k in ("_faces", "_face_cover", "_spot_on_land"):
             mk.pop(k, None)
+        out_path = out_dir / f"{s['id']}.json"
+        out_path.write_text(json.dumps(dict(meta, id=s["id"], **mk), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         time.sleep(4)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"Skrev {out_path} ({out_path.stat().st_size // 1024} KiB)")
+    print(f"Skrev {len(spots)} filer i {out_dir}")
 
 
 if __name__ == "__main__":
