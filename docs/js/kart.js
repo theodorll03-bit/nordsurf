@@ -82,11 +82,13 @@
       markersEl = root.querySelector("#markersLayer");
       if(!window.maplibregl || !window.pmtiles){ console.error("MapLibre/PMTiles mangler"); return; }
       if(!Lag._proto){ Lag._proto = new pmtiles.Protocol(); maplibregl.addProtocol("pmtiles", Lag._proto.tile); }
+      const tGl = performance.now();
       map = new maplibregl.Map({
         container: root.querySelector("#mlKart"), style: style(), bounds: [[4, 57.5], [31.5, 71.3]],
         maxBounds: BOUNDS, minZoom: 4, maxZoom: 14, maxPitch: 0, pitchWithRotate: false, dragRotate: false, touchPitch: false,
         renderWorldCopies: false, attributionControl: false, fadeDuration: 0, keyboard: true,
       });
+      window.__kartOppsettMs = performance.now() - tGl;   // WebGL-kontekst og shadere (testene skiller dette ut)
       map.touchZoomRotate.disableRotation();
       map.keyboard.disableRotation();
       map.addControl(new maplibregl.AttributionControl({compact: true}), "bottom-left");
@@ -210,5 +212,8 @@
     const pts = (list || []).map(s=>({s, id: s.id, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon})).filter(p=> p.lat!=null && p.lon!=null);
     return Lag.thumbSvg(pts, (p)=> colorOf(p));
   }
+  // åpnes appen rett på Utforsk, lastes MapLibre parallelt med varseldataene i stedet for etter dem
+  if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{});
+  window.addEventListener("hashchange", ()=>{ if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{}); });
   window.Kart = { lag: Lag, init, loadLib, setCoast, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(), offMapSpots, screenOf, extentOf, thumb, covers: (la, lo)=> Lag.covers(la, lo) };
 })();
