@@ -92,7 +92,7 @@ Kystlinja er GSHHS i full oppløsning. Små skjær kan mangle, så sjekk trange 
 BarentsWatch er hovedkilden når den er koblet på: den har sin egen finmaskede
 kystmodell som allerede tar hensyn til skjerming bak odder og øyer, og brukes
 **uten** noen faktor. Hver spot har to BarentsWatch-punkter i `spots.json`:
-- `barentswatch_point` (ca 250 m ut fra stranda) - dette er punktet ratingen
+- `barentswatch_point` (like utenfor brytesonen - typisk 150-900 m ut, se snittene i data/bw_point_search/) - dette er punktet ratingen
   og kalibreringen faktisk bruker (`bw_height` i timedataene).
 - `barentswatch_point_near` (ca 150 m ut, det opprinnelige punktet) - hentes
   også, men bare til sammenligning (`bw_height_near`). Brukes ALDRI i

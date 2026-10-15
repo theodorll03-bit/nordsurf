@@ -180,7 +180,7 @@ assert c5["stars"] <= c1["stars"]
 # 6.5: offshore vind - ingen straff til 10 m/s, -1 fra der.
 assert wind_penalty(9, 120, G) == 0
 assert abs(wind_penalty(12, 120, G) - 0.5) < 1e-9   # 15.10.2026: glatt kurve offshore 10 -> 0, 14 -> 1
-print(f"{'6.5: offshore 9/12 m/s straff':<40} 0 1")
+print(f"{'6.5: offshore 9/12 m/s straff':<40} 0 0,5")
 
 # 6.6: Komar og Gaughan sin bruddhøyde-formel, kontrollverdier (toleranse
 # 0,05 m - se spesifikasjonen 26.09.2026).
@@ -1370,7 +1370,7 @@ def old_wind_type(wind_dir, spot):
 
 # 15.10.2026: farstadsanden tatt ut - offshore_wind UTVIDET til [85,200] (observasjon 15.10, samme regel som Unstad), ikke lenger eksakt facing+180±45
 EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda", "russelv")
-OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa")
+OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa", "farstadsanden")
 
 for other_id in EXACT_CENTER_SPOTS:
     sp = spots[other_id]
@@ -1568,7 +1568,13 @@ print("26.1: 287° er innenfor Farstadsanden sitt vindu 284-326 (kantene inklusi
 # 2,0 m - målet er 4-5 (vinden fra 211° regnes fortsatt som side, sektoren går til 200°, og
 # den lokale offshore_strict-regelen tar −0,7 - se STATUS.md). Vindregelen 15.10 (glatt kurve,
 # svelldemping, kast maks +2 m/s, lokal regel erstatter) er en del av dette.
-F27 = spots["farstadsanden"]
+F27 = dict(spots["farstadsanden"])
+# som produksjonen (fetch.build_spot): glattet eksponering fra data/exposure_baseline.json, så
+# retningen 289° får 0,71 («i utkanten av vinduet», bw_confirms) som i rapporten - ikke 1,0
+_sm27, _raw27, _warn27 = _fetch.resolve_exposure(F27, _exposure_baseline_real, "Farstadsanden")
+assert _warn27 is None
+F27["exposure_smoothed"], F27["exposure_raw"] = _sm27, _raw27
+F27["exposure_distance_km"], F27["exposure_width_km"] = _fetch.resolve_obstacle_geometry(F27, _exposure_baseline_real)
 H27 = {"t": "2026-10-15T15:00Z", "height_offshore": 6.6, "swell_offshore": 4.24, "swell_model": "gfs", "secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0, "swell_peak_period": None, "dir_offshore": 289, "period": 17.35, "turn": 14.399999999999977, "wind_speed": 8.2, "wind_dir": 211.0, "gust": 13.7, "tide": {"level": 0.53, "state": "middels", "rising": False}, "light": "dag", "daylight": True, "bw_interpolated": False, "bw_source": "norce", "bw_file_source": "hustadvika3x2v", "bw_height": 2.19, "bw_height_max": 4.161, "bw_period": 12.896, "bw_dir": 300, "bw_dir_raw": 120}
 r27 = rate(dict(H27), F27)
 show("27.1: Farstadsanden 15.10 kl. 17, nytt punkt + ny vind", r27)

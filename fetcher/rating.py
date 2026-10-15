@@ -840,10 +840,11 @@ def _fmt_m(v):
 
 
 def _fmt_penalty(n):
-    """«ingen effekt», «−1» for hele, ellers «−0,7» (flytende vindstraff, 15.10.2026)."""
-    if n is None or abs(n) < 1e-9:
+    """«ingen effekt» under 0,05, «−1» når det runder til et helt tall med én desimal,
+    ellers «−0,7» (flytende vindstraff, 15.10.2026)."""
+    if n is None or n < 0.05:
         return "ingen effekt"
-    if abs(n - round(n)) < 1e-9:
+    if abs(n - round(n)) < 0.05:
         return f"−{int(round(n))}"
     return f"−{n:.1f}".replace(".", ",")
 
@@ -1181,17 +1182,13 @@ def energy_thresholds_used(spot):
 
 
 def local_rules_penalty(hour, spot, wind_type_, wind_speed):
-    """Tidevann og en strengere offshore-sjekk, begge "koster stjerner" -
-    trekkes fra `solid` (ETTER vind og tidevann sin vanlige straff, se
-    rate()), som et eget, klart merket fradrag - IKKE lagt inn i
-    faded_wind/faded_tide sin bokføring, som fortsatt bare skal vise hva
-    VIND og TIDEVANN alene tar.
-
-    weight demper hvert fradrag direkte (effektiv straff = weight*rå_straff
-    stjerner), summert FØR avrunding til nærmeste hele stjerne (0,5 rundes
-    OPP - vanlig avrunding, ikke Pythons "bankers rounding" som ville gitt
-    0 for nøyaktig 0,5 her, uforutsigbart for noe som skal vises som "koster
-    én stjerne")."""
+    """Tidevann og en strengere offshore-sjekk, begge "koster stjerner".
+    15.10.2026 (Theodors regel 4): returnerer (tidevann_rå, vind_rå, linjer),
+    begge vektet med weight. Tidevannsfradraget er et eget, additivt ledd i
+    rate(); VINDfradraget legges ikke oppå den generelle vindstraffen, men
+    erstatter den når det er strengere (rate(): wp = max(generell, lokal)) -
+    og bokføres da som vind (zero_losses["wind"]), ikke som "local". Alt
+    summeres som flyttall i rate() og rundes til slutt (0,5 opp)."""
     rules = spot.get("local_rules")
     if not rules:
         return 0.0, 0.0, []
@@ -1433,9 +1430,13 @@ def rate(hour, spot):
     tide_pen = tide_penalty(hour.get("tide"), spot)
     raw_solid = potential - wp - tide_pen - local_tide_raw
     solid = max(0, min(potential, math.floor(raw_solid + 0.5)))
-    # bokføring i hele stjerner (det som vises som blasse stjerner): vind først, så tidevann, så lokalt
+    # bokføring i hele stjerner (det som vises som blasse stjerner): «uten vind» er det samme
+    # regnestykket uten vindleddet (fysikk-kontrollør 15.10.2026: en egen avrunding av vinden
+    # kunne gi «(4 uten vind)» når tidevannsregelen alene tok stjernen), så vind først, så
+    # tidevann, så lokalt
     lost_total = potential - solid
-    lost_wind = min(lost_total, math.floor(wp + 0.5))
+    without_wind = max(0, min(potential, math.floor(potential - tide_pen - local_tide_raw + 0.5)))
+    lost_wind = max(0, without_wind - solid)
     lost_tide = min(lost_total - lost_wind, tide_pen)
     local_extra_stars = lost_total - lost_wind - lost_tide
     solid_before_local = solid + local_extra_stars
@@ -1551,8 +1552,10 @@ def rate(hour, spot):
         # synlig i breakdown-teksten.
         "energy_period_source": energy_period_source,
         # Myke lokale regler (Magnus, se CLAUDE.md "Lokalkunnskap") - None
-        # når spoten ikke har local_rules. "stars_lost" er ETT tall (allerede
-        # avrundet, summert på tvers av tidevann/vind-delreglene) - energi
+        # når spoten ikke har local_rules. "stars_lost" er ETT tall: det det
+        # LOKALE tidevannsfradraget tok etter avrunding (15.10.2026: den lokale
+        # vindregelen erstatter den generelle vindstraffen når den er strengere,
+        # og bokføres da under "wind", ikke her - se local_rules_penalty()) - energi
         # sin effekt er IKKE i dette tallet (den ganger potensialet NED før
         # vind/tidevann i det hele tatt, se energy_factor() - det er ikke et
         # eget stjerne-fradrag å telle opp samme måte, og vises nå som egen

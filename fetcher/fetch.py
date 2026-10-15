@@ -601,7 +601,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     if marine and not swell_values:
         REPORT.append((name, "Open-Meteo svellhøyde", "tom", "havpunktet gir ingen svellhøyde, bruker met.no"))
 
-    # barentswatch_point (ca 250 m ut) er punktet ratingen og kalibreringen
+    # barentswatch_point (like utenfor brytesonen (150-900 m ut, se data/bw_point_search/)) er punktet ratingen og kalibreringen
     # bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet)
     # hentes i tillegg og lagres bare til sammenligning (bw_height_near) - se
     # spots.json sin _info. Gir 250 m-punktet ingen data, brukes 150 m-punktet

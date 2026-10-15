@@ -157,7 +157,7 @@ Mål: appen skal se ut og føles som en ordentlig surfeapp: mer farge, tydelige 
 - Etter merge: Innstillinger «Utseende: System / Lys / Mørk» (HIG 1). Spotens egne energigrenser (local_rules.min_energy_kj) som merker på energistolpen - KREVER at Unstad sine 400/200 regnes om til ny skala (×1,56, se CLAUDE.md) og Theodors ja; ordet bruker universelle 500/2 000/10 000 kJ inntil da (fysikk-kontrollør 15.10.2026).
 
 **Farstadsanden 15.10.2026 (gren `fiks/farstad-vind`, PR åpen - se STATUS.md):**
-- Vindmålinger for Farstadsanden: legg Hustadvika og Kristiansund (Frost-kilder må verifiseres mot stasjonslista) i wind_obs.STATIONS, så målt vind finnes for neste observasjon. Theodor bestemmer: sektoren [85,200] → [85,215]? (vinden 15.10 kl. 17 var 211° og ga sjøsprøyt bakover) og offshore_strict (nå det bindende leddet ved sidevind).
+- Vindmålinger for Farstadsanden: legg Hustadvika og Kristiansund (Frost-kilder må verifiseres mot stasjonslista) i wind_obs.STATIONS, så målt vind finnes for neste observasjon. Theodor bestemmer: sektoren [85,200] → [85,215]? (vinden 15.10 kl. 17 var 211° og ga sjøsprøyt bakover - 4★ krever at den regnes som offshore; offshore_strict alene endrer ingenting kl. 17). 5★ er i praksis uoppnåelig med dagens height_score/int(5·score) - toppen er 4 (stjernegrenser, krever ja). Punktet 900 m trenger én uavhengig logg til (en mindre dag) før surf_factor kan stoles på.
 - BarentsWatch-punktene for de andre sju spotene: snittet 15.10 (data/bw_point_search/snitt_2026-10-15.md) viser brytesone-mistanke ved dagens avstander for alle - Theodor bestemmer per spot. Krever Theodors ja.
 
 **Lav prioritet (fra PR #4, Theodor 14.10.2026):**
