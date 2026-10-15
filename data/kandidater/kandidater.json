@@ -1,0 +1,3949 @@
+{
+ "_info": "Kandidater fra Theodors liste 15.10.2026 (ROADMAP K del A). Bare posisjon, kommune og hint - ingen tekst fra lista. Hint og pin_liste er ubekreftet. Ikke publisert i appen; ingen spot i spots.json herfra. Regionene er forslag til Theodor.",
+ "regioner_forslag": [
+  "Finnmark",
+  "Troms",
+  "Vesterålen",
+  "Lofoten",
+  "Salten",
+  "Møre og Romsdal",
+  "Stad og Nordfjord",
+  "Karmøy",
+  "Jæren",
+  "Dalane og Lista",
+  "Sørlandet",
+  "Østlandet"
+ ],
+ "antall": 115,
+ "kandidater": [
+  {
+   "id": "porsangvika",
+   "name": "Porsangvika",
+   "aliases": [
+    "Porsangvika (Magerøya)",
+    "Hjellnes"
+   ],
+   "fylke": "Finnmark",
+   "kommune": "Nordkapp",
+   "region": "Finnmark",
+   "pin_liste": {
+    "lat": 70.8714,
+    "lon": 25.8403
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "E",
+    "best_wind_dir": "W",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/porsangvika/6418e47ce072f8fce20332e1",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/troms-og-finnmark/nordkapp/778459",
+    "https://breakfinder.surf/en/surf_spots/porsangvika",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "berlevag-sandfjorden",
+   "name": "Berlevåg Sandfjorden",
+   "aliases": [
+    "Sandfjorden",
+    "Sandfjordbukta",
+    "Sandfjord Berlevåg",
+    "Sandfjordstranden"
+   ],
+   "fylke": "Finnmark",
+   "kommune": "Berlevåg",
+   "region": "Finnmark",
+   "pin_liste": {
+    "lat": 70.7979,
+    "lon": 29.2671
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NE",
+    "best_wind_dir": "WSW",
+    "skill_level": "beginner/intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.surfline.com/surf-report/berlev-g-sandfjorden/6418e3cb93265b7c5618ebde",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/troms-og-finnmark/berlev-g/780686",
+    "https://breakfinder.surf/en/surf_spots/berlevag-sandfjorden",
+    "https://www.komoot.com/highlight/7769547",
+    "https://ws.geonorge.no/stedsnavn/v1/",
+    "https://surf-norge.no/surfespots/region/nordnorge/fylke/finnmark/sandfjordstranden/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "persfjord",
+   "name": "Persfjord",
+   "aliases": [
+    "Persfjorden"
+   ],
+   "fylke": "Finnmark",
+   "kommune": "Vardø",
+   "region": "Finnmark",
+   "pin_liste": {
+    "lat": 70.4209,
+    "lon": 30.7834
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "N",
+    "best_wind_dir": "S",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/persfjord/6418e3a7a34c33e05c18d6fc",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/troms-og-finnmark/vard-/6453313",
+    "https://breakfinder.surf/en/surf_spots/persfjord",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "skallelv",
+   "name": "Skallelv",
+   "aliases": [
+    "Skallelva",
+    "Skallelv beach"
+   ],
+   "fylke": "Finnmark",
+   "kommune": "Vadsø",
+   "region": "Finnmark",
+   "pin_liste": {
+    "lat": 70.1882,
+    "lon": 30.361
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break / river mouth",
+    "bottom": "unknown",
+    "best_swell_dir": "SSE",
+    "best_wind_dir": "NNW",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/skallelv/584204204e65fad6a770960a",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/finnmark/780166",
+    "https://breakfinder.surf/en/surf_spots/skallelv",
+    "https://en.wikipedia.org/wiki/Skallelv"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "skallneset",
+   "name": "Skallneset",
+   "aliases": [
+    "Skallnes",
+    "Draumen"
+   ],
+   "fylke": "Finnmark",
+   "kommune": "Vadsø",
+   "region": "Finnmark",
+   "pin_liste": {
+    "lat": 70.1397,
+    "lon": 30.349
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "flat rocks",
+    "best_swell_dir": "N, NE, E",
+    "best_wind_dir": "S, SW",
+    "skill_level": "experienced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/skallneset/index.html",
+    "https://www.geonames.org/search.html?q=Skallneset&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "russelv",
+   "name": "Russelv",
+   "aliases": [
+    "Russelva",
+    "Russelvneset"
+   ],
+   "fylke": "Troms",
+   "kommune": "Lyngen",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.9484,
+    "lon": 20.2198
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "N",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://github.com/theodorll03-bit/nordsurf",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "i_nordsurf",
+   "nordsurf_id": "russelv",
+   "avstand_pinne_nal_m": 2
+  },
+  {
+   "id": "lenangsoyra",
+   "name": "Lenangsøyra",
+   "aliases": [
+    "Sør-Lenangen",
+    "Nesodden (Lenangsøyra)"
+   ],
+   "fylke": "Troms",
+   "kommune": "Lyngen",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.8475,
+    "lon": 19.9899
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "NNE",
+    "best_wind_dir": "SSW",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://github.com/theodorll03-bit/nordsurf",
+    "https://www.komoot.com/highlight/5178036",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "i_nordsurf",
+   "nordsurf_id": "lenangsoyra",
+   "avstand_pinne_nal_m": 2
+  },
+  {
+   "id": "grotfjord",
+   "name": "Grøtfjord",
+   "aliases": [
+    "Grøtfjorden",
+    "Grøtfjord beach"
+   ],
+   "fylke": "Troms",
+   "kommune": "Tromsø",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.7788,
+    "lon": 18.5353
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://surfing-waves.com/atlas/europe/norway/spot/gr_tfjord.html",
+    "https://www.itromso.no/nyheter/i/qRjGvm/surfernes-paradis",
+    "https://bobilavisen.no/badeplasser/grotfjorden/",
+    "https://hearitfromlocals.com/tromso-norway/",
+    "https://github.com/theodorll03-bit/nordsurf"
+   ],
+   "dokumentasjon": "god",
+   "status": "i_nordsurf",
+   "nordsurf_id": "grotfjord",
+   "avstand_pinne_nal_m": 2
+  },
+  {
+   "id": "tromvik",
+   "name": "Tromvik",
+   "aliases": [
+    "Tromvika",
+    "Norskesanden",
+    "Sandvika (Tromvik)"
+   ],
+   "fylke": "Troms",
+   "kommune": "Tromsø",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.7777,
+    "lon": 18.4345
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NNW",
+    "best_wind_dir": "SSE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://github.com/theodorll03-bit/nordsurf",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "i_nordsurf",
+   "nordsurf_id": "tromvik",
+   "avstand_pinne_nal_m": 5
+  },
+  {
+   "id": "steinkrossa",
+   "name": "Steinkrøssa",
+   "aliases": [
+    "Storvika (Kartverket-navn ved pin)",
+    "Steinkrøssa-stranda"
+   ],
+   "fylke": "Troms",
+   "kommune": "Senja",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.4917,
+    "lon": 17.2585
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "N",
+    "best_wind_dir": "SW",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://github.com/theodorll03-bit/nordsurf",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "i_nordsurf",
+   "nordsurf_id": "steinkrossa",
+   "avstand_pinne_nal_m": 1
+  },
+  {
+   "id": "ersfjordstranda",
+   "name": "Ersfjordstranda",
+   "aliases": [
+    "Ersfjord Beach",
+    "Ersfjord (Senja)"
+   ],
+   "fylke": "Troms",
+   "kommune": "Senja",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.4839,
+    "lon": 17.3994
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.mefjordbrygge.no/self-guided-activities/",
+    "https://github.com/theodorll03-bit/nordsurf",
+    "https://www.nasjonaleturistveger.no/en/routes/senja/ersfjordstranda/",
+    "https://www.outdooractive.com/en/poi/senja/ersfjord-beach/56039048/",
+    "https://www.visitsenja.no/en/strandliv-og-bading-den-arktiske-maten",
+    "https://www.polarpanoramalodge.com/surfing"
+   ],
+   "dokumentasjon": "god",
+   "status": "i_nordsurf",
+   "nordsurf_id": "ersfjordstranda",
+   "avstand_pinne_nal_m": 2
+  },
+  {
+   "id": "laukvika-senja",
+   "name": "Laukvika (Senja)",
+   "aliases": [
+    "Laukvik",
+    "Laukvika ved Bøvær"
+   ],
+   "fylke": "Troms",
+   "kommune": "Senja",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.4745,
+    "lon": 17.2249
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.mefjordbrygge.no/self-guided-activities/",
+    "https://www.visitsenja.no/en/strandliv-og-bading-den-arktiske-maten",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "bovaer",
+   "name": "Bøvær",
+   "aliases": [
+    "Bøstranda",
+    "Bøvær Beach",
+    "Bovær"
+   ],
+   "fylke": "Troms",
+   "kommune": "Senja",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.4682,
+    "lon": 17.2303
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.mefjordbrygge.no/self-guided-activities/",
+    "https://www.visitsenja.no/en/strandliv-og-bading-den-arktiske-maten",
+    "https://www.dangerous-business.com/senja-norway-guide/",
+    "https://ws.geonorge.no/stedsnavn/v1/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "hamn-senja",
+   "name": "Hamn (Senja)",
+   "aliases": [
+    "Hamn i Senja"
+   ],
+   "fylke": "Troms",
+   "kommune": "Senja",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.4172,
+    "lon": 17.1641
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.outsideonline.com/outdoor-adventure/water-activities/tasty-freeze?scope=anon",
+    "https://www.geonames.org/search.html?q=Hamn+Senja&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "andenes",
+   "name": "Andenes",
+   "aliases": [
+    "Andenes beach",
+    "Andenes shoreline"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 69.3218,
+    "lon": 16.1165
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand/rock",
+    "best_swell_dir": "N/NW",
+    "best_wind_dir": "S",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://bestarctic.com/northern-norway-travel-blog/top-summer-spots-for-surfing-in-northern-norway",
+    "https://www.komoot.com/highlight/4750487"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "bleik",
+   "name": "Bleik",
+   "aliases": [
+    "Bleikstranda",
+    "Bleiksstranda",
+    "Bleik beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 69.28,
+    "lon": 15.975
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW/W",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://bestarctic.com/northern-norway-travel-blog/top-summer-spots-for-surfing-in-northern-norway",
+    "https://bestarctic.com/northern-norway-travel-blog/top-spots-for-surfing-in-northern-norway-during-summertime",
+    "https://arcticnorway.com/discover/highlights/andoya-in-vesteralen/",
+    "https://sandee.com/norway/nordland/bleik/bleik-beach",
+    "https://en.wikipedia.org/wiki/Bleik",
+    "https://www.windfinder.com/forecast/andoya_bleik"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "hoyvika",
+   "name": "Høyvika",
+   "aliases": [
+    "Høyvik",
+    "Apple Beach",
+    "Høyvika Andøya"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 69.2323,
+    "lon": 15.8572
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W/NW",
+    "best_wind_dir": "E/SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.vol.no/nyheter/n/lzVlO9/hver-bolge-er-unik",
+    "https://www.visitandoy.info/opplevelser/aktiviteter"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "stave",
+   "name": "Stave",
+   "aliases": [
+    "Stavstranda",
+    "Stave beach",
+    "Stave Camping"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 69.2049,
+    "lon": 15.8635
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W/NW",
+    "best_wind_dir": "E/SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.vol.no/nyheter/n/lzVlO9/hver-bolge-er-unik",
+    "https://www.komoot.com/highlight/7051700",
+    "https://www.visitnorway.com/listings/stave-camping-beach-camping-cabins/139256/"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "ducks",
+   "name": "Ducks",
+   "aliases": [
+    "Ducks Andøya",
+    "Skogvoll/Nøss area"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 69.068,
+    "lon": 15.5223
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "NNW",
+    "best_wind_dir": "SSE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://breakfinder.surf/en/surf_spots/ducks",
+    "https://breakfinder.surf/en/regions/northern-norway"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "aknes",
+   "name": "Åknes",
+   "aliases": [
+    "Åknes Andøya",
+    "Farmen",
+    "Arctic Aloha beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Andøy",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 68.9715,
+    "lon": 15.4423
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W/NW",
+    "best_wind_dir": "E/SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.vol.no/nyheter/n/lzVlO9/hver-bolge-er-unik",
+    "https://www.carvemag.com/artic-aloha/",
+    "https://www.visitandoy.info/opplevelser/aktiviteter",
+    "https://arcticaloha.com/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "the-frog",
+   "name": "The Frog",
+   "aliases": [
+    "Frog Nykvåg",
+    "Nykvåg beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Bø",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 68.7575,
+    "lon": 14.4709
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "SW/W",
+    "best_wind_dir": "S/SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://breakfinder.surf/en/surf_spots/the-frog",
+    "https://breakfinder.surf/en/regions/northern-norway",
+    "https://en.wikipedia.org/wiki/Nykv%C3%A5g"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "g-frame",
+   "name": "G-frame",
+   "aliases": [
+    "G-frame Bø",
+    "Gimstad A-frame"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Bø",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 68.6389,
+    "lon": 14.4275
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "reef",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfline.com/surf-report/g-frame/620aea6d9f082f5bda126528",
+    "https://windy.app/forecast2/spot/4016709/G-frame"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "g-force",
+   "name": "G-force",
+   "aliases": [
+    "G-force Bø",
+    "Vinje/Skagen beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Bø",
+   "region": "Vesterålen",
+   "pin_liste": {
+    "lat": 68.6381,
+    "lon": 14.4251
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "NW (SW-W per widget)",
+    "best_wind_dir": "SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://breakfinder.surf/en/surf_spots/g-force",
+    "https://breakfinder.surf/en/regions/northern-norway",
+    "https://en.wikipedia.org/wiki/Vinje,_Nordland"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "kvalnes",
+   "name": "Kvalnes",
+   "aliases": [
+    "Kvalnes Lofoten",
+    "Kvalnes beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.3449,
+    "lon": 13.93
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "boulders",
+    "best_swell_dir": "N/NW (SW-N window)",
+    "best_wind_dir": "S/SW",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/kvalnes",
+    "https://www.surf-forecast.com/breaks/Kvalnes",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/lofoten-strender-og-surfing"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "eggum-ost-steinstrand",
+   "name": "Eggum øst (steinstrand)",
+   "aliases": [
+    "Eggum pebble beach",
+    "Eggum east"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.3135,
+    "lon": 13.668
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "pebbles/boulders",
+    "best_swell_dir": "N/NW (big swell)",
+    "best_wind_dir": "S",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/eggum"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "eggum",
+   "name": "Eggum",
+   "aliases": [
+    "Eggum beach",
+    "Eggumstranda"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.3107,
+    "lon": 13.6548
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "NW (SW-N window)",
+    "best_wind_dir": "SE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/eggum",
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.fjordtours.com/inspiration/articles/surfing-norway"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "unstad-right",
+   "name": "Unstad Right",
+   "aliases": [
+    "Unstad høyre",
+    "Unnstad",
+    "Unstad point right",
+    "Unstad høyrebølge"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2734,
+    "lon": 13.5775
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders/rock",
+    "best_swell_dir": "W (SW-NW window)",
+    "best_wind_dir": "E/SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 7,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/unstad-right",
+    "https://www.surf-forecast.com/breaks/Unstad",
+    "https://surf-norge.no/surfespots/region/nordnorge/fylke/nordland/unstad-hoyre/",
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://visitlofoten.com/tema/surfing-i-lofoten/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "unstad-beach",
+   "name": "Unstad Beach",
+   "aliases": [
+    "Unstadstranda",
+    "Unstad strand",
+    "Unnstad",
+    "Unstad bay"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2695,
+    "lon": 13.581
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with scattered boulders",
+    "best_swell_dir": "W/NW (SW-NW window)",
+    "best_wind_dir": "SE/ESE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 11,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/unstad-beach",
+    "https://breakfinder.surf/en/surf_spots/unstad-beach",
+    "https://surf-norge.no/surfespots/region/nordnorge/fylke/nordland/unstad/",
+    "https://www.surf-forecast.com/breaks/Unstad",
+    "https://bestarctic.com/northern-norway-travel-blog/top-summer-spots-for-surfing-in-northern-norway",
+    "https://visitlofoten.com/tema/surfing-i-lofoten/",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/lofoten-strender-og-surfing",
+    "https://www.nationalgeographic.com/magazine/article/lofoten-islands-norway-one-of-the-worlds-top-spots-for-winter-surfing",
+    "https://www.nbcnews.com/news/world/chilling-out-lofoten-masters-world-s-northernmost-surf-contest-n922061",
+    "https://www.fjordtours.com/inspiration/articles/surfing-norway",
+    "https://expertworldtravel.com/lofoten-islands-beaches/"
+   ],
+   "dokumentasjon": "god",
+   "status": "i_nordsurf",
+   "nordsurf_id": "unstad",
+   "avstand_pinne_nal_m": 33
+  },
+  {
+   "id": "unstad-left",
+   "name": "Unstad Left",
+   "aliases": [
+    "Unstad venstre",
+    "Unstad point left",
+    "Unstad venstrebølge"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2692,
+    "lon": 13.5696
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "uneven rocky reef/boulders",
+    "best_swell_dir": "SW (SW-NW window)",
+    "best_wind_dir": "SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 7,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/unstad-left",
+    "https://surf-norge.no/surfespots/region/nordnorge/fylke/nordland/unstad-venstre/",
+    "https://www.surf-forecast.com/breaks/Unstad",
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.volcom.com/blogs/truetothis/surfing-the-freezing-waters-of-norways-lofoten-islands-with-leon-glatzer"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "soppelplassen",
+   "name": "Søppelplassen",
+   "aliases": [
+    "Garbage Dump",
+    "Unstad søppelplassen",
+    "Unstad left outside section"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2665,
+    "lon": 13.5572
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "rock",
+    "best_swell_dir": "SW/NW",
+    "best_wind_dir": "SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://surf-norge.no/surfespots/region/nordnorge/fylke/nordland/soppelplassen/",
+    "https://surf-norge.no/nsk",
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "utakleiv",
+   "name": "Utakleiv",
+   "aliases": [
+    "Uttakleiv",
+    "Uttakleiv beach",
+    "Utakleivstranda"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2109,
+    "lon": 13.5001
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand and boulders",
+    "best_swell_dir": "NW (SW-N window)",
+    "best_wind_dir": "SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/utakleiv",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/lofoten-strender-og-surfing",
+    "https://www.fjordtours.com/inspiration/articles/surfing-norway",
+    "https://theaficionados.com/journal/norway/surfing-lofoten"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "haukland",
+   "name": "Haukland",
+   "aliases": [
+    "Hauklandstranda",
+    "Haukland beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.2045,
+    "lon": 13.529
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/utakleiv",
+    "https://theaficionados.com/journal/norway/surfing-lofoten",
+    "https://expertworldtravel.com/lofoten-islands-beaches/",
+    "https://visitlofoten.com/en/topic/beaches-in-lofoten/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "rorvika",
+   "name": "Rørvika",
+   "aliases": [
+    "Rørvik beach",
+    "Rørvikstranda",
+    "Rorvika"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vågan",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.186,
+    "lon": 14.229
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "N/NE",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/",
+    "https://visitlofoten.com/en/topic/beaches-in-lofoten/",
+    "https://theaficionados.com/journal/norway/surfing-lofoten",
+    "https://www.wannasurf.com/spot/Europe/Norway/rorvika/index.html"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "vikten",
+   "name": "Vikten",
+   "aliases": [
+    "Vikten beach",
+    "Viktenstranda"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Flakstad",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.1401,
+    "lon": 13.3163
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with rocky reefs at the south end",
+    "best_swell_dir": "SW (wrap)",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/",
+    "https://www.surfnerd.com/surf-forecast/flakstad"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "flakstad-beach-kirkesiden",
+   "name": "Flakstad Beach (kirkesiden)",
+   "aliases": [
+    "Flakstadsanden",
+    "Flakstadstranda",
+    "Flakstad bay",
+    "Flakstad lefts"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Flakstad",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.109,
+    "lon": 13.315
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW (needs near-180 wrap)",
+    "best_wind_dir": "S",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "skagsanden",
+   "name": "Skagsanden",
+   "aliases": [
+    "Flakstad (Surfnerd/Breakfinder)",
+    "Flakstad Beach",
+    "Skagsanden beach",
+    "Skagsandstranda",
+    "Lofoten Beach Camp"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Flakstad",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.1048,
+    "lon": 13.2868
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand (boulders in the western corner)",
+    "best_swell_dir": "NW (W-N window)",
+    "best_wind_dir": "SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 12,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/flakstad",
+    "https://breakfinder.surf/en/surf_spots/flakstad-beach",
+    "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://visitlofoten.com/tema/surfing-i-lofoten/",
+    "https://visitlofoten.com/en/topic/beaches-in-lofoten/",
+    "https://www.visitnorway.no/listings/surf-med-alt-utsyr-og-opplaering-midt-i-lofoten-lofoten-beach-camp/503395/",
+    "https://theaficionados.com/journal/norway/surfing-lofoten",
+    "https://expertworldtravel.com/lofoten-islands-beaches/",
+    "https://www.surfertoday.com/surfing/worlds-coldest-surf-contest-hits-norway",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/lofoten-strender-og-surfing",
+    "https://breakfinder.surf/en/regions/northern-norway"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "ramberg",
+   "name": "Ramberg",
+   "aliases": [
+    "Rambergstranda",
+    "Ramberg beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Flakstad",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.0899,
+    "lon": 13.2299
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://windy.app/spots/Norway/surfing",
+    "https://www.geonames.org/search.html?q=Ramberg+Flakstad&country=NO",
+    "https://en.wikipedia.org/wiki/Ramberg,_Nordland"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "kvalvika",
+   "name": "Kvalvika",
+   "aliases": [
+    "Kvalvika beach",
+    "Kvalvikstranda"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Moskenes/Flakstad",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.0772,
+    "lon": 13.0924
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W (SW-N window)",
+    "best_wind_dir": "E",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/kvalvika",
+    "https://www.surfnerd.com/surf-reports/norway/nordland",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/lofoten-strender-og-surfing",
+    "https://expertworldtravel.com/lofoten-islands-beaches/",
+    "https://visitlofoten.com/en/topic/beaches-in-lofoten/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "broken-hearts",
+   "name": "Broken Hearts",
+   "aliases": [
+    "Ballstad point",
+    "Ballstad reef"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Vestvågøy",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.065,
+    "lon": 13.52
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "black rock reef",
+    "best_swell_dir": "S/SW",
+    "best_wind_dir": "unknown",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.outsideonline.com/outdoor-adventure/water-activities/tasty-freeze/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "horseid",
+   "name": "Horseid",
+   "aliases": [
+    "Horseidstranda",
+    "Horseid beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Moskenes",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 68.033,
+    "lon": 13.0
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/kvalvika",
+    "https://expertworldtravel.com/lofoten-islands-beaches/"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "bunes",
+   "name": "Bunes",
+   "aliases": [
+    "Bunesstranda",
+    "Bunes beach"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Moskenes",
+   "region": "Lofoten",
+   "pin_liste": {
+    "lat": 67.982,
+    "lon": 13.01
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/kvalvika",
+    "https://visitlofoten.com/en/topic/beaches-in-lofoten/",
+    "https://expertworldtravel.com/lofoten-islands-beaches/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "lop",
+   "name": "Løp",
+   "aliases": [
+    "Lop camping",
+    "Lop",
+    "Løpsmark",
+    "Storvollen"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Bodø",
+   "region": "Salten",
+   "pin_liste": {
+    "lat": 67.3245,
+    "lon": 14.477
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W-SW",
+    "best_wind_dir": "SW",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://breakfinder.surf/en/surf_spots/lop-camping",
+    "https://www.surfline.com/surf-report/lop-camping/6418dfd4a34c33af5f180a20",
+    "https://expertworldtravel.com/best-surfing-norway/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "seines",
+   "name": "Seines",
+   "aliases": [
+    "Seines (Straumøya)",
+    "Steines"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Bodø",
+   "region": "Salten",
+   "pin_liste": {
+    "lat": 67.2098,
+    "lon": 14.353
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "rock point into sand",
+    "best_swell_dir": "SW-W",
+    "best_wind_dir": "SE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 9,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Seines",
+    "https://breakfinder.surf/en/surf_spots/seines",
+    "https://www.surfline.com/surf-report/seines/6418dfda9a43c4468537a852",
+    "https://surf-norge.no/foto/bodo-bolger/",
+    "https://expertworldtravel.com/best-surfing-norway/",
+    "http://arcticsurfing.no/nye-spots-utenfor-bodo.html",
+    "https://arcticsurfing.no/nydelig-dag-pa-seines.html",
+    "https://surf-norge.no/foto/flashbacks-fra-nord/",
+    "https://en.wikipedia.org/wiki/Straum%C3%B8ya"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "monumentet",
+   "name": "Monumentet",
+   "aliases": [
+    "Uredd-monumentet",
+    "Uredd Monument",
+    "Ureddplassen"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Gildeskål",
+   "region": "Salten",
+   "pin_liste": {
+    "lat": 66.9504,
+    "lon": 13.6317
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "rock",
+    "best_swell_dir": "NNW",
+    "best_wind_dir": "SE",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Uredd-Monument",
+    "https://arcticsurfing.no/arctic-surfing-pa-en-liten-formiddagstur-til-uredd-statuen.html"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "storvika",
+   "name": "Storvika",
+   "aliases": [
+    "Storvik (Gildeskål)",
+    "Storvika Grimstad"
+   ],
+   "fylke": "Nordland",
+   "kommune": "Gildeskål",
+   "region": "Salten",
+   "pin_liste": {
+    "lat": 66.9488,
+    "lon": 13.7183
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SW-W",
+    "best_wind_dir": "S",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://breakfinder.surf/en/surf_spots/storvika",
+    "https://www.surfline.com/surf-report/storvika/6418dfce9a43c4d3e737a4d9"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "farstad-reef-hustadvika-gjestegard",
+   "name": "Farstad reef (Hustadvika Gjestegård)",
+   "aliases": [
+    "Hustadvika Gjestegård",
+    "Hustadvika reefs",
+    "Farstadbukta",
+    "Hustadvika (reef)"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Hustadvika",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.9851,
+    "lon": 7.1466
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "rock ledge / shallow reef",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE/E",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.surfline.com/surf-report/hustadvika-gjesteg-rd/584204204e65fad6a770960b",
+    "https://breakfinder.surf/en/surf_spots/hustadvika-gjestegard",
+    "https://www.surfnerd.com/surf-forecast/hustadvika",
+    "https://www.wannasurf.com/spot/Europe/Norway/farstadstranda-farstad/index.html",
+    "https://www.surf-forecast.com/breaks/Farstadstranda",
+    "https://www.surfline.com/travel/norway/m-re-og-romsdal-fylke-surfing-and-beaches/3145495"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "farstadsanden",
+   "name": "Farstadsanden",
+   "aliases": [
+    "Farstadstranda",
+    "Farstad",
+    "Farstad beach",
+    "Hustadvika (beach)"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Hustadvika",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.9823,
+    "lon": 7.1516
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "NW/W",
+    "best_wind_dir": "E/SE",
+    "skill_level": "all (beginner on small days)",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 11,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Farstadstranda",
+    "https://www.wannasurf.com/spot/Europe/Norway/farstadstranda-farstad/index.html",
+    "https://www.surfnerd.com/surf-forecast/hustadvika",
+    "https://www.fjordnorway.com/no/attraksjoner/hustadvika",
+    "https://www.visitnorway.no/reisemal/vestlandet/nordvest/listings-northwest/farstadsanden/234085/",
+    "https://www.fjordnorway.com/en/inspiration/best-beaches-in-fjord-norway",
+    "https://www.fjordtours.com/inspiration/articles/surfing-norway",
+    "https://wanderlog.com/place/details/1029050/farstadsanden",
+    "https://www.rbnett.no/naeringsliv/n/pQ250E/myrtille-32-flyttet-til-hustadvika-og-startet-surfesenter",
+    "https://www.tk.no/sporten/surfing-pa-farstad/s/1-113-5353759",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/"
+   ],
+   "dokumentasjon": "god",
+   "status": "i_nordsurf",
+   "nordsurf_id": "farstadsanden",
+   "avstand_pinne_nal_m": 320
+  },
+  {
+   "id": "ulla",
+   "name": "Ulla",
+   "aliases": [
+    "Ulla Haramsøya",
+    "Ulla/Longva",
+    "Ulla reef"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Haram",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.6918,
+    "lon": 6.1984
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "rock reef with sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Ulla",
+    "https://www.wannasurf.com/spot/Europe/Norway/ulla/index.html",
+    "https://www.surfline.com/surf-report/ulla/584204204e65fad6a770960f",
+    "https://breakfinder.surf/en/surf_spots/ulla",
+    "https://www.surfline.com/travel/norway/m-re-og-romsdal-fylke-surfing-and-beaches/3145495"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "krakevika",
+   "name": "Kråkevika",
+   "aliases": [
+    "Kraakevika",
+    "Liabukta (Haramsøya)"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Haram",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.6726,
+    "lon": 6.1681
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "W/NW",
+    "best_wind_dir": "E",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surfline.com/surf-report/kraakevika/6418dc6da34c33f7851751bb",
+    "https://breakfinder.surf/en/surf_spots/kraakevika",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/m-re-og-romsdal-fylke/-lesund/6453341"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "alnes",
+   "name": "Alnes",
+   "aliases": [
+    "Alnes Lighthouse",
+    "Alnes fyr",
+    "Godøy",
+    "Godoy",
+    "Sandvika (Godøy)",
+    "Jo Godo"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Giske",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.4885,
+    "lon": 5.9666
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break / reef break (right over boulders into sandy beach; left at south end; beach peaks in middle)",
+    "bottom": "large boulders and rock ledge, sand inside",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE/E",
+    "skill_level": "intermediate/advanced (all on small days)",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 9,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Alnes-Lighthouse",
+    "https://www.wannasurf.com/spot/Europe/Norway/alnes_lighthouse/index.html",
+    "https://surfnerd.com/surf-forecast/godoy",
+    "https://www.surfline.com/surf-report/alnes-lighthouse-godoy-/584204204e65fad6a770960e",
+    "https://breakfinder.surf/en/surf_spots/alnes-lighthouse-godoy",
+    "https://www.fjordtours.com/inspiration/articles/surfing-norway",
+    "https://www.hawaiisurf.com/en/blogs/hawaiisurf-blog/a-la-decouverte-du-surf-dans-les-fjords-de-norvege-une-aventure-unique",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.surfnerd.com/surf-reports/norway/møre-og-romsdal"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "flo",
+   "name": "Flø",
+   "aliases": [
+    "Flo",
+    "Flø point",
+    "Flø beach",
+    "Flø Feriesenter"
+   ],
+   "fylke": "Møre og Romsdal",
+   "kommune": "Ulstein",
+   "region": "Møre og Romsdal",
+   "pin_liste": {
+    "lat": 62.4071,
+    "lon": 5.852
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break and beach break (close together) / reef break",
+    "bottom": "rounded boulders and sand",
+    "best_swell_dir": "W/NW/N",
+    "best_wind_dir": "SE/E",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 8,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Flo",
+    "https://www.wannasurf.com/spot/Europe/Norway/Floe/index.html",
+    "https://breakfinder.surf/en/surf_spots/flo",
+    "https://www.surfline.com/surf-report/flo/584204204e65fad6a770960d",
+    "https://www.vikebladet.no/kultur/i/GQXEk6/surfar-jula-inn",
+    "https://www.vikebladet.no/nyhende/i/ppxo6o/surfar-pa-flo-15-april",
+    "https://www.camping.no/en/campingplasser/2097757",
+    "https://www.floe-feriesenter.no/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "ervik-north-right",
+   "name": "Ervik North Right",
+   "aliases": [
+    "Ervik right",
+    "Ervik rocks",
+    "Ervik nordenden"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.1672,
+    "lon": 5.109
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "rock",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfline.com/surf-report/ervika/584204204e65fad6a7709611",
+    "https://www.surf-forecast.com/breaks/Ervika"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "ervik",
+   "name": "Ervik",
+   "aliases": [
+    "Ervika",
+    "Ervikstranda",
+    "Erviksanden",
+    "Ervik Beach"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.165,
+    "lon": 5.104
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with rock and boulders",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 16,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/ervik/index.html",
+    "https://www.surf-forecast.com/breaks/Ervika",
+    "https://www.surfnerd.com/surf-forecast/ervik",
+    "https://www.surfline.com/surf-report/ervika/584204204e65fad6a7709611",
+    "https://www.surf-report.com/news/voyages/destination-norvege-voyage-trip-surf-eau-froide-fjords-guide-1128229814.html",
+    "https://www.nordfjord.no/en/winter-surfing-stad",
+    "https://www.nordfjord.no/en/stadlandet",
+    "https://www.fjordnorway.com/no/reiseinspirasjon/toppen-av-bolgelykke",
+    "https://www.fjordnorway.com/no/reiseinspirasjon/de-beste-strendene-pa-vestlandet",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/stad-strender-og-surfing-pa-stadlandet",
+    "https://www.hawaiisurf.com/en/blogs/hawaiisurf-blog/a-la-decouverte-du-surf-dans-les-fjords-de-norvege-une-aventure-unique",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.theculturetrip.com/europe/norway/articles/how-to-best-explore-norways-best-surfing-spots",
+    "https://www.visitnorway.com/things-to-do/outdoor-activities/surfing/",
+    "https://www.surfnerd.com/surf-reports/norway/vestland",
+    "https://mmv.boku.ac.at/refbase/files/164_Mykletun.pdf"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "ervik-wreck-left",
+   "name": "Ervik Wreck Left",
+   "aliases": [
+    "Ervik vraket",
+    "Ervik left",
+    "Sanct Svithun wreck"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.162,
+    "lon": 5.099
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand with rock and wreck",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surf-report.com/news/voyages/destination-norvege-voyage-trip-surf-eau-froide-fjords-guide-1128229814.html",
+    "https://www.wannasurf.com/spot/Europe/Norway/ervik/index.html"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "hoddevik-right",
+   "name": "Hoddevik Right",
+   "aliases": [
+    "Peach",
+    "Hoddevik Peach",
+    "Hoddevik molo-right",
+    "Hoddevik north point"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.1262,
+    "lon": 5.1555
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders and sand",
+    "best_swell_dir": "W-NW",
+    "best_wind_dir": "E",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/hoddevik-surf/",
+    "https://www.surfnerd.com/surf-forecast/hoddevika/Cbp87aLxbMqr3kLGd",
+    "https://www.lapointcamps.com/surfcamp/norway/surfing-in-hoddevik-guide/",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.wannasurf.com/spot/Europe/Norway/hoddevik/index.html"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "hoddevik",
+   "name": "Hoddevik",
+   "aliases": [
+    "Hoddevika",
+    "Hoddeviksanden",
+    "Hoddevikstranda",
+    "Hoddevik Beach"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.1236,
+    "lon": 5.1539
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand and boulders",
+    "best_swell_dir": "W-NW",
+    "best_wind_dir": "E-SE",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 20,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/hoddevika/Cbp87aLxbMqr3kLGd",
+    "https://www.wannasurf.com/spot/Europe/Norway/hoddevik/index.html",
+    "https://www.surf-forecast.com/breaks/Hoddevik",
+    "https://www.surfline.com/surf-report/hoddevik/584204204e65fad6a7709610",
+    "https://thesurfatlas.com/surfing-in-norway/hoddevik-surf/",
+    "https://www.lapointcamps.com/surfcamp/norway/surfing-in-hoddevik-guide/",
+    "https://www.fjordnorway.com/no/reiseinspirasjon/toppen-av-bolgelykke",
+    "https://www.nordfjord.no/en/winter-surfing-stad",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/stad-strender-og-surfing-pa-stadlandet",
+    "https://www.surf-report.com/news/voyages/destination-norvege-voyage-trip-surf-eau-froide-fjords-guide-1128229814.html",
+    "https://windy.app/forecast2/spot/5448/Hoddevik,%20Norway",
+    "https://en.wikipedia.org/wiki/Hoddevik",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.heartmybackpack.com/norway/hoddevik-beach-surfing-norway/",
+    "https://stadsurfing.no/",
+    "https://www.surfnerd.com/surf-reports/norway/vestland",
+    "https://www.hawaiisurf.com/en/blogs/hawaiisurf-blog/a-la-decouverte-du-surf-dans-les-fjords-de-norvege-une-aventure-unique",
+    "https://www.fjordnorway.com/en/inspiration/the-joy-of-riding-the-waves",
+    "https://www.fjordnorway.com/no/se-og-gjore/hoddevik",
+    "https://www.nordfjord.no/en/stadlandet"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "hoddevik-left",
+   "name": "Hoddevik Left",
+   "aliases": [
+    "Hoddevik south point",
+    "Hoddevik venstre"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Stad",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.1208,
+    "lon": 5.156
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand and boulders",
+    "best_swell_dir": "N windswell or large SW",
+    "best_wind_dir": "E",
+    "skill_level": "beginner to intermediate (longboard)",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/hoddevik-surf/",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.surf-forecast.com/breaks/Hoddevik"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "refviksanden-left",
+   "name": "Refviksanden Left",
+   "aliases": [
+    "Refvik left",
+    "Refvik rocks"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Kinn",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.004,
+    "lon": 5.078
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "rock and sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner to intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/hoddevik-surf/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat",
+   "region_merknad": "Sunnfjord-kysten lagt i Stad og Nordfjord som nærmeste forslag"
+  },
+  {
+   "id": "refviksanden",
+   "name": "Refviksanden",
+   "aliases": [
+    "Refvik",
+    "Refvika",
+    "Refvikstranda",
+    "Refvik Beach"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Kinn",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 62.0017,
+    "lon": 5.0863
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with reef/rock",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner to intermediate (longboard)",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://thesurfatlas.com/surfing-in-norway/hoddevik-surf/",
+    "https://sandee.com/norway/vestland/strand-refviksanden",
+    "https://www.komoot.com/highlight/4936608",
+    "https://en.wikipedia.org/wiki/Refvika",
+    "https://www.fjordnorway.com/en/see-and-do/beach-refvik"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "region_merknad": "Sunnfjord-kysten lagt i Stad og Nordfjord som nærmeste forslag"
+  },
+  {
+   "id": "vetvika",
+   "name": "Vetvika",
+   "aliases": [
+    "Vetvik",
+    "Vetvika bay",
+    "Vetvika Bremanger"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Bremanger",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 61.8832,
+    "lon": 4.9304
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand and rock",
+    "best_swell_dir": "N-NW",
+    "best_wind_dir": "unknown",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 8,
+   "sources": [
+    "https://www.surf-report.com/news/voyages/destination-norvege-voyage-trip-surf-eau-froide-fjords-guide-1128229814.html",
+    "https://www.hawaiisurf.com/en/blogs/hawaiisurf-blog/a-la-decouverte-du-surf-dans-les-fjords-de-norvege-une-aventure-unique",
+    "https://www.nordfjord.no/en/vetvika",
+    "https://www.visitnorway.com/listings/vetvika/213781/",
+    "https://www.fjordnorway.com/no/reiseinspirasjon/toppen-av-bolgelykke",
+    "https://www.fjordnorway.com/en/inspiration/the-joy-of-riding-the-waves",
+    "https://www.fjordnorway.com/de/reiseinspiration/der-gipfel-des-wellenglucks",
+    "https://www.komoot.com/highlight/2481833"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "region_merknad": "Sunnfjord-kysten lagt i Stad og Nordfjord som nærmeste forslag"
+  },
+  {
+   "id": "hovden-kvanhovden",
+   "name": "Hovden (Kvanhovden)",
+   "aliases": [
+    "Hovden",
+    "Kvanhovden",
+    "Hovden (NO",
+    "surfing)"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Kinn",
+   "region": "Stad og Nordfjord",
+   "pin_liste": {
+    "lat": 61.686,
+    "lon": 4.8209
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "W-NW (kystorientering ca 290 grader ifølge Breakfinder)",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/hovden/6425a8b54d6ed3a83a3ca2ec",
+    "https://breakfinder.surf/en/surf_spots/hovden",
+    "https://windy.app/forecast2/spot/4016739/Hovden+NO+surfing",
+    "https://en.wikipedia.org/wiki/Kvanhovden_Lighthouse"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "region_merknad": "Kinn (Florø) er Sunnfjord, lagt i Stad og Nordfjord som nærmeste forslag"
+  },
+  {
+   "id": "fjern-z",
+   "name": "Fjern-z",
+   "aliases": [
+    "Fjern z",
+    "Alveim"
+   ],
+   "fylke": "Vestland",
+   "kommune": "Øygarden",
+   "region": null,
+   "pin_liste": {
+    "lat": 60.5995,
+    "lon": 4.763
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "S-SW (kystorientering ca 187 grader ifølge Breakfinder)",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/fjern-z/6418e224970272ca98879c23",
+    "https://breakfinder.surf/en/surf_spots/fjern-z",
+    "https://windy.app/forecast2/spot/4016737/Fjern-z",
+    "https://en.wikipedia.org/wiki/Alvheim"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "region_merknad": "ingen av regionforslagene dekker Hordaland (ligger mellom Karmøy og Stad og Nordfjord)"
+  },
+  {
+   "id": "akrasanden",
+   "name": "Åkrasanden",
+   "aliases": [
+    "Åkrasand",
+    "Åkra",
+    "Åkrehamn beach"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Karmøy",
+   "region": "Karmøy",
+   "pin_liste": {
+    "lat": 59.252,
+    "lon": 5.1885
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://visitkarmoy.no/inspirasjon/havet-strendene",
+    "https://www.fjordnorway.com/no/se-og-gjore/surfing-og-kiting-pa-karmoystrendene",
+    "https://fjordnorway.com/en/see-and-do/surf-at-karmoy-beaches",
+    "https://www.visitnorway.com/listings/surf-at-karm%c3%b8y-beaches/174235/",
+    "https://en.wikipedia.org/wiki/%C3%85krasanden",
+    "https://www.visitnorway.no/aktiviteter-og-attraksjoner/utendorsaktiviteter/kitesurfing/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "stavasanden",
+   "name": "Stavasanden",
+   "aliases": [
+    "Stavasand",
+    "Ferkingstad",
+    "Stavasanden på Ferkingstad"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Karmøy",
+   "region": "Karmøy",
+   "pin_liste": {
+    "lat": 59.2335,
+    "lon": 5.1831
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://visitkarmoy.no/inspirasjon/havet-strendene",
+    "https://www.fjordnorway.com/no/se-og-gjore/surfing-og-kiting-pa-karmoystrendene",
+    "https://www.surfline.com/surf-report/ferkingstad/584204204e65fad6a7709612",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/3144096",
+    "https://www.wannasurf.com/spot/Europe/Norway/sandvesannen/index.html",
+    "https://en.wikipedia.org/wiki/%C3%85krasanden"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "sandhaland",
+   "name": "Sandhåland",
+   "aliases": [
+    "Sandhålandsanden",
+    "Sandhåland camping"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Karmøy",
+   "region": "Karmøy",
+   "pin_liste": {
+    "lat": 59.205,
+    "lon": 5.186
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://fjordnorway.com/en/see-and-do/surf-at-karmoy-beaches",
+    "https://www.visitnorway.com/listings/surf-at-karm%c3%b8y-beaches/174235/",
+    "https://www.theculturetrip.com/europe/norway/articles/how-to-best-explore-norways-best-surfing-spots",
+    "https://www.visitnorway.no/aktiviteter-og-attraksjoner/utendorsaktiviteter/kitesurfing/",
+    "https://windy.app/spots/Norway/surfing"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "sandvesanden",
+   "name": "Sandvesanden",
+   "aliases": [
+    "Sandve",
+    "Sandvesand",
+    "Sandvesannen",
+    "Sandvestranda"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Karmøy",
+   "region": "Karmøy",
+   "pin_liste": {
+    "lat": 59.1701,
+    "lon": 5.1937
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand (med steinutstikkere)",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "E",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 9,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/sandvesannen/index.html",
+    "https://www.surfline.com/surf-report/sandve/664e239caa9bb60f8c3550ee",
+    "https://www.fjordnorway.com/no/attraksjoner/sandve",
+    "https://visitkarmoy.no/inspirasjon/havet-strendene",
+    "https://www.fjordnorway.com/no/se-og-gjore/surfing-og-kiting-pa-karmoystrendene",
+    "https://fjordnorway.com/en/see-and-do/surf-at-karmoy-beaches",
+    "https://www.visitnorway.com/listings/surf-at-karm%c3%b8y-beaches/174235/",
+    "https://www.fjordnorway.com/en/inspiration/best-beaches-in-fjord-norway",
+    "https://www.theculturetrip.com/europe/norway/articles/how-to-best-explore-norways-best-surfing-spots"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "mjolhus",
+   "name": "Mjølhus",
+   "aliases": [
+    "Mjølhussand",
+    "Mjølhussanden"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Karmøy",
+   "region": "Karmøy",
+   "pin_liste": {
+    "lat": 59.163,
+    "lon": 5.196
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://fjordnorway.com/en/see-and-do/surf-at-karmoy-beaches",
+    "https://www.visitnorway.com/listings/surf-at-karm%c3%b8y-beaches/174235/",
+    "https://www.fjordnorway.com/no/se-og-gjore/surfing-og-kiting-pa-karmoystrendene",
+    "https://www.fjordnorway.com/no/attraksjoner/sandve",
+    "https://www.visitnorway.no/aktiviteter-og-attraksjoner/utendorsaktiviteter/kitesurfing/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "solastranden",
+   "name": "Solastranden",
+   "aliases": [
+    "Sola",
+    "Solastrand",
+    "Sola Beach",
+    "Solastranda"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8774,
+    "lon": 5.5898
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W",
+    "best_wind_dir": "E",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.surfline.com/surf-report/solastrand/584204204e65fad6a7709613",
+    "https://en.wikipedia.org/wiki/Solastranda",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/jaeren-strender-og-surfing",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
+    "https://www.fjordnorway.com/no/se-og-gjore/solastranden",
+    "https://www.lifeinnorway.net/sola-strand-beach/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "point-seldom",
+   "name": "Point Seldom",
+   "aliases": [
+    "Sola sør",
+    "Solastranden south point"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.874,
+    "lon": 5.583
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand/rock",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "SE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/point_seldom/index.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "olbergstranden",
+   "name": "Ølbergstranden",
+   "aliases": [
+    "Ølberg",
+    "Ølbergstranda"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.87,
+    "lon": 5.575
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://sandee.com/norway/rogaland/rege/ølbergstranden",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
+    "https://www.fjordnorway.com/no/attraksjoner/sola"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "vigdel",
+   "name": "Vigdel",
+   "aliases": [
+    "Vigdelstranden",
+    "Vigdelstranda"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8615,
+    "lon": 5.557
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfline.com/surf-report/vigdel/584204204e65fad6a7709614",
+    "https://www.surfline.com/surf-reports-forecasts-cams/norway/3144096",
+    "https://www.fjordnorway.com/en/see-and-do/vigdel---bore",
+    "https://www.fjordnorway.com/no/attraksjoner/sola"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "regestranda",
+   "name": "Regestranda",
+   "aliases": [
+    "Rege",
+    "Ræge",
+    "Regestranden"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.855,
+    "lon": 5.56
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.fjordnorway.com/en/inspiration/fjord-norways-10-best-kept-secrets",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
+    "https://sandee.com/norway/rogaland/rege/ølbergstranden"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "hellesto",
+   "name": "Hellestø",
+   "aliases": [
+    "Hellstø",
+    "Hellesto",
+    "Hellestøstranden",
+    "Hellest"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8429,
+    "lon": 5.5571
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W",
+    "best_wind_dir": "E",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 8,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/hellsto",
+    "https://www.surf-forecast.com/breaks/Hellesto",
+    "https://www.wannasurf.com/spot/Europe/Norway/hellest/index.html",
+    "https://www.surfline.com/surf-report/hellesto/584204204e65fad6a7709615",
+    "https://windy.app/forecast2/spot/1853655/Hellestø",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/jaeren-strender-og-surfing",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "byberg",
+   "name": "Byberg",
+   "aliases": [
+    "Bybergsanden",
+    "Byberg Point"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Sola",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8342,
+    "lon": 5.5505
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "E",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/byberg",
+    "https://www.wannasurf.com/spot/Europe/Norway/bybergsanden/index.html",
+    "https://www.surfline.com/surf-report/byberg/6418dcdba34c33d42d176852",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "suppa",
+   "name": "Suppå",
+   "aliases": [
+    "Suppa"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8223,
+    "lon": 5.5369
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "W",
+    "best_wind_dir": "SE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/suppa",
+    "https://www.surfline.com/surf-report/supp-/6418dce8e072f8dbba0198cb",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "sele",
+   "name": "Sele",
+   "aliases": [
+    "Sele Point",
+    "Selestranda",
+    "Sele havn"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8135,
+    "lon": 5.5427
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "NE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 8,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/sele",
+    "https://www.surf-forecast.com/breaks/Sele",
+    "https://www.wannasurf.com/spot/Europe/Norway/sele/index.html",
+    "https://www.surfline.com/surf-report/sele/584204204e65fad6a7709616",
+    "https://windy.app/forecast2/spot/4016771/Sele",
+    "https://surf-norge.no/konkurranser/nm-og-norgescup/",
+    "https://uis.brage.unit.no/uis-xmlui/handle/11250/2563448",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "bore-elvemunning",
+   "name": "Bore elvemunning",
+   "aliases": [
+    "Elvenes",
+    "Figgjo-elva utløp",
+    "Bore rivermouth"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.8095,
+    "lon": 5.5445
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "river mouth",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "E",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/bore/index.html",
+    "https://www.birdlife.no/innhold/bilder/2020/03/30/7186/innspill_jaren.pdf",
+    "https://www.surfnerd.com/surf-forecast/sele"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "bore",
+   "name": "Bore",
+   "aliases": [
+    "Borestranden",
+    "Boresanden",
+    "Borestranda",
+    "Bore Beach"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7992,
+    "lon": 5.5459
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand (stein i nord- og sørenden)",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "E",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 12,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/bore",
+    "https://www.surf-forecast.com/breaks/Bore",
+    "https://www.wannasurf.com/spot/Europe/Norway/bore/index.html",
+    "https://www.surfline.com/surf-report/bore/584204204e65fad6a7709618",
+    "https://surf-norge.no/surfespots/region/vestlandet/fylke/rogaland/bore/",
+    "https://surf-norge.no/boretunet/",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/jaeren-strender-og-surfing",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.visitnorway.no/listings/borestranden/30634/",
+    "https://www.edgeofnorway.com/en/destinations/the-jaeren-beaches",
+    "https://mmv.boku.ac.at/refbase/files/164_Mykletun.pdf",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "toveisbukta",
+   "name": "Toveisbukta",
+   "aliases": [
+    "Toveisbukten"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7905,
+    "lon": 5.54
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand/rock",
+    "best_swell_dir": "W",
+    "best_wind_dir": "E",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/toveisbukta/index.html",
+    "https://www.surfnerd.com/surf-forecast/steinen"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "fuglingane",
+   "name": "Fuglingane",
+   "aliases": [
+    "Foglingane"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7873,
+    "lon": 5.5373
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand",
+    "best_swell_dir": "W",
+    "best_wind_dir": "E",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/fuglingane/index.html",
+    "https://www.surfnerd.com/surf-forecast/steinen"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "steinen",
+   "name": "Steinen",
+   "aliases": [
+    "Steinen reef"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7847,
+    "lon": 5.5344
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "E",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/steinen",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "reve-havn",
+   "name": "Reve Havn",
+   "aliases": [
+    "Revehavn",
+    "Reve",
+    "Reve Harbour",
+    "Jærens rev"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7721,
+    "lon": 5.5164
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "SE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/reve-havn",
+    "https://www.surf-forecast.com/breaks/Reve-Havn",
+    "https://www.wannasurf.com/spot/Europe/Norway/revehavn/index.html",
+    "https://www.surfline.com/surf-report/reve-havn/584204204e65fad6a7709617",
+    "https://surf-norge.no/reveallstars/snart-nm-disse-to-tidligere-vinnerne-haper-at-konkurransen-blir-beinhard",
+    "https://en.wikipedia.org/wiki/J%C3%A6rens_rev"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "pigsty",
+   "name": "Pigsty",
+   "aliases": [
+    "Piggy",
+    "Svinestien",
+    "Grisen",
+    "Pigsty/Piggy",
+    "Revtangen"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7634,
+    "lon": 5.4992
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "NW",
+    "best_wind_dir": "E",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/pigsty-piggy",
+    "https://www.wannasurf.com/spot/Europe/Norway/svinestien/index.html",
+    "https://www.surfline.com/surf-report/pigsty-piggy/6418dcd5e072f8239f019509",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "secret-revtangen",
+   "name": "Secret (Revtangen)",
+   "aliases": [
+    "Secret (NO",
+    "surfing)",
+    "Orre nordre point"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.7505,
+    "lon": 5.4896
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "S, SE",
+    "best_wind_dir": "E, SE",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://windy.app/forecast2/spot/551967/Secret+NO+surfing",
+    "https://www.wannasurf.com/spot/Europe/Norway/orre/index.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat",
+   "vern_mistanke": true,
+   "venter_pa_theodor": "hemmelig/«secret» i lista - ikke bygg før Theodor har svart"
+  },
+  {
+   "id": "orrestranda",
+   "name": "Orrestranda",
+   "aliases": [
+    "Orre",
+    "Orrestranden",
+    "Orre beach"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.728,
+    "lon": 5.515
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "E",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/orre/index.html",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.fjordnorway.com/no/se-og-gjore/orrestranden",
+    "https://www.campervannorway.com/blog/things-to-do/surf-in-norway",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/jaeren-strender-og-surfing"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "point-perfect",
+   "name": "Point Perfect",
+   "aliases": [
+    "Vik",
+    "Orre point",
+    "Point Perfect (Orre)"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Klepp",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.6969,
+    "lon": 5.5382
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders/sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "NE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/point-perfect",
+    "https://www.surfline.com/surf-report/point-perfect-orre-/6418dbe493265b32411742d0",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "refsnes",
+   "name": "Refsnes",
+   "aliases": [
+    "Refsnesstranda",
+    "Jæren",
+    "Refnesstranden"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Hå",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.6915,
+    "lon": 5.5486
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "W",
+    "best_wind_dir": "NE",
+    "skill_level": "beginner",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 5,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/refsnes",
+    "https://www.surfline.com/surf-report/refsnes/6418dccf970272e2be867c45",
+    "https://windy.app/forecast2/spot/1853655/Hellestø",
+    "https://www.birdlife.no/innhold/bilder/2020/03/30/7186/innspill_jaren.pdf",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "naerlandsanden",
+   "name": "Nærlandsanden",
+   "aliases": [
+    "Nærland",
+    "Nærlandstranda",
+    "Naerland"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Hå",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.678,
+    "lon": 5.556
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.birdlife.no/innhold/bilder/2020/03/30/7186/innspill_jaren.pdf",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
+    "https://www.surfnerd.com/surf-forecast/refsnes"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "kvassheim",
+   "name": "Kvassheim",
+   "aliases": [
+    "Kvassheim Point"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Hå",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.5488,
+    "lon": 5.6695
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "NE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/kvassheim",
+    "https://www.wannasurf.com/spot/Europe/Norway/kvassheim/index.html",
+    "https://www.surfline.com/surf-report/kvassheim/6418dce293265b272617772c",
+    "https://www.surfnerd.com/surf-reports/norway/rogaland"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "brusand",
+   "name": "Brusand",
+   "aliases": [
+    "Brusanden",
+    "Brusand strand",
+    "Brusandstranda"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Hå",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.5285,
+    "lon": 5.7695
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "S",
+    "best_wind_dir": "NE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 7,
+   "sources": [
+    "https://www.surfnerd.com/surf-forecast/brusand",
+    "https://www.wannasurf.com/spot/Europe/Norway/brusand/index.html",
+    "https://www.surfline.com/surf-report/brusand/584204204e65fad6a7709619",
+    "https://www.fjordnorway.com/no/se-og-gjore/brusand-strand",
+    "https://www.finn.no/reise/artikler/aktivitet/surfing-og-strender/jaeren-strender-og-surfing",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "ognasanden",
+   "name": "Ognasanden",
+   "aliases": [
+    "Ogna",
+    "Ogna camping",
+    "Brusand sør"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Hå",
+   "region": "Jæren",
+   "pin_liste": {
+    "lat": 58.5195,
+    "lon": 5.788
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/brusand/index.html",
+    "https://www.fjordnorway.com/no/se-og-gjore/brusand-strand",
+    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "utenfor-eigeroy",
+   "name": "Utenfor Eigerøy",
+   "aliases": [
+    "Eigerøy",
+    "Egersund"
+   ],
+   "fylke": "Rogaland",
+   "kommune": "Eigersund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.4039,
+    "lon": 5.9237
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "S, SW, W (windy.app oppgir E til W)",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://windy.app/forecast2/spot/365837/Utenfor+Eiger%C3%B8y"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "hove-tango",
+   "name": "Hove (Tango)",
+   "aliases": [
+    "Tango",
+    "Hove",
+    "Hove Tromøy"
+   ],
+   "fylke": "Agder",
+   "kommune": "Arendal",
+   "region": "Sørlandet",
+   "pin_liste": {
+    "lat": 58.434,
+    "lon": 8.829
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "boulders",
+    "best_swell_dir": "SE",
+    "best_wind_dir": "NE",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/tango/index.html",
+    "https://www.geonames.org/search.html?q=Hoveodden&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "lista-bausje",
+   "name": "Lista (Bausje)",
+   "aliases": [
+    "Bausje",
+    "Lista Bausje"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.09,
+    "lon": 6.6
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "reef/rock",
+    "best_swell_dir": "W",
+    "best_wind_dir": "NNE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Lista-Bausje",
+    "https://www.surfnerd.com/surf-forecast/lista",
+    "https://www.surfnerd.com/surf-reports/norway/agder"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "renna-pisserenna",
+   "name": "Renna (Pisserenna)",
+   "aliases": [
+    "Pisserenna",
+    "Renna",
+    "Borhaug molo",
+    "Bausje Strand-Borhaug (Surfline)",
+    "Vestbygda harbour right"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.0854,
+    "lon": 6.6114
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders/rock",
+    "best_swell_dir": "W",
+    "best_wind_dir": "NW",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/renna/index.html",
+    "https://www.surfline.com/surf-report/bausje-strand-borhaug/584204204e65fad6a770961a",
+    "https://www.surfline.com/surf-report/lista/60521386c79046102c0e2cfd",
+    "https://www.surf-magazin.de/spots-und-reviere/international/sonstige-europa/roadtrip-norwegen-die-besten-windsurfspots-im-sueden-norwegens/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "osthassel",
+   "name": "Østhassel",
+   "aliases": [
+    "Osthassel",
+    "Østhasselstrand",
+    "Østhasselstranda"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.08,
+    "lon": 6.652
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand/rock",
+    "best_swell_dir": "S",
+    "best_wind_dir": "unknown",
+    "skill_level": "advanced",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surf-magazin.de/spots-und-reviere/international/sonstige-europa/roadtrip-norwegen-die-besten-windsurfspots-im-sueden-norwegens/",
+    "https://www.visitnorway.no/listings/listastrendene/22701/",
+    "https://www.geonames.org/search.html?q=%C3%98sthassel&country=NO"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "kviljo",
+   "name": "Kviljo",
+   "aliases": [
+    "Kviljosanden",
+    "Kviljo beach",
+    "Kviljoodden"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.069,
+    "lon": 6.695
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 4,
+   "sources": [
+    "https://www.surfnerd.com/surf-reports/norway/agder",
+    "https://www.visitnorway.com/places-to-go/southern-norway/listings-lister/kviljosanden-beach-lista/193735/",
+    "https://we3travel.com/these-23-norwegian-beaches-will-make-you-forget-the-mediterranean/",
+    "https://www.geonames.org/search.html?q=Kviljo&country=NO"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "radiosletta",
+   "name": "Radiosletta",
+   "aliases": [
+    "Radioslettta"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.0655,
+    "lon": 6.742
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with rock",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/radiosletta/index.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "havika",
+   "name": "Havika",
+   "aliases": [
+    "Havik",
+    "Haviksanden",
+    "Store Havika",
+    "Havika Bucht"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.064,
+    "lon": 6.731
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 6,
+   "sources": [
+    "https://www.surf-forecast.com/breaks/Havik",
+    "https://www.wannasurf.com/spot/Europe/Norway/havik/index.html",
+    "https://www.surf-magazin.de/spots-und-reviere/international/sonstige-europa/roadtrip-norwegen-die-besten-windsurfspots-im-sueden-norwegens/",
+    "https://www.visitnorway.com/places-to-go/southern-norway/listings-lister/havik-beach-lista/11431/",
+    "https://fjordline.com/en/norway/inspiration/the-best-five-beaches-in-southern-norway",
+    "https://www.geonames.org/search.html?q=Havika&country=NO"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "lille-havika",
+   "name": "Lille Havika",
+   "aliases": [
+    "Lille Havik"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.0625,
+    "lon": 6.726
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/havik/index.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "lista",
+   "name": "Lista",
+   "aliases": [
+    "Lista peninsula",
+    "Listastrendene"
+   ],
+   "fylke": "Agder",
+   "kommune": "Farsund",
+   "region": "Dalane og Lista",
+   "pin_liste": {
+    "lat": 58.0512,
+    "lon": 6.6476
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break / point break / reef break (area)",
+    "bottom": "sand (beaches), boulders (points)",
+    "best_swell_dir": "SW",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 7,
+   "sources": [
+    "https://www.surfline.com/surf-report/lista/60521386c79046102c0e2cfd",
+    "https://www.surfnerd.com/surf-forecast/lista",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.visitnorway.no/listings/listastrendene/22701/",
+    "https://www.visitnorway.no/listings//lista-surfing/182545",
+    "https://www.visitnorway.com/places-to-go/southern-norway/listings-lister/surf-lista/211973/",
+    "https://www.visitnorway.com/listings/the-lista-beaches/22701/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "njervesanden",
+   "name": "Njervesanden",
+   "aliases": [
+    "Njerve Pipeline",
+    "Njerve",
+    "Njervesanden beach"
+   ],
+   "fylke": "Agder",
+   "kommune": "Lindesnes",
+   "region": "Sørlandet",
+   "pin_liste": {
+    "lat": 58.0436,
+    "lon": 7.1664
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "SSW",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/Njervesanden/index.html",
+    "https://www.surf-forecast.com/breaks/Njerve-Pipeline"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "tjom",
+   "name": "Tjøm",
+   "aliases": [
+    "Tjøm beach",
+    "Tjøm Lindesnes"
+   ],
+   "fylke": "Agder",
+   "kommune": "Lindesnes",
+   "region": "Sørlandet",
+   "pin_liste": {
+    "lat": 58.0332,
+    "lon": 7.2745
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfline.com/surf-report/tj-m/6418e654e072f8eaf9039b31",
+    "https://www.surfline.com/travel/norway/agder-surfing-and-beaches/12110596"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "sjosanden",
+   "name": "Sjøsanden",
+   "aliases": [
+    "Sjøsanden Mandal",
+    "Sjosanden"
+   ],
+   "fylke": "Agder",
+   "kommune": "Lindesnes",
+   "region": "Sørlandet",
+   "pin_liste": {
+    "lat": 58.0195,
+    "lon": 7.4455
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "WNW",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.surfline.com/surf-report/sj-sanden/6418e24e9a43c4b695382a78",
+    "https://www.wannasurf.com/spot/Europe/Norway/Njervesanden/index.html",
+    "https://en.wikipedia.org/wiki/Sj%C3%B8sanden"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat"
+  },
+  {
+   "id": "hollen-lindesnes-usikkert-navn",
+   "name": "Hollen (Lindesnes, usikkert navn)",
+   "aliases": [
+    "Hollen"
+   ],
+   "fylke": "Agder",
+   "kommune": "Lindesnes",
+   "region": "Sørlandet",
+   "pin_liste": {
+    "lat": 58.0125,
+    "lon": 7.1494
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "boulders",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "beginner (kilden)",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://surfing-waves.com/atlas/europe/norway/spot/hollen.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "krabberodstrand",
+   "name": "Krabberødstrand",
+   "aliases": [
+    "Krabberød",
+    "Krabberødstranda"
+   ],
+   "fylke": "Telemark",
+   "kommune": "Bamble",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.0499,
+    "lon": 9.6832
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://windy.app/forecast2/spot/4016753/Krabber%C3%B8dstrand",
+    "https://windy.app/spots/Norway/surfing",
+    "https://www.geonames.org/search.html?q=Krabber%C3%B8d&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "skallevold",
+   "name": "Skallevold",
+   "aliases": [
+    "Skallevoldbukta",
+    "Skallevoll",
+    "Skallevold beach"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Tønsberg",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.292,
+    "lon": 10.5023
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand with rock",
+    "best_swell_dir": "S",
+    "best_wind_dir": "SW",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/Skallevold/index.html",
+    "https://www.surfline.com/surf-report/skallevoldbukta/6418e3b9e072f8639a030a69",
+    "https://www.surfline.com/travel/norway/vestfold-og-telemark-surfing-and-beaches/12110599"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "vora",
+   "name": "Vøra / Langeby",
+   "aliases": [
+    "Vora",
+    "Vøra badestrand",
+    "Langebystranda",
+    "Vøra"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Sandefjord",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.0721,
+    "lon": 10.2587
+   },
+   "coord_confidence": "good",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://windy.app/forecast2/spot/4016765/Vora",
+    "https://windy.app/spots/Norway/surfing",
+    "https://windy.app/forecast2/spot/4016767/Langeby"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "batteritomta",
+   "name": "Batteritomta",
+   "aliases": [
+    "Batt",
+    "Batteristranda",
+    "Batteriet Larvik"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Larvik",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.0475,
+    "lon": 10.0345
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "breakwater/jetty",
+    "bottom": "sand",
+    "best_swell_dir": "SE",
+    "best_wind_dir": "N",
+    "skill_level": "all",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/batteritomta/index.html"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "rekkevik",
+   "name": "Rekkevik",
+   "aliases": [
+    "Rekkeviksbukta"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Larvik",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.0285,
+    "lon": 10.0747
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 3,
+   "sources": [
+    "https://windy.app/spots/Norway/surfing",
+    "https://www.visitvestfold.com/en/activity/rekkeviksbukta-beach",
+    "https://www.geonames.org/search.html?q=Rekkevik&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "naverfjorden",
+   "name": "Naverfjorden",
+   "aliases": [
+    "Naverfjorden Larvik"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Larvik",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 58.9814,
+    "lon": 9.9812
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "unknown",
+    "bottom": "unknown",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfline.com/surf-report/naverfjorden/6418e3c56478f0daf3fb069d",
+    "https://www.surfline.com/travel/norway/vestfold-og-telemark-surfing-and-beaches/12110599"
+   ],
+   "dokumentasjon": "middels",
+   "status": "kandidat",
+   "vern_mistanke": true
+  },
+  {
+   "id": "saltstein",
+   "name": "Saltstein",
+   "aliases": [
+    "Saltstone",
+    "Saltsteinen",
+    "Nevlunghavn",
+    "Mølen"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Larvik",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 58.9685,
+    "lon": 9.8375
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "reef break",
+    "bottom": "boulders",
+    "best_swell_dir": "SSW",
+    "best_wind_dir": "NE",
+    "skill_level": "intermediate",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 10,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/saltstein/index.html",
+    "https://www.surf-forecast.com/breaks/Saltstein",
+    "https://www.surfnerd.com/surf-forecast/saltstein",
+    "https://www.surfline.com/surf-report/saltstein/584204204e65fad6a770961c",
+    "https://swellnet.com/news/swellnet-dispatch/2017/01/11/aussie-surfer-kingdom-norway",
+    "https://web.kite-and-windsurfing-guide.com/spots/kiteboarding-windsurfing-sup/saltstein-oslofjorden-norway.html",
+    "https://norwayexplained.com/the-best-surf-locations-in-norway/",
+    "https://www.surf-magazin.de/spots-und-reviere/international/sonstige-europa/roadtrip-norwegen-die-besten-windsurfspots-im-sueden-norwegens/",
+    "https://www.geonames.org/search.html?q=Saltstein&country=NO",
+    "https://visitvestfold.com/en/activity/oddane-sand-beach/"
+   ],
+   "dokumentasjon": "god",
+   "status": "kandidat"
+  },
+  {
+   "id": "nevlungstranda",
+   "name": "Nevlungstranda",
+   "aliases": [
+    "Nevlunghavn beach",
+    "Gurvika"
+   ],
+   "fylke": "Vestfold",
+   "kommune": "Larvik",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 58.9665,
+    "lon": 9.862
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "S",
+    "best_wind_dir": "N",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 1,
+   "sources": [
+    "https://visitvestfold.com/en/activity/oddane-sand-beach/"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "fiske-beach",
+   "name": "Fiske Beach",
+   "aliases": [
+    "Alby (Jeløy)"
+   ],
+   "fylke": "Østfold",
+   "kommune": "Moss",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.4242,
+    "lon": 10.6107
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "point break",
+    "bottom": "sand",
+    "best_swell_dir": "SW, S, SE",
+    "best_wind_dir": "SW, S, SE",
+    "skill_level": "all levels",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.wannasurf.com/spot/Europe/Norway/fiske_beach/index.html",
+    "https://www.geonames.org/search.html?q=Alby&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  },
+  {
+   "id": "storesand",
+   "name": "Storesand",
+   "aliases": [
+    "Storesand Hvaler",
+    "Storesand Kirkøy"
+   ],
+   "fylke": "Østfold",
+   "kommune": "Hvaler",
+   "region": "Østlandet",
+   "pin_liste": {
+    "lat": 59.0258,
+    "lon": 11.0168
+   },
+   "coord_confidence": "exact",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "sand",
+    "best_swell_dir": "unknown",
+    "best_wind_dir": "unknown",
+    "skill_level": "unknown",
+    "_kilde": "fra lista, ubekreftet"
+   },
+   "source_count": 2,
+   "sources": [
+    "https://www.surfline.com/surf-report/storesand/6418e3bfa34c33460218dc16",
+    "https://www.geonames.org/search.html?q=Storesand&country=NO"
+   ],
+   "dokumentasjon": "svak",
+   "status": "kandidat"
+  }
+ ]
+}

@@ -1,0 +1,307 @@
+{
+ "_info": "Restriksjoner lest i forskriftsteksten på Lovdata 15.10.2026 (ROADMAP K del A punkt 5) for verneområder innen 600 m av en kandidatpinne, og for pigsty/orrestranda/kvassheim/seines. Bare det som står i forskriften; sitatet er ordrett. type: ferdselsforbud | surfeforbud (forbud mot surfebrett/bølgjesurfing, ikke all ferdsel). gjelder: sjø | strand | begge | land (land = ikke strand/sjø). verneomrade: restriksjonen gjelder bare dette området når forskriften dekker flere. Forskrifter for områder 600-2000 m unna er ikke lest for restriksjoner (står som lest: false i vern.json). stedsbundet: restriksjonen gjelder bare det navngitte stedet inne i verneområdet (ikke hele området).",
+ "forskrifter": {
+  "1980-06-13-7": {
+   "restriksjoner": [],
+   "merknad": "bare motorisert ferdsel forbudt",
+   "lovdata": "https://lovdata.no/forskrift/1980-06-13-7"
+  },
+  "1981-10-02-4739": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud (aktsomhet ved rastende fugl)",
+   "lovdata": "https://lovdata.no/forskrift/1981-10-02-4739"
+  },
+  "1983-11-04-1637": {
+   "restriksjoner": [],
+   "merknad": "bare motorisert ferdsel",
+   "lovdata": "https://lovdata.no/forskrift/1983-11-04-1637"
+  },
+  "1983-12-23-2016": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/1983-12-23-2016"
+  },
+  "1984-11-16-1903": {
+   "restriksjoner": [],
+   "merknad": "bare inngrep",
+   "lovdata": "https://lovdata.no/forskrift/1984-11-16-1903"
+  },
+  "1987-04-03-290": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "begge",
+     "omrade": "holmar og skjer og ei sone ut til 50 m frå land (om ikkje anna grense er merkt)",
+     "paragraf": "IV punkt 4",
+     "sitat": "I tida f.o.m. 15. april t.o.m. 31. juli er det forbod mot ilandstiging og ferdsel på holmar og skjer i ei sone ut til 50 m frå land, hvis ikkje anna grense er markert.",
+     "kilde": "https://lovdata.no/forskrift/1987-04-03-290"
+    }
+   ],
+   "lovdata": "https://lovdata.no/forskrift/1987-04-03-290"
+  },
+  "1987-08-28-722": {
+   "restriksjoner": [],
+   "merknad": "bare motorisert ferdsel, telting/hest i sanddynene",
+   "lovdata": "https://lovdata.no/forskrift/1987-08-28-722"
+  },
+  "1987-08-28-724": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud (departementet kan fastsette)",
+   "lovdata": "https://lovdata.no/forskrift/1987-08-28-724"
+  },
+  "1987-08-28-725": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud (departementet kan fastsette)",
+   "lovdata": "https://lovdata.no/forskrift/1987-08-28-725"
+  },
+  "1987-08-28-727": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud (departementet kan fastsette)",
+   "lovdata": "https://lovdata.no/forskrift/1987-08-28-727"
+  },
+  "1988-05-27-384": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/1988-05-27-384"
+  },
+  "1988-05-27-397": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/1988-05-27-397"
+  },
+  "1993-07-09-699": {
+   "restriksjoner": [],
+   "merknad": "bare motorisert ferdsel, sykkel/hest",
+   "lovdata": "https://lovdata.no/forskrift/1993-07-09-699"
+  },
+  "1996-12-20-1278": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-01",
+     "til": "08-15",
+     "gjelder": "land",
+     "omrade": "holmene i Orrevatnet (ferskvann, ikke sjø/strand)",
+     "paragraf": "kap. IV nr. 6",
+     "sitat": "All ferdsel på holmene er forbudt i tida f.o.m. 1. april t.o.m. 15. august.",
+     "kilde": "https://lovdata.no/forskrift/1996-12-20-1278"
+    }
+   ],
+   "merknad": "Orrevatnet er en innsjø innenfor stranda - forbudet gjelder ikke Orrestranda eller sjøen.",
+   "lovdata": "https://lovdata.no/forskrift/1996-12-20-1278"
+  },
+  "1996-12-20-1279": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/1996-12-20-1279"
+  },
+  "1997-12-19-1356": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud; motorferdsel og brettseiling (seilbrett) forbudt hele året - surfebrett ikke nevnt",
+   "lovdata": "https://lovdata.no/forskrift/1997-12-19-1356"
+  },
+  "1997-12-19-1357": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud; motorferdsel og brettseiling forbudt hele året - surfebrett ikke nevnt",
+   "lovdata": "https://lovdata.no/forskrift/1997-12-19-1357"
+  },
+  "2002-11-08-1247": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud i forskriften; § 6 gir hjemmel for egen ferdselsforskrift - ikke sjekket om den finnes",
+   "lovdata": "https://lovdata.no/forskrift/2002-11-08-1247"
+  },
+  "2002-12-06-1447": {
+   "restriksjoner": [
+    {
+     "type": "surfeforbud",
+     "fra": null,
+     "til": null,
+     "gjelder": "sjø",
+     "omrade": "hele reservatet (381 daa er sjø)",
+     "paragraf": "§ 3 nr. 3",
+     "sitat": "Bruk av modellbåter, modellfly, vannskuter og surfebrett og oppsetting av kamuflasjeinnretninger for fotografering er forbudt.",
+     "kilde": "https://lovdata.no/forskrift/2002-12-06-1447"
+    }
+   ],
+   "merknad": "Surfebrett er forbudt hele året i Eggum naturreservat; om spoten ligger i reservatet må posisjonen avgjøre (A2).",
+   "lovdata": "https://lovdata.no/forskrift/2002-12-06-1447"
+  },
+  "2002-12-06-1462": {
+   "restriksjoner": [
+    {
+     "type": "surfeforbud",
+     "fra": null,
+     "til": null,
+     "gjelder": "sjø",
+     "omrade": "hele reservatet",
+     "paragraf": "§ 3 nr. 5",
+     "sitat": "Bruk av modellbåter, modellfly, vannskuter og surfebrett og oppsetting av kamuflasjeinnretninger for fotografering er forbudt.",
+     "kilde": "https://lovdata.no/forskrift/2002-12-06-1462"
+    },
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "strand",
+     "omrade": "verneområdet på land, unntatt delen på selve Langøya",
+     "paragraf": "§ 3 nr. 4",
+     "sitat": "I tiden fra og med 15. april til og med 31. juli er det, med unntak av den delen som ligger på selve Langøya, forbud mot camping, teltslaging og ferdsel på land i verneområdet.",
+     "kilde": "https://lovdata.no/forskrift/2002-12-06-1462"
+    }
+   ],
+   "lovdata": "https://lovdata.no/forskrift/2002-12-06-1462"
+  },
+  "2003-12-12-1675": {
+   "restriksjoner": [
+    {
+     "type": "surfeforbud",
+     "fra": "10-01",
+     "til": "03-31",
+     "gjelder": "sjø",
+     "omrade": "sjøområda i fuglefredingsområda (Jærstrendene fuglefredningsområde)",
+     "paragraf": "§ 3 B nr. 6 d",
+     "sitat": "I sjøområda er det forbod mot bruk av vannscooter/vannjet, andre former for vannmotorsport, bølgjesurfing og bruk av seglbrett f.o.m . 1. oktober t.o.m. 31. mars.",
+     "kilde": "https://lovdata.no/forskrift/2003-12-12-1675",
+     "verneomrade": "Jærstrendene fuglefredningsområde"
+    },
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "land",
+     "omrade": "Rott (Sola): vest og sørvest for Vatnet på Vestre Rott",
+     "paragraf": "§ 3 B nr. 6 a",
+     "sitat": "Rott i Sola kommune: All ferdsel på land i området vest og sørvest for Vatnet på Vestre Rott er forbode i tida f.o.m. 15. april t.o.m. 31. juli.",
+     "kilde": "https://lovdata.no/forskrift/2003-12-12-1675",
+     "verneomrade": "Jærstrendene fuglefredningsområde",
+     "stedsbundet": "Rott"
+    },
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "land",
+     "omrade": "Håsteingruppa (Sola): navngitte holmer",
+     "paragraf": "§ 3 B nr. 6 b",
+     "sitat": "Håsteingruppa i Sola kommune: All ferdsel på land på Kjarten, Flatholmen, Frøsholmane, sørlege del av Hoggjo, Sandøy, Kvernholmen, austre del av Buøy og vestre del av Håstein er forbode i tida f.o.m. 15. april t.o.m. 31. juli.",
+     "kilde": "https://lovdata.no/forskrift/2003-12-12-1675",
+     "verneomrade": "Jærstrendene fuglefredningsområde",
+     "stedsbundet": "Håsteingruppa"
+    },
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "land",
+     "omrade": "Raunen (Hå)",
+     "paragraf": "§ 3 B nr. 6 c",
+     "sitat": "Raunen i Hå kommune: All ferdsel på land er forbode i tida f.o.m. 15. april t.o.m. 31. juli.",
+     "kilde": "https://lovdata.no/forskrift/2003-12-12-1675",
+     "verneomrade": "Jærstrendene fuglefredningsområde",
+     "stedsbundet": "Raunen"
+    }
+   ],
+   "merknad": "Forbudet mot bølgjesurfing 1.10-31.3 gjelder bare sjøområdene i fuglefredingsområdene (ikke hele landskapsvernområdet). Bekrefter listas påstand for spots som ligger i de sjøområdene.",
+   "lovdata": "https://lovdata.no/forskrift/2003-12-12-1675"
+  },
+  "2004-06-04-861": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-31",
+     "gjelder": "land",
+     "omrade": "vestre del av Ertnøya og øyene øst og nord for Kjøpmannsøya",
+     "paragraf": "§ 3 nr. 3",
+     "sitat": "I tiden fra og med 15. april til og med 31. juli er det forbud mot ferdsel på land på vestre del av Ertnøya og på øyene øst og nord for Kjøpmannsøya (se kart).",
+     "kilde": "https://lovdata.no/forskrift/2004-06-04-861"
+    }
+   ],
+   "lovdata": "https://lovdata.no/forskrift/2004-06-04-861"
+  },
+  "2004-06-18-940": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/2004-06-18-940"
+  },
+  "2006-06-30-832": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud",
+   "lovdata": "https://lovdata.no/forskrift/2006-06-30-832"
+  },
+  "2006-12-08-1386": {
+   "restriksjoner": [],
+   "merknad": "bare krav om varsom ferdsel",
+   "lovdata": "https://lovdata.no/forskrift/2006-12-08-1386"
+  },
+  "2009-06-26-883": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-15",
+     "gjelder": "begge",
+     "omrade": "sone C (sjøfugl) og D (sel) på vernekartet - navngitte holmer med sjøareal",
+     "paragraf": "§ 3 pkt. 5.5",
+     "sitat": "Av hensyn til hekkende sjøfugl og kasteplasser for sel er all ferdsel forbudt i perioden f.o.m. 15. april t.o.m. 15. juli i sone C og D som er avmerket på vernekartet.",
+     "kilde": "https://lovdata.no/forskrift/2009-06-26-883"
+    }
+   ],
+   "merknad": "Gjelder bare sone C og D (holmer), ikke resten av nasjonalparken.",
+   "lovdata": "https://lovdata.no/forskrift/2009-06-26-883"
+  },
+  "2010-04-16-565": {
+   "restriksjoner": [],
+   "merknad": "bare motorferdsel, sykling, hest",
+   "lovdata": "https://lovdata.no/forskrift/2010-04-16-565"
+  },
+  "2010-05-28-864": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "05-01",
+     "til": "07-31",
+     "gjelder": "strand",
+     "omrade": "heile landarealet i reservatet - ikkje sjøen",
+     "paragraf": "§ 5 nr. 1",
+     "sitat": "I tida frå og med 1. mai til og med 31. juli er det forbod mot ferdsel på land i verneområdet.",
+     "kilde": "https://lovdata.no/forskrift/2010-05-28-864"
+    }
+   ],
+   "lovdata": "https://lovdata.no/forskrift/2010-05-28-864"
+  },
+  "2016-06-17-689": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud; ferdsel med båt unntatt, vernet gjelder sjø utenfor 5 m-koten",
+   "lovdata": "https://lovdata.no/forskrift/2016-06-17-689"
+  },
+  "2016-12-16-1632": {
+   "restriksjoner": [
+    {
+     "type": "ferdselsforbud",
+     "fra": "04-15",
+     "til": "07-15",
+     "gjelder": "begge",
+     "omrade": "sone A (sjøfuglområder) unntatt Tromlingene, på land og i sjø nærmere enn 50 m fra land",
+     "paragraf": "§ 7 andre ledd",
+     "sitat": "I sone A med unntak av Tromlingene er det i perioden fra og med 15. april til og med 15. juli forbud mot all ferdsel på land og i sjø nærmere enn 50 meter fra land.",
+     "kilde": "https://lovdata.no/forskrift/2016-12-16-1632"
+    }
+   ],
+   "merknad": "Gjelder bare sone A.",
+   "lovdata": "https://lovdata.no/forskrift/2016-12-16-1632"
+  },
+  "2018-06-22-1001": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud; varsom ferdsel",
+   "lovdata": "https://lovdata.no/forskrift/2018-06-22-1001"
+  },
+  "2024-12-20-3357": {
+   "restriksjoner": [],
+   "merknad": "ingen ferdselsforbud; ferdsel med båt unntatt",
+   "lovdata": "https://lovdata.no/forskrift/2024-12-20-3357"
+  }
+ }
+}
