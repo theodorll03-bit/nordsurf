@@ -87,6 +87,70 @@ def describe(spot, w, now):
     return f"{spot['name']}: {w['best']} stjerner {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)
 
 
+FIVE_STAR_DAYS_AHEAD = 7       # «Rått»-varselet ser 7 dager frem
+FIVE_STAR_REPEAT_HOURS = 24    # høyst ett «Rått»-varsel per spot per døgn
+
+
+def five_star_windows(spot, now, days_ahead=FIVE_STAR_DAYS_AHEAD):
+    """Theodor 15.10.2026 (ROADMAP K, del 0.1b): sammenhengende timer med
+    nøyaktig 5 stjerner («Rått») de neste `days_ahead` dagene, i
+    kronologisk rekkefølge. Timer i mørke tas ikke med (ingen kan sjekke og
+    logge dem). Bare et varsel - ratingen røres ikke. Manglende stjerner
+    (None) teller aldri som 5."""
+    out, cur = [], None
+    end = now + dt.timedelta(days=days_ahead)
+    for h in spot["hours"]:
+        t = dt.datetime.fromisoformat(h["t"].replace("Z", "+00:00"))
+        if t < now - dt.timedelta(hours=1):
+            continue
+        if t > end:
+            break
+        good = h.get("stars") == 5 and h.get("daylight") is not False
+        if good and cur and t - cur["end"] <= dt.timedelta(hours=1):
+            cur["end"] = t
+            cur["hours"].append(h)
+        elif good:
+            cur = {"start": t, "end": t, "best": 5, "hours": [h]}
+            out.append(cur)
+        else:
+            cur = None
+    return out
+
+
+def describe_five(spot, ws, now):
+    """Tittel og tekst for «Rått»-varselet: spot, dag og tidsrom (første
+    vindu), og hvor mange vinduer til som har 5 de neste 7 dagene."""
+    title, body = describe(spot, ws[0], now)
+    title = title.replace("5 stjerner", "5 stjerner («Rått»)", 1)
+    more = len(ws) - 1
+    extra = f" Og {more} vindu{'er' if more > 1 else ''} til med 5 de neste {FIVE_STAR_DAYS_AHEAD} dagene." if more else ""
+    return title, " ".join(p for p in ((body + ".") if body else "", extra.strip(), "Sjekk gjerne og logg økta.") if p)
+
+
+def five_star_alerts(forecast, now, state, topic):
+    """Ett ntfy-varsel per spot når varselet har minst én time med 5 de
+    neste 7 dagene, høyst ett per spot per døgn (nøkkel "five:<id>" i
+    data/notified.json). Uavhengig av notify.json sin min_stars/spots-liste."""
+    for spot in forecast["spots"]:
+        ws = five_star_windows(spot, now)
+        if not ws:
+            continue
+        key = f"five:{spot['id']}"
+        prev = state.get(key)
+        if prev and dt.datetime.fromisoformat(prev["sent"]) > now - dt.timedelta(hours=FIVE_STAR_REPEAT_HOURS):
+            continue
+        title, body = describe_five(spot, ws, now)
+        msg = {"topic": topic, "title": title, "message": body, "tags": ["ocean", "star"], "priority": 4}
+        if os.environ.get("APP_URL"):
+            msg["click"] = os.environ["APP_URL"]
+        try:
+            requests.post("https://ntfy.sh/", json=msg, timeout=20).raise_for_status()
+            print(f"Varslet (5 stjerner): {title}")
+            state[key] = {"sent": now.isoformat(), "end": now.isoformat()}
+        except Exception as e:
+            print(f"Varsel (5 stjerner) feilet: {e}")
+
+
 HEALTH_ALERT_REPEAT_HOURS = 24  # samme helseproblem varsles høyst én gang per døgn
 
 
@@ -157,5 +221,6 @@ def run(forecast, now):
             state[key] = {"best": w["best"], "end": w["end"].isoformat()}
         except Exception as e:
             print(f"Varsel feilet: {e}")
+    five_star_alerts(forecast, now, state, topic)
     STATE.parent.mkdir(exist_ok=True)
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))

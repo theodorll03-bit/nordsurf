@@ -207,6 +207,26 @@ covered_no_bw = sum(len(w["hours"]) for w in ws_no_bw)
 print("6h timer dekket uten bw_until (skal være 20, alle timer):", covered_no_bw)
 assert covered_no_bw == 20
 
+# ---------- 6h2: «Rått»-varsel (Theodor 15.10.2026, ROADMAP K del 0.1b) ----------
+# Ett ntfy-varsel per spot når det er minst én time med 5 de neste 7 dagene,
+# høyst ett per spot per døgn; mørke timer, 4-ere og None teller ikke; dag 8 er utenfor.
+def mk5(i, stars, daylight=True): return {"t": th(i), "stars": stars, "daylight": daylight, "period": 14}
+spot5 = {"id": "raa", "name": "Rå", "hours": [mk5(0, 4), mk5(30, 5), mk5(31, 5), mk5(32, 4), mk5(40, 5, daylight=False),
+                                            mk5(50, None), mk5(60, 5), mk5(24 * 8, 5)]}
+spot4 = {"id": "fire", "name": "Fire", "hours": [mk5(i, 4) for i in range(5)]}
+ws5 = notify.five_star_windows(spot5, now3)
+print("6h2 Rått-vinduer (skal være 2: kl +30-31 og +60):", [len(w["hours"]) for w in ws5])
+assert [len(w["hours"]) for w in ws5] == [2, 1]
+sent5, state5 = [], {}
+notify.requests.post = lambda url, json=None, timeout=None: sent5.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
+notify.five_star_alerts({"spots": [spot5, spot4]}, now3, state5, "emne")
+assert len(sent5) == 1 and "Rå: 5 stjerner («Rått»)" in sent5[0]["title"] and "1 vindu til" in sent5[0]["message"], sent5
+notify.five_star_alerts({"spots": [spot5, spot4]}, now3 + dt.timedelta(hours=23), state5, "emne")
+assert len(sent5) == 1  # samme døgn: ikke på nytt
+notify.five_star_alerts({"spots": [spot5, spot4]}, now3 + dt.timedelta(hours=25), state5, "emne")
+assert len(sent5) == 2  # neste døgn: på nytt
+print("6h2 Rått-varsel: ett per spot per døgn, 4-ere/mørke/None ignorert - ok")
+
 # ---------- 6i: 250 m-punktet brukes i ratingen, 150 m bare til sammenligning
 # (bw_height_near) - og 250 m uten data faller tilbake til 150 m for RATINGEN ----------
 # Nøytral swell_share (svell == total, altså 1,0) og bw_dir rett på facing,
