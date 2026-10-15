@@ -69,6 +69,7 @@ DETAIL_EXCLUDE = (
     "breaking_height", "bw_dir_raw", "bw_file_source", "bw_source", "dir_spot", "energy_period_source",
     "height_spot_model", "likely_flat", "spot_direction_offshore", "spot_direction_overridden",
     "swell_peak_period", "turn",
+    "surf_height_shadow", "stars_shadow", "surf_height_shadow_noprior",   # 15.10.2026: skyggemodus, bare i forecast.json/arkivet
 )
 
 HOME_DAYS = 9   # glidebryteren dekker 7 døgn; to døgns margin så ukeoversikten er lik også når varselet er litt gammelt

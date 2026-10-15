@@ -99,11 +99,16 @@ def run_key(now):
 
 
 def write_archive(now, spots, archive_dir=None):
-    """Liten fil per kjøring: {spot: {t: [stjerner, surfehøyde]}}."""
+    """Liten fil per kjøring: {spot: {t: [stjerner, surfehøyde, surfehøyde skyggepunkt,
+    surfehøyde skyggepunkt uten prior, stjerner skyggepunkt, i bruk fra BarentsWatch (1/0)]}} - de fire siste fra 15.10.2026
+    (skyggemodus for BarentsWatch-punktene, tools/skygge_rapport.py); None når skyggepunktet
+    mangler tall. Lesere bruker [0] og [1] som før."""
     d = archive_dir or ARCHIVE_DIR
     d.mkdir(parents=True, exist_ok=True)
     payload = {"issued": now.isoformat(), "spots": {
-        s["id"]: {h["t"]: [h["stars"], h.get("surf_height")] for h in s["hours"]} for s in spots}}
+        s["id"]: {h["t"]: [h["stars"], h.get("surf_height"), h.get("surf_height_shadow"), h.get("surf_height_shadow_noprior"), h.get("stars_shadow"),
+                           (1 if h.get("height_source") == "barentswatch" else 0) if h.get("height_source") else None]
+                  for h in s["hours"]} for s in spots}}
     (d / f"{run_key(now)}.json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
 
 
