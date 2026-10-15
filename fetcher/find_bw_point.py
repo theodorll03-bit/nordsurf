@@ -34,6 +34,8 @@ HOURS_AHEAD = 48
 # BarentsWatch-oppslag per kjøring - greit for et manuelt engangsverktøy.
 DISTANCES_KM = [0.15, 0.25, 0.5, 1.0]
 OFFSETS_DEG = [-20, 0, 20]
+GRID_ON = False
+HOURS_BACK = 12   # 15.10.2026: ta med timene tidligere i dag (12-18 lokal) hvis BarentsWatch fortsatt serverer dem
 
 
 def pt(lat, lon, bearing, d):
@@ -48,21 +50,34 @@ def pt(lat, lon, bearing, d):
 # Målet: finne punktet like utenfor brytesonen - dagens punkt (58 m fra
 # pinnen) ligger nesten i fjæra, der 100 m-modellen allerede har brukket
 # bølgene (0,9 m der mot 2 m 280 m lenger ute).
+# 15.10.2026, Theodors oppgave (Farstadsanden - observasjon 15.10, «Holy portugal»):
+# snitt langs facing fra fjæra og 1,5 km ut med 100 m mellomrom, for ALLE spots
+# (de sju andre bare som rapport: punkter der Hs øker over 30 % innen 300 m
+# utover tyder på at punktet ligger inne i brytesonen). Farstadsanden får i
+# tillegg dagens punkt og _near (legges til av grid_points), Theodors
+# opprinnelige punkt 62.986005/7.147075 og nålen 62.98688/7.14407.
+TRANSECT_DISTS_M = list(range(0, 1501, 100))
 TRANSECTS = {
     "farstadsanden": {
         "bearing": 310,
-        "dists_m": [0, 150, 300, 500, 800],
-        "extra": {"Theodors nål 06.10 (skygge)": {"lat": 62.986005, "lon": 7.147075},
-                  "Breivika (BW-kartet 2 m)": {"lat": 62.98688, "lon": 7.14407}},
+        "dists_m": TRANSECT_DISTS_M,
+        "extra": {"Theodors opprinnelige punkt 06.10": {"lat": 62.986005, "lon": 7.147075},
+                  "nålen (BW-kartet 2 m)": {"lat": 62.98688, "lon": 7.14407}},
     },
 }
 
 
+def transect_for(spot):
+    """Snittet for spoten: eget oppsett i TRANSECTS, ellers langs facing med standardavstandene."""
+    tr = TRANSECTS.get(spot["id"])
+    if tr:
+        return tr
+    return {"bearing": spot["facing"], "dists_m": TRANSECT_DISTS_M, "extra": {}}
+
+
 def transect_points(spot):
     """Snittpunktene for spoten (se TRANSECTS), eller tomt."""
-    tr = TRANSECTS.get(spot["id"])
-    if not tr:
-        return {}
+    tr = transect_for(spot)
     s = spot["spot"]
     out = {}
     for d in tr["dists_m"]:
@@ -79,7 +94,9 @@ def grid_points(spot):
     s = spot["spot"]
     facing = spot["facing"]
     points = {}
-    for off in OFFSETS_DEG:
+    # 15.10.2026: rutenettet (3 retninger x 4 avstander) er slått av - snittet langs facing
+    # med 100 m-steg er det Theodor ba om; sett GRID_ON = True for det gamle søket
+    for off in (OFFSETS_DEG if GRID_ON else []):
         bearing = (facing + off) % 360
         for d in DISTANCES_KM:
             la, lo = pt(s["lat"], s["lon"], bearing, d)
@@ -117,7 +134,7 @@ def search_spot(spot, now, cutoff):
             if not t:
                 continue
             tdt = sources.parse_iso(t)
-            if tdt < now or tdt > cutoff:
+            if tdt < now - dt.timedelta(hours=HOURS_BACK) or tdt > cutoff:
                 continue
             if chosen_point is None:
                 chosen_point = {"lat": row.get("latitude"), "lon": row.get("longitude")}

@@ -78,10 +78,11 @@ show("Nesten perfekt, 11 s", near); assert near["stars"] <= 4
 unc = rate({"height_spot_model": 1.5, "dir_offshore": 308, "turn": 15, "period": 15, "wind_speed": 1, "wind_dir": 90}, E)
 show("Usikker (met.no, 15 grader dreining)", unc); assert unc["stars"] <= 3 and unc["uncertain"]
 
-# 26.09.2026: mildere vind. 6 m/s onshore havner nå i 5-8 m/s-sjiktet
-# (straff 2, ikke 3 som før) - se breakdown for det fulle regnestykket.
+# 26.09.2026: mildere vind. 15.10.2026 (Theodors regel 1, glatt kurve): 6 m/s onshore
+# ligger mellom 5 (−1) og 8 (−2) -> −1,33, rundet til −1 til slutt (ingen svellenergi
+# oppgitt -> ingen demping). Før: −2 (trinn 5-8 m/s).
 on = rate({"bw_height": 1.4, "dir_offshore": 300, "turn": 3, "period": 15, "wind_speed": 6, "wind_dir": 300}, G)
-show("Perfekt svell, onshore 6 m/s", on); assert on["faded"] == 2
+show("Perfekt svell, onshore 6 m/s", on); assert on["faded"] == 1
 
 # Tidevann: spot som bare liker lavt vann mister en stjerne på flo. Bruker
 # samme periode-justerte høyde som "Alt perfekt" - se forklaringen der.
@@ -164,7 +165,7 @@ c3 = rate({**base09, "period": 16, "wind_speed": 4, "wind_dir": 300}, G)
 show("6.3a: 0,9m/16s, 4 m/s onshore, uten kast", c3); assert c3["stars"] == 3
 
 c4 = rate({**base09, "period": 16, "wind_speed": 4, "wind_dir": 300, "gust": 12}, G)
-show("6.3b: 0,9m/16s, 4 m/s onshore, kast 12 (eff. 6,4)", c4); assert c4["stars"] == 2
+show("6.3b: 0,9m/16s, 4 m/s onshore, kast 12 (eff. 6,0 - kast teller høyst 2 m/s, Theodor 15.10)", c4); assert c4["stars"] == 3
 
 c5 = rate({**base09, "period": 8, "wind_speed": 1, "wind_dir": 120}, G)
 show("6.4: 0,9m/8s, 1 m/s", c5)
@@ -178,8 +179,8 @@ assert c5["stars"] <= c1["stars"]
 
 # 6.5: offshore vind - ingen straff til 10 m/s, -1 fra der.
 assert wind_penalty(9, 120, G) == 0
-assert wind_penalty(12, 120, G) == 1
-print(f"{'6.5: offshore 9/12 m/s straff':<40} 0 1")
+assert abs(wind_penalty(12, 120, G) - 0.5) < 1e-9   # 15.10.2026: glatt kurve offshore 10 -> 0, 14 -> 1
+print(f"{'6.5: offshore 9/12 m/s straff':<40} 0 0,5")
 
 # 6.6: Komar og Gaughan sin bruddhøyde-formel, kontrollverdier (toleranse
 # 0,05 m - se spesifikasjonen 26.09.2026).
@@ -1367,8 +1368,9 @@ def old_wind_type(wind_dir, spot):
     return old_wind_type_by_center(_ad(wind_dir, center))
 
 
-EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda", "russelv", "farstadsanden")
-OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa")
+# 15.10.2026: farstadsanden tatt ut - offshore_wind UTVIDET til [85,200] (observasjon 15.10, samme regel som Unstad), ikke lenger eksakt facing+180±45
+EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda", "russelv")
+OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa", "farstadsanden")
 
 for other_id in EXACT_CENTER_SPOTS:
     sp = spots[other_id]
@@ -1544,4 +1546,45 @@ print(f"25.2: energy_period_source 'topp'/'omregnet' riktig valgt, surfehøyde/b
       f"({r_with_peak['surf_height']} m begge), energi {r_without_peak['energy_swell_kj']} kJ (omregnet) "
       f"vs {r_with_peak['energy_swell_kj']} kJ (topp) - breakdown viser begge periodene, OK")
 
+
+# ---------- 15.10.2026, Theodors del 4: 287° er INNENFOR vinduet 284-326 ----------
+# Appen viste «Ute: utenfor vinduet (287°, vindu 284-326°)» (rettet 14.10 i
+# directionHitText, se STATUS.md) - testen her er den eksakte vindu-testen som
+# både rating.py og appens inSwellWindow skal følge: kantene inklusive.
+from rating import in_sector as _in_sector, degrees_outside as _deg_out
+F26 = spots["farstadsanden"]
+assert F26["swell_window"] == [284, 326]
+assert _in_sector(287, F26["swell_window"]) and _deg_out(287, F26) == 0
+assert _in_sector(284, F26["swell_window"]) and _in_sector(326, F26["swell_window"])
+assert not _in_sector(283, F26["swell_window"]) and _deg_out(283, F26) == 1
+assert not _in_sector(327, F26["swell_window"]) and _deg_out(327, F26) == 1
+print("26.1: 287° er innenfor Farstadsanden sitt vindu 284-326 (kantene inklusive, 283/327 utenfor) - OK")
+# ---------- 15.10.2026, Farstadsanden «Holy portugal» (Martin, kl. 17:20/17:50) ----------
+# Store, rene bølger som lukker seg i tuber, 6-8 surfere, sjøsprøyt bakover; hodehøyt til
+# godt over hodet, ansikt ca. 2-3 m (anslag fra bilder); Theodor 4-5 stjerner. Inndata: dagens
+# kjøring (15.10 kl. 15Z) for timen kl. 17, med BarentsWatch fra det NYE punktet (snitt 900 m@310,
+# 2,2 m - se data/bw_point_search/snitt_2026-10-15.md); det gamle punktet (0,71 m, i brytesonen)
+# ga «Dårlig» 1,0 m. Kravet er satt som Unstad 27.09: MINST 3 stjerner og surfehøyde minst
+# 2,0 m - målet er 4-5 (vinden fra 211° regnes fortsatt som side, sektoren går til 200°, og
+# den lokale offshore_strict-regelen tar −0,7 - se STATUS.md). Vindregelen 15.10 (glatt kurve,
+# svelldemping, kast maks +2 m/s, lokal regel erstatter) er en del av dette.
+F27 = dict(spots["farstadsanden"])
+# som produksjonen (fetch.build_spot): glattet eksponering fra data/exposure_baseline.json, så
+# retningen 289° får 0,71 («i utkanten av vinduet», bw_confirms) som i rapporten - ikke 1,0
+_sm27, _raw27, _warn27 = _fetch.resolve_exposure(F27, _exposure_baseline_real, "Farstadsanden")
+assert _warn27 is None
+F27["exposure_smoothed"], F27["exposure_raw"] = _sm27, _raw27
+F27["exposure_distance_km"], F27["exposure_width_km"] = _fetch.resolve_obstacle_geometry(F27, _exposure_baseline_real)
+H27 = {"t": "2026-10-15T15:00Z", "height_offshore": 6.6, "swell_offshore": 4.24, "swell_model": "gfs", "secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0, "swell_peak_period": None, "dir_offshore": 289, "period": 17.35, "turn": 14.399999999999977, "wind_speed": 8.2, "wind_dir": 211.0, "gust": 13.7, "tide": {"level": 0.53, "state": "middels", "rising": False}, "light": "dag", "daylight": True, "bw_interpolated": False, "bw_source": "norce", "bw_file_source": "hustadvika3x2v", "bw_height": 2.19, "bw_height_max": 4.161, "bw_period": 12.896, "bw_dir": 300, "bw_dir_raw": 120}
+r27 = rate(dict(H27), F27)
+show("27.1: Farstadsanden 15.10 kl. 17, nytt punkt + ny vind", r27)
+assert r27["stars"] >= 3 and r27["surf_height"] >= 2.0, (r27["stars"], r27["surf_height"], r27["low_reason"])
+assert r27["wind_type"] == "side" and F27["offshore_wind"] == [85, 200]
+# samme time med det gamle punktet (0,71 m, i brytesonen): høyden halveres (1,0 m mot observert
+# 2-3 m) - det var punktet som tok høyden, og den gamle vindregelen (−2 for 8 m/s side med kast)
+# som tok stjernene (1 stjerne i dagens app; med ny vindregel alene 3)
+r27_old = rate(dict(H27, bw_height=0.71, bw_height_max=1.35, bw_dir=306, bw_dir_raw=126), F27)
+show("27.2: samme time, gammelt punkt 0,71 m", r27_old)
+assert r27_old["surf_height"] < 1.5 and r27_old["surf_height"] < r27["surf_height"]
+print("27: Farstadsanden 15.10 kl. 17 - nytt punkt + ny vind gir minst 3 stjerner og 2,0 m+, gammelt punkt under 1,5 m - OK")
 print("Alle tester ok")
