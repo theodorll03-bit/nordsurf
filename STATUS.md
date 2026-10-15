@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG
+## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG (16.10 natt)
 
 Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste steg».
 
@@ -11,12 +11,12 @@ Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste ste
 | 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | skalering/oversikt, #12 |
 | 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
 | 0.4 Steinkrøssa nytt snitt automatisk | ferdig, merget (daglig sjekk i Testlab-workflowen, kjører fra main) | steinkrossa/nytt-snitt, #13 |
-| A kandidatimport | PR åpen, venter på CI + kontrollørens bekreftelse, så merge | kandidater/import, #14 |
-| A2 koordinatjakt | i gang: bevis (stedsnavn + OSM) hentes; flyfoto IKKE åpent (Norge i bilder er «norway digital restricted»), så Theodor gjør den visuelle sjekken | - |
-| B S3 MapLibre | i gang (egen arbeidskopi ../nordsurf-b) | s3/maplibre |
-| C spotfabrikken | venter | - |
+| A kandidatimport | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | kandidater/import, #14 |
+| A2 koordinatjakt | **STOPPET** etter blind validering: 1 av 8 innenfor 100 m, 4 over 300 m (krav: 6 av 8, ingen over 300) - de 108 er ikke kjørt; se data/kandidater/validering_blind.md. Verktøy + konvensjon + gjennomgangsside committes som PR (ikke merge) | kandidater/posisjoner |
+| B S3 MapLibre | bygget (forgrening), kontrollør kjører, så PR (ikke merge) | s3/maplibre |
+| C spotfabrikken | i gang: bygg_spot.py + validering på de 8 (ingen A-kandidater å bygge - A2 stoppet, og flyfoto mangler) | spotfabrikken |
 
-**Neste steg:** merge #14 når grønn og bekreftet; A2 (hypoteser fra bevisene, blind validering på de 8 fra stedsnavnet - listepinnene for de 8 er i praksis våre egne nåler, 1-5 m unna, så de kan ikke brukes blindt).
+**Neste steg:** kontrollør på A2 og B → PR-er (ikke merge); Del C (tools/bygg_spot.py, validering mot spots.json for de 8), S6-plan i ROADMAP, morgenrapport.
 
 **Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og regestranda «secret» - spørsmål til Theodor sammen med secret-revtangen.
 
