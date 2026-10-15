@@ -43,6 +43,8 @@ jobs:
         run: timeout 60 python fetcher/backtest_inputs.py
       - name: Testlab
         run: timeout 300 python fetcher/backtest.py
+      - name: Skyggerapport for BarentsWatch-punktene (15.10.2026, 14 dager)
+        run: timeout 120 python tools/skygge_rapport.py || echo "skyggerapporten feilet - testlaben lagres likevel"
         env:
           LOGS_REPO: ${{ secrets.LOGS_REPO }}
           LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}

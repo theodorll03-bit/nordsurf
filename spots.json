@@ -22,6 +22,8 @@
         "lat": 69.779391,
         "lon": 18.531728
       },
+      "barentswatch_point_shadow": {"lat": 69.780347, "lon": 18.525839},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 400m@295, 400 m ut langs facing; regelen fant ingen 15.10 (vindsjø fra SSV, retning 60-70° fra svellet ute) - første punkt med >= 8 m dyp (18 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         286,
         310
@@ -72,6 +74,8 @@
         "lat": 69.778832,
         "lon": 18.432576
       },
+      "barentswatch_point_shadow": {"lat": 69.77844, "lon": 18.433226},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 100m@330, 100 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (15 m); nesten samme som dagens punkt). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         314,
         349
@@ -111,6 +115,8 @@
         "lat": 69.484878,
         "lon": 17.396687
       },
+      "barentswatch_point_shadow": {"lat": 69.487116, "lon": 17.390343},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 500m@315, 500 m ut langs facing; regelens valg 15.10 (14 m dyp, Hs 0,42 mot 0,34 m i dag)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         294,
         320
@@ -159,6 +165,8 @@
         "lat": 69.949339,
         "lon": 20.21701
       },
+      "barentswatch_point_shadow": {"lat": 69.952217, "lon": 20.208673},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 600m@315, 600 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (8,8 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         [
           5,
@@ -212,6 +220,8 @@
         "lat": 69.848839,
         "lon": 19.989858
       },
+      "barentswatch_point_shadow": {"lat": 69.849193, "lon": 19.991556},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 200m@19, 200 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (9,5 m); dagens punkt ligger ca. der). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         15,
         23
@@ -259,6 +269,8 @@
         "lat": 69.492666,
         "lon": 17.261223
       },
+      "barentswatch_point_shadow": {"lat": 69.50066, "lon": 17.283887},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 1400m@45, 1400 m ut langs facing; regelens valg 15.10 (29 m dyp, Hs 0,68 mot 0,10 m i dag - langt ute, kan være utenfor skjermingen)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         315,
         16
@@ -302,6 +314,8 @@
         "lat": 68.269784,
         "lon": 13.57748
       },
+      "barentswatch_point_shadow": {"lat": 68.271871, "lon": 13.565367},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 700m@294.8, 700 m ut langs facing; regelens valg 15.10 (8,5 m dyp, Hs 3,06 mot 0,68 m i dag - prioren 1,45 kompenserer trolig for brytesonen, regnes derfor også uten prior)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
       "swell_window": [
         253,
         335

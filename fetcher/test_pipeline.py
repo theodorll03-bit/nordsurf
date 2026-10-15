@@ -772,6 +772,33 @@ _k9e = ("t", "stars", "surf_height", "height", "height_source", "bw_height", "lo
 assert [tuple(h.get(k) for k in _k9e) for h in with_sh["hours"]] == [tuple(h.get(k) for k in _k9e) for h in without["hours"]], "skyggepunktet skal ikke endre noe i ratingen"
 print(f"9e: skyggepunktet hentes ({len(sh_vals)} timer, 2,0 m mot 0,9 m i bruk), rad i kilderapporten, stjerner/surfehøyde/høyde uendret - OK")
 
+# ---------- 9f: skyggemodus 15.10.2026 - skyggepunktet rates også (surf_height_shadow/stars_shadow),
+# aldri i ratingen i bruk; None (aldri 0) når skyggepunktet mangler tall; uten prior bare for spots
+# med surf_factor_prior ----------
+sh_rated = [h for h in with_sh["hours"] if h.get("bw_height_shadow") is not None]
+assert sh_rated and all(isinstance(h["surf_height_shadow"], float) and isinstance(h["stars_shadow"], int) for h in sh_rated), [(h.get("surf_height_shadow"), h.get("stars_shadow")) for h in sh_rated[:3]]
+assert all(h["surf_height_shadow"] >= h["surf_height"] for h in sh_rated), "2,0 m ved skyggepunktet skal gi minst like høy surfehøyde som 0,9 m i bruk"
+assert all(h["surf_height_shadow"] is None and h["stars_shadow"] is None for h in without["hours"]), "uten skyggepunkt: None, aldri 0"
+assert all(h["surf_height_shadow"] is None for h in with_sh["hours"] if h.get("bw_height_shadow") is None), "time uten skyggetall: None"
+assert all(h.get("surf_height_shadow_noprior") is None for h in with_sh["hours"]), "Farstadsanden har ikke surf_factor_prior - uten-prior-feltet skal være None"
+# Unstad (surf_factor_prior 1,45): uten prior gir lavere surfehøyde enn med
+_saved_bw_9f = sources.barentswatch_point
+def bw_shadow_mock_u(la, lo):
+    now2 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": 1.5, "dir": 295.0, "period": 12.0} for i in (0, 3, 6, 9)}
+sources.barentswatch_point = bw_shadow_mock_u
+try:
+    u_cfg = json.loads(json.dumps(next(s for s in spots_cfg if s["id"] == "unstad")))
+    assert u_cfg.get("surf_factor_prior") == 1.45 and u_cfg.get("barentswatch_point_shadow")
+    fetch.REPORT.clear()
+    u_sh = fetch.build_spot(u_cfg, now9, {}, {}, "test-run-9f", exposure_baseline_real, {})
+finally:
+    sources.barentswatch_point = _saved_bw_9f
+    fetch.REPORT.clear()
+u_rated = [h for h in u_sh["hours"] if h.get("surf_height_shadow") is not None and h.get("surf_height_shadow_noprior") is not None and h["surf_height_shadow"] > 0]
+assert u_rated and all(abs(h["surf_height_shadow_noprior"] * 1.45 - h["surf_height_shadow"]) < 0.02 for h in u_rated), [(h["surf_height_shadow"], h["surf_height_shadow_noprior"]) for h in u_rated[:3]]
+print(f"9f: skyggerating ({len(sh_rated)} timer, surfehøyde/stjerner fra skyggepunktet, None uten), Unstad uten prior = med/1,45 ({len(u_rated)} timer) - OK")
+
 # ---------- 10: ROADMAP oppgave B - langtid 16 dager med sikkerhet ----------
 import longrange
 

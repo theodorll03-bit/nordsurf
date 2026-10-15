@@ -806,6 +806,22 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         if sanitize_hour_fields(hour):
             gust_lower_than_wind += 1
         hour.update(rate(hour, spot))
+        # 15.10.2026 (Theodors oppgave, skyggemodus 14 dager for BarentsWatch-punktene): ratingen
+        # regnet med SKYGGEPUNKTET sine BarentsWatch-tall (høyde, retning, periode, maks) - lagres
+        # bare (surf_height_shadow/stars_shadow), appen og kalibreringen bruker aldri dem. For
+        # spots med surf_factor_prior (Unstad) også uten prioren (surf_height_shadow_noprior),
+        # siden prioren trolig kompenserer for at dagens punkt ligger i brytesonen. Mangler
+        # skyggepunktet tall for timen: None, aldri 0.
+        hour["surf_height_shadow"] = hour["stars_shadow"] = hour["surf_height_shadow_noprior"] = None
+        if bwk_shadow and bwk_shadow.get("height") is not None:
+            hour_sh = {**hour, "bw_height": bwk_shadow.get("height"), "bw_dir": bwk_shadow.get("dir"),
+                       "bw_dir_raw": bwk_shadow.get("dir_raw"), "bw_period": bwk_shadow.get("period"),
+                       "bw_height_max": bwk_shadow.get("max_height"), "bw_interpolated": bwk_shadow.get("interpolated")}
+            r_sh = rate(hour_sh, spot)
+            hour["surf_height_shadow"], hour["stars_shadow"] = r_sh["surf_height"], r_sh["stars"]
+            if spot.get("surf_factor_source") == "prior":
+                r_np = rate(hour_sh, {**spot, "surf_factor": SURF_FACTOR_DEFAULT, "surf_factor_source": "standard"})
+                hour["surf_height_shadow_noprior"] = r_np["surf_height"]
         # ROADMAP oppgave B: sone, dag frem og sikkerhet i prosent (kapper
         # ALDRI stjernene - bare merket). "målt" når spoten har nok
         # sammenligninger for dette antallet dager frem, ellers "anslag".
