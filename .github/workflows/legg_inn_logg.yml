@@ -1,0 +1,28 @@
+name: Legg inn logg
+
+# Engangsverktøy (Theodor 15.10.2026): legger en observasjon inn i logs.json i det
+# private loggrepoet (LOGS_REPO/LOGS_TOKEN - samme nøkler som «Hent varsel» leser
+# loggene med), så den teller i kalibrering og testlab. Kjøres bare manuelt.
+on:
+  workflow_dispatch:
+    inputs:
+      logg:
+        description: "Loggen som JSON (id, spot, t, stars, size, wind, type, source, forecast*-felt)"
+        required: true
+        type: string
+
+jobs:
+  legg_inn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Legg inn loggen
+        run: python fetcher/add_log.py
+        env:
+          LOGG: ${{ inputs.logg }}
+          LOGS_REPO: ${{ secrets.LOGS_REPO }}
+          LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
