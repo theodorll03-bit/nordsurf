@@ -10,13 +10,15 @@ Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste ste
 | 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | ferdig, merget | fiks/fem-stjerner, #11 |
 | 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | skalering/oversikt, #12 |
 | 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
-| 0.4 Steinkrøssa nytt snitt automatisk | PR åpen, merges når CI er grønn (kontrollør: to funn rettet) | steinkrossa/nytt-snitt, #13 |
-| A kandidatimport | i gang (OSM-landpolygoner lastet ned til privat/geodata/) | kandidater/import (arbeidskopi ../nordsurf-a) |
-| A2 koordinatjakt | venter | - |
-| B S3 MapLibre | venter | - |
+| 0.4 Steinkrøssa nytt snitt automatisk | ferdig, merget (daglig sjekk i Testlab-workflowen, kjører fra main) | steinkrossa/nytt-snitt, #13 |
+| A kandidatimport | PR åpen, venter på CI + kontrollørens bekreftelse, så merge | kandidater/import, #14 |
+| A2 koordinatjakt | i gang: bevis (stedsnavn + OSM) hentes; flyfoto IKKE åpent (Norge i bilder er «norway digital restricted»), så Theodor gjør den visuelle sjekken | - |
+| B S3 MapLibre | i gang (egen arbeidskopi ../nordsurf-b) | s3/maplibre |
 | C spotfabrikken | venter | - |
 
-**Neste steg:** merge #13 når grønn; Del A (importer_kandidater.py → kandidat_triage.py → vern).
+**Neste steg:** merge #14 når grønn og bekreftet; A2 (hypoteser fra bevisene, blind validering på de 8 fra stedsnavnet - listepinnene for de 8 er i praksis våre egne nåler, 1-5 m unna, så de kan ikke brukes blindt).
+
+**Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og regestranda «secret» - spørsmål til Theodor sammen med secret-revtangen.
 
 ## Tillegg 2: appen skal tåle 100+ spots (Theodor 15.10.2026, punkt 4) - gren `skalering/oversikt`, PR åpen, IKKE merget
 
