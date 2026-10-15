@@ -88,10 +88,13 @@ def brytesone_flag(rows):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--hour", default=None, help="UTC-time som 2026-10-15T12:00Z (standard: første time i resultatet)")
+    ap.add_argument("--res", default=str(RES), help="resultatfila fra find_bw_point.py (standard: result.json)")
+    ap.add_argument("--out", default=None, help="markdown-fila (standard: snitt_<dato>.md ved siden av resultatet)")
     a = ap.parse_args()
-    res = json.loads(RES.read_text(encoding="utf-8"))
+    res_path = Path(a.res)
+    res = json.loads(res_path.read_text(encoding="utf-8"))
     depths = json.loads(DEP.read_text(encoding="utf-8")) if DEP.exists() else {}
-    first = res["spots"]["farstadsanden"]["points"]
+    first = (res["spots"].get("farstadsanden") or next(iter(res["spots"].values())))["points"]
     all_hours = sorted({k for p in first.values() for k in p["hours"]})
     hour_key = a.hour or all_hours[0]
     out = [f"# Snitt langs facing, BarentsWatch {res['generated'][:16]}Z, time {hour_key} (kl. {oslo(hour_key):%H} norsk tid)", ""]
@@ -124,6 +127,8 @@ def main():
         if flagged:
             out.append(f"Brytesone-mistanke (Hs +30 % innen 300 m utover): {', '.join(flagged)}.")
         out.append("")
+    if "farstadsanden" not in res["spots"]:
+        return write(out, res_path, a, hour_key, chosen_all)
     # Farstadsanden: alle timene i dag 12-18 og i morgen 08-16 for noen nøkkelpunkter
     out.append("## Farstadsanden time for time (BarentsWatch gir 3-timers verdier)")
     out.append("")
@@ -137,8 +142,12 @@ def main():
         out.append(f"| {k} | " + " | ".join(cells) + " |")
     out.append("")
     out.append("Celler: Hs m / periode s / retning fra. Timene er de nærmeste BarentsWatch har: 3-timers steg.")
+    return write(out, res_path, a, hour_key, chosen_all)
+
+
+def write(out, res_path, a, hour_key, chosen_all):
     md = "\n".join(out)
-    path = RES.parent / f"snitt_{oslo(hour_key):%Y-%m-%d}.md"
+    path = Path(a.out) if a.out else res_path.parent / f"snitt_{oslo(hour_key):%Y-%m-%d}.md"
     path.write_text(md, encoding="utf-8")
     print(md[:200] + " …")
     print(f"\nSkrev {path}")
