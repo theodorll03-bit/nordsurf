@@ -1,5 +1,23 @@
 # Nordsurf: status
 
+## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG
+
+Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste steg».
+
+| Del | Status | Gren / PR |
+|---|---|---|
+| Plan i ROADMAP (K) + privat/ i .gitignore | ferdig | main |
+| 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | i gang | fiks/fem-stjerner, #11 |
+| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | venter | skalering/oversikt, #12 |
+| 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
+| 0.4 Steinkrøssa nytt snitt automatisk | venter | - |
+| A kandidatimport | venter | - |
+| A2 koordinatjakt | venter | - |
+| B S3 MapLibre | venter | - |
+| C spotfabrikken | venter | - |
+
+**Neste steg:** Del 0.1.
+
 ## Skyggemodus for BarentsWatch-punktene, 14 dager (Theodor 15.10.2026, punkt 2) - gren `skygge/bw-punkter`
 
 De sju andre spotene flyttes IKKE nå. Henteren henter BarentsWatch både for dagens punkt og for snittregelens punkt (`barentswatch_point_shadow` i spots.json, med `_skyggepunkt`-notat) og rater timen med begge: `bw_height_shadow`, `surf_height_shadow`, `stars_shadow` i forecast.json og arkivet (`[stjerner, surf, surf_skygge, surf_skygge_uten_prior, stjerner_skygge]` per time - lesere bruker [0]/[1] som før), ikke i detaljfilene (DETAIL_EXCLUDE). Appen viser fortsatt dagens punkt; kalibreringen rører ikke skyggen. Unstad: `surf_height_shadow_noprior` (surf_factor 1,0) i tillegg - HYPOTESE: prioren 1,45 kompenserer for at punktet lå i brytesonen (700 m ute viste 3,06 m mot 0,68 m 15.10). Fysikk-kontrollør: forholdet er tilstandsavhengig (brytesone bare på store dager, små dager gir forhold ca. 1), så rapporten deler i små/store dager; om prioren fjernes ved flytting avgjøres av dataene (ROADMAP). `tools/skygge_rapport.py` (ukentlig i Testlab, data/backtest/skygge_latest.md) sammenligner i bruk mot skygge time for time og mot logger/benchmarks etter hvert som de kommer.
