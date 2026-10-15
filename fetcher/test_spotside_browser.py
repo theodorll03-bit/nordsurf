@@ -438,6 +438,12 @@ def main():
                         word = page.evaluate("(h) => ratingWord(h)", details[flat[0]]["hours"][flat[1]])
                         k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
                         assert word in k4[0] and "null" not in " ".join(k4) and not k4[0].startswith("Surf –"), (word, k4)
+                    # «Treffer ikke» med surfehøyde > 0: regel (c) sier intet pålitelig tall → ordet, ikke «–» (runde 3)
+                    ti = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "treffer_ikke" and (x.get("surf_height") or 0) > 0 and i > now_idx(d["hours"])), None)
+                    if ti:
+                        go(f"#spot={ti[0]}&t={ti[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
+                        k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
+                        assert "Treffer ikke" in k4[0] and not k4[0].startswith("Surf –"), k4[0]
                     # ---- 10. spotsiden på dagen uten tall: «–», aldri 0 ----
                     go(f"#spot={MISS_ID}&t={first_miss_idx}", "#viewSpot:not([hidden]) #tilbakeNa")
                     assert ord_dom() == "–", ord_dom()

@@ -133,8 +133,9 @@
   }
   function kortHtml(s, h){
     const hoyde = H.heightText(h); const vh = visHoyde(h);
-    // ekte 0 (flat-sperren, «Treffer ikke»): tallet er kjent, ordet vises - «–» er bare for tall som mangler
-    const ekteNull = !!(h && h.surf_height!=null && h.surf_height <= 0 && (!vh || vh.a <= 0));
+    // tallet er kjent, men regel (c) sier «ikke noe pålitelig tall» (flat-sperren, «Treffer ikke» - også med
+    // surfehøyde 0,2-0,4 m): ordet vises. «–» er bare for tall som mangler (surf_height null).
+    const ekteNull = !!(h && h.surf_height!=null && (!vh || vh.a <= 0));
     const kh = kroppshoyde(h);
     const ideal = s.ideal_height ? `Best her ${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "";
     const vt = vinduTekst(h, s);
