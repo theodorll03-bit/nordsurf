@@ -19,6 +19,7 @@ avhengigheter, bare installert for de verktøyene), denne workflowen
 installerer bare `requests`."""
 import json
 import math
+import os
 import datetime as dt
 from pathlib import Path
 
@@ -170,11 +171,14 @@ def main():
     now = dt.datetime.now(dt.timezone.utc)
     cutoff = now + dt.timedelta(hours=HOURS_AHEAD)
 
+    # 15.10.2026 (nattjobben, ROADMAP K del 0.4): BW_SEARCH_SPOTS=steinkrossa,… begrenser søket til
+    # noen spots, BW_SEARCH_OUT=<fil> skriver til en egen fil i stedet for result.json (som da står urørt).
+    only = {x.strip() for x in os.environ.get("BW_SEARCH_SPOTS", "").split(",") if x.strip()}
     result = {"generated": now.isoformat(), "hours_ahead": HOURS_AHEAD,
-              "spots": {sid: search_spot(s, now, cutoff) for sid, s in spots.items() if s.get("enabled")}}
+              "spots": {sid: search_spot(s, now, cutoff) for sid, s in spots.items() if s.get("enabled") and (not only or sid in only)}}
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = OUT_DIR / "result.json"
+    out_path = OUT_DIR / (os.environ.get("BW_SEARCH_OUT") or "result.json")
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\nSkrev {out_path}")
 

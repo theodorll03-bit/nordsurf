@@ -13,6 +13,7 @@ name: Testlab (backtest, ukentlig)
 on:
   schedule:
     - cron: "41 5 * * 1"   # mandager kl. 05:41 UTC
+    - cron: "17 7 * * *"   # daglig: bare steinkrossa_snitt (ROADMAP K del 0.4) - testlaben selv kjører ukentlig som før
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,7 @@ permissions:
 
 jobs:
   backtest:
+    if: github.event_name != 'schedule' || github.event.schedule == '41 5 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -57,5 +59,49 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add -A data/backtest data/ww3 data/benchmarks.json
           git diff --cached --quiet || git commit -m "Testlab: ny kjøring"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git push
+
+  # Theodor 15.10.2026 (nattjobben, ROADMAP K del 0.4): Steinkrøssa-skyggepunktet (1 400 m) ble valgt på en
+  # dag med vindsjø. Første dag varselet har svell ute >= 1,5 m og 10 s fra innenfor vinduet (i BarentsWatch-
+  # sonen) tas snittet på nytt; resultatet går i data/bw_point_search/ (egne filer - result.json røres ikke).
+  # Punktet flyttes aldri automatisk. Etter første kjøring gjør jobben ingenting (steinkrossa_utloser.json).
+  steinkrossa_snitt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Hent siste varsel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash fetcher/hent_varsel.sh
+      - name: Sjekk vilkårene (svell ute >= 1,5 m, >= 10 s, i vinduet)
+        id: sjekk
+        run: timeout 60 python tools/steinkrossa_utloser.py sjekk
+      - name: Snitt langs facing for Steinkrøssa (BarentsWatch)
+        if: steps.sjekk.outputs.trigger == '1'
+        run: |
+          d=$(date -u +%Y-%m-%d)
+          echo "RES=result_steinkrossa_${d}.json" >> "$GITHUB_ENV"
+          echo "MD=snitt_steinkrossa_${d}.md" >> "$GITHUB_ENV"
+          BW_SEARCH_SPOTS=steinkrossa BW_SEARCH_OUT="result_steinkrossa_${d}.json" timeout 300 python fetcher/find_bw_point.py
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+          BW_POINT_URL: ${{ secrets.BW_POINT_URL }}
+      - name: Rapport og lagring
+        if: steps.sjekk.outputs.trigger == '1'
+        run: |
+          timeout 60 python tools/snitt_rapport.py --res "data/bw_point_search/${RES}" --hour "${{ steps.sjekk.outputs.hour }}" --out "data/bw_point_search/${MD}"
+          python tools/steinkrossa_utloser.py ferdig "${{ steps.sjekk.outputs.hour }}" "data/bw_point_search/${RES}"
+          git config user.name "nordsurf-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/bw_point_search
+          git diff --cached --quiet || git commit -m "Steinkrøssa: nytt BarentsWatch-snitt på en svelldag (punktet flyttes ikke)"
           git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push
