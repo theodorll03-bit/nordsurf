@@ -1616,7 +1616,8 @@ for navn, h in cases.items():
 r_side = rate(dict(EPIC_H, wind_speed=4, wind_dir=30), G)
 assert r_side["stars"] == 4 and r_side["faded_wind"] == 1 and any(l.startswith("Femte stjerne holdes tilbake: vinden") for l in r_side["breakdown"]), (r_side["stars"], r_side["faded_wind"], r_side["breakdown"][-3:])
 # tidevann: spot med preferanse - flo holder den femte tilbake (4 + 1 blass tidevann), ukjent tidevann -> ikke 5
-r_flo = rate({**EPIC_H, "tide": {"state": "høy"}}, T); r_lav = rate({**EPIC_H, "tide": {"state": "lav"}}, T); r_uk = rate(dict(EPIC_H), T)
+T28 = {**G, "tide": ["lav", "middels"]}   # (T brukes til noe annet lenger opp i fila)
+r_flo = rate({**EPIC_H, "tide": {"state": "høy"}}, T28); r_lav = rate({**EPIC_H, "tide": {"state": "lav"}}, T28); r_uk = rate(dict(EPIC_H), T28)
 assert r_lav["stars"] == 5 and r_flo["stars"] == 4 and r_flo["faded_tide"] == 1 and r_uk["stars"] == 4, (r_lav["stars"], r_flo["stars"], r_flo["faded_tide"], r_uk["stars"])
 # høyden: 0,85 = |h − mid| <= 0,375·(hi − lo) - like innenfor og like utenfor
 G_lo, G_hi = G["ideal_height"]; mid = (G_lo + G_hi) / 2
