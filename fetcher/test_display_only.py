@@ -18,6 +18,7 @@ bekrefter at ingenting som lager tallene er endret på designgrenen:
 
 Kjør: python fetcher/test_display_only.py   (ingen nett, under 10 s)."""
 import hashlib
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -59,10 +60,14 @@ def sha_file(path):
 ref = main_ref()
 assert ref, "fant ikke main (origin/main eller main) å sammenligne mot"
 head = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-# 14.10.2026: regelen gjelder DESIGNGRENER (design/*) og pull requests mot main (CI: HEAD er
-# flettecommiten, «HEAD»). En annen gren kan endre henteren med vilje (f.eks.
+# 14.10.2026: regelen gjelder DESIGNGRENER (design/*). I CI på pull_request er HEAD
+# flettecommiten («HEAD») - da sier GITHUB_HEAD_REF hvilken gren PR-en kommer fra
+# (15.10.2026: uten det kjørte sjekken på PR-en fra fiks/farstad-vind, som endrer
+# ratingen med vilje). En annen gren kan endre henteren med vilje (f.eks.
 # farstadsanden/transekt: skyggepunkt i spots.json/fetch.py) - der er det
 # fysikk-kontrolløren og stopp-regelen som gjelder, ikke denne sjekken.
+if head == "HEAD" and os.environ.get("GITHUB_HEAD_REF"):
+    head = os.environ["GITHUB_HEAD_REF"]
 if head == "main":
     print(f"1-2: står på main selv ({ref}) - ingenting å sammenligne, hopper over hash-sjekken")
 elif head != "HEAD" and not head.startswith("design/"):
