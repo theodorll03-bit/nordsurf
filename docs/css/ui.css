@@ -189,15 +189,15 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .uke i.dark{background:transparent;color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .uke b{color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
+.stars .st.f{fill:var(--rc);stroke:var(--rc-ink);stroke-width:1;stroke-dasharray:none;opacity:.32}   /* tapt stjerne: dempet fyll, ikke stiplet (Theodor 15.10); aria sier «tapt på vind eller tidevann» */
 .gruppe{margin-top:22px}
-.gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 2px 8px}
+.gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 14px 8px}   /* samme sidepadding som .rad, så ukedagene står rett over rutene (Theodor 15.10) */
 .gruppe-topp h3{font-size:1.0625rem;font-weight:700}
 .gruppe-topp h3 small{color:var(--muted);font-weight:500;font-size:var(--fs-secondary);margin-left:6px}
-.gruppe-topp .uke{gap:4px}
 .rader{display:flex;flex-direction:column;gap:6px}
 .rad{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;width:100%;min-height:60px;padding:10px 14px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer;text-align:left}   /* flex-wrap: ved 200 % tekst faller ukerutene ned på egen linje i stedet for å dekke navnet */
 .rad:hover{box-shadow:0 0 0 2px var(--line-strong)}
-.rad .nm{flex:1 1 140px;min-width:0}
+.rad .nm{flex:1 1 110px;min-width:0}   /* 110 + 12 + 172 (ukerutene) ≤ 315 innhold på 390 px, så alt står på én linje; ved 200 % faller rutene ned */
 .rad .uke{flex:0 0 auto;margin-left:auto}
 .rad .nm b{display:block;font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
