@@ -1,47 +1,47 @@
 {
- "last_scored_until": "2026-10-15T03:00:00+00:00",
+ "last_scored_until": "2026-10-15T06:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1346,
+    "n": 1370,
+    "hits": 1370,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1155,
+    "n": 1179,
+    "hits": 1179,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 962,
+    "n": 986,
+    "hits": 986,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 765,
+    "n": 792,
+    "hits": 792,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 557,
+    "n": 581,
+    "hits": 581,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -60,44 +60,44 @@
   },
   "tromvik": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1345,
+    "n": 1370,
+    "hits": 1369,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1142,
+    "n": 1179,
+    "hits": 1166,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 954,
+    "n": 986,
+    "hits": 978,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 762,
+    "n": 792,
+    "hits": 789,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 556,
+    "n": 581,
+    "hits": 580,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -116,44 +116,44 @@
   },
   "ersfjordstranda": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1346,
+    "n": 1370,
+    "hits": 1370,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1155,
+    "n": 1179,
+    "hits": 1179,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 962,
+    "n": 986,
+    "hits": 986,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 765,
+    "n": 792,
+    "hits": 792,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 555,
+    "n": 581,
+    "hits": 579,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -172,44 +172,44 @@
   },
   "russelv": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1345,
+    "n": 1370,
+    "hits": 1369,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1144,
+    "n": 1179,
+    "hits": 1168,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 918,
+    "n": 986,
+    "hits": 942,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 764,
+    "n": 792,
+    "hits": 791,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 557,
+    "n": 581,
+    "hits": 581,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -228,44 +228,44 @@
   },
   "lenangsoyra": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1342,
+    "n": 1370,
+    "hits": 1366,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1142,
+    "n": 1179,
+    "hits": 1166,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 951,
+    "n": 986,
+    "hits": 975,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 765,
+    "n": 792,
+    "hits": 792,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 557,
+    "n": 581,
+    "hits": 581,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -284,44 +284,44 @@
   },
   "steinkrossa": {
    "1": {
-    "n": 1338,
-    "hits": 1326,
+    "n": 1365,
+    "hits": 1353,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1308,
+    "n": 1370,
+    "hits": 1332,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1106,
+    "n": 1179,
+    "hits": 1130,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 955,
+    "n": 986,
+    "hits": 979,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 764,
+    "n": 792,
+    "hits": 791,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 551,
+    "n": 581,
+    "hits": 575,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -340,44 +340,44 @@
   },
   "unstad": {
    "1": {
-    "n": 1338,
-    "hits": 1303,
+    "n": 1365,
+    "hits": 1330,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1296,
+    "n": 1370,
+    "hits": 1320,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1020,
+    "n": 1179,
+    "hits": 1044,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 822,
+    "n": 986,
+    "hits": 836,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 645,
+    "n": 792,
+    "hits": 653,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 402,
+    "n": 581,
+    "hits": 416,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 202,
+    "n": 393,
+    "hits": 219,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -396,44 +396,44 @@
   },
   "farstadsanden": {
    "1": {
-    "n": 1338,
-    "hits": 1338,
+    "n": 1365,
+    "hits": 1365,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1346,
-    "hits": 1346,
+    "n": 1370,
+    "hits": 1370,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1155,
-    "hits": 1155,
+    "n": 1179,
+    "hits": 1179,
     "n_logs": 0,
     "hits_logs": 0
    },
    "4": {
-    "n": 962,
-    "hits": 962,
+    "n": 986,
+    "hits": 986,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 765,
-    "hits": 741,
+    "n": 792,
+    "hits": 768,
     "n_logs": 0,
     "hits_logs": 0
    },
    "6": {
-    "n": 557,
-    "hits": 557,
+    "n": 581,
+    "hits": 581,
     "n_logs": 0,
     "hits_logs": 0
    },
    "7": {
-    "n": 369,
-    "hits": 369,
+    "n": 393,
+    "hits": 393,
     "n_logs": 0,
     "hits_logs": 0
    },
