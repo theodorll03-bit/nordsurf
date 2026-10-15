@@ -788,7 +788,7 @@ def bw_shadow_mock_u(la, lo):
     # skyggepunktet (68.271871/13.565367) får ANNEN retning og periode enn punktet i bruk - så en feil som
     # bruker i-bruk-retningen i skyggeratingen ville blitt fanget (fysikk-kontrollør 15.10.2026)
     sh = abs(la - 68.271871) < 1e-5
-    return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": 1.5, "dir": 250.0 if sh else 295.0, "period": 15.0 if sh else 12.0} for i in (0, 3, 6, 9)}
+    return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": 1.5, "dir": 250.0 if sh else 295.0, "period": 4.0 if sh else 12.0} for i in (0, 3, 6, 9)}
 sources.barentswatch_point = bw_shadow_mock_u
 try:
     u_cfg = json.loads(json.dumps(next(s for s in spots_cfg if s["id"] == "unstad")))
@@ -800,8 +800,9 @@ finally:
     fetch.REPORT.clear()
 u_rated = [h for h in u_sh["hours"] if h.get("surf_height_shadow") is not None and h.get("surf_height_shadow_noprior") is not None and h["surf_height_shadow"] > 0]
 assert u_rated and all(abs(h["surf_height_shadow_noprior"] * 1.45 - h["surf_height_shadow"]) < 0.02 for h in u_rated), [(h["surf_height_shadow"], h["surf_height_shadow_noprior"]) for h in u_rated[:3]]
-# skyggen rates med skyggepunktets EGEN retning: 250° (45° fra facing 294,8) gir spot_direction_factor 0,65 mot 1,0
-# for 295° - skyggens surfehøyde skal derfor være LAVERE enn i bruk selv om BarentsWatch-høyden er lik (1,5 m)
+# skyggen rates med skyggepunktets EGNE tall: periode 4 s ved skyggepunktet (mot 12 s i bruk) gir lavere
+# bw_period_factor, så skyggens surfehøyde skal være LAVERE enn i bruk selv om BarentsWatch-høyden er lik (1,5 m).
+# (Retningen 250° alene ville ikke skilt dem: når svellet ute er godt eksponert overstyres retningsfaktoren ved punktet.)
 u_cmp = [h for h in u_sh["hours"] if h.get("surf_height_shadow") is not None and h.get("bw_height") and h.get("surf_height")]
 assert u_cmp and all(h["surf_height_shadow"] < h["surf_height"] - 0.05 for h in u_cmp), ("skyggeratingen skal bruke skyggepunktets egen retning", [(h["surf_height"], h["surf_height_shadow"]) for h in u_cmp[:3]])
 # arkivraden: [stjerner, surf, surf_skygge, surf_skygge_uten_prior, stjerner_skygge, i bruk fra BarentsWatch]
