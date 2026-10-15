@@ -17,7 +17,22 @@
 
   /* ---------- data (oversikt-2) ---------- */
   const regionOf = (s)=> s.region || s.area || "";
-  const stedText = (s)=>{ const r = regionOf(s); return s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r); };
+  /* ROADMAP K del C.4 (bare visning, ratingen røres ikke): nye spots (status «forelopig», tools/godkjenn_spot.py)
+     har merkelappen «Foreløpig» og er ikke med i «Beste økt» de første 14 dagene; spots med ferdsels- eller
+     surfeforbud (fra verneforskriften, data/kandidater/vern.json) vises med «Forbud nå» i perioden og er aldri
+     med i «Beste økt» da. Mangler forelopig_fra regnes spoten som ny (ikke anbefalt før datoen er kjent). */
+  const FORELOPIG_DAGER = 14;
+  const osloMD = (t)=>{ const p = new Intl.DateTimeFormat("en-CA", {month:"2-digit", day:"2-digit", timeZone:TZ}).formatToParts(new Date(t)); return `${p.find(x=>x.type==="month").value}-${p.find(x=>x.type==="day").value}`; };
+  function forbudNa(s, t){
+    const md = osloMD(t==null ? Date.now() : t);
+    return (s.restriksjoner || []).some(r=> ["ferdselsforbud", "surfeforbud"].includes(r.type) && ["sjø", "strand", "begge"].includes(r.gjelder)
+      && (!r.fra || !r.til || (r.fra <= r.til ? md >= r.fra && md <= r.til : md >= r.fra || md <= r.til)));
+  }
+  const nyForelopig = (s)=> s.status==="forelopig" && !(s.forelopig_fra && Date.now() - Date.parse(s.forelopig_fra) >= FORELOPIG_DAGER*864e5);
+  const iBesteOkt = (s, t)=> !nyForelopig(s) && !forbudNa(s, t);
+  const merker = (s)=> [s.status==="forelopig" ? "Foreløpig" : null, forbudNa(s) ? "Forbud nå" : null].filter(Boolean);
+  const omrMerker = (s)=> [s.area, ...merker(s)].filter(Boolean).join(" · ");
+  const stedText = (s)=>{ const r = regionOf(s); return [s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r), ...merker(s)].join(" · "); };
   const regions = ()=> (DATA.regions || []).map(r=>r.name);
   const REGION_KEY = "nordsurf.region";
   function chosenRegion(){
@@ -106,7 +121,7 @@
   function bestSession(spots){
     let best = null;
     for(const s of spots) for(const [k, d] of (s.dager || []).slice(0, 3).entries()){
-      if(d.status!=="ok" || !d.h || stars(d.h) < 1) continue;
+      if(d.status!=="ok" || !d.h || stars(d.h) < 1 || !iBesteOkt(s, d.h.t)) continue;
       if(new Date(d.slutt || d.h.t).getTime() + 36e5 <= Date.now()) continue;   // vinduet er over siden oversikten ble laget (fysikk-kontrollør 15.10)
       const c = {s, d, st: stars(d.h), hh: d.h.surf_height||0, k};
       if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c;
@@ -115,7 +130,7 @@
   }
   function nextPossibility(spots){
     let first = null;
-    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1 && new Date(d.slutt || d.h.t).getTime() + 36e5 > Date.now()){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
+    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1 && iBesteOkt(s, d.h.t) && new Date(d.slutt || d.h.t).getTime() + 36e5 > Date.now()){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
     return first;
   }
   function nextBest(spots, exclude, n){
@@ -168,7 +183,7 @@
   function radHtml(s, days){
     const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h);
     return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
-      <span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}</small><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
+      <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
       ${ukeHtml(s, days, false)}</a>`;
   }
   function regionChips(current, onPickAttr){
@@ -210,7 +225,7 @@
             if(!v || (!(v.a > 0) && !(b.st >= 1))){ const ord = ratingWord(b.h); return `<td class="c"><span class="celle null" title="${esc(`${d.lang}: ${ord}`)}">${esc(ord)}</span></td>`; }
             const hh = nf1.format(v.a);
             return `<td class="c"><span class="celle r-${min5(b.st)}" title="${esc(`${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}, ${hh} m`)}">${esc(hh)}${b.st>=1 ? `<small>★${b.st}</small>` : ""}</span></td>`; }).join("");
-          return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
+          return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
         }).join("");
     }).join("");
     const chips = `<div class="chips regionvelger" role="group" aria-label="Region"><button type="button" class="chip" data-tabellregion="" aria-pressed="${!filt}">Alle</button>${regions().map(r=>`<button type="button" class="chip" data-tabellregion="${esc(r)}" aria-pressed="${r===filt}">${esc(r)}</button>`).join("")}</div>`;
@@ -413,6 +428,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") render(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, nowIdx, usable, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, forbudNa, iBesteOkt, nowIdx, usable, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

@@ -70,6 +70,11 @@ def main():
     watchdog = _watchdog()
     srv, port = serve()
     big, regions_cfg = synthetic_spots.make(FORECAST, N_SPOTS)
+    # ROADMAP K del C.4: dagens «Beste økt» i Troms (test078) blir en ny, foreløpig spot, og test079 får et
+    # surfeforbud som gjelder nå (1.10-31.3) - begge skal få merkelapp og holdes utenfor «Beste økt»
+    by_id = {s["id"]: s for s in big["spots"]}
+    by_id["test078"].update(status="forelopig", forelopig_fra=T0.date().isoformat())
+    by_id["test079"]["restriksjoner"] = [{"type": "surfeforbud", "fra": "10-01", "til": "03-31", "gjelder": "sjø"}]
     overview, details = publish.split(big, regions_cfg=regions_cfg)
     OV_BODY = json.dumps(overview, ensure_ascii=False, separators=(",", ":"))
     DET_BODY = {sid: json.dumps(d, ensure_ascii=False, separators=(",", ":")) for sid, d in details.items()}
@@ -143,6 +148,17 @@ def main():
                 heads = page.evaluate("[...document.querySelectorAll('#viewHjem table.spots thead th.dag, #viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
                 assert heads and not any(h.startswith("I dag") for h in heads) and not page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over"), heads[:8]
                 print(f"PR #12 a-c ({label}): valgt brikke «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
+                # ROADMAP K del C.4: «Foreløpig»/«Forbud nå» ved navnet, og ikke i «Beste økt»
+                best_name = page.text_content("#bestKort .navn").strip()
+                assert best_name not in ("Testspot 078", "Testspot 079"), f"foreløpig/forbudt spot i Beste økt: {best_name}"
+                lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr.s')]
+                    .map(r => [r.querySelector('b').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
+                if lbl:   # radene vises (mobil: 5 beste; nett: tabellen)
+                    assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Forbud nå" in t) for n, t in lbl.items()), lbl
+                f79 = page.evaluate("""() => { const H = Front.helpers, s = DATA.spots.find(x => x.id === 'test079'), n = DATA.spots.find(x => x.id === 'test000');
+                    return [H.forbudNa(s), H.stedText(s), H.forbudNa(s, Date.parse('2026-05-01T12:00:00Z')), H.forbudNa(n), H.iBesteOkt(s, Date.parse('2026-05-01T12:00:00Z'))]; }""")
+                assert f79[0] is True and "Forbud nå" in f79[1] and f79[2] is False and f79[3] is False and f79[4] is True, f79
+                print(f"C.4 ({label}): Beste økt = {best_name}, merkelapper {sorted(lbl)}, Forbud nå 1.10-31.3 (ikke 1.5) - OK")
                 shot("hjem")
                 # 8. nett-tabellen: regionfilter, «Vis alle», sticky
                 if not mobile:
