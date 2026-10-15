@@ -492,7 +492,7 @@ function directionHitText(h, spot){
   if(h.directness==null) return "";
   const inside = inSwellWindow(h.dir_offshore, spot);
   if(inside===false) return "Utenfor vinduet";
-  if(h.directness >= 0.999) return "Midt i vinduet";
+  if(h.directness >= 0.999) return "Innenfor vinduet";
   if(h.directness >= 0.667) return "I kanten av vinduet";
   return inside ? "I vinduet, men skjermet" : "Utenfor vinduet";
 }
@@ -694,9 +694,9 @@ function exposureChartSVG(spotId, curve, logs){
   }).join("");
   const ticks = [0,90,180,270].map(d=>{
     const i = d/10;
-    return `<text x="${bx(i)}" y="${H-1}" font-size="9" fill="var(--muted)" text-anchor="middle">${d}°</text>`;
+    return `<text x="${bx(i)}" y="${H-1}" font-size="15" fill="var(--muted)" text-anchor="middle">${d}°</text>`;
   }).join("");
-  const yTicks = [0,0.5,1].map(v=>`<text x="${padL-4}" y="${by(v)+3}" font-size="9" fill="var(--muted)" text-anchor="end">${v}</text>`).join("");
+  const yTicks = [0,0.5,1].map(v=>`<text x="${padL-4}" y="${by(v)+4}" font-size="15" fill="var(--muted)" text-anchor="end">${v}</text>`).join("");
   return `<svg class="expo-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Eksponering per retning">
     <line x1="${padL}" y1="${axisY}" x2="${W-padR}" y2="${axisY}" stroke="var(--line)"/>
     ${bars}
@@ -1350,7 +1350,9 @@ async function start(){
     maybeShowWitnessPrompt();
   }catch(e){
     console.error(e);
-    $("#loading").textContent = STR.noData; $("#loading").hidden = false;
+    // HIG 12: «Fikk ikke hentet varselet» med «Prøv igjen» (index.html #feil)
+    $("#loading").hidden = true;
+    const f = $("#feil"); if(f) f.hidden = false; else { $("#loading").textContent = STR.noData; $("#loading").hidden = false; }
   }
 }
 // start() kalles fra js/front.js når kartmotoren er lastet (kart først, 09.10.2026).

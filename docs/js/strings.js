@@ -124,7 +124,7 @@
     fromDir: (c) => `fra ${c}`,
     ofTotal: (m, pct) => `av ${m} m totalt (${pct} %)`,
     totalFallback: "svell ikke skilt ut, bruker total",
-    inWindow: "Midt i vinduet", edgeWindow: "I kanten av vinduet", outWindow: "Utenfor vinduet",
+    inWindow: "Innenfor vinduet", edgeWindow: "I kanten av vinduet", outWindow: "Utenfor vinduet",
     window: (w) => `Vindu ${w}`,
     tideNow: (rising, state) => `${rising?"Stigende":"Fallende"}, ${state}`,
     tideNext: (type, time) => `${type} kl. ${time}`,
