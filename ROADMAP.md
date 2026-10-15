@@ -2,7 +2,7 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## K. 116 spots fra Theodors liste (15.10.2026) - NATTJOBBEN 15.-16.10, se STATUS.md øverst for hvor langt den er kommet
+## K. 116 spots fra Theodors liste (15.10.2026) - NATTJOBBEN FERDIG 16.10: 0 og A merget; A2 og C STOPPET etter validering; B som PR - VENTER PÅ THEODOR (se morgenrapporten i STATUS.md)
 
 Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det er gitt ja på forhånd. STOPP = parker delen, skriv i STATUS.md hva som venter, gå videre til neste del som ikke avhenger av den. Fysikk-kontrollør før commit på alt som rører fysikk, ingen force-push, ingen sletting av data/logger, aldri secrets eller GitHub-innstillinger. Etter HVERT ferdige steg: STATUS.md øverst («Nattjobben 15.-16.10: ferdig / i gang / venter på Theodor», gren, PR, neste steg), commit og push. STATUS.md er fasiten.
 
