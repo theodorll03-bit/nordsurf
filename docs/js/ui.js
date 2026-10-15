@@ -16,6 +16,8 @@
   // region per område - til S5 kommer et eget felt i spots.json (bare visning)
   const REGION_OF = {"Kvaløya":"Troms", "Senja":"Troms", "Lyngen":"Troms", "Lofoten":"Lofoten", "Hustadvika":"Møre og Romsdal"};
   const regionOf = (s)=> s.region || REGION_OF[s.area] || s.area || "";
+  // «område · region» - én gang når de er like (Unstad: Lofoten)
+  const stedText = (s)=>{ const r = regionOf(s); return s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r); };
   const REGION_ORDER = ["Troms", "Lofoten", "Møre og Romsdal"];
   const SNARVEIER = ["Unstad", "Senja", "Lyngen", "Kvaløya"];
   const S = { view:"hjem", from:"hjem", spotId:null, idx:null, q:"", utforskDay:null, utforskView:"nord", picked:null, now:-1, visAlle:{} };
@@ -137,7 +139,7 @@
     const fakta = [h.period!=null ? `${nf0.format(h.period)} s` : null, kjText(h), windText(h)].filter(Boolean).join(" · ");
     const hoyde = heightText(h);
     return `<a class="kort best tap r-${Math.min(5,st)}" id="bestKort" href="#spot=${esc(s.id)}&t=${best.a}" aria-label="${esc(`Beste økt: ${s.name}, ${spanText(s, best.a, best.b)}, ${STR.starsAria(st, 0)}, ${ratingWord(h)}${hoyde ? ", " + hoyde + " m" : ""}. Åpne spoten`)}">
-      <div class="rad"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(s.area||"")} · ${esc(regionOf(s))}</div></div><span class="tid">${esc(spanText(s, best.a, best.b))}</span></div>
+      <div class="rad"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(stedText(s))}</div></div><span class="tid">${esc(spanText(s, best.a, best.b))}</span></div>
       <div class="vurd"><div>${starsSVG(st, 0)}<div class="ord">${esc(ratingWord(h))}</div></div>${hoyde ? `<div class="hoyde">${esc(hoyde)}<small>m</small></div>` : ""}</div>
       ${fakta ? `<div class="fakta">${numHtml(fakta)}</div>` : ""}</a>`;
   }
@@ -189,7 +191,7 @@
           if(b.cls==="dark") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mørkt">–</span></td>`;
           const hh = b.h && b.h.surf_height!=null ? nf1.format(b.h.surf_height) : "–";
           return `<td class="c"><span class="celle r-${Math.min(5,b.st)}" title="${esc(`${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}, ${hh} m`)}">${esc(hh)}${b.st>=1 ? `<small>★${b.st}</small>` : ""}</span></td>`; }).join("");
-        return `<tr class="s r-${Math.min(5,st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")} · ${esc(g.region)}</small></td><td class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
+        return `<tr class="s r-${Math.min(5,st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></td><td class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
       }).join("")).join("");
     return `<div class="tabellboks"><table class="spots">${head}<tbody>${body}</tbody></table></div>`;
   }
@@ -221,7 +223,7 @@
   }
   function sradHtml(s){
     const h = hourAt(s, nowIdx(s)), st = stars(h), oh = ordOgHoyde(h);
-    return `<a class="srad r-${Math.min(5,st)}" href="#spot=${esc(s.id)}" role="option"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")} · ${esc(regionOf(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
+    return `<a class="srad r-${Math.min(5,st)}" href="#spot=${esc(s.id)}" role="option"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
   }
   function resultsHtml(q){
     const r = search(q);
@@ -324,14 +326,14 @@
     const root = $("#viewSpot"), s = spotById(S.spotId);
     if(!s){ go("hjem", true); return; }
     if(!spotIsFull(s)){
-      root.innerHTML = `<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(s.area||"")} · ${esc(regionOf(s))}</div></div></div>
+      root.innerHTML = `<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(stedText(s))}</div></div></div>
         <p class="muted" role="status" id="spotLaster">${s._loadErr ? `Fikk ikke hentet detaljene for ${esc(s.name)}. Sjekk at du er på nett, og prøv igjen.` : "Henter detaljene …"}</p>${s._loadErr ? `<button type="button" class="ghost" id="spotRetry">Prøv igjen</button>` : ""}`;
       $("#spotBack").onclick = closeSpot;
       const rb = $("#spotRetry"); if(rb) rb.onclick = ()=>{ s._loadErr = false; renderSpotView(); };
       if(!s._loadErr) ensureSpot(s.id).then(()=>{ if(S.view==="spot" && S.spotId===s.id) renderSpotView(); }).catch((e)=>{ console.error(e); s._loadErr = true; if(S.view==="spot" && S.spotId===s.id) renderSpotView(); });
       return;
     }
-    Spot.render(root, s, S, {regionOf, close: closeSpot, nowIdx, usable, known, stars, dkOf, heightText, isDesktop});
+    Spot.render(root, s, S, {regionOf, stedText, close: closeSpot, nowIdx, usable, known, stars, dkOf, heightText, isDesktop});
   }
   function render(){
     if(!DATA) return;
@@ -367,6 +369,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") render(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, nowIdx, usable, known, stars, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, nowIdx, usable, known, stars, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop} };
   window.start();
 })();

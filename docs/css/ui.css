@@ -122,7 +122,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .feil h2{font-size:var(--fs-title)}
 .feil p{margin:0;color:var(--muted)}
 .feil .primary{margin:8px auto 0}
-.primary{all:unset;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 22px;border-radius:25px;background:var(--selected);color:var(--on-selected);font-weight:600;cursor:pointer}
+.primary{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 22px;border-radius:25px;background:var(--selected);color:var(--on-selected);font-weight:600;cursor:pointer}
 .primary:hover{filter:brightness(1.1)}
 .ghost{all:unset;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:22px;box-shadow:inset 0 0 0 1.5px var(--line-strong);font-weight:600;cursor:pointer;font-size:var(--fs-secondary)}
 .ghost:hover{background:var(--sunken)}
@@ -131,7 +131,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .iconbtn:hover{background:var(--sunken)}
 
 /* ---------- Brikker (40 px) ---------- */
-.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0;-webkit-overflow-scrolling:touch}
+.chips{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0;-webkit-overflow-scrolling:touch}
 .chips::-webkit-scrollbar{display:none}
 .chip{all:unset;flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:20px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);font-weight:600;font-size:var(--fs-secondary);cursor:pointer;white-space:nowrap}
 .chip:hover{background:var(--sunken)}
@@ -241,7 +241,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .dagchips{position:absolute;left:16px;right:16px;bottom:calc(var(--nav-h) + 4px + env(safe-area-inset-bottom,0px));z-index:6}
 .dagchips .chip{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge)}
 .dagchips .chip[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
-.kartkort{position:absolute;left:16px;right:16px;bottom:calc(var(--nav-h) + 56px + env(safe-area-inset-bottom,0px));z-index:7;padding:14px 16px;border-radius:var(--radius)}
+.kartkort{position:absolute;left:16px;right:16px;bottom:calc(var(--nav-h) + 56px + env(safe-area-inset-bottom,0px));z-index:7;padding:14px 16px;border-radius:var(--radius);background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge);box-shadow:var(--shadow)}
 .kartkort[hidden]{display:none}
 .kartkort .topp{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .kartkort .navn{font-size:1.125rem;font-weight:700}
@@ -253,17 +253,19 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kartkort .fakta b{display:block;color:var(--ink);font-size:var(--fs-secondary);font-weight:600}
 .kartkort .primary{width:100%;margin-top:12px}
 .kartkort .lukk{position:absolute;right:8px;top:8px}
-/* kartmerker (kart.js): hele merket er én 44 px høy knapp, lappen 28 px, «Navn Ord» */
+/* kartet og merkene (kart.js): hele merket er én 44 px høy knapp (prikk + lapp), lappen 28 px, «Navn Ord» */
+.map-layer{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.map-layer .coast{fill:var(--land);stroke:var(--coast);stroke-width:1.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .markers{position:absolute;inset:0;pointer-events:none}
-.mk{position:absolute;left:0;top:0;height:44px;pointer-events:auto;display:flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;cursor:pointer;z-index:2;transform:translate3d(var(--x,0px),var(--y,0px),0) translateY(-22px)}
-.mk.left{flex-direction:row-reverse}
-.mk-dot{width:12px;height:12px;border-radius:50%;background:var(--rc,var(--r0));box-shadow:0 0 0 2px var(--raised);flex:none;transition:background .3s ease}
-.mk.sel .mk-dot{width:16px;height:16px;box-shadow:0 0 0 3px var(--ink)}
-.mk-pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--raised);color:var(--ink);box-shadow:0 1px 0 var(--line),0 2px 8px rgba(0,0,0,.08);white-space:nowrap;font-size:0.9375rem;font-weight:700}
+.mk{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:auto;z-index:2}
+.mk[hidden]{display:none}
+.mk-dot{position:absolute;left:16px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--rc,var(--r0));box-shadow:0 0 0 2px var(--raised);transition:background .3s ease,transform .2s ease}
+.mk.sel .mk-dot{transform:scale(1.35);box-shadow:0 0 0 2.5px var(--ink)}
+.mk.miss .mk-dot{background:var(--raised);border:1.5px dashed var(--muted);box-sizing:border-box}
+.mk-pill{position:absolute;left:var(--lx,52px);top:var(--ly,8px);display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--raised);color:var(--ink);box-shadow:0 1px 0 var(--line),0 2px 8px rgba(0,0,0,.10);white-space:nowrap;font-size:0.9375rem;font-weight:700;line-height:1}
 .mk-pill .ord{color:var(--rc-ink);font-weight:600}
 .mk.bare .mk-pill{display:none}
-.mk.bare{width:44px;justify-content:center;transform:translate3d(var(--x,0px),var(--y,0px),0) translate(-22px,-22px)}
-.mk-dot.miss{background:transparent;border:1.5px dashed var(--muted)}
+.mk.sel{z-index:3}
 .utforsk-liste{display:none}
 
 /* ---------- Spotsiden ---------- */
@@ -346,9 +348,11 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .grafrad .celler div small{color:var(--muted);font-family:var(--mono);font-size:0.6875rem}
 .grafrad .celler svg{width:0.875rem;height:0.875rem}
 .grafrad .celler .b{font-weight:700}
-.tidekurve{width:100%;height:64px;display:block}
+.tidekurve{width:100%;height:84px;display:block;margin-top:6px}
 .tidekurve path{fill:none;stroke:var(--ink);stroke-width:1.5}
 .tidekurve text{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tidekurve circle{fill:var(--ink)}
+.tide svg .b,.tidekurve .b{font-family:var(--body);font-weight:700;fill:var(--ink)}
 .tidekurve text.b{font-family:var(--body);font-weight:700;fill:var(--ink)}
 /* minikart, tidevann, vær */
 .mini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
@@ -404,7 +408,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   :root{--nav-h:0px}
   .pc-only{display:revert !important}
   .pc-hide{display:none !important}
-  .topbar{position:sticky;top:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;height:var(--top-h);padding:0 32px;background:var(--raised);border-bottom:1px solid var(--line);z-index:20}
+  .topbar{position:sticky;top:0;display:grid !important;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;height:var(--top-h);padding:0 32px;background:var(--raised);border-bottom:1px solid var(--line);z-index:20}
   .topbar .wm svg{height:1.75rem}
   .topsok{position:relative;max-width:620px;width:100%;justify-self:center}
   .topnav{display:flex;gap:4px}
@@ -460,3 +464,24 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .dagfane{width:98px}
   .logg-her .primary{width:auto}
 }
+
+/* ---------- Minikartet (minikart.js): kyst i land/sjø-fargene, resten i blekk ---------- */
+.minikart{overflow:visible}
+.minikart .sjo{fill:var(--sea)}
+.minikart .land{fill:var(--land)}
+.minikart .coast{fill:none;stroke:var(--coast);stroke-width:1}
+.minikart .vindu{fill:var(--window-fill);stroke:var(--ink);stroke-opacity:.5;stroke-width:1;stroke-dasharray:3 3}
+.minikart .ticks line{stroke:var(--faint);stroke-width:1}
+.minikart .rand{fill:none;stroke:var(--muted);stroke-width:1}
+.minikart .svell line{stroke:var(--ink);stroke-width:2.5;stroke-linecap:round}
+.minikart .svell path{fill:var(--ink)}
+.minikart .svell.miss line{stroke:var(--muted);stroke-dasharray:4 4}
+.minikart .svell.miss path{fill:var(--muted)}
+.minikart .vind line{stroke:var(--ink);stroke-width:1.8;stroke-linecap:round}
+.minikart .vind path{fill:var(--ink)}
+.minikart .buer .bue{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9;animation:mk-rull 4.2s linear infinite}
+.minikart.still .buer .bue{animation:none}
+.minikart .spot{fill:var(--ink);stroke:var(--raised);stroke-width:1.5}
+.minikart .komp text{font-family:var(--body);font-size:9px;font-weight:600;fill:var(--muted)}
+@keyframes mk-rull{from{transform:translateY(0);opacity:.9}to{transform:translateY(44px);opacity:0}}
+@media (prefers-reduced-motion: reduce){.minikart .buer .bue{animation:none}}
