@@ -46,6 +46,11 @@ jobs:
         env:
           LOGS_REPO: ${{ secrets.LOGS_REPO }}
           LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
+      - name: Skyggerapport for BarentsWatch-punktene (15.10.2026, 14 dager)
+        run: timeout 120 python tools/skygge_rapport.py || echo "skyggerapporten feilet - testlaben lagres likevel"
+        env:
+          LOGS_REPO: ${{ secrets.LOGS_REPO }}
+          LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
       - name: Lagre resultatet
         run: |
           git config user.name "nordsurf-bot"
