@@ -579,6 +579,72 @@ def height_score(h, spot):
 
 PERIOD_SCORE_POINTS = [(6, 0.4), (8, 0.65), (10, 0.85), (12, 0.95), (14, 1.0)]  # se period_score()
 
+# ---------- 5 stjerner («Rått») - Theodor 15.10.2026, fysikk-kontrollørens forslag ----------
+# Før: int(5·score) og height_score (1,0 bare nøyaktig midt i ideal_height) gjorde 4 til toppen i
+# praksis (0 av 1 600 timer i varselet 15.10). Nå gir formelen ALDRI 5 selv (potential = min(4, …)); den
+# femte stjernen gis bare av en bevisst port der ALT er kjent og oppfylt (manglende ≠ oppfylt):
+#  A (svellsiden, five_star_swell_gate): dagens regning gir potensial 4, timen er verken usikker
+#    eller «kildene uenige»; høyden kommer fra BarentsWatch (kystmodellen, dag 1-3) og bw_confirms;
+#    height_score(surf_height) ≥ FIVE_STAR_HS_MIN (0,85 = |h − mid| ≤ 0,375·(hi − lo); 0,9 ville vært
+#    «midterste halvdel», men utelukker Farstadsanden 15.10 kl. 17, det eneste observerte 4-5-tilfellet
+#    modellen når); middelperioden ute ≥ 13 s; svellenergi kjent, energifaktor full OG ≥ 2 000 kJ
+#    (gulv - Unstads lokale full-grense 400 skal ikke definere Rått); svellretning i vinduet med minst
+#    min(EDGE_TAPER, bredde/4) margin og eksponering ≥ 0,667; tidevann kjent når spoten har preferanse.
+#  B (den femte stjernen er sprø, five_star_losses): vind kjent med straff nøyaktig 0 (generell og
+#    lokal) OG offshore eller under FIVE_STAR_CALM_MS effektivt; tidevann uten straff og foretrukket
+#    når spoten har preferanse - ellers holdes den femte stjernen tilbake (bokført som tapt på vind/
+#    tidevann). Krever Theodors ja (stjernegrenser): Unstad 26.09-rekonstruksjonen (test 16.1, 4
+#    observert) oppfyller alle vilkår og får 5. Se STATUS.md 15.10.2026.
+FIVE_STAR_HS_MIN = 0.85
+FIVE_STAR_PERIOD_MIN = 13.0   # s, middelperiode ute (hour["period"])
+FIVE_STAR_CALM_MS = 3.0       # = wind_label() sin «nesten blankt»-grense
+FIVE_STAR_ENERGY_MIN_KJ = 2000.0   # = ENERGY_FULL_DEFAULT (gulv uansett local_rules)
+
+
+def _tide_prefer(spot):
+    return spot.get("tide") or (spot.get("local_rules") or {}).get("tide_prefer")
+
+
+def five_star_swell_gate(hour, spot, *, source, bw_detail, surf_height, period, energy_swell,
+                         energy_factor_value, dir_hit, uncertain, sources_disagree):
+    """Del A: svellsiden av 5-stjerners-porten. (åpen, liste over vilkår som feiler)."""
+    fails = []
+    if source != "barentswatch" or not (bw_detail and bw_detail.get("bw_confirms")):
+        fails.append("ikke BarentsWatch-sonen med bekreftet treff")
+    if uncertain or sources_disagree:
+        fails.append("usikkert varsel")
+    if surf_height is None or height_score(surf_height, spot) < FIVE_STAR_HS_MIN:
+        fails.append("høyden ikke midt i spotens beste spenn")
+    if period is None or period < FIVE_STAR_PERIOD_MIN:
+        fails.append("periode under 13 s")
+    if energy_swell is None or energy_factor_value < 0.999 or energy_swell < FIVE_STAR_ENERGY_MIN_KJ:
+        fails.append("svellenergi ikke over full-grensen")
+    d = hour.get("dir_offshore")
+    if d is None or degrees_outside(d, spot) > 0:
+        fails.append("svell ikke i vinduet")
+    else:
+        width = next(((end - start) % 360 for start, end in window_sectors(spot) if in_sector(d, [start, end])), 360)
+        if degrees_inside(d, spot) < min(EDGE_TAPER, width / 4):
+            fails.append("svell i kanten av vinduet")
+    if dir_hit is None or dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE:
+        fails.append("svellet dårlig eksponert")
+    prefer = _tide_prefer(spot)
+    if prefer and (hour.get("tide") or {}).get("state") is None:
+        fails.append("tidevann ukjent")
+    return not fails, fails
+
+
+def five_star_losses(hour, spot, wind_parts, local_wind_raw, tide_pen, local_tide_raw):
+    """Del B: hva som holder den femte stjernen tilbake - «wind», «tide» eller None."""
+    if (hour.get("wind_speed") is None or hour.get("wind_dir") is None or wind_parts["pen"] > 0 or local_wind_raw > 0
+            or not (wind_parts["kind"] == "offshore" or (wind_parts["eff"] is not None and wind_parts["eff"] < FIVE_STAR_CALM_MS))):
+        return "wind"
+    prefer = _tide_prefer(spot)
+    if tide_pen > 0 or local_tide_raw > 0 or (prefer and (hour.get("tide") or {}).get("state") not in prefer):
+        return "tide"
+    return None
+
+
 
 def period_score(p):
     """06.10.2026, Theodors rettelse (se CLAUDE.md/STATUS.md): lineær kurve
@@ -871,7 +937,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      potential, solid, lost_wind, lost_tide, uncertain,
                      sources_disagree, capped_from, disagree_cap,
                      energy_swell_kj=None, energy_factor_value=1.0,
-                     energy_period_value=None, energy_period_source=None):
+                     energy_period_value=None, energy_period_source=None,
+                     five_open=False, five_fails=None, five_lost=None):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -987,6 +1054,15 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         items.append(f"Kilder uenige: kappet fra {disagree_cap} til maks 1 stjerne")
     elif capped_from is not None and capped_from > potential:
         items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner (ingen BarentsWatch, og retning utenfor vinduet eller stor dreining)")
+    # 15.10.2026: 5-stjerners-porten
+    if five_open:
+        items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter - 5 mulig")
+        if five_lost == "wind":
+            items.append("Femte stjerne holdes tilbake: vinden er ikke ren (offshore eller nesten blank uten straff)")
+        elif five_lost == "tide":
+            items.append("Femte stjerne holdes tilbake: tidevannet er ikke det spoten liker")
+    elif five_fails:
+        items.append("Ikke Rått: " + ", ".join(five_fails[:3]))
     without_wind = min(potential, solid + lost_wind)
     total = f"Totalt: {solid} av 5 stjerner"
     if lost_wind > 0:
@@ -1308,7 +1384,7 @@ def rate(hour, spot):
     ps = period_score(period)
     ds = direction_score(hour.get("dir_offshore"), spot, source)
     score = hs * ps * ds
-    potential = int(5 * score + 1e-9)  # rund ned
+    potential = min(4, int(5 * score + 1e-9))  # rund ned; 5 gis bare av porten (five_star_swell_gate, under)
 
     deg_out = degrees_outside(hour.get("dir_offshore"), spot)
     # Ærlighet: uten BarentsWatch, med dreining eller utenfor vinduet vet vi
@@ -1417,6 +1493,16 @@ def rate(hour, spot):
         potential = int(potential * energy_factor_value + 1e-9)
     faded_energy = potential_before_energy - potential
 
+    # 15.10.2026: 5-stjerners-porten (del A) - bare når alt annet gir 4
+    five_open, five_fails = False, []
+    if potential == 4:
+        five_open, five_fails = five_star_swell_gate(
+            hour, spot, source=source, bw_detail=bw_detail, surf_height=surf_height, period=period,
+            energy_swell=energy_swell, energy_factor_value=energy_factor_value, dir_hit=dir_hit,
+            uncertain=uncertain, sources_disagree=sources_disagree)
+        if five_open:
+            potential = 5
+
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
     wt = wind_type(wind_dir, spot)
     # 15.10.2026 (Theodors regler 1-4): vindstraffen er en glatt kurve (float), dempet av
@@ -1430,14 +1516,22 @@ def rate(hour, spot):
     tide_pen = tide_penalty(hour.get("tide"), spot)
     raw_solid = potential - wp - tide_pen - local_tide_raw
     solid = max(0, min(potential, math.floor(raw_solid + 0.5)))
+    # del B: den femte stjernen er sprø - holdes tilbake hvis vinden eller tidevannet ikke er rent
+    five_lost = None
+    if potential == 5:
+        five_lost = five_star_losses(hour, spot, wind_parts, local_wind_raw, tide_pen, local_tide_raw)
+        if five_lost and solid == 5:
+            solid = 4
     # bokføring i hele stjerner (det som vises som blasse stjerner): «uten vind» er det samme
     # regnestykket uten vindleddet (fysikk-kontrollør 15.10.2026: en egen avrunding av vinden
     # kunne gi «(4 uten vind)» når tidevannsregelen alene tok stjernen), så vind først, så
     # tidevann, så lokalt
     lost_total = potential - solid
     without_wind = max(0, min(potential, math.floor(potential - tide_pen - local_tide_raw + 0.5)))
+    if five_lost == "tide" and without_wind == 5:
+        without_wind = 4   # den femte stjernen holdes tilbake av tidevannet også uten vind
     lost_wind = max(0, without_wind - solid)
-    lost_tide = min(lost_total - lost_wind, tide_pen)
+    lost_tide = min(lost_total - lost_wind, tide_pen if five_lost != "tide" else max(1, tide_pen))
     local_extra_stars = lost_total - lost_wind - lost_tide
     solid_before_local = solid + local_extra_stars
     zero_losses = {
@@ -1462,6 +1556,7 @@ def rate(hour, spot):
         potential, solid, lost_wind, lost_tide, uncertain,
         sources_disagree, capped_from, disagree_cap, energy_swell, energy_factor_value,
         energy_period_value, energy_period_source,
+        five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
     )
 
     return {
