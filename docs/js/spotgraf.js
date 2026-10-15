@@ -21,7 +21,9 @@
     const by = new Map();
     s.hours.forEach((h, i)=>{ const k = H.dkOf(h.t); if(!by.has(k)) by.set(k, []); by.get(k).push(i); });
     const today = dayKey(new Date());
-    return [...by.entries()].filter(([key])=> key >= today).map(([key, idxs])=>({key, idxs, step: idxs.length >= 20 ? 1 : 6}));
+    // steget leses av avstanden mellom timene (ikke antallet: «i dag» har færre enn 20 timer fra kjøringen)
+    const stepOf = (idxs)=> idxs.length >= 2 && (new Date(s.hours[idxs[1]].t) - new Date(s.hours[idxs[0]].t)) >= 2*36e5 ? 6 : 1;
+    return [...by.entries()].filter(([key])=> key >= today).map(([key, idxs])=>({key, idxs, step: stepOf(idxs)}));
   }
   function dayOf(s, idx){ return H.dkOf(s.hours[idx].t); }
   function bestOfDay(s, d){
@@ -79,7 +81,7 @@
       const navn = d.key===today ? "I dag" : k===1 && d.key===dayKey(new Date(Date.now()+864e5)) ? "I morgen" : cap(fmtWd.format(t).replace(/\.$/, ""));
       const aria = `${cap(fmtDato.format(t))}: ${span.txt || span.word || "–"}${usikker ? ", usikker (langtidsmodell)" : ""}`;
       return `<button type="button" class="dagfane${usikker ? " usikker" : ""}" role="tab" data-day="${d.key}" aria-pressed="${d.key===selKey}" aria-selected="${d.key===selKey}" aria-label="${esc(aria)}">
-        <span class="d"><span>${esc(navn)}</span><small>${fmtDayNum.format(t)}.</small></span>
+        <span class="d"><span>${esc(navn)}</span><small>${fmtDayNum.format(t).replace(/\.$/, "")}.</small></span>
         <span class="h">${span.txt ? esc(span.txt).replace(" m", "<small>m</small>") : (span.word ? "–" : "–")}</span>
         <span class="o ${wordCls}">${esc(span.word || "–")}</span>
         <span class="felt" aria-hidden="true">${felt}</span>
@@ -93,18 +95,22 @@
     const cols = d.step===1 ? Array.from({length:24}, (_, hh)=>({hh, i: d.idxs.find(i=> osloHour(new Date(s.hours[i].t))===hh) ?? -1})) : d.idxs.map(i=>({hh: osloHour(new Date(s.hours[i].t)), i}));
     const scaleMax = Math.max(1.5, ...s.hours.map(h=> Math.max(h.surf_height_sets||0, h.surf_height||0)));
     const bestI = bestOfDay(s, d); const bh = s.hours[bestI];
-    const topTxt = H.usable(bh) && H.known(bh) && H.stars(bh) >= 1
+    // ordet i toppteksten kommer bare fra en lys, kjent time - aldri fra en mørk (fysikk-kontrollør 15.10.2026)
+    const lysKjent = H.usable(bh) && H.known(bh);
+    const topTxt = lysKjent && H.stars(bh) >= 1
       ? `Best kl. ${fmtHour.format(new Date(bh.t))}: <b class="r-${Math.min(5,H.stars(bh))}">${esc(ratingWord(bh))}</b>${H.heightText(bh) ? `, ${esc(H.heightText(bh))} m` : ""}`
-      : `Ingen surfbare timer${bh && ratingWord(bh) ? ` · ${esc(ratingWord(bh).toLowerCase())}` : ""}`;
+      : `Ingen surfbare timer${lysKjent ? ` · ${esc(ratingWord(bh).toLowerCase())}` : d.idxs.every(i=> !H.usable(s.hours[i])) ? " · mørkt" : ""}`;
     const n = cols.length; const H_PX = 120;
     const kol = cols.map(c=>{
       const h = c.i >= 0 ? s.hours[c.i] : null; const st = H.stars(h); const known = H.known(h);
       const l = h ? (h.light || null) : null; const natt = l==="mørkt" ? " natt" : l==="skumring" ? " skum" : "";
+      // tallet mangler (også for en «kjent» time med low_reason men uten høyde): stiplet, aldri en 0-søyle
+      const miss = !known || h.surf_height==null;
       const hs = h && h.surf_height!=null ? h.surf_height : 0, sets = h && h.surf_height_sets!=null ? Math.max(0, h.surf_height_sets - hs) : 0;
-      const bar = !h ? "" : !known ? `<span class="b miss" style="height:3px"></span>`
-        : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx || (c.i===bestI && hs>0) ? `<span class="tall">${nf1.format(h.surf_height_sets!=null ? h.surf_height_sets : hs)}</span>` : ""}</span>`;
-      const rs = !h ? `<span class="rs tom"></span>` : !known ? `<span class="rs miss" title="mangler"></span>` : `<span class="rs r-${Math.min(5,st)}" aria-hidden="true">${st||""}</span>`;
-      const aria = h ? `${fmtHour.format(new Date(h.t))}:00, ${known ? (st ? STR.starsAria(st, h.faded||0) + ", " : "") + ratingWord(h) + (H.heightText(h) ? ", " + H.heightText(h) + " m" : "") : "tallet mangler"}` : `${String(c.hh).padStart(2,"0")}:00, har vært`;
+      const bar = !h ? "" : miss ? `<span class="b miss" style="height:3px"></span>`
+        : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx ? `<span class="tall">${nf1.format(h.surf_height_sets!=null ? h.surf_height_sets : hs)}</span>` : ""}</span>`;
+      const rs = !h ? `<span class="rs tom"></span>` : miss ? `<span class="rs miss" title="mangler"></span>` : `<span class="rs r-${Math.min(5,st)}" aria-hidden="true">${st||""}</span>`;
+      const aria = h ? `${fmtHour.format(new Date(h.t))}:00, ${!miss ? (st ? STR.starsAria(st, h.faded||0) + ", " : "") + ratingWord(h) + (H.heightText(h) ? ", " + H.heightText(h) + " m" : "") : "tallet mangler"}` : `${String(c.hh).padStart(2,"0")}:00, har vært`;
       return `<div class="kol${natt}${c.i===selIdx ? " valgt" : ""}${!h ? " tom" : ""}" data-i="${c.i}" data-hh="${c.hh}">${rs}<button type="button" class="soyle" data-i="${c.i}" aria-label="${esc(aria)}"${!h ? " disabled" : ""}${c.i===selIdx ? ' aria-pressed="true"' : ""}>${bar}</button></div>`; }).join("");
     const axis = cols.map(c=>`<span>${d.step===1 ? (c.hh % 3===0 ? String(c.hh).padStart(2,"0") : "") : String(c.hh).padStart(2,"0")}</span>`).join("");
     const every3 = cols.filter((c, k)=> d.step===6 || c.hh % 3===0);

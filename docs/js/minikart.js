@@ -39,6 +39,8 @@
   function markup(spot, h, kyst, opts){
     const o = opts || {};
     const inside = h && h.dir_offshore!=null && spot.swell_window ? inSwellWindow(h.dir_offshore, spot) : null;
+    // buene ruller bare når svellet faktisk treffer (i vinduet OG ikke skjermet - opts.hit fra spot.js sin vinduTekst)
+    const hit = opts && opts.hit!=null ? opts.hit : inside;
     const hasSwell = h && h.dir_offshore!=null;
     const hasWind = h && h.wind_dir!=null;
     const ticks = [];
@@ -48,7 +50,7 @@
     const coast = kyst && kyst.coast ? kyst.coast.map(d=>`<path class="coast" d="${d}"/>`).join("") : "";
     const aria = [
       `Minikart rundt ${spot.name}, 3,5 km radius, nord opp.`,
-      hasSwell ? `Svell fra ${compass(h.dir_offshore)} ${Math.round(h.dir_offshore)} grader, ${inside ? "innenfor" : "utenfor"} svellvinduet.` : "Svellretning mangler.",
+      hasSwell ? `Svell fra ${compass(h.dir_offshore)} ${Math.round(h.dir_offshore)} grader, ${inside==null ? "" : inside ? "innenfor svellvinduet" : "utenfor svellvinduet"}${hit===false && inside ? ", men skjermet" : ""}.` : "Svellretning mangler.",
       hasWind ? `Vind fra ${compass(h.wind_dir)} ${Math.round(h.wind_dir)} grader.` : "Vindretning mangler.",
       spot.swell_window ? `Svellvindu ${windowText(spot).replace("Vindu ", "")}.` : "",
     ].join(" ");
@@ -59,7 +61,7 @@
       ${spot.swell_window ? `<path class="vindu" d="${wedge(spot.swell_window, R)}"/>` : ""}
       <g class="ticks">${ticks.join("")}</g>
       <circle class="rand" r="${R}"/>
-      ${hasSwell ? (inside ? arcs(h.dir_offshore) : "") + arrowFromRim(h.dir_offshore, 40, inside ? "svell" : "svell miss") : ""}
+      ${hasSwell ? (hit ? arcs(h.dir_offshore) : "") + arrowFromRim(h.dir_offshore, 40, hit ? "svell" : "svell miss") : ""}
       ${hasWind ? arrowFromRim(h.wind_dir, 26, "vind") : ""}
       <circle class="spot" r="3.2"/>
       <g class="komp">${labels}</g>

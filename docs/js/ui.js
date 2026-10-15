@@ -41,16 +41,20 @@
   const spotById = (id)=> DATA.spots.find(x=>x.id===id);
   const numHtml = (t)=> esc(t).replace(/\d[\d,.–]*/g, m=>`<span class="num">${m}</span>`);
   function heightText(h){
-    // «1,6–2,1 m» (surf_height–surf_height_sets); tallet mangler → «–»
-    if(!h || h.surf_height==null) return null;
-    const a = nf1.format(h.surf_height), b = h.surf_height_sets!=null ? nf1.format(h.surf_height_sets) : null;
+    // «1,6–2,1 m» (høyden som vises–surf_height_sets); tallet mangler → «–». Høyden følger
+    // Theodors regel (c) 05.10.2026 (app.js heightMForDisplay via Spot.visHoyde): «Blåst ut»
+    // viser surfehøyden hvis reell, ellers BarentsWatch sin totalhøyde; «Stormsjø» alltid totalhøyden.
+    const v = window.Spot ? Spot.visHoyde(h) : (h && h.surf_height!=null ? {a: h.surf_height, b: h.surf_height_sets} : null);
+    if(!v) return null;
+    const a = nf1.format(v.a), b = v.b!=null ? nf1.format(v.b) : null;
     return b!=null && b!==a ? `${a}–${b}` : a;
   }
   function ordOgHoyde(h){
     // «ord · høyde» nå: ordet alltid (ratingWord), høyden når det er noe å vise
     if(!h) return {ord:"–", hoyde:null};
     const ord = ratingWord(h);
-    const show = h.surf_height!=null && (stars(h) >= 1 || h.surf_height >= 0.3);
+    const v = window.Spot ? Spot.visHoyde(h) : null;
+    const show = v!=null && (stars(h) >= 1 || v.a >= 0.3);
     return {ord, hoyde: show ? heightText(h) : null};
   }
   function windText(h){

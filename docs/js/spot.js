@@ -20,10 +20,21 @@
   let H = null;   // hjelpere fra ui.js (nowIdx, usable, known, stars, dkOf, heightText, regionOf, close, isDesktop)
 
   /* ---------- tekster som tolker tall ---------- */
+  function visHoyde(h){
+    // Theodors regel (c) 05.10.2026 (app.js heightMForDisplay): «Blåst ut» viser surfehøyden hvis
+    // den er reell, ellers BarentsWatch sin totalhøyde; «Stormsjø» ALLTID totalhøyden; Flatt/Treffer
+    // ikke har ikke noe pålitelig tall. Settene (1,27 × Hb) hører bare til surfehøyden.
+    if(!h) return null;
+    const v = heightMForDisplay(h);
+    if(v==null) return null;
+    const sets = (!h.low_reason || (h.low_reason==="blown_out" && h.surf_height!=null && h.surf_height > 0)) && h.surf_height_sets!=null ? h.surf_height_sets : null;
+    return {a: v, b: sets};
+  }
   function kroppshoyde(h){
-    // midtpunktet mellom surf_height og surf_height_sets (Theodors tabell 14.10.2026)
-    if(!h || h.surf_height==null) return null;
-    const m = h.surf_height_sets!=null ? (h.surf_height + h.surf_height_sets) / 2 : h.surf_height;
+    // midtpunktet mellom høyden som vises og settene (Theodors tabell 14.10.2026)
+    const v = visHoyde(h);
+    if(!v) return null;
+    const m = v.b!=null ? (v.a + v.b) / 2 : v.a;
     if(m < 0.3) return "Nesten flatt";
     if(m < 0.6) return "Ankel- til knehøyt";
     if(m < 0.9) return "Kne- til hoftehøyt";
@@ -34,18 +45,29 @@
     if(m < 3.4) return "Godt over hodet";
     return "Over dobbel hodehøyde";
   }
-  function energiGrenser(s){
-    // standard 500 / 2 000 / 10 000 kJ; spotens local_rules.min_energy_kj der den finnes (zero, full, 5×full)
-    const lr = s.local_rules && s.local_rules.min_energy_kj;
-    if(lr && lr.zero!=null && lr.full!=null) return [lr.zero, lr.full, lr.full * 5];
-    return [500, 2000, 10000];
-  }
-  function energiOrd(kj, g){
+  // Energiordet beskriver SVELLET ute, ikke spotens behov: universelle grenser 500 / 2 000 / 10 000 kJ
+  // (fysikk-kontrollør 15.10.2026: local_rules.min_energy_kj er spotens krav i rating.energy_factor(),
+  // og Unstad sine 400/200 er i gammel skala - de passer ikke som ord på tallet. Spotens egne grenser
+  // på stolpen venter til de er regnet om, se ROADMAP).
+  const ENERGI_GRENSER = [500, 2000, 10000];
+  function energiGrenser(){ return ENERGI_GRENSER; }
+  function energiOrd(kj){
     if(kj==null) return null;
-    if(kj < g[0]) return "Svakt";
-    if(kj < g[1]) return "Middels kraft";
-    if(kj < g[2]) return "Kraftig";
+    if(kj < ENERGI_GRENSER[0]) return "Svakt";
+    if(kj < ENERGI_GRENSER[1]) return "Middels kraft";
+    if(kj < ENERGI_GRENSER[2]) return "Kraftig";
     return "Svært kraftig";
+  }
+  // Vinduet sies fra vinduet (inSwellWindow = rating.in_sector), graden av treff fra eksponeringen
+  // (h.directness, som i directionHitText i app.js) - en hake alene ville motsagt «Treffer ikke»
+  // for svell i vinduet men skjermet, og et kryss alene 2-3 stjerner bekreftet ved spoten.
+  function vinduTekst(h, s){
+    if(!h || h.dir_offshore==null || !s || !s.swell_window) return null;
+    const inside = inSwellWindow(h.dir_offshore, s);
+    if(inside===false) return h.bw_confirms ? {ikon:"delvis", txt:"Utenfor vinduet, men bekreftet ved spoten"} : {ikon:"nei", txt:"Utenfor vinduet"};
+    if(h.directness==null || h.directness >= 0.999) return {ikon:"ja", txt:"Innenfor vinduet"};
+    if(h.directness >= 0.667) return {ikon:"ja", txt:"I kanten av vinduet"};
+    return {ikon:"delvis", txt:"I vinduet, men skjermet"};
   }
   const logPos = (kj)=> Math.max(0, Math.min(1, Math.log10(Math.max(1, kj) / 100) / 3));   // log-skala 100–100 000 kJ
   function sikkerhet(h){
@@ -55,20 +77,23 @@
     const sone = h.zone==="barentswatch" ? "kystmodell 100 m" : h.zone==="reserve" ? "havmodell" : h.zone==="langtid" ? "langtidsmodell" : null;
     return [ord, sone].filter(Boolean).join(" · ") || "–";
   }
-  const kjFmt = (kj)=> kj==null ? "–" : nf0.format(Math.round(kj)).replace(/ | /g, " ");
+  // hardt mellomrom bare i den lille teksten («kraftig fra 2 000»); det store tallet må kunne brekke ved 200 % tekst
+  const kjFmt = (kj, hard)=> kj==null ? "–" : nf0.format(Math.round(kj)).replace(/[ \u00a0\u202f]/g, hard ? "\u00a0" : " ");
   const lysOrd = (h)=>{ const l = h && (h.light || (h.daylight===false ? "mørkt" : h.daylight===true ? "dag" : null)); return l==="mørkt" ? "mørkt" : l==="skumring" ? "skumring" : l==="dag" ? "dagslys" : "–"; };
 
   /* ---------- tidevann (bare visning: cosinus mellom to hendelser) ---------- */
   function tideLevel(events, t){
     const ms = t.getTime(); let prev = null, next = null;
     for(const e of events){ const em = new Date(e.time).getTime(); if(em <= ms) prev = e; else { next = e; break; } }
-    if(!prev || !next) return null;
+    if(!prev || !next || prev.cm==null || next.cm==null || prev.type===next.type) return null;
     const t0 = new Date(prev.time).getTime(), t1 = new Date(next.time).getTime();
     const f = (1 - Math.cos(Math.PI * (ms - t0) / (t1 - t0))) / 2;
     return {cm: prev.cm + (next.cm - prev.cm) * f, rising: next.cm > prev.cm, next};
   }
-  function tideSvg(events, t, dayKeyOf){
-    // døgnkurve for valgt dag med prikk for valgt time
+  function tideSvg(events, t){
+    // døgnkurve for valgt dag med prikk for valgt time. Naturlig høyde (viewBox 300×128, ikke strukket),
+    // etikettene på to linjer («Fjære 09:27» / «0,7 m») så to fjærer samme dag ikke kolliderer (≥ 148 enheter
+    // mellom dem mot ca. 90 brede). Flo over toppen, fjære under bunnen; aksen 00 06 12 18 24 nederst.
     const key = dayKey(t); const dayEvents = events.filter(e=> dayKey(new Date(e.time))===key);
     const [y, m, d] = key.split("-").map(Number);
     const start = new Date(Date.UTC(y, m-1, d, 0)); const off = tzOffsetMs(start);
@@ -77,13 +102,18 @@
     for(let i=0;i<=48;i++){ const tt = new Date(t0 + i*(t1-t0)/48); const lv = tideLevel(events, tt); if(lv) pts.push([i/48, lv.cm]); }
     if(pts.length < 2) return "";
     const cms = pts.map(p=>p[1]); const lo = Math.min(...cms), hi = Math.max(...cms) || 1;
-    const W = 300, Hh = 96, pad = 12;
-    const px = (f)=> pad + f * (W - 2*pad), py = (cm)=> Hh - 30 - ((cm - lo) / Math.max(1, hi - lo)) * (Hh - 52);
+    const W = 300, Hh = 128, pad = 12;   // topp ved y=36 (plass til to etikettlinjer over), bunn ved y=76 (to linjer under + aksen)
+    const px = (f)=> pad + f * (W - 2*pad), py = (cm)=> Hh - 52 - ((cm - lo) / Math.max(1, hi - lo)) * (Hh - 88);
     const path = pts.map((p, i)=> `${i ? "L" : "M"}${px(p[0]).toFixed(1)},${py(p[1]).toFixed(1)}`).join("");
     const nowF = Math.max(0, Math.min(1, (t.getTime() - t0) / (t1 - t0))); const lvNow = tideLevel(events, t);
-    const labels = dayEvents.map(e=>{ const f = (new Date(e.time).getTime() - t0) / (t1 - t0); const yy = e.type==="flo" ? py(e.cm) - 7 : py(e.cm) + 13; const x = Math.max(pad + 22, Math.min(W - pad - 22, px(f))); return `<text x="${x.toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="middle"><tspan class="b">${esc(cap(e.type))}</tspan> ${fmtHM.format(new Date(e.time))}${e.cm!=null ? ` · ${nf1.format(e.cm/100)} m` : ""}</text>`; }).join("");
+    const labels = dayEvents.map(e=>{
+      if(e.cm==null) return "";
+      const f = (new Date(e.time).getTime() - t0) / (t1 - t0);
+      const x = Math.max(pad + 46, Math.min(W - pad - 46, px(f))).toFixed(1);
+      const y1 = e.type==="flo" ? py(e.cm) - 22 : py(e.cm) + 13;
+      return `<text x="${x}" y="${y1.toFixed(1)}" text-anchor="middle"><tspan class="b">${esc(cap(e.type))}</tspan> ${fmtHM.format(new Date(e.time))}<tspan x="${x}" dy="18">${nf1.format(e.cm/100)} m</tspan></text>`; }).join("");
     const axis = [0, 6, 12, 18, 24].map(hh=>`<text x="${px(hh/24).toFixed(1)}" y="${Hh - 3}" text-anchor="middle">${String(hh).padStart(2, "0")}</text>`).join("");
-    return `<svg class="tidekurve" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-hidden="true"><path d="${path}"/>${lvNow ? `<circle cx="${px(nowF).toFixed(1)}" cy="${py(lvNow.cm).toFixed(1)}" r="4"/>` : ""}${labels}${axis}</svg>`;
+    return `<svg class="tidekurve" viewBox="0 0 ${W} ${Hh}" aria-hidden="true"><path d="${path}"/>${lvNow ? `<circle cx="${px(nowF).toFixed(1)}" cy="${py(lvNow.cm).toFixed(1)}" r="4"/>` : ""}${labels}${axis}</svg>`;
   }
   function tzOffsetMs(d){
     // Europe/Oslo sin forskyvning for et tidspunkt (sommertid slutter 25.10) - via Intl, ingen egne tabeller
@@ -95,37 +125,39 @@
 
   /* ---------- kortene ---------- */
   const CHECK = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m6.5 10 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const TILDE = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9c2-4 4-4 6 0s4 4 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
   const CROSS = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 7 6 6m0-6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
   function vindPil(dir){
     // peker dit vinden blåser (wind_dir + 180)
     return `<svg class="vindpil" viewBox="0 0 20 20" aria-hidden="true" style="transform:rotate(${((dir + 180) % 360).toFixed(0)}deg)"><path d="M10 2 15 17 10 13 5 17z" fill="currentColor"/></svg>`;
   }
   function kortHtml(s, h){
-    const hoyde = H.heightText(h);
+    const hoyde = H.heightText(h); const vh = visHoyde(h);
     const kh = kroppshoyde(h);
     const ideal = s.ideal_height ? `Best her ${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "";
-    const inside = h && h.dir_offshore!=null && s.swell_window ? inSwellWindow(h.dir_offshore, s) : null;
-    const g = energiGrenser(s); const kj = h ? h.energy_swell_kj : null; const eo = energiOrd(kj, g);
+    const vt = vinduTekst(h, s);
+    const g = energiGrenser(); const kj = h ? h.energy_swell_kj : null; const eo = energiOrd(kj);
     const ticks = g.slice(0, 2).map(v=>`<span class="tick" style="left:${(logPos(v)*100).toFixed(1)}%"></span>`).join("");
     return `<div class="kort4">
-      <div class="kort"><div class="k">Surf</div><div class="v">${h && h.surf_height!=null && h.surf_height <= 0 ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `${esc(hoyde)}<small>m</small>` : "–"}</div><div class="l">${h && h.surf_height!=null && h.surf_height <= 0 ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
+      <div class="kort"><div class="k">Surf</div><div class="v">${vh && vh.a <= 0 ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `${esc(hoyde)}<small>m</small>` : "–"}</div><div class="l">${vh && vh.a <= 0 ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
       <div class="kort"><div class="k">Svell ute</div><div class="v">${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)}<small>m</small>` : "–"}${h && h.period!=null ? `<span class="sep">·</span>${nf0.format(h.period)}<small>s</small>` : ""}</div>
         <div class="l">${h && h.dir_offshore!=null ? `fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : "retning mangler"}</div>
-        <div class="m">${inside==null ? "" : inside ? `<span class="vindu-ok">${CHECK}Innenfor vinduet</span>` : `<span class="vindu-nei">${CROSS}Utenfor vinduet</span>`}</div></div>
+        <div class="m">${!vt ? "" : `<span class="vindu-${vt.ikon}">${vt.ikon==="ja" ? CHECK : vt.ikon==="nei" ? CROSS : TILDE}${esc(vt.txt)}</span>`}</div></div>
       <div class="kort"><div class="k">Vind</div><div class="v">${h && h.wind_speed!=null ? `${h.wind_dir!=null ? vindPil(h.wind_dir) : ""}${nf0.format(h.wind_speed)}<small>m/s</small>` : "–"}</div>
         <div class="l">${h && h.wind_speed!=null ? `<b>${esc(cap(windLabel(h)))}</b>${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</div>
         <div class="m">${h && h.gust!=null ? `Kast ${nf0.format(h.gust)} m/s` : ""}</div></div>
       <div class="kort"><div class="k">Energi</div><div class="v">${kj!=null ? `<span class="num">${kjFmt(kj)}</span><small>kJ</small>` : "–"}</div><div class="l">${esc(eo || "–")}</div>
-        <div class="m"><div class="energi-bar" aria-hidden="true">${kj!=null ? `<div class="fyll" style="width:${(logPos(kj)*100).toFixed(1)}%"></div>` : ""}${ticks}</div><div class="energi-txt"><span>svak</span><span>kraftig fra ${kjFmt(g[1])}</span></div></div></div>
+        <div class="m"><div class="energi-bar" aria-hidden="true">${kj!=null ? `<div class="fyll" style="width:${(logPos(kj)*100).toFixed(1)}%"></div>` : ""}${ticks}</div><div class="energi-txt"><span>svak</span><span>kraftig fra ${kjFmt(g[1], true)}</span></div></div></div>
     </div>`;
   }
   function minikartHtml(s, h){
     const inside = h && h.dir_offshore!=null && s.swell_window ? inSwellWindow(h.dir_offshore, s) : null;
     const kyst = kystCache && kystCache.spots && kystCache.spots[s.id];
-    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches});
+    const vt = vinduTekst(h, s);
+    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null});
     return `<div class="kort mini" id="miniKort"><div>${svg}${!kyst ? `<p class="muted" style="text-align:center;font-size:var(--fs-caption);margin:6px 0 0">${kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}</div>
       <div class="forkl">
-        <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 9q3-5 6-2t6-2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>Svell<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : "–"}${h && h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : ""}</b>${inside==null ? "" : inside ? "Innenfor vinduet" : "Utenfor vinduet"}</div>
+        <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 9q3-5 6-2t6-2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>Svell<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : "–"}${h && h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : ""}</b>${vt ? esc(vt.txt) : ""}</div>
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 7h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>Vind<b>${h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</b>${h && h.wind_speed!=null ? esc(cap(windLabel(h))) : ""}</div>
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="currentColor" opacity=".3"/><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="none" stroke="currentColor" stroke-dasharray="2 2"/></svg></span>Vindu<b>${s.swell_window ? esc(windowText(s).replace("Vindu ", "")) : "–"}</b></div>
       </div></div>`;
@@ -187,5 +219,5 @@
     }
     if(!pc) root.scrollTop = 0;
   }
-  window.Spot = { render, kroppshoyde, energiOrd, energiGrenser, sikkerhet, tideLevel, tideSvg, tzOffsetMs };
+  window.Spot = { render, kroppshoyde, visHoyde, energiOrd, energiGrenser, vinduTekst, sikkerhet, tideLevel, tideSvg, tzOffsetMs };
 })();
