@@ -42,6 +42,10 @@ jobs:
           # uten --depth: en grunn henting av main ville kuttet den felles historikken igjen
           git fetch --no-tags origin main:refs/remotes/origin/main
           python fetcher/test_display_only.py
+      - name: Kontrast i fargevariablene (tekst 4,5:1, grafikk 3:1, lys og mørk)
+        run: python tools/kontrast.py -q
+      - name: Nettlesertest for søk, Utforsk og spotsiden (design/spotside, Playwright)
+        run: timeout 330 python fetcher/test_spotside_browser.py
       - name: Last opp designskjermbilder (til feilsøking, selv om testen bestod)
         if: always()
         uses: actions/upload-artifact@v4

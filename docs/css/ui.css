@@ -11,7 +11,7 @@
   --accent:#0E1A21; --focus:#0B7483; --warn:#B8441F;
   --night:rgba(14,26,33,.08); --dusk:rgba(14,26,33,.04);
   /* ratingfyll (ruter, søyler, prikker, stjerner) og rating som tekst (ordet) */
-  --r0:#8E9CA4; --r0-ink:#55656E; --r0-on:#0E1A21;
+  --r0:#7D8C95; --r0-ink:#55656E; --r0-on:#0E1A21;   /* HIG sa #8E9CA4, men det gir 2,8:1 mot hvitt - mørknet til 3,5:1 (grafikk ≥3:1, HIG 15) */
   --r1:#E0623A; --r1-ink:#B8441F; --r1-on:#0E1A21;
   --r2:#BF8A00; --r2-ink:#8F6600; --r2-on:#0E1A21;
   --r3:#22A36B; --r3-ink:#167A4F; --r3-on:#0E1A21;
@@ -112,7 +112,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .sokknapp{flex:none;width:64px;height:64px;border-radius:32px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
 .sokknapp svg{width:24px;height:24px}
 .pagebar{display:flex;align-items:center;gap:8px;margin:0 0 6px}
-.back{all:unset;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px 0 8px;border-radius:22px;cursor:pointer;font-weight:600;font-size:var(--fs-secondary)}
+.back{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 14px 0 8px;border-radius:22px;cursor:pointer;font-weight:600;font-size:var(--fs-secondary)}
 .back svg{width:18px;height:18px}
 .back:hover{background:var(--sunken)}
 .loading{position:fixed;left:16px;right:16px;top:40%;text-align:center;color:var(--muted);margin:0}
@@ -133,7 +133,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 /* ---------- Brikker (40 px) ---------- */
 .chips{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0;-webkit-overflow-scrolling:touch}
 .chips::-webkit-scrollbar{display:none}
-.chip{all:unset;flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:20px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);font-weight:600;font-size:var(--fs-secondary);cursor:pointer;white-space:nowrap}
+.chip{all:unset;box-sizing:border-box;flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:20px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);font-weight:600;font-size:var(--fs-secondary);cursor:pointer;white-space:nowrap}
 .chip:hover{background:var(--sunken)}
 .chip[aria-pressed="true"]{background:var(--selected);color:var(--on-selected);box-shadow:none}
 .chip.dashed{box-shadow:inset 0 0 0 1px transparent;border:1px dashed var(--line-strong)}
@@ -190,14 +190,15 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .uke b{color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
 .gruppe{margin-top:22px}
-.gruppe-topp{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 2px 8px}
+.gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 2px 8px}
 .gruppe-topp h3{font-size:1.0625rem;font-weight:700}
 .gruppe-topp h3 small{color:var(--muted);font-weight:500;font-size:var(--fs-secondary);margin-left:6px}
 .gruppe-topp .uke{gap:4px}
 .rader{display:flex;flex-direction:column;gap:6px}
-.rad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;width:100%;min-height:60px;padding:10px 14px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer;text-align:left}
+.rad{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;width:100%;min-height:60px;padding:10px 14px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer;text-align:left}   /* flex-wrap: ved 200 % tekst faller ukerutene ned på egen linje i stedet for å dekke navnet */
 .rad:hover{box-shadow:0 0 0 2px var(--line-strong)}
-.rad .nm{min-width:0}
+.rad .nm{flex:1 1 140px;min-width:0}
+.rad .uke{flex:0 0 auto;margin-left:auto}
 .rad .nm b{display:block;font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm .na{color:var(--rc-ink);font-weight:600;font-size:var(--fs-secondary)}
@@ -275,7 +276,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .spot-topp .tittel h1{font-size:1.5rem;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spot-topp .tittel .omr{color:var(--muted);font-size:var(--fs-secondary)}
 .naa{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--muted);margin:16px 0 4px}
-.naa .tilbakena{all:unset;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:18px;background:var(--selected);color:var(--on-selected);font-weight:600;font-size:var(--fs-caption);cursor:pointer}
+.naa .tilbakena{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:22px;background:var(--selected);color:var(--on-selected);font-weight:600;font-size:var(--fs-caption);cursor:pointer}
 .vurdering{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:10px 0 18px}
 .vurdering .ord{font-size:2.5rem;font-weight:800;line-height:1.05;color:var(--rc-ink);letter-spacing:-.02em}
 .vurdering .ord.r-0{color:var(--muted)}
@@ -283,25 +284,28 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kort4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .kort4 .kort{display:flex;flex-direction:column;gap:6px;min-height:150px}
 .kort4 .v{font-family:var(--mono);font-size:1.875rem;font-weight:500;line-height:1.05}
+.kort4 .v .sep{display:inline-block;margin:0 .15em}   /* inline-block gir et bruddpunkt rundt «·» ved 200 % tekst */
 .kort4 .v small{font-family:var(--body);font-size:0.875rem;color:var(--muted);margin-left:4px;font-weight:500}
 .kort4 .v .sep{color:var(--muted);margin:0 6px}
 .kort4 .l{font-size:var(--fs-secondary)}
 .kort4 .l b{font-weight:700}
 .kort4 .m{color:var(--muted);font-size:var(--fs-caption);margin-top:auto}
-.vindu-ok,.vindu-nei{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.vindu-ja,.vindu-nei,.vindu-delvis{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}
+.vindu-ja svg,.vindu-nei svg,.vindu-delvis svg{width:16px;height:16px;flex:none}
 .vindu-ok svg,.vindu-nei svg{width:18px;height:18px}
 .vindpil{display:inline-block;width:1.25rem;height:1.25rem;vertical-align:-3px;margin-right:4px}
 .energi-bar{position:relative;height:6px;border-radius:3px;background:var(--sunken);margin:8px 0 4px}
 .energi-bar .fyll{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--ink)}
 .energi-bar .tick{position:absolute;top:-4px;width:2px;height:14px;background:var(--muted)}
-.energi-txt{display:flex;justify-content:space-between;color:var(--muted);font-size:var(--fs-caption)}
-.sek-spot{margin:26px 0 10px;display:flex;justify-content:space-between;align-items:baseline}
+.energi-txt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;color:var(--muted);font-size:var(--fs-caption)}
+.energi-txt span:last-child{text-align:right;margin-left:auto}
+.sek-spot{margin:26px 0 10px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 12px}
 .sek-spot .sub{margin:0}
 /* dagfaner */
 .dagfaner{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;scroll-snap-type:x proximity}
 .dagfaner::-webkit-scrollbar{display:none}
 .dagfane{all:unset;box-sizing:border-box;flex:none;width:88px;scroll-snap-align:start;display:flex;flex-direction:column;gap:5px;padding:10px 10px 10px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer}
-.dagfane .d{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:var(--fs-secondary)}
+.dagfane .d{display:flex;flex-direction:column;font-weight:700;font-size:var(--fs-secondary);line-height:1.2}   /* navn over dato: «I morgen» får ikke plass ved siden av «16.» på 88 px */
 .dagfane .d small{color:var(--muted);font-weight:500;font-size:var(--fs-caption)}
 .dagfane .h{font-family:var(--mono);font-size:0.9375rem}
 .dagfane .h small{font-family:var(--body);font-size:0.75rem;color:var(--muted)}
@@ -342,20 +346,22 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .akse span{text-align:center}
 .grafrad{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .grafrad .k{font-size:0.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.grafrad .k small{text-transform:none;letter-spacing:0;font-weight:500}
+.grafrad .k small{text-transform:none;letter-spacing:0;font-weight:500;font-size:inherit}   /* small ville gitt 9 px - minst 11 px (HIG 4) */
 .grafrad .celler{display:grid;gap:2px;margin-top:6px}
 .grafrad .celler div{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--mono);font-size:0.6875rem;color:var(--ink);min-width:0}
 .grafrad .celler div small{color:var(--muted);font-family:var(--mono);font-size:0.6875rem}
 .grafrad .celler svg{width:0.875rem;height:0.875rem}
 .grafrad .celler .b{font-weight:700}
-.tidekurve{width:100%;height:84px;display:block;margin-top:6px}
+.tidekurve{width:100%;height:auto;display:block}
 .tidekurve path{fill:none;stroke:var(--ink);stroke-width:1.5}
-.tidekurve text{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tidekurve text{font-family:var(--mono);font-size:13px;fill:var(--muted)}   /* 13 enheter i viewBox 300 ≥ 11 px ned til 254 px bredde (graf-raden på mobil er 272 px) */
 .tidekurve circle{fill:var(--ink)}
 .tide svg .b,.tidekurve .b{font-family:var(--body);font-weight:700;fill:var(--ink)}
 .tidekurve text.b{font-family:var(--body);font-weight:700;fill:var(--ink)}
 /* minikart, tidevann, vær */
-.mini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+.mini{display:flex;flex-wrap:wrap;gap:16px;align-items:center}   /* flex-wrap: ved 200 % tekst faller forklaringen under kartet i stedet for å klemme det */
+.mini > div:first-child{flex:1 1 180px;min-width:0}
+.mini .forkl{flex:1 1 150px}
 .mini svg{width:100%;max-width:240px;height:auto;display:block;margin:0 auto}
 .mini .forkl{display:flex;flex-direction:column;gap:10px;font-size:var(--fs-caption);color:var(--muted);min-width:110px}
 .mini .forkl b{display:block;color:var(--ink);font-size:var(--fs-secondary)}
@@ -366,10 +372,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .tide .trend{font-weight:700;margin-top:4px}
 .tide .neste{text-align:right;color:var(--muted);font-size:var(--fs-caption)}
 .tide .neste b{display:block;color:var(--ink);font-size:var(--fs-secondary)}
-.tide svg{grid-column:1/-1;width:100%;height:84px;display:block}
-.tide svg path{fill:none;stroke:var(--ink);stroke-width:1.5}
-.tide svg circle{fill:var(--ink)}
-.tide svg text{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tide svg{grid-column:1/-1}   /* størrelse, skrift og farger: .tidekurve-reglene over */
 .vaer{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .vaer .v{font-family:var(--mono);font-size:1.5rem;margin-top:4px}
 .hvorfor{margin-top:18px}
@@ -434,7 +437,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   table.spots{width:100%;border-collapse:collapse;min-width:820px}
   table.spots th{text-align:left;padding:12px 16px;color:var(--muted);font-weight:600;font-size:var(--fs-caption);border-bottom:1px solid var(--line)}
   table.spots th.dag{text-align:center}
-  table.spots th.dag small{display:block;font-weight:500}
+  table.spots th.dag small{display:block;font-weight:500;font-size:0.6875rem}   /* 11 px, ikke small sin 0,83em */
   table.spots td{padding:10px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
   table.spots tr.g td{background:var(--sunken);font-weight:700;padding:8px 16px}
   table.spots tr.g td small{color:var(--muted);font-weight:500}
@@ -453,6 +456,8 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .utforskkort{position:relative;overflow:hidden;min-height:260px;padding:0;background:var(--sea)}
   .utforskkort .knapp{position:absolute;left:14px;bottom:14px}
   .utforskkort svg{width:100%;height:100%;display:block}
+  .utforskkort svg .coast{fill:var(--land);stroke:var(--coast);stroke-width:1;vector-effect:non-scaling-stroke}   /* samme farger som kartet (uten regelen ble landet svart) */
+  .kort4 .v{font-size:1.5rem}   /* kortene er smalere på PC (154 px) enn på mobil (173 px): «1,5–1,9» skal stå på én linje */
   /* spotsiden på nett: venstre kolonne 320 px, høyre resten */
   #viewSpot{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px 32px;align-items:start}
   .spot-topp{grid-column:1/-1;position:static;margin:0;padding:0;border:0;background:transparent}
@@ -482,6 +487,6 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .minikart .buer .bue{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9;animation:mk-rull 4.2s linear infinite}
 .minikart.still .buer .bue{animation:none}
 .minikart .spot{fill:var(--ink);stroke:var(--raised);stroke-width:1.5}
-.minikart .komp text{font-family:var(--body);font-size:9px;font-weight:600;fill:var(--muted)}
+.minikart .komp text{font-family:var(--body);font-size:17px;font-weight:600;fill:var(--ink)}   /* 17 enheter i viewBox 236 ≈ 11,7 px på 162 px bredde (minst 11 px, HIG 4) */
 @keyframes mk-rull{from{transform:translateY(0);opacity:.9}to{transform:translateY(44px);opacity:0}}
 @media (prefers-reduced-motion: reduce){.minikart .buer .bue{animation:none}}

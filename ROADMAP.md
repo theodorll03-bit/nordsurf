@@ -153,6 +153,9 @@ Mål: appen skal se ut og føles som en ordentlig surfeapp: mer farge, tydelige 
 6. Lite grafbibliotek fra cdnjs (fast versjon) eller egen SVG, ingen bundler.
 **Vis designplan med skjermbilder av forsiden, detaljsiden og kartet, i lys og mørk modus, FØR bygging.** Ferdig når Theodor har sagt ja og alt er bygget og testet.
 
+**Ny struktur (Theodor 14./15.10.2026, gren `design/spotside`, PR åpen - se STATUS.md):** søk først, Utforsk, spotside - BYGGET, venter på Theodors blikk på skjermbildene før merge.
+- Etter merge: Innstillinger «Utseende: System / Lys / Mørk» (HIG 1). Spotens egne energigrenser (local_rules.min_energy_kj) som merker på energistolpen - KREVER at Unstad sine 400/200 regnes om til ny skala (×1,56, se CLAUDE.md) og Theodors ja; ordet bruker universelle 500/2 000/10 000 kJ inntil da (fysikk-kontrollør 15.10.2026).
+
 **Lav prioritet (fra PR #4, Theodor 14.10.2026):**
 - «Neste mulighet» ved manglende data 4 til 6 dager frem (mer presist: fra 72 timer til glidebryterens ende, ca. 7 dager): svarlinja sier ikke fra om timer uten tall der før dagen den viser - forbeholdet «Noen timer mangler data» dekker bare de første 72 timene (`windowGaps()` i front.js). Samme svake «neste»-påstand gjelder «Neste gode økt» for timer uten tall før svarets time.
 - Test for at i dag-ringen i ukeoversikten (og «i dag»/«nå») flytter seg ved midnatt: testen dekker timeskifte (punkt 13 i `test_design_browser.py`, `currentHour` byttes), men ikke datoskifte. En `currentHour`-overstyring holder IKKE (ukedagene og ringen leser `new Date()`, og sideklokka står fast i testen) - flytt sideklokka over midnatt (`page.clock.set_fixed_time(...)` + `visibilitychange`); `currentHour` følger klokka av seg selv.
