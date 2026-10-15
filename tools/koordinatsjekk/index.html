@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koordinatsjekk</title>
+<link rel="stylesheet" href="/vendor/maplibre-gl.css">
+<style>
+  :root{--bg:#F2F5F6;--panel:#FFFFFF;--ink:#0E1A21;--muted:#55656E;--line:#C9D2D7;--a:#22A36B;--b:#BF8A00;--c:#E0623A;--pin:#7D8C95;--navn:#0B7483;--focus:#0B7483}
+  @media (prefers-color-scheme: dark){:root{--bg:#0A1923;--panel:#12232D;--ink:#EAF2F4;--muted:#93A7B1;--line:#2B4250}}
+  *{box-sizing:border-box} body{margin:0;font:15px/1.4 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:minmax(300px,380px) 1fr;height:100vh}
+  aside{overflow:auto;padding:16px;background:var(--panel);border-right:1px solid var(--line)}
+  #kart{height:100vh}
+  h1{font-size:1.25rem;margin:0 0 4px} .muted{color:var(--muted)} .rad{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  button,a.knapp{font:inherit;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+  button:focus-visible,a.knapp:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  button.G{background:var(--a);color:#0E1A21;border:0} button.U{background:var(--b);color:#0E1A21;border:0} button.A{background:var(--c);color:#0E1A21;border:0}
+  .merke{display:inline-block;padding:2px 8px;border-radius:6px;font-weight:700;color:#0E1A21} .mA{background:var(--a)} .mB{background:var(--b)} .mC{background:var(--c)}
+  ul{padding-left:18px;margin:6px 0} .liste{font-size:.875rem;margin-top:16px;border-top:1px solid var(--line);padding-top:8px}
+  .liste div{padding:4px 6px;border-radius:6px;cursor:pointer} .liste div.valgt{background:var(--bg);font-weight:600}
+  .forklaring span{display:inline-block;width:12px;height:12px;border-radius:50%;margin:0 4px 0 10px;vertical-align:-1px}
+  .status{min-height:1.4em}
+  @media (max-width:800px){body{grid-template-columns:1fr;grid-template-rows:auto 60vh;height:auto}#kart{height:60vh}}
+</style>
+</head>
+<body>
+<aside>
+  <h1 id="tittel">Koordinatsjekk</h1>
+  <div class="muted" id="sted"></div>
+  <div class="rad" id="info"></div>
+  <p id="begrunnelse"></p>
+  <ul id="flagg"></ul>
+  <div class="rad">
+    <button class="G" data-v="G" title="Godkjenn (G)">Godkjenn (G)</button>
+    <button class="U" data-v="U" title="Usikker (U)">Usikker (U)</button>
+    <button class="A" data-v="A" title="Avvis (A)">Avvis (A)</button>
+  </div>
+  <div class="rad">
+    <button id="forrige" title="Forrige (←)">← Forrige</button>
+    <button id="neste" title="Neste (→)">Neste →</button>
+    <a class="knapp" id="norgeskart" target="_blank" rel="noopener">Norgeskart (flyfoto)</a>
+    <a class="knapp" id="google" target="_blank" rel="noopener">Google satellitt</a>
+  </div>
+  <div class="status muted" id="status" role="status"></div>
+  <p class="forklaring muted">Dra forslaget for å flytte det.<br><span style="background:var(--pin)"></span>listepinne <span style="background:var(--a)"></span>forslag (A/B/C-farge) <span style="background:var(--navn)"></span>stedsnavn · omriss = OSM-strand</p>
+  <div class="liste" id="liste"></div>
+  <p class="muted" style="font-size:.75rem">Kart © Kartverket (CC BY 4.0) · strender © OpenStreetMap-bidragsytere (ODbL) · stedsnavn © Kartverket</p>
+</aside>
+<div id="kart"></div>
+<script src="/vendor/maplibre-gl.js"></script>
+<script>
+const FARGE = {A: "#22A36B", B: "#BF8A00", C: "#E0623A"};
+const VURD = {godkjent: "G", usikker: "U", avvist: "A"};
+let rows = [], i = 0, forslag = null, pinne = null, navnMerker = [];
+const $ = (s)=> document.querySelector(s);
+const map = new maplibregl.Map({
+  container: "kart", dragRotate: false, pitchWithRotate: false, touchPitch: false, maxZoom: 18,
+  style: {version: 8, sources: {topo: {type: "raster", tileSize: 256, attribution: "© Kartverket",
+    tiles: ["https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"]}},
+    layers: [{id: "topo", type: "raster", source: "topo"}]},
+  center: [15, 68], zoom: 5
+});
+map.touchZoomRotate.disableRotation();
+map.addControl(new maplibregl.ScaleControl({unit: "metric"}));
+function dot(color, size){ const e = document.createElement("div"); e.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)`; return e; }
+function strandData(r){ return {type: "FeatureCollection", features: r.bevis.strender.map(s=>({type: "Feature", properties: {navn: s.navn || ""}, geometry: {type: "LineString", coordinates: s.coords}}))}; }
+function vis(){
+  const r = rows[i]; if(!r) return;
+  $("#tittel").textContent = r.navn;
+  $("#sted").textContent = `${r.region || "uten region"} · ${r.kommune || ""} · ${r.type || "ukjent type"} · ${i + 1} av ${rows.length}`;
+  $("#info").innerHTML = `<span class="merke m${r.sikkerhet}">${r.sikkerhet}</span><span class="muted">${r.metode || ""}</span>${r.triage ? `<span class="muted">· triage: ${r.triage}</span>` : ""}${r.vurdering ? `<b>· ${r.vurdering} (${r.satt_av})</b>` : ""}`;
+  $("#begrunnelse").textContent = r.begrunnelse || "";
+  $("#flagg").innerHTML = (r.flagg || []).map(f=>`<li>${f.replace(/</g, "&lt;")}</li>`).join("");
+  const p = r.forslag || r.pinne;
+  $("#norgeskart").href = `https://norgeskart.no/#!?project=norgeskart&layers=1002&zoom=16&lat=${r.utm33.n}&lon=${r.utm33.e}`;
+  $("#google").href = `https://www.google.com/maps/@${p.lat},${p.lon},600m/data=!3m1!1e3`;
+  if(pinne) pinne.remove(); if(forslag) forslag.remove(); navnMerker.forEach(m=>m.remove()); navnMerker = [];
+  pinne = new maplibregl.Marker({element: dot("#7D8C95", 14)}).setLngLat([r.pinne.lon, r.pinne.lat]).setPopup(new maplibregl.Popup().setText("Listepinnen")).addTo(map);
+  navnMerker = r.bevis.navn.map(n=> new maplibregl.Marker({element: dot("#0B7483", 9)}).setLngLat([n.lon, n.lat]).setPopup(new maplibregl.Popup().setText(`${n.navn} (${n.type})`)).addTo(map));
+  if(r.forslag){ forslag = new maplibregl.Marker({element: dot(FARGE[r.sikkerhet] || "#E0623A", 22), draggable: true}).setLngLat([r.forslag.lon, r.forslag.lat]).addTo(map); }
+  const src = map.getSource("strender"); if(src) src.setData(strandData(r));
+  map.jumpTo({center: [p.lon, p.lat], zoom: 14.5});
+  [...document.querySelectorAll(".liste div")].forEach((d, k)=> d.classList.toggle("valgt", k===i));
+  const v = document.querySelectorAll(".liste div")[i]; if(v) v.scrollIntoView({block: "nearest"});
+  $("#status").textContent = "";
+}
+async function lagre(v){
+  const r = rows[i]; const ll = forslag ? forslag.getLngLat() : null;
+  const res = await fetch("/api/vurdering", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: r.id, valg: v, lat: ll && ll.lat, lon: ll && ll.lng})});
+  if(res.ok){ r.vurdering = {G: "godkjent", U: "usikker", A: "avvist"}[v]; r.satt_av = "theodor"; if(ll) r.forslag = {lat: ll.lat, lon: ll.lng}; liste(); $("#status").textContent = `Lagret: ${r.vurdering}`; if(i < rows.length - 1){ i++; vis(); } }
+  else $("#status").textContent = "Lagring feilet";
+}
+function liste(){
+  const grp = ["C - Theodor må se", "B", "Triage: trolig feil posisjon", "A"];
+  let last = -1; let h = "";
+  rows.forEach((r, k)=>{ if(r.gruppe !== last){ h += `<p><b>${grp[r.gruppe]}</b></p>`; last = r.gruppe; } h += `<div data-k="${k}">${r.vurdering ? "✓ " : ""}${r.navn} <span class="muted">${r.sikkerhet}</span></div>`; });
+  $("#liste").innerHTML = h;
+  document.querySelectorAll(".liste div").forEach(d=> d.onclick = ()=>{ i = +d.dataset.k; vis(); });
+}
+document.querySelectorAll("button[data-v]").forEach(b=> b.onclick = ()=> lagre(b.dataset.v));
+$("#forrige").onclick = ()=>{ if(i > 0){ i--; vis(); } };
+$("#neste").onclick = ()=>{ if(i < rows.length - 1){ i++; vis(); } };
+document.addEventListener("keydown", (e)=>{
+  if(e.target.closest("input,textarea")) return;
+  const k = e.key.toUpperCase();
+  if(k === "G" || k === "U" || k === "A") lagre(k);
+  else if(e.key === "ArrowRight"){ $("#neste").click(); } else if(e.key === "ArrowLeft"){ $("#forrige").click(); }
+});
+map.on("load", async ()=>{
+  map.addSource("strender", {type: "geojson", data: {type: "FeatureCollection", features: []}});
+  map.addLayer({id: "strender", type: "line", source: "strender", paint: {"line-color": "#B8441F", "line-width": 2.5}});
+  rows = await (await fetch("/api/kandidater")).json();
+  liste(); vis();
+});
+</script>
+</body>
+</html>
