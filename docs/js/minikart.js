@@ -50,7 +50,7 @@
     const coast = kyst && kyst.coast ? kyst.coast.map(d=>`<path class="coast" d="${d}"/>`).join("") : "";
     const aria = [
       `Minikart rundt ${spot.name}, 3,5 km radius, nord opp.`,
-      hasSwell ? `Svell fra ${compass(h.dir_offshore)} ${Math.round(h.dir_offshore)} grader, ${inside==null ? "" : inside ? "innenfor svellvinduet" : "utenfor svellvinduet"}${hit===false && inside ? ", men skjermet" : ""}.` : "Svellretning mangler.",
+      hasSwell ? `Svell fra ${compass(h.dir_offshore)} ${Math.round(h.dir_offshore)} grader, ${opts && opts.vinduTekst ? opts.vinduTekst.toLowerCase().replace("vinduet", "svellvinduet") : inside==null ? "" : inside ? "innenfor svellvinduet" : "utenfor svellvinduet"}.` : "Svellretning mangler.",
       hasWind ? `Vind fra ${compass(h.wind_dir)} ${Math.round(h.wind_dir)} grader.` : "Vindretning mangler.",
       spot.swell_window ? `Svellvindu ${windowText(spot).replace("Vindu ", "")}.` : "",
     ].join(" ");

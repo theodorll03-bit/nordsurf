@@ -258,7 +258,12 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .map-layer{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 .map-layer .coast{fill:var(--land);stroke:var(--coast);stroke-width:1.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .markers{position:absolute;inset:0;pointer-events:none}
-.mk{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:auto;z-index:2}
+.mk{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:none;z-index:2}
+/* trykkflatene er prikken (28 px) og lappen (44 px høy via ::before) - ikke hele 44 px-boksen: i tette utsnitt
+   (Tromvik/Grøtfjord 10 px fra hverandre) ville naboens boks ellers dekket prikken, og lappene kolliderer aldri */
+.mk-dot::before{content:"";position:absolute;left:-8px;top:-8px;width:28px;height:28px;border-radius:50%}
+.mk-dot,.mk-pill{pointer-events:auto}
+.mk-pill::before{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px}
 .mk[hidden]{display:none}
 .mk-dot{position:absolute;left:16px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--rc,var(--r0));box-shadow:0 0 0 2px var(--raised);transition:background .3s ease,transform .2s ease}
 .mk.sel .mk-dot{transform:scale(1.35);box-shadow:0 0 0 2.5px var(--ink)}

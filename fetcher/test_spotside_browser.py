@@ -348,6 +348,11 @@ def main():
                     # ---- 7. Utforsk ----
                     go("#utforsk", "#viewUtforsk:not([hidden]) .mk")
                     page.wait_for_timeout(500)
+                    def click_mk(sid):
+                        # lappen er trykkflaten når den vises (lappene kolliderer aldri); ellers prikken
+                        pill = page.query_selector(f".mk[data-id='{sid}']:not(.bare) .mk-pill")
+                        if pill: pill.click()
+                        else: page.click(f".mk[data-id='{sid}'] .mk-dot", force=True)
                     def markers():
                         return page.evaluate("[...document.querySelectorAll('.mk')].filter(m => !m.hidden).map(m => ({id: m.dataset.id, cls: m.className, ord: m.querySelector('.ord').textContent, bare: m.classList.contains('bare')}))")
                     mk = markers()
@@ -357,6 +362,15 @@ def main():
                         exp = f"r-{min(5, h.get('stars') or 0)}" if known(h) else "miss"
                         assert exp in m["cls"].split(), f"markøren nå for {m['id']} skal ha {exp}: {m['cls']}"
                     shot("utforsk-na", scheme); audit("utforsk-na")
+                    # kortet for en spot med ekte 0 nå: Surf = ordet, aldri «–»/«null»
+                    nul = next((m for m in mk if OV[m["id"]]["hours"][now_idx(OV[m["id"]]["hours"])].get("surf_height") == 0 and OV[m["id"]]["hours"][now_idx(OV[m["id"]]["hours"])].get("low_reason")), None)
+                    if nul:
+                        click_mk(nul["id"]); page.wait_for_selector("#kartKort:not([hidden])")
+                        h0 = OV[nul["id"]]["hours"][now_idx(OV[nul["id"]]["hours"])]
+                        surf_txt = page.text_content("#kartKort .fakta div:first-child b").strip()
+                        exp_word = page.evaluate("(h) => ratingWord(h)", h0)
+                        assert surf_txt not in ("–", "null", "") and (exp_word in surf_txt or "m" in surf_txt), (surf_txt, exp_word)
+                        page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     day3 = TODAY + dt.timedelta(days=3)
                     page.click(f"#dagChips .chip[data-day='{day3.isoformat()}']"); page.wait_for_timeout(300)
                     for m in markers():
@@ -364,7 +378,7 @@ def main():
                         exp = "miss" if cls == "miss" else "r-0" if cls == "dark" else cls
                         assert exp in m["cls"].split(), f"markøren {day3} for {m['id']} skal ha {exp}: {m['cls']}"
                         if cls == "miss": assert m["ord"] == "–", m
-                    page.click(".mk[data-id='tromvik']"); page.wait_for_selector("#kartKort:not([hidden])")
+                    click_mk("tromvik"); page.wait_for_selector("#kartKort:not([hidden])")
                     kort = page.text_content("#kartKort")
                     assert "Tromvik" in kort and WD[day3.weekday()] in kort, f"kortet skal si Tromvik og {WD[day3.weekday()]}: {kort[:120]}"
                     sel = next(m for m in markers() if m["id"] == "tromvik")
@@ -417,6 +431,13 @@ def main():
                     go(f"#spot={treffer[0]}&t={treffer[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
                     assert ord_dom() == "Treffer ikke", ord_dom()
                     shot("treffer-ikke", scheme); audit("treffer-ikke")
+                    # ---- ekte 0 (flat-sperren): ordet, aldri «–» eller «null» (fysikk-kontrollør runde 2) ----
+                    flat = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "flat" and x.get("surf_height") == 0 and i > now_idx(d["hours"])), None)
+                    if flat:
+                        go(f"#spot={flat[0]}&t={flat[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
+                        word = page.evaluate("(h) => ratingWord(h)", details[flat[0]]["hours"][flat[1]])
+                        k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
+                        assert word in k4[0] and "null" not in " ".join(k4) and not k4[0].startswith("Surf –"), (word, k4)
                     # ---- 10. spotsiden på dagen uten tall: «–», aldri 0 ----
                     go(f"#spot={MISS_ID}&t={first_miss_idx}", "#viewSpot:not([hidden]) #tilbakeNa")
                     assert ord_dom() == "–", ord_dom()

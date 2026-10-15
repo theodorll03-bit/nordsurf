@@ -492,7 +492,7 @@ function directionHitText(h, spot){
   if(h.directness==null) return "";
   const inside = inSwellWindow(h.dir_offshore, spot);
   if(inside===false) return "Utenfor vinduet";
-  if(h.directness >= 0.999) return "Midt i vinduet";
+  if(h.directness >= 0.999) return "Innenfor vinduet";
   if(h.directness >= 0.667) return "I kanten av vinduet";
   return inside ? "I vinduet, men skjermet" : "Utenfor vinduet";
 }

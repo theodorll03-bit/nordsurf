@@ -57,7 +57,7 @@ HOME_HOUR_FIELDS = (
     "energy_swell_kj", "energy_total_kj", "swell_offshore", "swell_model", "transfer",
     # Spotside/søk (Theodor 15.10.2026): Hjem og Utforsk viser høydespennet, vinden
     # (m/s og type) og svellet ute med retning uten å åpne spoten.
-    "surf_height_sets", "wind_speed", "wind_type", "dir_offshore",
+    "surf_height_sets", "bw_height", "wind_speed", "wind_type", "dir_offshore",
 )
 
 # Detaljfila: ALLE timefelt unntatt de som aldri leses av docs/js (målt

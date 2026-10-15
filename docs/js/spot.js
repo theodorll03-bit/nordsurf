@@ -133,13 +133,15 @@
   }
   function kortHtml(s, h){
     const hoyde = H.heightText(h); const vh = visHoyde(h);
+    // ekte 0 (flat-sperren, «Treffer ikke»): tallet er kjent, ordet vises - «–» er bare for tall som mangler
+    const ekteNull = !!(h && h.surf_height!=null && h.surf_height <= 0 && (!vh || vh.a <= 0));
     const kh = kroppshoyde(h);
     const ideal = s.ideal_height ? `Best her ${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "";
     const vt = vinduTekst(h, s);
     const g = energiGrenser(); const kj = h ? h.energy_swell_kj : null; const eo = energiOrd(kj);
     const ticks = g.slice(0, 2).map(v=>`<span class="tick" style="left:${(logPos(v)*100).toFixed(1)}%"></span>`).join("");
     return `<div class="kort4">
-      <div class="kort"><div class="k">Surf</div><div class="v">${vh && vh.a <= 0 ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `${esc(hoyde)}<small>m</small>` : "–"}</div><div class="l">${vh && vh.a <= 0 ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
+      <div class="kort"><div class="k">Surf</div><div class="v">${ekteNull ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `${esc(hoyde)}<small>m</small>` : "–"}</div><div class="l">${ekteNull ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
       <div class="kort"><div class="k">Svell ute</div><div class="v">${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)}<small>m</small>` : "–"}${h && h.period!=null ? `<span class="sep">·</span>${nf0.format(h.period)}<small>s</small>` : ""}</div>
         <div class="l">${h && h.dir_offshore!=null ? `fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : "retning mangler"}</div>
         <div class="m">${!vt ? "" : `<span class="vindu-${vt.ikon}">${vt.ikon==="ja" ? CHECK : vt.ikon==="nei" ? CROSS : TILDE}${esc(vt.txt)}</span>`}</div></div>
@@ -154,7 +156,7 @@
     const inside = h && h.dir_offshore!=null && s.swell_window ? inSwellWindow(h.dir_offshore, s) : null;
     const kyst = kystCache && kystCache.spots && kystCache.spots[s.id];
     const vt = vinduTekst(h, s);
-    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null});
+    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null, vinduTekst: vt ? vt.txt : null});
     return `<div class="kort mini" id="miniKort"><div>${svg}${!kyst ? `<p class="muted" style="text-align:center;font-size:var(--fs-caption);margin:6px 0 0">${kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}</div>
       <div class="forkl">
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 9q3-5 6-2t6-2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>Svell<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : "–"}${h && h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : ""}</b>${vt ? esc(vt.txt) : ""}</div>
