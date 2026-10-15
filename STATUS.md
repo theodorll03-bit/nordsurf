@@ -8,15 +8,15 @@ Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste ste
 |---|---|---|
 | Plan i ROADMAP (K) + privat/ i .gitignore | ferdig | main |
 | 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | ferdig, merget | fiks/fem-stjerner, #11 |
-| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | venter | skalering/oversikt, #12 |
+| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | skalering/oversikt, #12 |
 | 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
-| 0.4 Steinkrøssa nytt snitt automatisk | venter | - |
-| A kandidatimport | venter | - |
+| 0.4 Steinkrøssa nytt snitt automatisk | PR åpen, merges når CI er grønn (kontrollør: to funn rettet) | steinkrossa/nytt-snitt, #13 |
+| A kandidatimport | i gang (OSM-landpolygoner lastet ned til privat/geodata/) | kandidater/import (arbeidskopi ../nordsurf-a) |
 | A2 koordinatjakt | venter | - |
 | B S3 MapLibre | venter | - |
 | C spotfabrikken | venter | - |
 
-**Neste steg:** Del 0.2 (PR #12, arbeidskopi ../nordsurf-12).
+**Neste steg:** merge #13 når grønn; Del A (importer_kandidater.py → kandidat_triage.py → vern).
 
 ## Tillegg 2: appen skal tåle 100+ spots (Theodor 15.10.2026, punkt 4) - gren `skalering/oversikt`, PR åpen, IKKE merget
 
