@@ -112,7 +112,11 @@
   function render(state){
     S = state;
     if(!ensureInit()){ $("#utforskChips").innerHTML = `<span class="muted">Henter kartet …</span>`; return; }
-    if(S.utforskView===undefined) S.utforskView = null;
+    if(S.utforskView===undefined || S.utforskView===null && !S.utforskViewSatt){
+      // første gang: regionen fra Innstillinger -> Område (Troms) hvis den ligger på kartlaget, ellers hele kartet
+      const r = H().chosenRegion(); const onMap = regionsHere().some(x=> x.name===r && DATA.spots.some(s=> (s.region||s.area)===r && s.spot && Kart.covers(s.spot.lat, s.spot.lon)));
+      S.utforskView = onMap ? r : null; S.utforskViewSatt = true;
+    }
     renderChips();
     Kart.setArea(area());
     const e = viewExtent(); if(e) Kart.setExtent(e, false);

@@ -116,6 +116,22 @@ def now_idx(hours):
     return 0
 
 
+def naa_of(s):
+    """speiler naaOf() i ui.js: klokkas time blant de publiserte nå-timene, ellers den siste"""
+    return next((h for h in s["naa"] if dt.datetime.fromisoformat(h["t"].replace("Z", "+00:00")) + dt.timedelta(hours=1) > T0), s["naa"][-1] if s["naa"] else None)
+
+
+def day_cls(s, key):
+    """speiler dayBest() i ui.js på dagssammendraget (publish.day_summary): (cls, stjerner)"""
+    d = next((x for x in s["dager"] if x["d"] == key), None)
+    if not d or d["status"] == "miss" or not d.get("h"):
+        return "miss", None
+    if d["status"] == "dark":
+        return "dark", None
+    st = d["h"].get("stars") or 0
+    return f"r-{min(5, st)}", st
+
+
 def known(h):
     return bool(h) and not (not (h.get("stars") or 0) and not h.get("low_reason") and h.get("surf_height") is None)
 
@@ -252,9 +268,10 @@ def main():
             h["stars"] = 0; h["low_reason"] = None; h["breakdown"] = []
             h.pop("daylight", None)
         return h
-    for s in overview["spots"]:
+    fc_miss = json.loads(json.dumps(FORECAST))
+    for s in fc_miss["spots"]:
         if s["id"] == MISS_ID: s["hours"] = [blank(h) for h in s["hours"]]
-    details[MISS_ID]["hours"] = [blank(h) for h in details[MISS_ID]["hours"]]
+    overview, details = publish.split(fc_miss)   # oversikt-2: sammendragene regnes av publish.py på det endrede varselet
     OV_BODY = json.dumps(overview, ensure_ascii=False)
     DET_BODY = {sid: json.dumps(d, ensure_ascii=False) for sid, d in details.items()}
     OV = {s["id"]: s for s in overview["spots"]}
@@ -346,8 +363,8 @@ def main():
                         assert "Ingen spots heter «xyzzy»" in page.text_content("#sokDrop .ingen-treff")
                         shot("sok-ingen", scheme); audit("sok-ingen")
                         page.fill("#sokPC", ""); page.keyboard.press("Escape"); page.wait_for_selector("#sokDrop", state="hidden")
-                    # ---- 7. Utforsk ----
-                    go("#utforsk", "#viewUtforsk:not([hidden]) .mk")
+                    # ---- 7. Utforsk (Tillegg 2: standardutsnitt = valgt region, klynger under 48 px) ----
+                    go("#utforsk", "#viewUtforsk:not([hidden]) .mk, #viewUtforsk:not([hidden]) .klynge")
                     page.wait_for_timeout(500)
                     def click_mk(sid):
                         # lappen er trykkflaten når den vises (lappene kolliderer aldri); ellers prikken
@@ -355,42 +372,59 @@ def main():
                         if pill: pill.click()
                         else: page.click(f".mk[data-id='{sid}'] .mk-dot", force=True)
                     def markers():
-                        return page.evaluate("[...document.querySelectorAll('.mk')].filter(m => !m.hidden).map(m => ({id: m.dataset.id, cls: m.className, ord: m.querySelector('.ord').textContent, bare: m.classList.contains('bare')}))")
-                    mk = markers()
-                    assert len(mk) >= 5, f"for få markører i Troms-utsnittet: {mk}"
-                    for m in mk:
-                        hs = OV[m["id"]]["hours"]; h = hs[now_idx(hs)]
-                        exp = f"r-{min(5, h.get('stars') or 0)}" if known(h) else "miss"
-                        assert exp in m["cls"].split(), f"markøren nå for {m['id']} skal ha {exp}: {m['cls']}"
+                        return page.evaluate("[...document.querySelectorAll('.mk')].filter(m => !m.hidden).map(m => ({id: m.dataset.id, cls: m.className, ord: m.querySelector('.ord') ? m.querySelector('.ord').textContent : '', bare: m.classList.contains('bare')}))")
+                    def clusters():
+                        return page.evaluate("[...document.querySelectorAll('.klynge')].map(k => ({ids: k.dataset.ids.split(','), cls: k.className, n: +k.querySelector('b').textContent}))")
+                    def check_colors(val, what):
+                        mk, cl = markers(), clusters()
+                        assert mk or cl, f"ingen markører/klynger ({what})"
+                        for m in mk:
+                            exp, _ = val(m["id"]); assert exp in m["cls"].split(), f"markøren {what} for {m['id']} skal ha {exp}: {m['cls']}"
+                        for c in cl:
+                            best = max((val(sid)[1] or 0) for sid in c["ids"]); assert f"r-{best}" in c["cls"].split() and c["n"] == len(c["ids"]), (c, best)
+                        return mk, cl
+                    def val_now(sid):
+                        h = naa_of(OV[sid]); st = h.get("stars") or 0
+                        return (f"r-{min(5, st)}" if known(h) else "miss"), (st if known(h) else None)
+                    mk, cl = check_colors(val_now, "nå")
+                    assert page.text_content("#utforskChips [aria-pressed='true']").strip() == "Troms", "standardutsnittet skal være valgt region (Troms)"
                     shot("utforsk-na", scheme); audit("utforsk-na")
                     # kortet for en spot med ekte 0 nå: Surf = ordet, aldri «–»/«null»
-                    nul = next((m for m in mk if OV[m["id"]]["hours"][now_idx(OV[m["id"]]["hours"])].get("surf_height") == 0 and OV[m["id"]]["hours"][now_idx(OV[m["id"]]["hours"])].get("low_reason")), None)
+                    nul = next((m for m in mk if naa_of(OV[m["id"]]).get("surf_height") == 0 and naa_of(OV[m["id"]]).get("low_reason")), None)
                     if nul:
                         click_mk(nul["id"]); page.wait_for_selector("#kartKort:not([hidden])")
-                        h0 = OV[nul["id"]]["hours"][now_idx(OV[nul["id"]]["hours"])]
+                        h0 = naa_of(OV[nul["id"]])
                         surf_txt = page.text_content("#kartKort .fakta div:first-child b").strip()
                         exp_word = page.evaluate("(h) => ratingWord(h)", h0)
                         assert surf_txt not in ("–", "null", "") and (exp_word in surf_txt or "m" in surf_txt), (surf_txt, exp_word)
                         page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     day3 = TODAY + dt.timedelta(days=3)
                     page.click(f"#dagChips .chip[data-day='{day3.isoformat()}']"); page.wait_for_timeout(300)
-                    for m in markers():
-                        cls, st, _ = day_best(OV[m["id"]]["hours"], now_idx(OV[m["id"]]["hours"]), day3.isoformat())
-                        exp = "miss" if cls == "miss" else "r-0" if cls == "dark" else cls
-                        assert exp in m["cls"].split(), f"markøren {day3} for {m['id']} skal ha {exp}: {m['cls']}"
-                        if cls == "miss": assert m["ord"] == "–", m
-                    click_mk("tromvik"); page.wait_for_selector("#kartKort:not([hidden])")
+                    def val_day3(sid):
+                        cls, st = day_cls(OV[sid], day3.isoformat())
+                        return ("miss" if cls == "miss" else "r-0" if cls == "dark" else cls), st
+                    mk3, _ = check_colors(val_day3, str(day3))
+                    for m in mk3:
+                        if val_day3(m["id"])[0] == "miss": assert m["ord"] == "–", m
+                    # valgt markør beholder navnet: Lofoten-utsnittet har én spot (Unstad)
+                    page.click("#utforskChips [data-view='Lofoten']"); page.wait_for_timeout(900)
+                    click_mk("unstad"); page.wait_for_selector("#kartKort:not([hidden])")
                     kort = page.text_content("#kartKort")
-                    assert "Tromvik" in kort and WD[day3.weekday()] in kort, f"kortet skal si Tromvik og {WD[day3.weekday()]}: {kort[:120]}"
-                    sel = next(m for m in markers() if m["id"] == "tromvik")
+                    assert "Unstad" in kort and WD[day3.weekday()] in kort, f"kortet skal si Unstad og {WD[day3.weekday()]}: {kort[:120]}"
+                    sel = next(m for m in markers() if m["id"] == "unstad")
                     assert "sel" in sel["cls"].split() and not sel["bare"], f"valgt markør skal beholde navnet: {sel}"
                     shot("utforsk-dag-valgt", scheme); audit("utforsk-dag-valgt")
-                    # dagen uten tall: «–» på markøren
+                    page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
+                    # dagen uten tall: «–» på markøren (zoom inn i klyngen hvis spoten ligger i en)
+                    page.click("#utforskChips [data-view='Troms']"); page.wait_for_timeout(900)
                     page.click(f"#dagChips .chip[data-day='{MISS_DAY.isoformat()}']"); page.wait_for_timeout(300)
+                    kl = next((c for c in clusters() if MISS_ID in c["ids"]), None)
+                    if kl:
+                        page.click(f".klynge[data-ids='{','.join(kl['ids'])}']"); page.wait_for_timeout(900)
                     mm = next(m for m in markers() if m["id"] == MISS_ID)
                     assert "miss" in mm["cls"].split() and mm["ord"] == "–", f"markøren for dagen uten tall: {mm}"
-                    page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     page.click("#dagChips .chip[data-day='']"); page.wait_for_timeout(200)
+                    page.click("#utforskChips [data-view='Troms']"); page.wait_for_timeout(300)
                     # ---- 8. Unstad nå ----
                     go("#spot=unstad", "#viewSpot:not([hidden]) .vurdering .ord")
                     page.wait_for_selector("#miniKort .minikart path.land")

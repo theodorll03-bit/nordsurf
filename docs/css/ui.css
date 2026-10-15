@@ -508,3 +508,16 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .minikart .komp text{font-family:var(--body);font-size:17px;font-weight:600;fill:var(--ink)}   /* 17 enheter i viewBox 236 ≈ 11,7 px på 162 px bredde (minst 11 px, HIG 4) */
 @keyframes mk-rull{from{transform:translateY(0);opacity:.9}to{transform:translateY(44px);opacity:0}}
 @media (prefers-reduced-motion: reduce){.minikart .buer .bue{animation:none}}
+
+/* ---------- Tillegg 2 (15.10.2026): regioner, klynger, mange spots ---------- */
+.regionvelger{margin:0 0 10px}
+.rader .rad,.alfa.lang .srad{content-visibility:auto;contain-intrinsic-size:auto 60px}   /* lange lister tegnes i bolker */
+.visflere{margin:10px 0 0}
+.ghost.liten{min-height:32px;padding:0 10px;font-size:var(--fs-caption);margin-left:8px}
+.sokgrupper h3{margin:14px 0 6px;font-size:var(--fs-secondary);color:var(--muted)}
+.sokgrupper h3 small{font-weight:500}
+.klynge{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:auto;z-index:2}
+.klynge .ring{position:absolute;left:5px;top:5px;width:34px;height:34px;border-radius:50%;background:var(--rc,var(--r0));color:var(--rc-on,var(--ink));display:grid;place-items:center;box-shadow:0 0 0 2.5px var(--raised),0 2px 8px rgba(0,0,0,.18);font-size:0.875rem;font-weight:700}
+.offliste{max-height:40vh;overflow:auto;margin-top:8px}
+.tabellboks{max-height:70vh;overflow:auto}
+.tabellboks thead th{position:sticky;top:0;background:var(--raised);z-index:1;box-shadow:0 1px 0 var(--line)}

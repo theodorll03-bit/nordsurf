@@ -120,7 +120,8 @@
     const groups = clusters();
     const html = [];
     const placed = [];   // lapper plassert, til kollisjonssjekk
-    const dots = groups.map(g=>({x: g.x - 7, y: g.y - 7, w: 14, h: 14}));
+    // hindre for lappene: prikker (14 px) og klyngeringer (34 px)
+    const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 17, y: g.y - 17, w: 34, h: 34} : {x: g.x - 7, y: g.y - 7, w: 14, h: 14});
     const hit = (r)=> placed.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y) || dots.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
     // valgt først (beholder lappen), så flest stjerner
     const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.st||0)));

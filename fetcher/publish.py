@@ -331,7 +331,8 @@ def main():
     ov = Path(a.out) / "oversikt.json"
     sizes = [(Path(a.out) / "spots" / f"{sid}.json").stat().st_size for sid in details]
     print(f"Skrev {ov} ({ov.stat().st_size // 1024} KiB, {len(overview['spots'])} spots, "
-          f"{len(overview['spots'][0]['hours']) if overview['spots'] else 0} timer per spot) og {len(details)} detaljfiler "
+          f"{len(overview['spots'][0]['dager']) if overview['spots'] else 0} dager og {len(overview['spots'][0]['naa']) if overview['spots'] else 0} nå-timer per spot, "
+          f"{len(overview.get('regions', []))} regioner) og {len(details)} detaljfiler "
           f"(snitt {sum(sizes) // max(1, len(sizes)) // 1024} KiB)")
 
 
