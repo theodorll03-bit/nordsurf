@@ -87,7 +87,7 @@ cases, results, _ = backtest.run(["grunnlinje"], logs=[])
 rows = {x["case"]["id"]: (x["r"]["stars"], x["r"]["surf_height"]) for x in results["grunnlinje"]["rows"]}
 EXPECTED = {
     "grotfjord_2409_metno": (0, 0.0), "grotfjord_2409_bw": (0, 0.0), "grotfjord_2409_windy": (0, 0.1), "grotfjord_2509": (0, 0.0),
-    "grotfjord_2609": (0, 0.0), "lenangsoyra_2609": (0, 0.0), "unstad_2609": (4, 2.42), "unstad_2709_06": (3, 1.48),
+    "grotfjord_2609": (0, 0.0), "lenangsoyra_2609": (0, 0.0), "unstad_2609": (5, 2.42)   # 15.10.2026, 5-stjerners-porten: 26.09-rekonstruksjonen oppfyller alle vilkår (Theodor observerte 4) - KREVER THEODORS JA, se PR, "unstad_2709_06": (3, 1.48),
     "unstad_2709_07": (3, 1.34), "unstad_2709_08": (4, 1.49), "unstad_2809_12": (3, 1.21), "unstad_2809_13": (3, 1.17),
     "unstad_2809_14": (3, 1.15), "unstad_2809_15": (3, 1.11), "farstadsanden_338": (0, 1.28),
 }
