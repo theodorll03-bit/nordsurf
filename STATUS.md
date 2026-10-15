@@ -1,5 +1,23 @@
 # Nordsurf: status
 
+## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG
+
+Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste steg».
+
+| Del | Status | Gren / PR |
+|---|---|---|
+| Plan i ROADMAP (K) + privat/ i .gitignore | ferdig | main |
+| 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | ferdig, merget | fiks/fem-stjerner, #11 |
+| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | venter | skalering/oversikt, #12 |
+| 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
+| 0.4 Steinkrøssa nytt snitt automatisk | venter | - |
+| A kandidatimport | venter | - |
+| A2 koordinatjakt | venter | - |
+| B S3 MapLibre | venter | - |
+| C spotfabrikken | venter | - |
+
+**Neste steg:** Del 0.2 (PR #12, arbeidskopi ../nordsurf-12).
+
 ## Tillegg 2: appen skal tåle 100+ spots (Theodor 15.10.2026, punkt 4) - gren `skalering/oversikt`, PR åpen, IKKE merget
 
 **Data (publish.py, oversikt-2):** oversikt.json har per spot bare meta (`META_FIELDS`: id, navn, område, region, aliases, posisjon, status, facing), «naa» (nå-timen og de tre neste - henteren kjører hver 3. time, så klokkas time finnes alltid) og «dager» (7 døgn: beste time i dagslys etter `publish.best_hour()` - flest stjerner, likt → høyest surf_height, bare timer der lyset ikke er «mørkt», ukjent lys teller ikke; slutt på vinduet; laveste surf over 0 og høyeste sets i dagslys; «miss»/«dark»). Regelen er flyttet fra ui.js/spotgraf.js til publish.py og testet der (test_publish 2), så appen og forsiden er alltid enige; spotsiden (hele timelista) bruker samme regel i spotgraf. Feltene avrundes og None utelates. Regioner (navn, rekkefølge fra spots.json `regions`, utsnitt = ramme rundt spotene + margin) i `oversikt.regions`; region/aliases hentes fra spots.json når varselet mangler dem. Detaljfila (spot-2) har hele meta + alle timene. 8 spots: 3,5 KiB gzip (var 52); **100 syntetiske spots: 28 KiB gzip (414 KiB rå) - under 60** (test_publish 10, fetcher/synthetic_spots.py). NB: de 100 er 12 kopier av 8 identiske tidsserier, så gzip deduper - lineært fra 8 ekte spots (3,5 KiB) er anslaget ca. 44 KiB, fortsatt under 60 (fysikk-kontrollør). Minikart: docs/data/minikart/<id>.json, én fil per spot.
@@ -11,6 +29,21 @@
 **Fysikk-kontrollør (15.10.2026): IKKE GODKJENT i første runde, alt rettet:** mørke dager vistes som «mangler» (rekkefølge i dayBest); `local_rules` manglet i nå-timen/meta (ordet «Grøtete» i stedet for «For lite svell», mulig TypeError); `calibration` (uten kurve/accuracy) i oversikten så Logger-siden ikke viser standardverdier som fakta; naaOf viser ikke en time som er over som «nå» (null → «–») og staleBanner står øverst på Hjem; bare ukjent lys hele dagen er «mangler», ikke «mørkt»; vinduet har start (bakover) så «Beste økt» starter der løpet begynner; period/vind avrundes til 2 desimaler (ingen grenseflipp); gzip-anslaget nyansert. Ikke gjort: «I dag»-sammendraget er frosset ved kjøringen (beste time kan være over i inntil 3 t) - notert.
 
 **Ikke bygget nå (med vilje):** S3 (MapLibre/PMTiles for hele Norge) - kartlaget dekker fortsatt bare Nord-Norge (GSHHS), spots sør for det ligger i regionbrikkene.
+
+## 5 stjerner («Rått») - bevisst definisjon (Theodor 15.10.2026, punkt 3) - gren `fiks/fem-stjerner`, PR #11, Theodor sa JA 15.10 kveld (merget i nattjobben)
+
+**Problemet:** `potential = int(5·score)` og `height_score` (1,0 bare nøyaktig midt i ideal_height) gjorde 4 til toppen i praksis - 0 av 1 600 timer i varselet 15.10 hadde 5. **Løsningen (fysikk-kontrollørens forslag):** formelen gir aldri 5 selv (`potential = min(4, …)`); den femte stjernen gis av en port der ALT er kjent og oppfylt (manglende ≠ oppfylt):
+- A (svellsiden, `rating.five_star_swell_gate`): dagens regning gir potensial 4; ikke `uncertain`/`sources_disagree`; høyden fra BarentsWatch (kystmodellen, dag 1-3) med `bw_confirms`; `height_score(surf_height) ≥ 0,85` (= |h − mid| ≤ 0,375·(hi − lo); 0,9 ville vært «midterste halvdel» men utelukker Farstadsanden 15.10 kl. 17, 2,53 m i [1,0, 3,0] - det eneste observerte 4-5-tilfellet modellen når); middelperioden ute ≥ 13 s; svellenergi kjent, energifaktor full OG ≥ 2 000 kJ (gulv, så Unstads lokale 400 ikke definerer Rått); svellretning i vinduet med minst min(5°, bredde/4) margin og eksponering ≥ 0,667; tidevann kjent når spoten har preferanse. `exposure ≥ 0,999` kunne ikke brukes: glattet eksponering når aldri 1,0 for 6 av 8 spots.
+- B (den femte stjernen er sprø, `five_star_losses`): vind kjent med straff nøyaktig 0 (generell og lokal) OG offshore eller under 3 m/s effektivt; tidevann uten straff og foretrukket når spoten har preferanse - ellers holdes den femte tilbake (bokført som blass vind/tidevann, egen forklaringslinje). «Rått» vises bare ved 5 hele.
+- Sideeffekt (A): timer med Rått-svell og fradrag får fradraget trukket fra 5 - i dagens varsel 14 timer +1 (Unstad 16.10 kl. 00-07, 14-16 m/s offshore: 2→3/3→4; Farstadsanden 15.10 kl. 13-15: 3→4, Martins dag; 16.10 kl. 15-17: 2→3). Alternativet (porten bare når solid == 4) straffer «perfekt svell + flo» dobbelt - frarådet av kontrolløren.
+
+**Backtest (data/backtest/femstjerner_2026-10-15.md, tools/femstjerner_rapport.py):** 21 dager fra git-historikken (24.09-14.10, én kjøring per dag, timene for dagen) + dagens varsel: 3 113 timer, 1 492 i dagslys - **0 timer ville fått 5 (0,00 %, mål under 2 %)**, 0 på kjente dårlige dager. Nærmest: Farstadsanden 20.10 kl. 10-16 (feiler på sone og sidevind 3-4 m/s). 24 dagslystimer (48 totalt) har potensial 4 uten fradrag men ikke Rått - ingen feiler på høyden (height_score 0,85-1,0); de feiler på sone (BarentsWatch/bw_confirms), kant/utenfor vinduet, periode og energi (fysikk-kontrollørens opptelling).
+
+**Fysikk-kontrollør (15.10.2026): GODKJENT** - koden følger forslaget 1:1; rettet etter funn: ukjent vindretning med kjent fart under 3 m/s kunne gi 5 (nå kreves wind_dir kjent), STATUS-setningen om de 17 timene, forklaringslinja for tilbakeholdt femte stjerne. Kosmetisk, pre-eksisterende: «Tidevann: spoten tåler alt» for Farstadsanden (bare lokal preferanse).
+
+**Faste observasjoner:** alle uendret, unntatt Unstad 26.09-rekonstruksjonen (test 16.1, Theodor: 4 stjerner) som oppfyller alle vilkår (2,42 m, 15 s, 8 350 kJ, 3 m/s offshore, 300° = 35° inn i vinduet, BW bekrefter) og får 5 - ingen fysisk begrunnet skrue gir 4 der uten ren konstantjustering (fixturens vind og bw_dir er rekonstruerte antagelser). **Krever Theodors ja** - tabellen i test_display_only er satt til 5 med merknad; merge = ja. Syntetiske fixturer «Alt perfekt»/«Liker lavt vann» fikk kjent svellenergi (2,0 m ute, 2 760 kJ) - under porten teller manglende energi ikke som oppfylt. Tester: 28 (alt oppfylt → 5; hvert vilkår brutt → høyst 4; sidevind 4 m/s → 4 + 1 blass; flo/ukjent tidevann med preferanse → 4; høydegrensen; Farstadsanden 15.10 kl. 17 med 3 m/s offshore → 5).
+
+**Nattjobben (Theodors ja, ROADMAP K del 0.1):** (a) Unstad 26.09 (test 16.1, observert 4, porten gir 5) står som kjent avvik under «Venter på Theodor» i ROADMAP - neste observerte 5-dag avgjør om porten er for raus. (b) `notify.five_star_alerts()`: ett ntfy-varsel per spot når varselet har minst én time med 5 i dagslys de neste 7 dagene (spot, dag, tidsrom, antall vinduer til), maks ett per spot per rullerende døgn (nøkkel `five:<id>` i data/notified.json), uavhengig av notify.json sin spots-liste. Test 6h2. Fysikk-kontrollør: GODKJENT. Merknader: en 5-er innen 36 t gir også det vanlige ≥3-varselet (to meldinger, med vilje: den ene sier «sjekk og logg»); samme vindu kan varsles igjen neste døgn mens det står i varselet (1-3 ganger i praksis, BarentsWatch-horisonten); før første spot får status `hemmelig` må notify utelate den (navnet går til ntfy.sh, id-en til data/notified.json) - gjelder også det vanlige varselet fra før.
 
 ## Skyggemodus for BarentsWatch-punktene, 14 dager (Theodor 15.10.2026, punkt 2) - gren `skygge/bw-punkter`
 

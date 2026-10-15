@@ -67,7 +67,9 @@ def _solve_h_for_surf_height(target, period):
 # height_score sin eksakte 1,0-topp (og dermed 5. stjerne) - i motsetning
 # til den gamle, lineære period_factor-formelen, som tålte avrunding fint.
 H_EPIC = _solve_h_for_surf_height(MID, 15)
-epic = rate({"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}, G)
+# 15.10.2026 (5-stjerners-porten): svellenergien må være KJENT og over full-grensen for 5 - 2,0 m ute ved 15 s
+# (× 1,25 topperiode) = 2 760 kJ; lik totalhøyde beholder svellandel 1,0 og surfehøyden nøyaktig i midten
+epic = rate({"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120, "swell_offshore": 2.0, "height_offshore": 2.0}, G)
 show("Alt perfekt", epic); assert epic["stars"] == 5
 
 # Nesten perfekt, men 11 s periode: skal ikke bli 5.
@@ -87,7 +89,7 @@ show("Perfekt svell, onshore 6 m/s", on); assert on["faded"] == 1
 # Tidevann: spot som bare liker lavt vann mister en stjerne på flo. Bruker
 # samme periode-justerte høyde som "Alt perfekt" - se forklaringen der.
 T = {**G, "tide": ["lav", "middels"]}
-base = {"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120}
+base = {"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120, "swell_offshore": 2.0, "height_offshore": 2.0}
 lo = rate({**base, "tide": {"state": "lav"}}, T); hi = rate({**base, "tide": {"state": "høy"}}, T)
 show("Liker lavt vann, fjære", lo); show("Liker lavt vann, flo", hi)
 assert lo["stars"] == 5 and hi["stars"] == 4 and hi["faded_tide"] == 1
@@ -207,7 +209,8 @@ print(f"{'6.7: Hs vs surfehøyde (1,0 m/16s)':<40} Hs={r_period['height']} surfe
 # 26.09.2026) erstatter den gamle "føles som"-teksten. BarentsWatch-periode-
 # linja er ikke med her, siden base09 ikke setter bw_period.
 bd = c4["breakdown"]
-assert len(bd) == 11
+# 15.10.2026: 5-stjerners-porten legger til én linje («Ikke Rått: …» / «Rått-svell …») når potensialet var 4
+assert len([l for l in bd if not l.startswith(("Ikke Rått", "Rått-svell", "Femte stjerne"))]) == 11
 assert bd[-1].startswith("Totalt:")
 assert bd[-1].split("Totalt: ")[1].startswith(f"{c4['stars']} av 5")
 print(f"{'6.8: breakdown (0,9m/16s, kast 12)':<40}")
@@ -1587,4 +1590,44 @@ r27_old = rate(dict(H27, bw_height=0.71, bw_height_max=1.35, bw_dir=306, bw_dir_
 show("27.2: samme time, gammelt punkt 0,71 m", r27_old)
 assert r27_old["surf_height"] < 1.5 and r27_old["surf_height"] < r27["surf_height"]
 print("27: Farstadsanden 15.10 kl. 17 - nytt punkt + ny vind gir minst 3 stjerner og 2,0 m+, gammelt punkt under 1,5 m - OK")
+# ---------- 15.10.2026, Theodors punkt 3: 5-stjerners-porten («Rått») ----------
+# Formelen gir aldri 5 selv (potential = min(4, int(5·score))); den femte stjernen gis bare når ALT
+# er kjent og oppfylt (five_star_swell_gate + five_star_losses, fysikk-kontrollørens forslag).
+from rating import five_star_swell_gate, FIVE_STAR_HS_MIN, FIVE_STAR_PERIOD_MIN, FIVE_STAR_ENERGY_MIN_KJ
+EPIC_H = {"bw_height": H_EPIC, "dir_offshore": 300.5, "bw_dir": G["facing"], "turn": 3, "period": 15, "wind_speed": 1, "wind_dir": 120, "swell_offshore": 2.0, "height_offshore": 2.0}
+r28 = rate(dict(EPIC_H), G)
+assert r28["stars"] == 5 and r28["faded"] == 0 and any(l.startswith("Rått-svell") for l in r28["breakdown"]), (r28["stars"], r28["breakdown"][-3:])
+# hvert vilkår brutt alene -> 4 (eller lavere), aldri 5
+cases = {
+    "periode 12 s": dict(EPIC_H, period=12),
+    "energi ukjent": {k: v for k, v in EPIC_H.items() if k not in ("swell_offshore", "height_offshore")},
+    "energi under 2 000 kJ": dict(EPIC_H, swell_offshore=1.0, height_offshore=1.0),
+    "svell i kanten (288° i 286-310)": dict(EPIC_H, dir_offshore=288),
+    "svell utenfor vinduet": dict(EPIC_H, dir_offshore=283),
+    "reservemodellen (ingen BarentsWatch)": dict({k: v for k, v in EPIC_H.items() if k not in ("bw_height", "bw_dir")}, height_spot_model=1.0),
+    "sidevind 4 m/s (straff 0, men ikke offshore)": dict(EPIC_H, wind_speed=4, wind_dir=30),
+    "offshore 11 m/s (straff 0,25)": dict(EPIC_H, wind_speed=11, wind_dir=120),
+    "vindretning ukjent (fart 1 m/s)": {k: v for k, v in EPIC_H.items() if k != "wind_dir"},   # kontrollør: ukjent retning skal ikke gi 5
+}
+for navn, h in cases.items():
+    r = rate(dict(h), G)
+    assert r["stars"] <= 4, (navn, r["stars"])
+    print(f"28.1 {navn:46} {r['stars']} hele, {r['faded']} tapt")
+# sidevind 4 m/s: porten (del A) er åpen, men den femte stjernen holdes tilbake -> 4 + 1 blass (vind)
+r_side = rate(dict(EPIC_H, wind_speed=4, wind_dir=30), G)
+assert r_side["stars"] == 4 and r_side["faded_wind"] == 1 and any(l.startswith("Femte stjerne holdes tilbake: vinden") for l in r_side["breakdown"]), (r_side["stars"], r_side["faded_wind"], r_side["breakdown"][-3:])
+# tidevann: spot med preferanse - flo holder den femte tilbake (4 + 1 blass tidevann), ukjent tidevann -> ikke 5
+T28 = {**G, "tide": ["lav", "middels"]}   # (T brukes til noe annet lenger opp i fila)
+r_flo = rate({**EPIC_H, "tide": {"state": "høy"}}, T28); r_lav = rate({**EPIC_H, "tide": {"state": "lav"}}, T28); r_uk = rate(dict(EPIC_H), T28)
+assert r_lav["stars"] == 5 and r_flo["stars"] == 4 and r_flo["faded_tide"] == 1 and r_uk["stars"] == 4, (r_lav["stars"], r_flo["stars"], r_flo["faded_tide"], r_uk["stars"])
+# høyden: 0,85 = |h − mid| <= 0,375·(hi − lo) - like innenfor og like utenfor
+G_lo, G_hi = G["ideal_height"]; mid = (G_lo + G_hi) / 2
+h_in = _solve_h_for_surf_height(mid + 0.37 * (G_hi - G_lo), 15); h_out = _solve_h_for_surf_height(mid + 0.40 * (G_hi - G_lo), 15)
+assert rate(dict(EPIC_H, bw_height=h_in), G)["stars"] == 5 and rate(dict(EPIC_H, bw_height=h_out), G)["stars"] == 4
+# Farstadsanden 15.10 kl. 17 (test 27) med 3 m/s offshore i stedet for 8 m/s side: Rått (hs 0,85 tar 2,53 m i [1,0, 3,0])
+r_fs = rate(dict(H27, wind_speed=3.0, wind_dir=130.0, gust=4.0, tide={"level": 0.3, "state": "lav", "rising": False}), F27)
+assert r_fs["stars"] == 5, (r_fs["stars"], r_fs["breakdown"][-4:])
+# faste observasjoner: Unstad 26.09-rekonstruksjonen (test 16.x, Theodor: 4 stjerner) oppfyller alle vilkår og får 5 -
+# KREVER THEODORS JA (står i PR/STATUS); alle andre faste observasjoner er uendret (sjekket av testene over)
+print("28: 5-stjerners-porten - alt oppfylt gir 5, hvert vilkår brutt gir høyst 4, sidevind/flo holder den femte tilbake som blass, Farstadsanden 15.10 med offshore 3 m/s gir Rått - OK")
 print("Alle tester ok")
