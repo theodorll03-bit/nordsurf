@@ -6,8 +6,9 @@
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
 const CACHE = "nordsurf-845c929484b0";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg",
-  "css/app.css", "css/kart.css",
-  "js/strings.js", "js/wordmark.js", "js/explain.js", "js/app.js", "js/kart.js", "js/front.js", "js/auth.js",
+  "css/app.css", "css/ui.css",
+  "js/strings.js", "js/wordmark.js", "js/explain.js", "js/app.js", "js/kart.js", "js/minikart.js", "js/spotgraf.js",
+  "js/spot.js", "js/utforsk.js", "js/ui.js", "js/auth.js",
   "geo/coast.json",
   "fonts/bricolage-grotesque-latin-wght.woff2", "fonts/inter-latin-wght.woff2", "fonts/geist-latin-wght.woff2", "fonts/geist-mono-latin-wght.woff2",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon-180.png", "icons/icon-maskable-512.png"];
