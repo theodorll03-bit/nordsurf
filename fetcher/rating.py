@@ -669,41 +669,84 @@ def wind_type(wind_dir, spot):
     return "side"
 
 
+GUST_FACTOR = 0.3        # kastene teller 30 % av forskjellen mellom kast og middelvind ...
+GUST_MAX_ADD_MS = 2.0    # ... men kan legge til høyst 2 m/s (Theodor 15.10.2026: 8,7 m/s med kast 15 ble før 10,7 og et helt trinn)
+
+
 def effective_wind(speed, gust):
     """Når kastene er kraftigere enn middelvinden kjennes det verre enn
-    middelvinden alene skulle tilsi. Uten kastdata: bare middelvind."""
+    middelvinden alene skulle tilsi. Uten kastdata: bare middelvind.
+    15.10.2026 (Theodors regel 3): effektiv vind = middelvind + 0,3 × (kast −
+    middelvind), men kastene kan legge til høyst 2 m/s."""
     if speed is None:
         return None
     if gust is not None and gust > speed:
-        return speed + 0.3 * (gust - speed)
+        return speed + min(GUST_MAX_ADD_MS, GUST_FACTOR * (gust - speed))
     return speed
 
 
-WIND_PENALTY_TABLE = (
-    # (øvre grense effektiv vind eksklusiv, {vindtype: straff-funksjon(eff)})
-    (3, {"offshore": lambda e: 0, "side": lambda e: 0, "sideonshore": lambda e: 0, "onshore": lambda e: 0}),
-    (5, {"offshore": lambda e: 0, "side": lambda e: 0, "sideonshore": lambda e: 1, "onshore": lambda e: 1}),
-    (8, {"offshore": lambda e: 0, "side": lambda e: 1, "sideonshore": lambda e: 1, "onshore": lambda e: 2}),
-    (11, {"offshore": lambda e: 1 if e > 10 else 0, "side": lambda e: 2, "sideonshore": lambda e: 2, "onshore": lambda e: 3}),
-)
+# 15.10.2026, Theodors regel 1 (Farstadsanden «Holy portugal» - se STATUS.md): glatt
+# kurve i stedet for trinn (7,9 m/s ga −1, 8,1 m/s ga −2). Effektiv vind (m/s) ->
+# straff i stjerner, lineært mellom punktene, 0 under første punkt, flatt etter siste.
+# Avrundes IKKE her - først til slutt, sammen med resten av ratingen (rate()).
+WIND_PENALTY_CURVES = {
+    "offshore": ((10, 0), (14, 1), (18, 2)),
+    "side": ((5, 0), (10, 1), (14, 2), (18, 3)),
+    "sideonshore": ((3, 0), (7, 1), (11, 2), (15, 3)),
+    "onshore": ((2, 0), (5, 1), (8, 2), (11, 3), (14, 4)),
+}
+# Theodors regel 2: svellets styrke demper vindstraffen (alle typer unntatt offshore).
+# Faktor 1,0 ved 2 000 kJ eller lavere, 0,6 ved 15 000 eller mer, log-interpolert
+# mellom. Mangler energien: 1,0 (grunnregelen - ukjent demper ikke).
+SWELL_DAMP_KJ_LOW = 2000.0
+SWELL_DAMP_KJ_HIGH = 15000.0
+SWELL_DAMP_MIN = 0.6
 
 
-def wind_penalty(speed, wind_dir, spot, gust=None):
+def wind_curve_penalty(eff, kind):
+    """Rå vindstraff (float) fra kurven for vindtypen."""
+    pts = WIND_PENALTY_CURVES.get(kind) or WIND_PENALTY_CURVES["onshore"]
+    if eff <= pts[0][0]:
+        return 0.0
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if eff <= x1:
+            return y0 + (y1 - y0) * (eff - x0) / (x1 - x0)
+    return float(pts[-1][1])
+
+
+def swell_damping(energy_swell_kj):
+    """Faktoren vindstraffen ganges med: 1,0 for svakt svell, ned til 0,6 for svært kraftig."""
+    if energy_swell_kj is None or energy_swell_kj <= SWELL_DAMP_KJ_LOW:
+        return 1.0
+    if energy_swell_kj >= SWELL_DAMP_KJ_HIGH:
+        return SWELL_DAMP_MIN
+    f = math.log(energy_swell_kj / SWELL_DAMP_KJ_LOW) / math.log(SWELL_DAMP_KJ_HIGH / SWELL_DAMP_KJ_LOW)
+    return 1.0 - (1.0 - SWELL_DAMP_MIN) * f
+
+
+def wind_penalty(speed, wind_dir, spot, gust=None, energy_swell_kj=None):
+    """Vindstraff i stjerner (float, avrundes først i rate()). Ukjent vind: 1
+    (ikke full pott). Ukjent retning: verste fall (onshore)."""
     if speed is None:
-        return 1  # ukjent vind: ikke gi full pott
+        return 1.0
     eff = effective_wind(speed, gust)
-    kind = wind_type(wind_dir, spot) or "onshore"  # ukjent retning: anta verste fall
-    for limit, table in WIND_PENALTY_TABLE:
-        if eff <= limit:
-            return table[kind](eff)
-    # over 11 m/s effektiv
-    if kind == "offshore":
-        return 2 if eff > 14 else 1
-    if kind == "side":
-        return 3
-    if kind == "sideonshore":
-        return 3
-    return 4
+    kind = wind_type(wind_dir, spot) or "onshore"
+    pen = wind_curve_penalty(eff, kind)
+    if kind != "offshore":
+        pen *= swell_damping(energy_swell_kj)
+    return pen
+
+
+def wind_penalty_parts(speed, wind_dir, spot, gust=None, energy_swell_kj=None):
+    """Samme som wind_penalty(), men med leddene til forklaringen:
+    {eff, kind, raw, damp, pen}."""
+    if speed is None:
+        return {"eff": None, "kind": wind_type(wind_dir, spot), "raw": 1.0, "damp": 1.0, "pen": 1.0}
+    eff = effective_wind(speed, gust)
+    kind = wind_type(wind_dir, spot) or "onshore"
+    raw = wind_curve_penalty(eff, kind)
+    damp = swell_damping(energy_swell_kj) if kind != "offshore" else 1.0
+    return {"eff": eff, "kind": kind, "raw": raw, "damp": damp, "pen": raw * damp}
 
 
 def wind_label(speed, wind_type_):
@@ -797,7 +840,12 @@ def _fmt_m(v):
 
 
 def _fmt_penalty(n):
-    return "ingen effekt" if n == 0 else f"−{n}"
+    """«ingen effekt», «−1» for hele, ellers «−0,7» (flytende vindstraff, 15.10.2026)."""
+    if n is None or abs(n) < 1e-9:
+        return "ingen effekt"
+    if abs(n - round(n)) < 1e-9:
+        return f"−{int(round(n))}"
+    return f"−{n:.1f}".replace(".", ",")
 
 
 def disagree_reason(hour, dir_hit, bw_detail):
@@ -917,8 +965,17 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         items.append("Vind: ukjent")
     else:
         label = wind_label(wind_speed, WIND_TYPE_WORD.get(wt, wt or ""))
-        gusttxt = f" med kast {gust:.0f}" if gust is not None and gust > wind_speed else ""
-        items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}: {_fmt_penalty(wp)}")
+        # 15.10.2026: «Vind 9 m/s sidevind, kast 15 (teller som 10,7), dempet av kraftig svell: −0,7»
+        wpp = wind_penalty_parts(wind_speed, wind_dir, spot, gust, energy_swell_kj)
+        gusttxt = ""
+        if gust is not None and gust > wind_speed and wpp["eff"] is not None and wpp["eff"] > wind_speed + 0.05:
+            gusttxt = f", kast {gust:.0f} (teller som {wpp['eff']:.1f})".replace(".", ",")
+        damptxt = ""
+        if wpp["damp"] < 0.999:
+            damptxt = ", dempet av " + ("svært kraftig" if (energy_swell_kj or 0) >= 10000 else "kraftig") + " svell"
+        if wp is not None and wpp["pen"] < wp - 1e-9:
+            damptxt += ", lokal regel strengere"
+        items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
     if not spot.get("tide"):
         items.append("Tidevann: spoten tåler alt")
     elif not tide:
@@ -937,7 +994,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     return items
 
 
-BLOWN_OUT_WIND_MS = 8.0  # samme grense som WIND_PENALTY_TABLE sin "kraftig"-sone
+BLOWN_OUT_WIND_MS = 8.0  # «kraftig» onshore/side-onshore (ordet følger zero_losses som før - Theodor 15.10.2026, regel 5)
 BLOWN_OUT_SHARE_MAX = 0.5  # samme "mest vindsjø"-grense som _share_word()
 # 27.09.2026, fysikk-kontrollør sitt funn: samme grense som sources_disagree
 # (se rate(), "BarentsWatch viser en reell totalhøyde (0,5 m+)") - IKKE
@@ -1137,7 +1194,7 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
     én stjerne")."""
     rules = spot.get("local_rules")
     if not rules:
-        return 0, []
+        return 0.0, 0.0, []
     weight = rules.get("weight", 1.0)
     lines = []
     raw_total = 0.0
@@ -1154,17 +1211,20 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
 
+    local_wind = 0.0
     if rules.get("offshore_strict"):
         strict_hit = (wind_type_ in ("side", "sideonshore")
                       and wind_speed is not None and wind_speed > 4)
         if strict_hit:
-            pen = weight * 1
-            raw_total += pen
+            local_wind = weight * 1
             lines.append(f"Vind {wind_speed:.0f} m/s {WIND_TYPE_WORD.get(wind_type_, wind_type_)}: "
-                         f"strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −{pen:.1f})")
+                         f"strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −{local_wind:.1f}), "
+                         f"erstatter den generelle vindstraffen hvis strengere")
 
-    extra_stars = math.floor(raw_total + 0.5)
-    return extra_stars, lines
+    # 15.10.2026 (Theodors regel 4): det lokale VINDfradraget legges ikke oppå den generelle
+    # vindstraffen (Farstadsanden ble straffet to ganger, −2 og −1) - rate() tar
+    # max(generell, lokal × vekt). Tidevannsfradraget er fortsatt et eget, additivt ledd.
+    return raw_total, local_wind, lines
 
 
 def rate(hour, spot):
@@ -1362,21 +1422,28 @@ def rate(hour, spot):
 
     wind_speed, wind_dir, gust = hour.get("wind_speed"), hour.get("wind_dir"), hour.get("gust")
     wt = wind_type(wind_dir, spot)
-    wp = wind_penalty(wind_speed, wind_dir, spot, gust)
-    lost_wind = min(potential, wp)
+    # 15.10.2026 (Theodors regler 1-4): vindstraffen er en glatt kurve (float), dempet av
+    # svellets energi, kastene teller høyst 2 m/s, og en strengere LOKAL vindregel
+    # erstatter den generelle (max), legges ikke oppå. Alle fradrag summeres som
+    # flyttall og rundes først til slutt (0,5 opp) - stjernene er fortsatt hele.
+    wind_parts = wind_penalty_parts(wind_speed, wind_dir, spot, gust, energy_swell)
+    wp_general = wind_parts["pen"]
+    local_tide_raw, local_wind_raw, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed)
+    wp = max(wp_general, local_wind_raw)
     tide_pen = tide_penalty(hour.get("tide"), spot)
-    lost_tide = min(potential - lost_wind, tide_pen)
-    solid = potential - lost_wind - lost_tide
-
-    local_extra_stars, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed)
-    solid_before_local = solid
-    if local_extra_stars:
-        solid = max(0, solid - local_extra_stars)
+    raw_solid = potential - wp - tide_pen - local_tide_raw
+    solid = max(0, min(potential, math.floor(raw_solid + 0.5)))
+    # bokføring i hele stjerner (det som vises som blasse stjerner): vind først, så tidevann, så lokalt
+    lost_total = potential - solid
+    lost_wind = min(lost_total, math.floor(wp + 0.5))
+    lost_tide = min(lost_total - lost_wind, tide_pen)
+    local_extra_stars = lost_total - lost_wind - lost_tide
+    solid_before_local = solid + local_extra_stars
     zero_losses = {
         "energy": faded_energy,
-        "wind": min(potential_before_energy, wp),
+        "wind": min(potential_before_energy, math.floor(wp + 0.5)),
         "tide": min(potential_before_energy, tide_pen),
-        "local": solid_before_local - solid,
+        "local": local_extra_stars,
         "cap": faded_cap,
     }
     local_rules_source = None
