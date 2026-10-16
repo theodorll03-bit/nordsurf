@@ -62,13 +62,10 @@
   // Vinduet sies fra vinduet (inSwellWindow = rating.in_sector), graden av treff fra eksponeringen
   // (h.directness, som i directionHitText i app.js) - en hake alene ville motsagt «Treffer ikke»
   // for svell i vinduet men skjermet, og et kryss alene 2-3 stjerner bekreftet ved spoten.
+  // (regelen bor i app.js vinduStatus - samme funksjon tegner svellkilen på Utforsk)
   function vinduTekst(h, s){
-    if(!h || h.dir_offshore==null || !s || !s.swell_window) return null;
-    const inside = inSwellWindow(h.dir_offshore, s);
-    if(inside===false) return h.bw_confirms ? {ikon:"delvis", txt:"Utenfor vinduet, men bekreftet ved spoten"} : {ikon:"nei", txt:"Utenfor vinduet"};
-    if(h.directness==null || h.directness >= 0.999) return {ikon:"ja", txt:"Innenfor vinduet"};
-    if(h.directness >= 0.667) return {ikon:"ja", txt:"I kanten av vinduet"};
-    return {ikon:"delvis", txt:"I vinduet, men skjermet"};
+    const v = vinduStatus(h, s);
+    return v ? {ikon: v.ikon, txt: v.txt} : null;
   }
   const logPos = (kj)=> Math.max(0, Math.min(1, Math.log10(Math.max(1, kj) / 100) / 3));   // log-skala 100–100 000 kJ
   function sikkerhet(h){

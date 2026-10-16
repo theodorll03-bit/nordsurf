@@ -17,12 +17,20 @@ som GitHub Pages (fetcher/testserver.py), fast klokke.
 4c. Kartverket-bakgrunnen (Theodor 16.10.2026): virker flisene, står det bare «© Kartverket» og OSM-detaljlagene er av
    (under zoom 7,5, der OSM-oversikten synes gjennom Kartverkets gjennomsiktige fliser, krediteres OSM også);
    feiler de, slås OSM-reserven og OSM-kildemerket på (data-kartkilde="osm").
-5. Skjermbilder (mobil og PC, lys og mørk): hele kysten, Lyngen (Russelv og Lenangsøyra), Lofoten og Unstad valgt
-   med svellkile og vind - med varselets 8 spots. Med NORDSURF_KARTVERKET_EKTE=1 (lokalt, med nett) brukes ekte
-   Kartverket-fliser og bildene skrives til docs/design/kart/kartverket/; ellers en midlertidig mappe.
-6. Vind og svellkile (fra «kart først», dac1d4a): kilens klasse følger h.directness (samme regel som spotsiden),
-   vindstrekene peker dit vinden går og roterer korteste vei over 0/360, animasjonene står stille ved
-   prefers-reduced-motion og når fanen er skjult, og bildefrekvensen under dra måles med og uten animasjon.
+4d. Kartverket-flisene lastes («lokal» testflis, som fra nett) mens service workeren styrer siden - og ingen av dem
+   havner i service workerens lager (4 kjører med Kartverket blokkert og kan ikke vise det).
+5. Skjermbilder (mobil og PC, lys og mørk) med varselets 8 spots. Kartverkets vilkår: z12 og innover (Geovekst) kan
+   vises, ikke kopieres - bilder med Kartverket-fliser (hele kysten, Lofoten) tas bare når hver flis kartet ber om har
+   z < 12 (testen feiler ellers, og avviser flisen). Lyngen og Unstad valgt (svellkile og vind) tas med OSM-reserven
+   (Kartverket blokkert), filnavn «-osm-reserve». Med NORDSURF_KARTVERKET_EKTE=1 (lokalt, med nett) brukes ekte
+   Kartverket-fliser og bildene skrives til docs/design/kart/kartverket/; ellers grå testfliser i en midlertidig mappe.
+   Kildemerket (#kartKilde) er synlig og udekket (elementFromPoint i fem punkter) uten og med valgt spot, mobil og PC,
+   og står «© Kartverket (farger endret)» i mørk modus (rasteret er invertert - CC BY 4.0).
+6. Vind og svellkile (fra «kart først», dac1d4a): kilens klasse er spotsidens regel (app.js vinduStatus): utenfor
+   vinduet bom uansett directness, i vinduet treff/kant/«skjermet» etter directness, manglende directness eller retning
+   «ukjent» uten fronter og bom-strek. Uten valgt spot vises ingen vind under zoom 8. Vindstrekene peker dit vinden går
+   og roterer korteste vei over 0/360, animasjonene står stille ved prefers-reduced-motion og når fanen er skjult,
+   og bildefrekvensen under dra måles med og uten animasjon.
 
 Kartverket-fliser (cache.kartverket.no) kan ikke nås fra CI og skal være deterministiske: testen ruter dem til én
 lokal grå PNG (samme størrelse og format), så ytelsestallene i CI gjelder kartet med et rasterlag av riktig type.
@@ -99,6 +107,8 @@ def _png(w, h, rgb):
 
 GRA_FLIS = _png(256, 256, (226, 224, 218))
 KV_PAT = "https://cache.kartverket.no/**"
+KV_MAKS_Z_BILDE = 12   # Kartverket: z12 og innover er Geovekst - kan vises, ikke kopieres (skjermbilder: bare flis-z < 12)
+kv_maks_z = []
 
 
 def route_kv(page, mode="lokal"):
@@ -298,6 +308,33 @@ def main():
             ctx.set_offline(False)
             ctx.close()
 
+            # ---- 4d. Kartverket-flisene LASTES (som fra nett) mens service workeren styrer siden - og lagres likevel aldri ----
+            # (sjekken i 4 kjører med Kartverket blokkert og ville bestått uansett: her svarer «Kartverket» med fliser)
+            ctx, page = new_page((390, 844), sw="allow")
+            kv_req = []
+            ctx.on("request", lambda r: kv_req.append(r.url) if r.url.startswith("https://cache.kartverket.no/") else None)
+            route_data(ctx, ov8, det8, kv="lokal")   # kontekst-nivå: også det service workeren selv henter, fanges
+            page.goto(base + "#utforsk")
+            page.wait_for_function(READY_JS)
+            page.evaluate("navigator.serviceWorker.register('sw.js').then(() => true)")
+            page.evaluate("navigator.serviceWorker.ready.then(r => !!r.active)")
+            page.wait_for_function("(async () => (await caches.keys()).some(k => /^nordsurf-[0-9a-f]+$/.test(k)))()", polling=250)
+            page.wait_for_timeout(500)
+            page.reload()
+            page.wait_for_function("!!navigator.serviceWorker.controller")
+            page.wait_for_function(READY_JS)
+            n_for = len(kv_req)
+            for z in (9, 10, 11):
+                page.evaluate(f"window.__kart.jumpTo({{center: [13.58, 68.27], zoom: {z}}})")
+                page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
+            page.wait_for_timeout(1000)   # service workeren lagrer asynkront (c.put) - gi den tid før lageret leses
+            assert page.evaluate("document.querySelector('#kart').dataset.kartkilde") == "kartverket", "Kartverket-flisene skulle virke her"
+            assert len(kv_req) > n_for, "ingen Kartverket-fliser hentet mens service workeren styrte siden - sjekken under ville ikke testet noe"
+            kv_lagret = page.evaluate("caches.keys().then(ks => Promise.all(ks.map(k => caches.open(k).then(c => c.keys())))).then(a => a.flat().filter(r => r.url.includes('kartverket')).length)")
+            assert kv_lagret == 0, f"{kv_lagret} Kartverket-fliser i service workerens lager med Kartverket virkende (skal aldri lagres)"
+            print(f"4d: {len(kv_req)} Kartverket-fliser lastet med service workeren aktiv, 0 i lageret - OK")
+            ctx.close()
+
             # ---- 4c. Kartverket virker / feiler ----
             for kvmode, want in (("lokal", "kartverket"), ("blokkert", "osm")):
                 ctx, page = new_page((390, 844))
@@ -358,28 +395,84 @@ def main():
             print(f"4b: ingen kyststrek langs datarammen ved fire kanter × fem zoomnivåer ({checked} sjekker), land helt ut i øst - OK")
             ctx.close()
 
-            # ---- 5. skjermbilder (varselets 8 spots) ----
+            # ---- 5. skjermbilder (varselets 8 spots) og kildemerket ----
+            # Kartverkets vilkår (Theodor 16.10.2026): data fra z12 og innover (Geovekst) kan VISES, men ikke kopieres
+            # eller lagres - et skjermbilde i git/Pages er en kopi. Bilder med Kartverket-fliser tas derfor bare der
+            # flisene kartet faktisk ber om har z < 12 (hele kysten, Lofoten); hver flisforespørsel i den konteksten
+            # registreres, og shot() feiler hvis en flis med z >= 12 er bedt om (den avvises også, så den aldri vises).
+            # Detaljbildene (Lyngen, Unstad valgt) tas i en egen kontekst med Kartverket blokkert - OSM-reserven -
+            # og heter «-osm-reserve» i filnavnet.
+            def kv_z(url):
+                try:
+                    return int(url.split("/webmercator/")[1].split("/")[0])
+                except (IndexError, ValueError):
+                    return None
+
+            def route_kv_vakt(page, hoy, alle):
+                mode = "ekte" if EKTE else "lokal"
+                def h(rt, req):
+                    z = kv_z(req.url)
+                    alle.append(z)
+                    if z is None or z >= KV_MAKS_Z_BILDE:
+                        hoy.append(req.url)
+                        rt.abort()
+                    elif mode == "ekte":
+                        rt.continue_()
+                    else:
+                        rt.fulfill(status=200, content_type="image/png", body=GRA_FLIS, headers={"access-control-allow-origin": "*"})
+                page.route(KV_PAT, h)
+
+            KILDE_JS = """() => { const a = document.querySelector('#kartKilde'); if(!a) return 'mangler';
+                const r = a.getBoundingClientRect(), k = document.querySelector('#kart').getBoundingClientRect();
+                if(!r.width || !r.height) return 'ingen størrelse';
+                const cs = getComputedStyle(a); if(cs.visibility !== 'visible' || +cs.opacity < 0.99 || cs.display === 'none') return 'skjult (' + cs.visibility + ', ' + cs.opacity + ')';
+                if(r.left < k.left || r.right > k.right || r.top < k.top || r.bottom > k.bottom) return 'utenfor kartet';
+                if(r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return 'utenfor skjermen';
+                const pts = [[0.5, 0.5], [0.08, 0.2], [0.92, 0.2], [0.08, 0.8], [0.92, 0.8]];
+                for(const [fx, fy] of pts){ const x = r.left + fx * r.width, y = r.top + fy * r.height, e = document.elementFromPoint(x, y);
+                  if(!e || !(e === a || a.contains(e))) return 'dekket ved (' + x.toFixed(0) + ',' + y.toFixed(0) + ') av ' + (e ? (e.id || e.className || e.tagName) : 'ingenting'); }
+                return 'ok'; }"""
+
+            def kilde_ok(page, hva):
+                page.wait_for_timeout(100)
+                r = page.evaluate(KILDE_JS)
+                assert r == "ok", f"kildemerket ikke synlig {hva}: {r}"
+
+            n_kilde = 0
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
                 for scheme, sname in (("light", "lys"), ("dark", "mork")):
-                    ctx, page = new_page(vp, scheme)
-                    route_data(page, ov8, det8)
-                    page.goto(base + "#utforsk")
-                    page.wait_for_function(READY_JS)
-
-                    def shot(name):
+                    def shot(page, name, hoy=None, alle=None):
                         # vent på at kartet faktisk er ferdig tegnet («idle» etter at nye fliser er bedt om), ikke bare at
                         # ingen fliser lastes akkurat nå - ellers kan bildet få uskarpe fliser fra et lavere zoomnivå
                         page.wait_for_timeout(300)
                         page.evaluate("new Promise(ok => { const m = window.__kart; if(m.loaded() && m.areTilesLoaded() && !m.isMoving()) { m.triggerRepaint(); } m.once('idle', ok); setTimeout(ok, 12000); })")
                         page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
                         page.wait_for_timeout(250)
+                        if hoy is not None:
+                            assert not hoy, (f"{name} ({label}, {sname}): Kartverket-fliser med z >= {KV_MAKS_Z_BILDE} bedt om mens bildet "
+                                             f"tas (Geovekst - kan vises, ikke kopieres): {hoy[:4]}")
+                            assert alle, f"{name}: ingen Kartverket-fliser i bildet"
                         page.screenshot(path=str(SHOT_DIR / f"{name}_{label}_{sname}.png"))
+                        if hoy is not None:
+                            kv_maks_z.append(max(z for z in alle if z is not None))
+                    # (a) Kartverket-bakgrunnen, bare oversiktsbilder (flis-z < 12)
+                    ctx, page = new_page(vp, scheme)
+                    hoy, alle = [], []
+                    route_data(page, ov8, det8, kv="blokkert")
+                    page.unroute(KV_PAT)
+                    route_kv_vakt(page, hoy, alle)
+                    page.goto(base + "#utforsk")
+                    page.wait_for_function(READY_JS)
                     # brikkene er regionene fra spots.json i rekkefølgen der (nord til sør), aldri område
                     chips = page.evaluate("[...document.querySelectorAll('#utforskChips [data-view]')].map(b => b.textContent.trim())")
                     want = [r["name"] for r in json.loads(ov8)["regions"]]
                     assert chips == want + ["Hele kartet"], (chips, want)
                     page.click("#utforskChips [data-view='']")
-                    shot("hele-kysten")
+                    shot(page, "hele-kysten", hoy, alle)
+                    kilde_ok(page, f"uten valgt spot ({label}, {sname})"); n_kilde += 1
+                    txt = page.inner_text("#kartKilde")
+                    # CC BY 4.0: mørk modus inverterer rasteret - endringen skal opplyses; lys modus er uendret
+                    assert ("farger endret" in txt) == (scheme == "dark"), (scheme, txt)
                     # ingen lapp oppå kildemerket, tids-/regionbrikkene eller andre knapper over kartet
                     bad = page.evaluate("""() => { const pills = [...document.querySelectorAll('#markersLayer .mk-pill')].map(e => e.getBoundingClientRect());
                         const obs = [...document.querySelectorAll('#kartKilde, #utforskChips .chip, #dagChips .chip, #viewUtforsk button:not(.mk):not(.klynge)')]
@@ -392,38 +485,85 @@ def main():
                         return [...document.querySelectorAll('#markersLayer .mk-dot, #markersLayer .klynge .ring')].map(e => e.getBoundingClientRect())
                           .filter(r => r.left < a.right && r.right > a.left && r.top < a.bottom && r.bottom > a.top).length; }""")
                     assert under == 0, f"{under} prikker under kildemerket ({label}, {sname})"
+                    page.click("#utforskChips [data-view='Lofoten']")
+                    shot(page, "region-lofoten", hoy, alle)
+                    # valgt spot på Kartverket-kartet (ikke noe bilde her): kortet skal ikke dekke kildemerket
+                    page.evaluate("window.__kart.jumpTo({center: [13.585, 68.268], zoom: 9})")
+                    page.wait_for_function("!window.__kart.isMoving()")
+                    page.wait_for_timeout(200)
+                    page.click("#markersLayer .mk[data-id='unstad'] .mk-dot")
+                    page.wait_for_function("!document.querySelector('#kartKort').hidden")
+                    kilde_ok(page, f"med valgt spot, Kartverket ({label}, {sname})"); n_kilde += 1
+                    ctx.close()
+                    # (b) detaljbildene: OSM-reserven (Kartverket blokkert) - aldri Geovekst-fliser i et bilde
+                    ctx, page = new_page(vp, scheme)
+                    route_data(page, ov8, det8, kv="blokkert")
+                    page.goto(base + "#utforsk")
+                    page.wait_for_function(READY_JS)
+                    page.wait_for_function("document.querySelector('#kart').dataset.kartkilde === 'osm'")
                     # Lyngen: samme utsnitt som Theodors skjermbilde (Russelv og Lenangsøyra)
                     page.evaluate("Kart.setExtent(Kart.extentOf(['russelv', 'lenangsoyra']), false)")
-                    shot("lyngen")
-                    page.click("#utforskChips [data-view='Lofoten']")
-                    shot("region-lofoten")
+                    shot(page, "lyngen-osm-reserve")
+                    kilde_ok(page, f"uten valgt spot, reserven ({label}, {sname})"); n_kilde += 1
                     page.evaluate("window.__kart.jumpTo({center: [13.585, 68.268], zoom: 11})")
                     page.wait_for_timeout(200)
                     page.click("#markersLayer .mk[data-id='unstad'] .mk-dot")
                     page.wait_for_function("document.querySelector('#kileG').dataset.spot === 'unstad'")
                     page.wait_for_timeout(1500)   # vindlaget dreier inn (1,4 s)
-                    shot("spot-unstad")
+                    kilde_ok(page, f"med valgt spot, reserven ({label}, {sname})"); n_kilde += 1
+                    shot(page, "spot-unstad-osm-reserve")
                     ctx.close()
+            print(f"5c: kildemerket synlig og udekket (elementFromPoint) i {n_kilde} tilfeller - mobil og PC, lys og mørk, med og uten valgt spot; "
+                  f"«(farger endret)» bare i mørk modus - OK")
+            print(f"5d: bilder med Kartverket-fliser bare med flis-z < {KV_MAKS_Z_BILDE} (høyeste brukt: z{max(kv_maks_z)}); detaljbildene med OSM-reserven - OK")
             # ---- 6. vind og svellkile ----
-            def hit_py(h):
-                dn = h.get("directness") if h else None
-                return "miss" if not h or h.get("dir_offshore") is None or dn is None or dn < 0.667 else "hit" if dn >= 0.999 else "edge"
             ctx, page = new_page((390, 844))
             route_data(page, ov8, det8)
             cdp = ctx.new_cdp_session(page)
             page.goto(base + "#utforsk")
             page.wait_for_function(READY_JS)
+            # vind uten valgt spot: ikke på oversiktszoom (én spots vind er ikke vinden for hele kysten), men fra zoom 8
+            page.evaluate("window.__kart.jumpTo({center: [15, 66], zoom: 4.5})")
+            page.wait_for_function("!window.__kart.isMoving()")
+            page.wait_for_timeout(150)
+            vz = page.evaluate("[document.querySelector('#vindLag').style.opacity, document.querySelector('#vindLag').dataset.spot]")
+            assert vz == ["0", ""], f"vind vist ved zoom 4,5 uten valgt spot: {vz}"
             page.evaluate("window.__kart.jumpTo({center: [13.585, 68.268], zoom: 11})")
+            page.wait_for_function("!window.__kart.isMoving()")
             page.wait_for_timeout(200)
+            naer = page.evaluate("Utforsk.valueFor(DATA.spots.find(s => s.id === 'unstad'), null).h")
+            if naer and naer.get("wind_dir") is not None and naer.get("wind_speed") is not None:
+                assert page.evaluate("document.querySelector('#vindLag').dataset.spot") == "unstad", "vinden ved zoom 11 skal være spoten nærmest midten"
             page.click("#markersLayer .mk[data-id='unstad'] .mk-dot")
             page.wait_for_function("document.querySelector('#kileG').dataset.spot === 'unstad'")
             naa = page.evaluate("Utforsk.valueFor(DATA.spots.find(s => s.id === 'unstad'), null).h")
             treff = page.evaluate("document.querySelector('#kileG').dataset.treff")
-            assert treff == hit_py(naa), (treff, naa and naa.get("directness"))
-            assert page.evaluate("Kart.hitClass({dir_offshore: 290, directness: 0.999})") == ""
-            assert page.evaluate("Kart.hitClass({dir_offshore: 290, directness: 0.7})") == "edge"
-            assert page.evaluate("Kart.hitClass({dir_offshore: 290, directness: 0.5})") == "miss"
-            assert page.evaluate("Kart.hitClass({dir_offshore: null, directness: 1})") == "miss"
+            want_treff = page.evaluate("(() => { const s = DATA.spots.find(x => x.id === 'unstad'); const v = vinduStatus(Utforsk.valueFor(s, null).h, s); return v ? v.klasse : 'ukjent'; })()")
+            assert treff == want_treff, (treff, want_treff, naa and naa.get("directness"))
+            # samme regel som spotsiden (app.js vinduStatus = Spot.vinduTekst): utenfor vinduet er «Utenfor vinduet» uansett
+            # directness; i vinduet og directness < 0,667 er «I vinduet, men skjermet»; mangler directness: «ukjent» (ingen bom)
+            kl = page.evaluate("""() => { const s = DATA.spots.find(x => x.id === 'unstad'), w = Array.isArray(s.swell_window[0]) ? s.swell_window[0] : s.swell_window;
+                const inn = (w[0] + ((w[1] - w[0] + 360) % 360) / 2) % 360, ut = (inn + 180) % 360;
+                const c = (h) => { Kart.setWedge(s, h); const g = document.querySelector('#kileG');
+                  return {k: Kart.hitClass(h, s), treff: g.dataset.treff, aria: g.getAttribute('aria-label'), arc: g.querySelectorAll('.arc').length,
+                          bom: g.querySelectorAll('.arc-miss').length, spot: (Spot.vinduTekst(h, s) || {}).txt || null}; };
+                return {inn, ut, hit: c({dir_offshore: inn, directness: 1, stars: 3, period: 12}), edge: c({dir_offshore: inn, directness: 0.7}),
+                  skjermet: c({dir_offshore: inn, directness: 0.5}), ut_hoy: c({dir_offshore: ut, directness: 0.9}), ut_lav: c({dir_offshore: ut, directness: 0.2}),
+                  ut_null: c({dir_offshore: ut, directness: null}), bekreftet: c({dir_offshore: ut, directness: 0.1, bw_confirms: true}),
+                  inn_null: c({dir_offshore: inn, directness: null}), dir_null: c({dir_offshore: null, directness: 1}), tom: c({}) }; }""")
+            assert kl["hit"]["k"] == "hit" and kl["hit"]["arc"] == 4 and kl["hit"]["bom"] == 0, kl["hit"]
+            assert kl["edge"]["k"] == "edge" and kl["edge"]["arc"] == 3, kl["edge"]
+            for k in ("ut_hoy", "ut_lav", "ut_null"):   # utenfor vinduet uansett directness - som spotsiden
+                assert kl[k]["k"] == "miss" and kl[k]["bom"] == 1 and kl[k]["arc"] == 0 and kl[k]["spot"] == "Utenfor vinduet" and "utenfor vinduet" in kl[k]["aria"], (k, kl[k])
+            assert kl["skjermet"]["k"] == "skjermet" and kl["skjermet"]["bom"] == 0 and kl["skjermet"]["arc"] == 2, kl["skjermet"]
+            assert kl["skjermet"]["spot"] == "I vinduet, men skjermet" and "i vinduet, men skjermet" in kl["skjermet"]["aria"], kl["skjermet"]
+            assert kl["bekreftet"]["k"] == "bekreftet" and kl["bekreftet"]["bom"] == 0 and "bekreftet ved spoten" in kl["bekreftet"]["aria"], kl["bekreftet"]
+            for k in ("inn_null", "dir_null", "tom"):   # manglende data: ingen fronter, ingen bom-strek
+                assert kl[k]["k"] == "ukjent" and kl[k]["arc"] == 0 and kl[k]["bom"] == 0 and "ukjent" in kl[k]["aria"], (k, kl[k])
+            for k, v in kl.items():
+                if isinstance(v, dict):
+                    assert v["treff"] == v["k"], (k, v)
+            page.evaluate("(() => { const s = DATA.spots.find(x => x.id === 'unstad'); Kart.setWedge(s, Utforsk.valueFor(s, null).h); })()")
             if naa.get("wind_dir") is not None and naa.get("wind_speed") is not None:
                 assert page.evaluate("document.querySelector('#vindLag').dataset.retning") == str(round((naa["wind_dir"] + 180) % 360))
             # kilen følger kartet: etter panorering ligger kilens sentrum på spotens skjermpunkt
@@ -439,7 +579,7 @@ def main():
             assert abs(ang[1] - ang[0]) == 20 and abs(ang[2] - ang[1]) <= 180 and ang[3] == "0", ang
             # fanen skjult → animasjonene står
             ps = page.evaluate("""() => { Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); document.dispatchEvent(new Event('visibilitychange'));
-                const st = [getComputedStyle(document.querySelector('#vindLag line')).animationPlayState, getComputedStyle(document.querySelector('#kileG .arc, #kileG .arc-miss')).animationPlayState];
+                const k = document.querySelector('#kileG .arc, #kileG .arc-miss'); const st = [getComputedStyle(document.querySelector('#vindLag line')).animationPlayState, k ? getComputedStyle(k).animationPlayState : 'paused'];
                 Object.defineProperty(document, 'hidden', {configurable: true, get: () => false}); document.dispatchEvent(new Event('visibilitychange')); return st; }""")
             assert ps[0] == "paused", ps
             # bilder per sekund under dra, 4x CPU, med kile + vind: med pause under bevegelse (appen) og uten (tvunget)
@@ -451,6 +591,8 @@ def main():
             fps_anim = page.evaluate(FPS_JS.replace("move(m)", "m.panBy([-200, 120], {duration: 1000})"))
             cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
             assert fps_pause["fps"] >= FPS_MIN, f"dra med kile og vind: {fps_pause['fps']:.0f} fps (grense {FPS_MIN})"
+            print(f"6a: kilen bruker spotsidens regel (vinduStatus): utenfor vinduet → bom uansett directness, i vinduet < 0,667 → «skjermet», "
+                  f"manglende directness/retning → «ukjent» uten fronter og bom; ingen vind uten valgt spot ved zoom 4,5 - OK")
             print(f"6: kilen «{treff}» (directness {naa.get('directness')}) følger spoten, vinden dreier korteste vei ({ang[0]:.0f}° → {ang[1]:.0f}°), "
                   f"stille når fanen er skjult; dra med 4x CPU: {fps_pause['fps']:.0f} fps med pause, {fps_anim['fps']:.0f} fps med animasjon - OK")
             ctx.close()

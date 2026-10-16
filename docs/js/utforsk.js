@@ -42,18 +42,24 @@
     return {st, word:w, miss:false, h, t:h.t, aria:`${s.name}: ${w}${st ? ", " + STR.starsAria(st, 0) : ""}`};
   }
   // vind og svellkile (fra «kart først», Theodor 16.10.2026): valgt spot gir kilen og vinden der for valgt time/dag;
-  // uten valgt spot vises vinden ved spoten nærmest kartets midte. Mangler timen, vises ingenting (aldri 0).
+  // uten valgt spot vises vinden ved spoten nærmest kartets midte, men bare fra zoom VIND_MIN_ZOOM (utsnittet er da
+  // ca. 45 km bredt på mobil, 100 km på PC - én spots vind sier noe om området). Ut over det (hele kysten, zoom 4-7)
+  // ville én spots vind sett ut som vinden for hele landsdelen - da vises ingen vind før en spot velges.
+  // Mangler timen, vises ingenting (aldri 0).
+  const VIND_MIN_ZOOM = 8;
   function lagene(){
     const s = S.picked && DATA.spots.find(x=>x.id===S.picked);
-    if(s){ const h = valueFor(s, S.utforskDay).h; Kart.setWedge(s, h); Kart.setWind(h); return; }
+    if(s){ const h = valueFor(s, S.utforskDay).h; Kart.setWedge(s, h); Kart.setWind(h, s.id); return; }
     Kart.setWedge(null, null);
+    const z = Kart.zoom();
+    if(z==null || z < VIND_MIN_ZOOM){ Kart.setWind(null); return; }
     const c = Kart.sentrum(); let best = null, bd = Infinity;
     if(c) for(const x of DATA.spots){
       if(!x.spot) continue;
       const d = (x.spot.lat - c.lat) ** 2 + ((x.spot.lon - c.lng) * Math.cos(c.lat * Math.PI / 180)) ** 2;
       if(d < bd){ bd = d; best = x; }
     }
-    Kart.setWind(best ? valueFor(best, S.utforskDay).h : null);
+    Kart.setWind(best ? valueFor(best, S.utforskDay).h : null, best && best.id);
   }
   function regionsHere(){ return (DATA.regions || []).filter(r=> r.extent); }
   function ensureCoast(){
@@ -126,8 +132,9 @@
     const el = $("#kartKort"); const s = S.picked && DATA.spots.find(x=>x.id===S.picked);
     const off = !s && S.offRegion;
     el.hidden = !s && !off;
-    if(!s && !off){ el.innerHTML = ""; return; }
+    if(!s && !off){ el.innerHTML = ""; Kart.redraw(); return; }
     el.innerHTML = s ? kortHtml(s) : offListeHtml(S.offRegion);
+    Kart.redraw();   // kildemerket flyttes over kortet (kart.js kildePlass), og lappene holder seg unna det
     $("#kortLukk", el).onclick = ()=>{ S.picked = null; S.offRegion = null; Kart.setSelected(null); renderKort(); lagene(); };
     const ap = $("#kortApne", el); if(ap){ const v = valueFor(s, S.utforskDay); ap.onclick = ()=> Front.openSpot(s.id, v.t || null); }
   }

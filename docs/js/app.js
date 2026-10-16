@@ -511,6 +511,19 @@ function directionHitText(h, spot){
   if(h.directness >= 0.667) return "I kanten av vinduet";
   return inside ? "I vinduet, men skjermet" : "Utenfor vinduet";
 }
+function vinduStatus(h, spot){
+  // Én regel for svellvinduet på spotsiden (Spot.vinduTekst) og svellkilen på Utforsk (Kart.hitClass):
+  // vinduet sies fra vinduet (inSwellWindow = rating.in_sector), graden av treff fra eksponeringen
+  // (h.directness). klasse: hit | edge | skjermet | bekreftet | miss | ukjent. «ukjent» = retningen er i
+  // vinduet, men treffgraden (directness) mangler - kartet tegner da verken fronter eller bom (aldri 0).
+  if(!h || h.dir_offshore==null || !spot || !spot.swell_window) return null;
+  const inside = inSwellWindow(h.dir_offshore, spot);
+  if(inside===false) return h.bw_confirms ? {klasse:"bekreftet", ikon:"delvis", txt:"Utenfor vinduet, men bekreftet ved spoten"} : {klasse:"miss", ikon:"nei", txt:"Utenfor vinduet"};
+  if(h.directness==null) return {klasse:"ukjent", ikon:"ja", txt:"Innenfor vinduet"};
+  if(h.directness >= 0.999) return {klasse:"hit", ikon:"ja", txt:"Innenfor vinduet"};
+  if(h.directness >= 0.667) return {klasse:"edge", ikon:"ja", txt:"I kanten av vinduet"};
+  return {klasse:"skjermet", ikon:"delvis", txt:"I vinduet, men skjermet"};
+}
 function offshoreShareText(h){
   if(h.swell_offshore==null || !(h.height_offshore>0)) return "";
   // 06.10.2026, Theodors rettelse (manglende svelldata, se CLAUDE.md): ingen

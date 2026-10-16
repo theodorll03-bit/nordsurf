@@ -275,6 +275,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kile .kile-c{fill:var(--ink)}
 .kile .arc{fill:none;stroke:var(--kc);stroke-width:2.2;stroke-linecap:round;vector-effect:non-scaling-stroke;animation:ns-swell 3s linear infinite}
 .kile .arc.edge{stroke-opacity:.6;stroke-dasharray:6 4}
+.kile .arc.skjermet,.kile .arc.bekreftet{stroke-opacity:.45;stroke-dasharray:3 5}   /* bare en del når inn */
 .kile .arc-miss{stroke:var(--swell-miss);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-dasharray:4 5}
 /* stille mens kartet dras/zoomes og når fanen er skjult (kart.js setter klassene) */
 .kart.beveger .vindlag line,.kart.beveger .kile .arc,.kart.skjult-fane .vindlag line,.kart.skjult-fane .kile .arc{animation-play-state:paused}

@@ -84,7 +84,7 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "zero_losses", "faded_wind", "faded_tide", "sources_disagree", "period", "energy_swell_kj",
               "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone",
-              "directness")   # Utforsk (16.10): svellkilen farges treff/bom fra directness, samme regel som spotsiden
+              "directness", "bw_confirms")   # Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)

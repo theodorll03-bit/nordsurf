@@ -34,6 +34,8 @@
   const MAX_ZOOM = 15;
   const KV_TILES = "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png";
   const KV_ATTR = '<a href="https://www.kartverket.no" target="_blank" rel="noopener">© Kartverket</a>';
+  // CC BY 4.0 krever at endringer opplyses: i mørk modus er rasteret invertert og uten farge
+  const KV_ATTR_ENDRET = '<a href="https://www.kartverket.no" target="_blank" rel="noopener">© Kartverket (farger endret)</a>';
   const OSM_ATTR = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bidragsytere</a>';
   const OVERSIKT_MAX = 7;                                 // norge-oversikt.pmtiles z0-7, norge-detalj.pmtiles z8+
   const merc = (lat)=> Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
@@ -47,10 +49,11 @@
   function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   function colors(){ return {land: cssVar("--land") || "#F2EDE2", sea: cssVar("--sea") || "#B7D3DF", coast: cssVar("--coast") || "#8F8268"}; }
   const dark = ()=> { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
-  // Kartverket-rasteret: lyst som det er; mørkt invertert, uten farge og med litt lavere kontrast (et rolig mørkt kart)
+  // Kartverket-rasteret: lyst helt uendret (kildemerket «© Kartverket»); mørkt invertert, uten farge og med litt lavere
+  // kontrast (et rolig mørkt kart) - da står det «© Kartverket (farger endret)» (CC BY 4.0: endringer skal opplyses)
   const kvPaint = ()=> dark()
     ? {"raster-brightness-min": 1, "raster-brightness-max": 0, "raster-saturation": -1, "raster-contrast": -0.25}
-    : {"raster-brightness-min": 0, "raster-brightness-max": 1, "raster-saturation": -0.15, "raster-contrast": 0};
+    : {"raster-brightness-min": 0, "raster-brightness-max": 1, "raster-saturation": 0, "raster-contrast": 0};
   // Kartverket-flisene er gjennomsiktige der de ikke har noe å tegne: til og med z8 nesten alt (bare linjer og navn -
   // land og sjø kommer fra OSM-oversikten under), fra z9 er sjøen hvit og landet halvgjennomsiktig over en hvit grunn.
   // Bakgrunnen under er derfor havfargen til og med z8 og Kartverkets egen grunnfarge fra z9-flisene (invertert i mørk modus:
@@ -100,10 +103,21 @@
   // Kartverket-flisene er gjennomsiktige og land/kyst i oversikten kommer fra OSM (ODbL krever kreditering da)
   function merk(){
     if(!attrEl || !map) return;
-    const osm = reserve || map.getZoom() < KV_GRUNN_Z;
-    if(attrEl.dataset.osm === String(osm)) return;
-    attrEl.dataset.osm = String(osm);
-    attrEl.innerHTML = KV_ATTR + (osm ? " · " + OSM_ATTR : "");
+    const osm = reserve || map.getZoom() < KV_GRUNN_Z, endret = dark();
+    if(attrEl.dataset.osm === String(osm) && attrEl.dataset.endret === String(endret)) return;
+    attrEl.dataset.osm = String(osm); attrEl.dataset.endret = String(endret);
+    attrEl.innerHTML = (endret ? KV_ATTR_ENDRET : KV_ATTR) + (osm ? " · " + OSM_ATTR : "");
+  }
+  // kildemerket skal alltid synes: på mobil ligger kortet for valgt spot (.kartkort, z-index 7) der merket står -
+  // da flyttes merket rett over kortet. På PC ligger kortet under kartet, og merket blir stående.
+  function kildePlass(){
+    if(!attrEl || !root) return;
+    attrEl.style.bottom = "";
+    const kort = document.getElementById("kartKort");
+    if(!kort || kort.hidden) return;
+    const k = kort.getBoundingClientRect(), a = attrEl.getBoundingClientRect();
+    if(!k.width || !k.height || !(a.left < k.right && a.right > k.left && a.top < k.bottom && a.bottom > k.top)) return;
+    attrEl.style.bottom = Math.round(root.getBoundingClientRect().bottom - k.top + 6) + "px";
   }
   function vurderReserve(){
     // offline, eller flere feilede enn lastede Kartverket-fliser i det siste → OSM
@@ -111,6 +125,7 @@
   }
   function applyColors(){
     if(!map) return;
+    merk();   // «(farger endret)» følger temaet
     // isStyleLoaded() er usann mens fliser lastes - prøv igjen når kartet er ferdig, ellers blir et temabytte borte
     if(!map.isStyleLoaded()){ map.once("idle", applyColors); return; }
     const c = colors();
@@ -148,7 +163,7 @@
         <div class="vindlag" id="vindLag" aria-hidden="true"><svg id="vindSvg"></svg></div>
         <svg class="kilelag" id="kileLag" aria-hidden="true"><g id="kileG"></g></svg>
         <div class="markers" id="markersLayer"></div>
-        <div class="kartkilde" id="kartKilde" data-kart-hinder>${KV_ATTR}</div>`;
+        <div class="kartkilde" id="kartKilde" data-kart-hinder>${dark() ? KV_ATTR_ENDRET : KV_ATTR}</div>`;
       markersEl = root.querySelector("#markersLayer");
       attrEl = root.querySelector("#kartKilde"); vindEl = root.querySelector("#vindLag"); kileSvg = root.querySelector("#kileLag");
       lagVind();
@@ -221,8 +236,9 @@
     svg.innerHTML = out;
   }
   let vindVinkel = null;   // akkumulert vinkel, så overgangen alltid tar korteste vei (ingen nesten-hel runde ved 0/360)
-  function setWind(h){
+  function setWind(h, spotId){
     if(!vindEl) return;
+    vindEl.dataset.spot = h && spotId ? spotId : "";   // hvilken spots vind som vises (testene leser den)
     const ws = h && h.wind_speed!=null ? h.wind_speed : null;
     const wd = h && h.wind_dir!=null ? h.wind_dir : null;
     if(ws==null || wd==null){ vindEl.style.opacity = "0"; vindEl.dataset.retning = ""; return; }   // ukjent vind: ingen streker
@@ -239,16 +255,17 @@
   }
 
   /* ---------- svellkilen ved valgt spot (fra «kart først», dac1d4a) ---------- */
-  // Treff/bom KUN fra h.directness - samme regel og grenser som spotsiden (app.js directionHitText:
-  // ≥ 0,999 innenfor, ≥ 0,667 i kanten, ellers utenfor) - aldri bw_confirms/spot_direction_factor.
-  function hitClass(h){
-    if(!h) return "miss";
-    const dn = h.directness;
-    return h.dir_offshore==null || dn==null || dn < 0.667 ? "miss" : dn >= 0.999 ? "" : "edge";
+  // Samme regel og tekst som spotsiden: app.js vinduStatus (også Spot.vinduTekst) - utenfor vinduet er
+  // «Utenfor vinduet» uansett directness, i vinduet gir directness innenfor/kanten/skjermet. Mangler
+  // retningen eller treffgraden, er klassen «ukjent»: ingen fronter og ingen bom-strek (aldri en verdi).
+  function hitClass(h, spot){
+    const v = vinduStatus(h, spot);
+    return v ? v.klasse : "ukjent";
   }
-  function kileAria(h){
-    if(!h || h.dir_offshore==null || h.directness==null) return "svellretning ukjent";
-    return h.directness < 0.667 ? "svellet treffer ikke vinduet" : "svellet treffer vinduet";
+  function kileAria(h, spot){
+    const v = vinduStatus(h, spot);
+    if(!v) return "svellretning ukjent";
+    return v.klasse === "ukjent" ? `Svell: ${v.txt.toLowerCase()}, treffgrad ukjent` : `Svell: ${v.txt.toLowerCase()}`;
   }
   const R0 = 64;   // kilens radius i SVG-enheter; skaleres med zoomen i plasserKile()
   function pt(bearing, r){ const a = bearing*Math.PI/180; return [r*Math.sin(a), -r*Math.cos(a)]; }
@@ -264,23 +281,24 @@
     const g = kileSvg && kileSvg.querySelector("#kileG"); if(!g) return;
     const win = spot && spot.swell_window;
     if(!spot || !win || !h || !spot.spot){ kile = null; g.innerHTML = ""; g.removeAttribute("data-spot"); return; }
-    const st = Math.min(5, h.stars||0), cls = hitClass(h), missing = h.dir_offshore==null;
+    const st = Math.min(5, h.stars||0), cls = hitClass(h, spot);
+    // periode mangler: fronter tegnes likevel bare når retning og treff er kjent - farten er da en nøytral 10 s
+    // (bare animasjonstempo, ingen tallverdi vises)
     const per = h.period!=null ? h.period : 10;
     const dur = Math.max(1.8, Math.min(4.4, per*0.26));        // bølgefrontenes fart etter perioden
+    // fronter: 4 ved treff, 3 stiplede i kanten, 2 svake stiplede når bare en del når inn (skjermet i vinduet,
+    // eller utenfor vinduet men bekreftet ved spoten), bom-strek utenfor vinduet, ingenting når treffet er ukjent
+    const n = {hit: 4, edge: 3, skjermet: 2, bekreftet: 2}[cls] || 0;
     let fronter = "";
-    if(!missing && cls!=="miss"){
-      const n = cls==="edge" ? 3 : 4;
-      for(let i=0;i<n;i++) fronter += `<path class="arc ${cls}" d="M-17,-60 Q0,-66 17,-60" style="animation-duration:${dur.toFixed(2)}s;animation-delay:-${(dur*i/4).toFixed(2)}s"/>`;
-    } else if(!missing){
-      fronter = `<line class="arc-miss" x1="0" y1="-64" x2="0" y2="-8"/>`;
-    }
-    g.setAttribute("class", `kile ${cls || "hit"}`);
-    // farge etter stjernene (minst 1) som merkene, ellers vindusfargen; bom alltid vindusfargen (som før)
-    g.setAttribute("style", `--kc:${st >= 1 && cls !== "miss" ? `var(--r${st})` : "var(--window)"}`);
-    g.setAttribute("aria-label", kileAria(h));
-    g.dataset.spot = spot.id; g.dataset.treff = cls || "hit";
+    for(let i=0;i<n;i++) fronter += `<path class="arc ${cls}" d="M-17,-60 Q0,-66 17,-60" style="animation-duration:${dur.toFixed(2)}s;animation-delay:-${(dur*i/4).toFixed(2)}s"/>`;
+    if(cls === "miss") fronter = `<line class="arc-miss" x1="0" y1="-64" x2="0" y2="-8"/>`;
+    g.setAttribute("class", `kile ${cls}`);
+    // farge etter stjernene (minst 1) som merkene, ellers vindusfargen; bom og ukjent alltid vindusfargen
+    g.setAttribute("style", `--kc:${st >= 1 && cls !== "miss" && cls !== "ukjent" ? `var(--r${st})` : "var(--window)"}`);
+    g.setAttribute("aria-label", kileAria(h, spot));
+    g.dataset.spot = spot.id; g.dataset.treff = cls;
     g.innerHTML = `<g class="kile-skala"><path class="kile-fyll" d="${kileSti(win, R0)}"/><circle r="1.6" class="kile-c"/>
-      <g transform="rotate(${missing ? 0 : h.dir_offshore})">${fronter}</g></g>`;
+      ${fronter ? `<g transform="rotate(${h.dir_offshore})">${fronter}</g>` : ""}</g>`;
     kile = {lat: spot.spot.lat, lon: spot.spot.lon, id: spot.id};
     plasserKile();
   }
@@ -351,6 +369,7 @@
   function draw(){
     if(!markersEl) return;
     const t0 = performance.now();
+    kildePlass();   // før overlays(): lappene skal holde seg unna merket der det faktisk står
     const groups = clusters();
     const html = [];
     const placed = [];   // lapper plassert, til kollisjonssjekk
@@ -407,5 +426,5 @@
   if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{});
   window.addEventListener("hashchange", ()=>{ if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{}); });
   window.Kart = { lag: Lag, init, loadLib, setCoast, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(), offMapSpots, screenOf, extentOf, thumb, covers: (la, lo)=> Lag.covers(la, lo),
-    setWind, setWedge, hitClass, sentrum: ()=> map ? map.getCenter() : null };
+    setWind, setWedge, hitClass, sentrum: ()=> map ? map.getCenter() : null, zoom: ()=> map ? map.getZoom() : null };
 })();
