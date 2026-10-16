@@ -21,6 +21,15 @@ assert have == want, (
 )
 print(f"docs/sw.js sin cache-versjon stemmer med docs/ sitt innhold ({want})")
 
+# S3 (16.10.2026): alle filene i SHELL må finnes - ellers feiler cache.addAll() i install, og en ny
+# sw.js blir aldri tatt i bruk (listen hadde css/kart.css og js/front.js, som ikke fantes).
+import json, re  # noqa: E402
+sw = SW.read_text(encoding="utf-8")
+shell = json.loads("[" + re.search(r"const SHELL = \[(.*?)\];", sw, re.S).group(1).replace("\n", " ") + "]")
+missing = [f for f in shell if f != "./" and not (SW.parent / f).is_file()]
+assert not missing, f"sw.js sin SHELL har filer som ikke finnes i docs/: {missing}"
+print(f"Alle {len(shell)} filene i sw.js sin SHELL finnes")
+
 # 16.10.2026 (PR #17): en endring bare i sw.js (SHELL-lista, logikk) skal også gi nytt CACHE-navn,
 # ellers kan en ny service worker gjenbruke det gamle lageret; CACHE-linja selv påvirker ikke hashen.
 import os, re, update_sw_cache as u   # noqa: E401,E402
@@ -34,9 +43,5 @@ finally:
     SW.write_text(orig, encoding="utf-8")
 assert changed != want, "en SHELL-endring i sw.js ga samme CACHE-navn"
 assert same == want, "CACHE-linja selv påvirker hashen (sirkulært)"
-# SHELL skal bare ha filer som finnes - ellers feiler cache.addAll og ny service worker installeres aldri (PR #17)
-shell = re.findall(r'"([^"]+)"', re.search(r"SHELL\s*=\s*\[(.*?)\]", orig, re.S).group(1))
-missing = [f for f in shell if f != "./" and not (SW.parent / f).exists()]
-assert not missing, f"SHELL i sw.js peker på filer som ikke finnes: {missing}"
-print("SHELL-endring gir nytt CACHE-navn, CACHE-linja er nøytral, alle SHELL-filer finnes - OK")
+print("SHELL-endring gir nytt CACHE-navn, CACHE-linja er nøytral - OK")
 print("Alle tester ok")

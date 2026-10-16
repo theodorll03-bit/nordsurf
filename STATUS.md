@@ -1,22 +1,59 @@
 # Nordsurf: status
 
-## Nattjobben 15.-16.10 (ROADMAP K, 116 spots) - I GANG (16.10 natt)
+## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - I GANG
 
-Fasit for hvor langt nattjobben er kommet. En ny økt fortsetter fra «Neste steg».
-
-| Del | Status | Gren / PR |
+| Punkt | Status | Gren / PR |
 |---|---|---|
-| Plan i ROADMAP (K) + privat/ i .gitignore | ferdig | main |
-| 0.1 PR #11 (ntfy ved 5, kjent avvik Unstad 26.09) | ferdig, merget | fiks/fem-stjerner, #11 |
-| 0.2 PR #12 (brikker, «Flatt»/«–», I dag etter mørket) | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | skalering/oversikt, #12 |
-| 0.3 Nøklene | venter på Theodor: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID finnes ikke (sjekket 15.10 kveld) | - |
-| 0.4 Steinkrøssa nytt snitt automatisk | ferdig, merget (daglig sjekk i Testlab-workflowen, kjører fra main) | steinkrossa/nytt-snitt, #13 |
-| A kandidatimport | ferdig, merget (kontrollør IKKE GODKJENT → rettet → GODKJENT) | kandidater/import, #14 |
-| A2 koordinatjakt | **STOPPET** etter blind validering: 1 av 8 innenfor 100 m, 4 over 300 m (krav: 6 av 8, ingen over 300) - de 108 er ikke kjørt; se data/kandidater/validering_blind.md. Verktøy + konvensjon + gjennomgangsside committes som PR (ikke merge) | kandidater/posisjoner |
-| B S3 MapLibre | bygget (forgrening), kontrollør kjører, så PR (ikke merge) | s3/maplibre |
-| C spotfabrikken | i gang: bygg_spot.py + validering på de 8 (ingen A-kandidater å bygge - A2 stoppet, og flyfoto mangler) | spotfabrikken |
+| 1. #17 sw.js - CACHE-navnet endres ved neste publisering? | **Rettet:** nei, #17 ga samme navn som live-siden (845c929484b0), fordi hashen utelot sw.js selv. Nå tas sw.js med (CACHE-linja nøytralisert) → 36ed691acc3a; test_docs_cache sjekker at en SHELL-endring gir nytt navn og at SHELL bare har filer som finnes. Kontrollør: GODKJENT. Theodor merger. NB: #15 og #18 må kjøre update_sw_cache.py på nytt etter at #17 er merget (ny hash-formel). | fiks/sw-shell, #17 |
+| 2. #15 rettelser a-d + test_kart_browser i CI | i gang (forgrening i ../nordsurf-b) | s3/maplibre, #15 |
+| 3.1 Regioner + Hordaland | ferdig (Øygarden → Hordaland, 0 uten region) | kandidater/posisjoner, #16 |
+| 3.2 secret-revtangen, regestranda «hemmelig»; vetvika lav prioritet | ferdig - **se spørsmålet under om det offentlige repoet** | #16 |
+| 3.3 Forbud-visning | Hjem, tabell, søk og spotsiden ferdig på #18 («Surfing forbudt nå» + «1. okt–31. mars, fuglefredning», linje om forbudet utenfor perioden, ikke i Beste økt, testet); Utforsk-kartet og klyngefargen bygges når #15 er merget | #18 |
+| 3.4 facing ±150 m langs kysten, offshore ±45 | ferdig: 5 av 8 (de samme fem som før, men mye tettere: Grøtfjord 1,5°, Tromvik 0,7°, Russelv 0,7°, Steinkrøssa 6,7°, Unstad 3,1°); utenfor: Ersfjordstranda 21°, Lenangsøyra 34° (ventet), Farstadsanden 61° (nålen i hjørnet av en buet strand - fabrikken varsler nå slike). Kontrollør: godkjent etter to tekstrettelser | spotfabrikken, #18 |
+| 3.5 posisjoner.json med listepinner, gjennomgangsside, importer_forslag.py | ferdig: 105 kandidater (listepinne, «ikke sjekket»), 386 alternative markører (OSM-strand, stedsnavn); siden region for region (Lofoten 17, Vesterålen 9 først) med teller; vernvarsel ved lagring i/nær forbudsområde; godkjenninger slettes aldri. Kontrollør: rettet → testet | #16 |
+| 4. Tidevannssted | **Stemmer:** bygg_spot.py gir nøyaktig samme referansested, forsinkelse og faktor som henterens eget oppslag (spotens posisjon, datatype=tab, 16 døgn) for alle 8 - Andenes (Grøtfjord, Tromvik, Ersfjordstranda, Steinkrøssa, Unstad), Hammerfest (Russelv, Lenangsøyra), Kristiansund (Farstadsanden). Andenes er Kartverkets eget referansested for de posisjonene. Ingen feil i bygg_spot.py. | - |
+| 5. NTFY_TOPIC | **Finnes ikke:** ikke som repo-nøkkel, ikke som repo-variabel (`gh variable list`: bare BW_DEBUG), og forecast.yml bruker ikke noe miljø (bare publiser.yml bruker github-pages). Den ekte henterkjøringen 15.10 kl. 15:53Z logget `NTFY_TOPIC:` tom og «Varsler: NTFY_TOPIC er ikke satt, hopper over.» («Varslet: …»-linjene i loggen er fra testene, med mock). **Ingen ntfy-varsler sendes i dag** - verken surfevarsler, driftsvarsler eller «Rått»-varselet - før Theodor legger inn NTFY_TOPIC som repo-nøkkel. | - |
+| 6. Ingen spot bygges | holdt | - |
 
-**Neste steg:** kontrollør på A2 og B → PR-er (ikke merge); Del C (tools/bygg_spot.py, validering mot spots.json for de 8), S6-plan i ROADMAP, morgenrapport.
+**Spørsmål til Theodor (fra kontrolløren):** repoet er offentlig. secret-revtangen og regestranda ligger med listepinnens koordinater i data/kandidater/kandidater.json og triage.json på main siden PR #14 - nå i tillegg merket «hemmelig» (som du ba om). Skal de flyttes ut av repoet til privat/ (gitignored)? Det kan gjøres framover uten å slette noe, men de ligger i git-historikken; å renske historikken krever force-push og sletting - bare med ditt ja.
+
+**Eggum og The Frog (3.3):** kart i data/kandidater/vern/ (tools/vern_kart.py, Naturbase-grensen mot listepinnen). Eggum: reservatet (med sjøstripe) begynner ca. 270 m sørvest for pinnen - bølgen foran pinnen ligger utenfor, men stranda fortsetter mot reservatet. The Frog: reservatet ligger på andre siden av bukta, ca. 580 m - utenfor. Eggum øst: ca. 690 m - utenfor. Alle tre er vanlige kandidater med en linje om reservatet (data/kandidater/vern_vurdering.json → kandidater.json vern_merknad). Vurdert ut fra listepinnen, ikke flyfoto.
+
+**Norgeskart-lenken (3.5):** `https://norgeskart.no/?backgroundLayer=Nibcache_UTM33_EUREF89_v2&lat=<lat>&lon=<lon>&zoom=15&sok=<lat>,<lon>` åpner flyfoto-laget med markør på punktet (parametrene lest fra Norgeskart sin egen kode, testet i nettleser 16.10). Brukes bare som lenke for Theodor - ingen flyfoto hentes automatisk.
+
+## Morgenrapport 16.10 - nattjobben (ROADMAP K, 116 spots) - FERDIG FOR NATTEN, venter på Theodor
+
+**Merget til main (alle med grønn CI og fysikk-kontrollør):**
+- **#11 5 stjerner («Rått»)** + ntfy-varsel ved 5 (spot, dag, tidsrom, maks ett per spot per døgn, 7 dager frem). Unstad 26.09 står som kjent avvik under «Venter på Theodor» i ROADMAP.
+- **#12 Tillegg 2** med dine tre rettelser: valgt regionbrikke rulles inn (rekkefølge nord til sør fra spots.json); «0,0» → «–» når tallet mangler og ordet («Flatt», «Treffer ikke») i grå rute ved ekte 0; dagen som er over vises ikke - tabellen/ukeradene starter på i morgen etter siste lys (oversikten har nå 8 døgn).
+- **#13 Steinkrøssa:** nytt BarentsWatch-snitt tas automatisk (daglig sjekk i Testlab-workflowen) første gang svellet ute er ≥ 1,5 m og ≥ 10 s fra vinduet, i BarentsWatch-sonen. Resultat i data/bw_point_search/; punktet flyttes ikke.
+- **#14 Kandidatimport (Del A):** 107 kandidater + de 8, triage med GSHHS f og OSM, vern fra Naturbase og Lovdata. Ingen tekst fra lista, den hemmelige spoten er ikke med, ingenting i appen.
+
+**Venter på deg (ikke merget):**
+- **#17 sw.js - merge denne først** (https://github.com/theodorll03-bit/nordsurf/pull/17): SHELL har hatt to filer som ikke finnes siden PR #7, så en ny service worker installeres aldri - en installert PWA kan stå på et gammelt skall og ikke vise #11/#12. Lukk og åpne appen to ganger etter merge.
+- **#15 S3 MapLibre-kartet for hele kysten** (https://github.com/theodorll03-bit/nordsurf/pull/15): se skjermbildene (mobil/PC, lys/mørk, hele kysten, Lofoten, Unstad). OSM-kyst som PMTiles (0,47 MB precachet + 26,5 MB med range). 62 fps og klynger på 0-2 ms med 500 spots; lasting 0,84 s + 1,18 s WebGL-oppsett i emulert GPU - **2 s er ikke bevist på en ekte telefon**, mål gjerne på din. Ved merge: test_kart_browser.py inn i test.yml og CLAUDE.md.
+- **#16 Koordinatjakt (A2) - STOPPET** (https://github.com/theodorll03-bit/nordsurf/pull/16): se data/kandidater/validering_blind.md. Konvensjon, verktøy og gjennomgangsside.
+- **#18 Spotfabrikken (Del C) - bygging STOPPET** (https://github.com/theodorll03-bit/nordsurf/pull/18): se tabellen. Vinduet treffer, facing bommer for 3 av 8.
+
+**Hva som stoppet og hvorfor:**
+- **A2:** den blinde valideringen på de 8 (fra Kartverkets stedsnavn, ikke listepinnen - for de 8 er listepinnen i praksis vår egen nål) ga **1 av 8 innenfor 100 m, 4 over 300 m** (krav: 6 av 8, ingen over 300). Stedsnavnets punkt er ofte ikke surfestranda (Steinkrøssa 1,8 km, Lenangsøyra 3,7 km), OSM mangler strandpolygoner i Troms/Lofoten (bare 3 av 8 har en innen 600 m), og hvor på stranda krever flyfoto - **Norge i bilder er ikke åpent** (WMS krever innlogging, «norway digital restricted»). De 108 er derfor ikke kjørt, og ingen posisjoner.json finnes.
+- **C:** 5 av 8 innenfor (krav 6) - og ingen A-kandidater å bygge (A krever flyfoto). Lofoten/Vesterålen er ikke bygget. S6-planen står i ROADMAP (seksjon S), ikke bygget.
+- **Nøklene (del 0.3):** LOGS_REPO, LOGS_TOKEN og FROST_CLIENT_ID finnes fortsatt ikke (sjekket 15.10 kveld og 16.10 natt) - Farstadsanden-loggen og Frost (Hustadvika/Kristiansund 15.10 kl. 12-18) venter. NB: NTFY_TOPIC står heller ikke blant repo-nøklene (`gh secret list`) - er den ikke satt et annet sted (miljø), sendes verken vanlige varsler eller «Rått»-varselet. Ikke bekreftet.
+
+**Funnet om vern (Del A, ordrett fra forskriftene):** Pigsty, Orrestranda og Kvassheim ligger i Jærstrendene fuglefredningsområde - **bølgjesurfing er forbudt 1.10-31.3** der (forskrift 2003-12-12-1675 § 3 B nr. 6 d), altså hele høysesongen. Seines: vern ja (Seinesodden naturreservat), forbud nei - bare motorferdsel og brettseiling; militært står ikke i forskriften eller Naturbase. Nytt: **Eggum og Nykvåg/Nykan naturreservat forbyr surfebrett hele året** (Eggum-pinnen 277 m unna, The Frog 579 m).
+
+**Spørsmål til deg:**
+1. **Regionnavnene** (forslag: Finnmark, Troms, Vesterålen, Lofoten, Salten, Møre og Romsdal, Stad og Nordfjord, Karmøy, Jæren, Dalane og Lista, Sørlandet, Østlandet). Hordaland/Øygarden passer ikke i noen (står uten region); Kinn/Sunnfjord er lagt i Stad og Nordfjord.
+2. **secret-revtangen:** skal den bygges? (Den ligger i Jærstrendene fuglefredningsområde med surfeforbud 1.10-31.3.) Lista kaller også **vetvika og regestranda** «secret».
+3. **Forbudsspotene:** vise med «Forbud nå» (bygget slik i #18, ren visning) eller skjule helt i perioden? For Jæren betyr «Forbud nå» oktober-mars.
+4. (Nytt) **facing for nye spots:** strandas normal eller midten av vinduet? spots.json bruker begge.
+5. (Nytt) **Koordinatene:** listepinnen som utgangspunkt og din gjennomgang med flyfoto i `tools/koordinatsjekk/` - skal jeg lage en posisjoner.json med listepinnene så siden kan brukes?
+
+**Åpne gjennomgangssiden (etter #16, når en posisjoner.json finnes):** `python3 tools/koordinatsjekk/server.py` og åpne http://127.0.0.1:8765/ (G/U/A, piltaster; lagrer i data/kandidater/posisjoner.json).
+
+**Arbeidskopier fra natten** (kan slettes med `git worktree remove`): ../nordsurf-12 (main), ../nordsurf-b (s3/maplibre), ../nordsurf-c (spotfabrikken). Råbevis og kystdata ligger i privat/ (ikke i git).
+
+**Neste steg for en ny økt:** vent på Theodors svar; ingenting i nattjobben står halvferdig.
 
 **Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og regestranda «secret» - spørsmål til Theodor sammen med secret-revtangen.
 
