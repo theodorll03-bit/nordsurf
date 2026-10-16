@@ -187,6 +187,34 @@ def main():
                 go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .vurdering .ord")
                 assert loaded["det"] == [troms_id], loaded["det"]
                 ctx.close()
+            # Theodor 16.10.2026 (punkt 1c): gammelt varsel eller gammelt format → banner på Hjem, Utforsk og spotsiden;
+            # ferskt varsel (alt over, klokka 70 min etter generated) → ingen banner
+            gammel_ov = json.dumps({**json.loads(OV_BODY), "format": "oversikt-1",
+                                    "spots": [{k: v for k, v in s.items() if k not in ("naa", "dager")} for s in json.loads(OV_BODY)["spots"]]})
+            for navn, klokke, body, tekst in (("ferskt", T0, OV_BODY, None),
+                                              ("10 t gammelt", T0 + dt.timedelta(hours=10), OV_BODY, "Varselet er 11 timer gammelt"),
+                                              ("gammelt format", T0, gammel_ov, "eldre format enn appen")):
+                ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo")
+                page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(klokke)
+                page.on("pageerror", lambda e, navn=navn: errors.append(f"banner {navn}: {e}"))
+                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"):
+                    page.route(pat, lambda r, req: r.abort())
+                page.route("**/data/oversikt.json", lambda rt, req, body=body: rt.fulfill(status=200, content_type="application/json", body=body))
+                page.route("**/data/spots/*.json", lambda rt, req: rt.fulfill(status=200, content_type="application/json", body=DET_BODY.get(req.url.split("?")[0].rsplit("/", 1)[-1][:-5], "{}")))
+                page.route("**/data/minikart/*.json", lambda rt, req: rt.fulfill(status=404, body=""))
+                sid = json.loads(OV_BODY)["spots"][0]["id"]
+                funn = {}
+                for side, hsh, sel in (("Hjem", "#hjem", "#viewHjem:not([hidden])"), ("Utforsk", "#utforsk", "#viewUtforsk:not([hidden])"),
+                                       ("spotsiden", f"#spot={sid}", "#viewSpot:not([hidden]) .spot-topp")):
+                    page.goto(f"http://127.0.0.1:{port}/index.html{hsh}"); page.wait_for_selector(sel); page.wait_for_timeout(600)
+                    funn[side] = page.evaluate(f"[...document.querySelectorAll('{sel.split(' ')[0]} .banner.stale')].map(b => b.textContent).join(' | ')")
+                for side, t in funn.items():
+                    if tekst is None:
+                        assert not t, f"banner ved ferskt varsel på {side}: {t}"
+                    else:
+                        assert tekst in t, f"{navn}: mangler banner «{tekst}» på {side}: «{t}»"
+                print(f"1c ({navn}): {'ingen banner' if tekst is None else 'banner'} på Hjem, Utforsk og spotsiden - OK")
+                ctx.close()
             browser.close()
     finally:
         srv.shutdown()

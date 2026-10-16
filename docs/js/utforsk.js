@@ -124,6 +124,7 @@
   }
   function render(state){
     S = state;
+    const ub = $("#utforskBanner"); if(ub) ub.innerHTML = typeof staleBanner==="function" ? staleBanner() : "";   // punkt 1c
     if(!ensureInit()){ $("#utforskChips").innerHTML = `<span class="muted">Henter kartet …</span>`; return; }
     if(S.utforskView===undefined || S.utforskView===null && !S.utforskViewSatt){
       // første gang: regionen fra Innstillinger -> Område (Troms) hvis den ligger på kartlaget, ellers hele kartet

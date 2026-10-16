@@ -237,6 +237,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .utforsk-top{position:absolute;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none}
 .utforsk-top h1{margin-bottom:8px;text-shadow:0 1px 0 var(--surface)}
 .utforsk-top .chips{pointer-events:auto}
+.utforsk-top .banner{margin:0 0 8px;pointer-events:auto}
 .utforsk-top .chip{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge)}
 .utforsk-top .chip[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
 .kart{position:absolute;inset:0}

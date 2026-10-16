@@ -15,6 +15,9 @@
     updated: (day, time) => `Oppdatert ${day} kl. ${time}`,
     stale: (day, time) => `Varselet er ikke oppdatert siden ${day} kl. ${time}`,
     staleMore: "Henteren har trolig feilet. Tallene kan være utdaterte.",
+    staleHours: (n) => `Varselet er ${n} ${n === 1 ? "time" : "timer"} gammelt`,
+    staleFormat: "Varselet har et eldre format enn appen.",
+    staleFormatMore: "Henteren har trolig feilet etter en oppdatering - tallene vises når neste varsel er hentet.",
     exampleSub: "Eksempel, ikke ekte data",
 
     /* rating: ord for 0-5 stjerner, og de fire ordene for 0-1 stjerne */
