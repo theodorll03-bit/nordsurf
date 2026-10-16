@@ -9,24 +9,27 @@
    "lat": 68.02655,
    "lon": 12.986765
   },
-  "facing": 213.4,
+  "facing": 305.0,
   "swell_window": [
    308,
    4
   ],
   "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[308, 4]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
   "offshore_wind": [
-   348,
-   78
+   80,
+   170
   ],
-  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "_offshore_vind": "forslag fra Claude 16.10, ukalibrert",
   "offshore": {
    "lat": 68.1505,
    "lon": 12.8403
   },
   "_havpunkt": "Langs midten av vinduet (336.0°), 15 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
-  "barentswatch_point": null,
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json): regelen fant ikke noe punkt i noen time.",
+  "barentswatch_point": {
+   "lat": 68.028625,
+   "lon": 12.978899
+  },
+  "_barentswatch": "FORELØPIG: nytt snitt langs 305.0° til 1500 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -40,7 +43,11 @@
   ],
   "max_height": 3.5,
   "kilde": "liste 15.10 + spotfabrikken",
-  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json"
+  "_rettet": {
+   "facing": "forslag fra Claude 16.10, ukalibrert",
+   "offshore_wind": "forslag fra Claude 16.10, ukalibrert",
+   "barentswatch_point": "nytt snitt langs 305.0° (forslag fra Claude 16.10, ukalibrert)"
+  }
  },
  "snitt": [
   {
@@ -51,103 +58,101 @@
   },
   {
    "m": 100,
-   "lat": 68.025795,
-   "lon": 12.985443,
-   "dybde_m": 1.8
+   "lat": 68.027069,
+   "lon": 12.984798,
+   "dybde_m": 3.0
   },
   {
    "m": 200,
-   "lat": 68.02504,
-   "lon": 12.984122,
-   "dybde_m": 2.5
+   "lat": 68.027587,
+   "lon": 12.982832,
+   "dybde_m": 5.8
   },
   {
    "m": 300,
-   "lat": 68.024285,
-   "lon": 12.9828,
-   "dybde_m": 0.4
+   "lat": 68.028106,
+   "lon": 12.980865,
+   "dybde_m": 6.4
   },
   {
    "m": 400,
-   "lat": 68.02353,
-   "lon": 12.981479,
-   "dybde_m": -27.8
+   "lat": 68.028625,
+   "lon": 12.978899,
+   "dybde_m": 9.5
   },
   {
    "m": 500,
-   "lat": 68.022775,
-   "lon": 12.980157,
-   "dybde_m": -239.0
+   "lat": 68.029144,
+   "lon": 12.976932,
+   "dybde_m": 9.4
   },
   {
    "m": 600,
-   "lat": 68.02202,
-   "lon": 12.978836,
-   "dybde_m": -274.9
+   "lat": 68.029662,
+   "lon": 12.974965,
+   "dybde_m": 11.7
   },
   {
    "m": 700,
-   "lat": 68.021265,
-   "lon": 12.977514,
-   "dybde_m": -389.7
+   "lat": 68.030181,
+   "lon": 12.972999,
+   "dybde_m": 12.1
   },
   {
    "m": 800,
-   "lat": 68.02051,
-   "lon": 12.976192,
-   "dybde_m": -424.3
+   "lat": 68.0307,
+   "lon": 12.971032,
+   "dybde_m": 15.9
   },
   {
    "m": 900,
-   "lat": 68.019755,
-   "lon": 12.974871,
-   "dybde_m": -384.6
+   "lat": 68.031219,
+   "lon": 12.969066,
+   "dybde_m": 17.2
   },
   {
    "m": 1000,
-   "lat": 68.019,
-   "lon": 12.973549,
-   "dybde_m": -328.2
+   "lat": 68.031737,
+   "lon": 12.967099,
+   "dybde_m": 21.7
   },
   {
    "m": 1100,
-   "lat": 68.018245,
-   "lon": 12.972228,
-   "dybde_m": -142.1
+   "lat": 68.032256,
+   "lon": 12.965132,
+   "dybde_m": 22.7
   },
   {
    "m": 1200,
-   "lat": 68.01749,
-   "lon": 12.970906,
-   "dybde_m": -60.7
+   "lat": 68.032775,
+   "lon": 12.963166,
+   "dybde_m": 25.4
   },
   {
    "m": 1300,
-   "lat": 68.016734,
-   "lon": 12.969585,
-   "dybde_m": 3.8
+   "lat": 68.033294,
+   "lon": 12.961199,
+   "dybde_m": 26.7
   },
   {
    "m": 1400,
-   "lat": 68.015979,
-   "lon": 12.968263,
-   "dybde_m": 8.3
+   "lat": 68.033812,
+   "lon": 12.959233,
+   "dybde_m": 29.0
   },
   {
    "m": 1500,
-   "lat": 68.015224,
-   "lon": 12.966941,
-   "dybde_m": 10.2
+   "lat": 68.034331,
+   "lon": 12.957266,
+   "dybde_m": 29.0
   }
  ],
- "flagg": [
-  "vindussektor [308, 4] ligger mer enn 90° fra facing - kan være bak stranda (tange/øyr smalere enn kysttoleransen)",
-  "BarentsWatch: regelen fant ikke noe punkt (Hs flater ikke ut / for grunt / retning) - Theodor må velge"
- ],
+ "flagg": [],
  "bygget": "2026-10-16T09:49+00:00",
  "bygget_fra": {
   "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
   "lat": 68.02655,
   "lon": 12.986765
- }
+ },
+ "rettet": "2026-10-16"
 }

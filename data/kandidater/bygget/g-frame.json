@@ -25,8 +25,11 @@
    "lon": 14.1262
   },
   "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
-  "barentswatch_point": null,
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json): regelen fant ikke noe punkt i noen time.",
+  "barentswatch_point": {
+   "lat": 68.653782,
+   "lon": 14.40406
+  },
+  "_barentswatch": "FORELØPIG: nytt snitt langs 330.0° til 3000 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater, maks_m=3000) og velg_bw_punkt.py.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -34,10 +37,17 @@
    "factor": "1.00",
    "obsname": "Andenes"
   },
-  "ideal_height": null,
-  "max_height": null,
+  "ideal_height": [
+   1.0,
+   2.5
+  ],
+  "max_height": 3.5,
   "kilde": "liste 15.10 + spotfabrikken",
-  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json"
+  "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+  "_rettet": {
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "barentswatch_point": "nytt snitt langs 330.0° (forslag fra Claude 16.10, ukalibrert)"
+  }
  },
  "snitt": [
   {
@@ -135,17 +145,104 @@
    "lat": 68.650649,
    "lon": 14.408992,
    "dybde_m": 5.8
+  },
+  {
+   "m": 1600,
+   "lat": 68.651432,
+   "lon": 14.407759,
+   "dybde_m": 6.0
+  },
+  {
+   "m": 1700,
+   "lat": 68.652215,
+   "lon": 14.406526,
+   "dybde_m": 2.7
+  },
+  {
+   "m": 1800,
+   "lat": 68.652998,
+   "lon": 14.405293,
+   "dybde_m": 2.2
+  },
+  {
+   "m": 1900,
+   "lat": 68.653782,
+   "lon": 14.40406,
+   "dybde_m": 9.9
+  },
+  {
+   "m": 2000,
+   "lat": 68.654565,
+   "lon": 14.402827,
+   "dybde_m": 11.2
+  },
+  {
+   "m": 2100,
+   "lat": 68.655348,
+   "lon": 14.401594,
+   "dybde_m": 9.6
+  },
+  {
+   "m": 2200,
+   "lat": 68.656131,
+   "lon": 14.40036,
+   "dybde_m": 7.1
+  },
+  {
+   "m": 2300,
+   "lat": 68.656914,
+   "lon": 14.399127,
+   "dybde_m": 11.7
+  },
+  {
+   "m": 2400,
+   "lat": 68.657698,
+   "lon": 14.397894,
+   "dybde_m": 10.6
+  },
+  {
+   "m": 2500,
+   "lat": 68.658481,
+   "lon": 14.396661,
+   "dybde_m": 12.7
+  },
+  {
+   "m": 2600,
+   "lat": 68.659264,
+   "lon": 14.395428,
+   "dybde_m": 13.6
+  },
+  {
+   "m": 2700,
+   "lat": 68.660047,
+   "lon": 14.394195,
+   "dybde_m": 13.4
+  },
+  {
+   "m": 2800,
+   "lat": 68.660831,
+   "lon": 14.392962,
+   "dybde_m": 11.6
+  },
+  {
+   "m": 2900,
+   "lat": 68.661614,
+   "lon": 14.391729,
+   "dybde_m": 9.1
+  },
+  {
+   "m": 3000,
+   "lat": 68.662397,
+   "lon": 14.390496,
+   "dybde_m": 9.8
   }
  ],
- "flagg": [
-  "ingen snittpunkt med EMODnet-dybde ≥ 8 m innen 1,5 km",
-  "ideal_height/max_height: Theodor må sette (ikke beachbreak)",
-  "BarentsWatch: regelen fant ikke noe punkt (Hs flater ikke ut / for grunt / retning) - Theodor må velge"
- ],
+ "flagg": [],
  "bygget": "2026-10-16T09:47+00:00",
  "bygget_fra": {
   "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
   "lat": 68.6389,
   "lon": 14.427489
- }
+ },
+ "rettet": "2026-10-16"
 }

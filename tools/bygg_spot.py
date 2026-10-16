@@ -161,13 +161,13 @@ def depth(lat, lon):
         return None
 
 
-def bw_transect(lat, lon, facing):
+def bw_transect(lat, lon, facing, max_m=BW_MAX_M, min_depth=BW_MIN_DEPTH):
     rows = []
-    for dm in range(0, BW_MAX_M + 1, BW_STEP_M):
+    for dm in range(0, max_m + 1, BW_STEP_M):
         la, lo = pt(lat, lon, facing, dm / 1000)
         rows.append({"m": dm, "lat": round(la, 6), "lon": round(lo, 6), "dybde_m": depth(la, lo)})
         time.sleep(0.2)
-    first = next((r for r in rows if r["dybde_m"] is not None and r["dybde_m"] >= BW_MIN_DEPTH), None)
+    first = next((r for r in rows if r["dybde_m"] is not None and r["dybde_m"] >= min_depth), None)
     return rows, first
 
 

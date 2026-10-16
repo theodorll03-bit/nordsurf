@@ -37,10 +37,17 @@
    "factor": "1.01",
    "obsname": "Andenes"
   },
-  "ideal_height": null,
-  "max_height": null,
+  "ideal_height": [
+   1.5,
+   3.5
+  ],
+  "max_height": 5.0,
   "kilde": "liste 15.10 + spotfabrikken",
-  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json"
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+  "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+  "_rettet": {
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert"
+  }
  },
  "snitt": [
   {
@@ -140,13 +147,12 @@
    "dybde_m": 18.5
   }
  ],
- "flagg": [
-  "ideal_height/max_height: Theodor må sette (ikke beachbreak)"
- ],
+ "flagg": [],
  "bygget": "2026-10-16T09:48+00:00",
  "bygget_fra": {
   "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
   "lat": 68.265958,
   "lon": 13.558251
- }
+ },
+ "rettet": "2026-10-16"
 }
