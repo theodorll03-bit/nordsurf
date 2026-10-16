@@ -26,10 +26,10 @@
   },
   "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": {
-   "lat": 68.649865,
-   "lon": 14.410225
+   "lat": 68.653782,
+   "lon": 14.40406
   },
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m.",
+  "_barentswatch": "Flyttet til 1900 m ut i snittet langs 330.0° (dybde 9.9 m) - kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne. Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -46,7 +46,7 @@
   "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
   "_rettet": {
    "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-   "barentswatch_point": "nytt snitt langs 330.0° (forslag fra Claude 16.10, ukalibrert)"
+   "barentswatch_point": "1900 m ut (kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne)"
   },
   "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1036_kandidater.json"
  },

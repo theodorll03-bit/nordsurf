@@ -9,7 +9,7 @@
    "lat": 68.265958,
    "lon": 13.558251
   },
-  "facing": 344.4,
+  "facing": 300.0,
   "swell_window": [
    262,
    6
@@ -29,7 +29,7 @@
    "lat": 68.269442,
    "lon": 13.555641
   },
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -46,7 +46,9 @@
   "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
   "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
   "_rettet": {
-   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert"
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektoren [119,209] beholdes (land bak i sør)",
+   "barentswatch_point": "beholdt ved ny facing (reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°)"
   }
  },
  "snitt": [

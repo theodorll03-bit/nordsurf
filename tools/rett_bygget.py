@@ -3,12 +3,17 @@ godkjenn_spot.py. Endrer bare data/kandidater/bygget/<id>.json (og minikartet), 
 merkes med kilden (standard «forslag fra Claude 16.10, ukalibrert») i «_rettet».
 
   python tools/rett_bygget.py <id> [--facing 305] [--offshore-wind 80,170] [--hoyder 1.5,3.5,5.0]
-                                   [--bw-fra <annen id>] [--nytt-snitt [--snitt-maks 3000]] [--merk "<tekst>"]
+                                   [--bw-fra <annen id>] [--nytt-snitt [--snitt-maks 3000]] [--bw-avstand 1900]
+                                   [--behold-bw "<begrunnelse>"] [--merk "<tekst>"]
 
 --facing: ny facing; snittet for BarentsWatch-punktet blir da foreldet (krever --nytt-snitt eller --bw-fra).
 --nytt-snitt: henter dybdene langs (ny) facing på nytt (EMODnet) og setter BarentsWatch-punktet til FORELØPIG, så
   snittet i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py må kjøres før godkjenn_spot.py.
---bw-fra: bruker BarentsWatch-punktet og snittfila til en annen bygget spot (f.eks. nabospot på samme strand)."""
+--bw-fra: bruker BarentsWatch-punktet og snittfila til en annen bygget spot (f.eks. nabospot på samme strand).
+--bw-avstand: flytter BarentsWatch-punktet til et annet punkt i det snittet som alt er kjørt (meter ut); dybden der må
+  være kjent og minst 8 m (samme krav som velg_bw_punkt.py), ellers stopper skriptet.
+--behold-bw: ny facing uten nytt snitt - punktet beholdes (f.eks. point/reef der strandnormalen var feil mål, men
+  punktet ligger der bølgene kommer inn). Begrunnelsen lagres i _barentswatch."""
 import datetime as dt
 import json
 import sys
@@ -37,8 +42,11 @@ def main():
         s["facing"] = float(opt("--facing"))
         rettet["facing"] = merk
         b["flagg"] = [f for f in b.get("flagg", []) if "facing" not in f and "vindussektor" not in f]
-        if not ("--nytt-snitt" in sys.argv or opt("--bw-fra")):
-            sys.exit("Ny facing gjør BarentsWatch-snittet foreldet - bruk --nytt-snitt eller --bw-fra")
+        if not ("--nytt-snitt" in sys.argv or opt("--bw-fra") or opt("--behold-bw")):
+            sys.exit("Ny facing gjør BarentsWatch-snittet foreldet - bruk --nytt-snitt, --bw-fra eller --behold-bw")
+        if opt("--behold-bw"):
+            s["_barentswatch"] = (s.get("_barentswatch") or "") + f" Beholdt ved ny facing {s['facing']}°: {opt('--behold-bw')}."
+            rettet["barentswatch_point"] = f"beholdt ved ny facing ({opt('--behold-bw')})"
     if opt("--offshore-wind"):
         s["offshore_wind"] = [int(x) for x in opt("--offshore-wind").split(",")]
         s["_offshore_vind"] = merk
@@ -58,6 +66,15 @@ def main():
         s["_barentswatch"] = f"Samme punkt som {opt('--bw-fra')} (nabospot på samme strand) - {merk}. " + (other.get("_barentswatch") or "")
         rettet["barentswatch_point"] = merk
         b["flagg"] = [f for f in b.get("flagg", []) if "BarentsWatch" not in f and "EMODnet-dybde" not in f]
+    if opt("--bw-avstand"):
+        m = int(opt("--bw-avstand"))
+        row = next((r for r in b.get("snitt", []) if r.get("m") == m), None)
+        if row is None or row.get("dybde_m") is None or row["dybde_m"] < 8:
+            sys.exit(f"{m} m: ingen punkt i snittet med kjent dybde på minst 8 m ({row})")
+        s["barentswatch_point"] = {"lat": row["lat"], "lon": row["lon"]}
+        s["_barentswatch"] = (f"Flyttet til {m} m ut i snittet langs {s['facing']}° (dybde {row['dybde_m']} m) - {merk}. "
+                              + (s.get("_barentswatch") or ""))
+        rettet["barentswatch_point"] = f"{m} m ut ({merk})"
     if "--nytt-snitt" in sys.argv:
         import bygg_spot
         maks = int(opt("--snitt-maks", bygg_spot.BW_MAX_M))

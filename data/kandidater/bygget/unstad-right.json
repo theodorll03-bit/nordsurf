@@ -9,17 +9,17 @@
    "lat": 68.273399,
    "lon": 13.57749
   },
-  "facing": 238.9,
+  "facing": 300.0,
   "swell_window": [
    237,
    332
   ],
   "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[237, 332]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
   "offshore_wind": [
-   14,
-   104
+   70,
+   232
   ],
-  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "_offshore_vind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)",
   "offshore": {
    "lat": 68.3006,
    "lon": 13.2956
@@ -29,7 +29,7 @@
    "lat": 68.270129,
    "lon": 13.562945
   },
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@238.9, 700 m ut, dybde 8,6 m, Hs 4,87 m kl. 2026-10-16T06:00Z.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@238.9, 700 m ut, dybde 8,6 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet).",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -46,7 +46,10 @@
   "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
   "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
   "_rettet": {
-   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert"
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)",
+   "barentswatch_point": "beholdt ved ny facing (point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet))",
+   "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)"
   }
  },
  "snitt": [

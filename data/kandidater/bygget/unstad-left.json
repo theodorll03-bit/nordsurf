@@ -9,17 +9,17 @@
    "lat": 68.267948,
    "lon": 13.575772
   },
-  "facing": 334.4,
+  "facing": 285.0,
   "swell_window": [
    257,
    344
   ],
   "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[257, 344]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
   "offshore_wind": [
-   109,
-   199
+   70,
+   232
   ],
-  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "_offshore_vind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (samme dal bak)",
   "offshore": {
    "lat": 68.323,
    "lon": 13.3249
@@ -29,7 +29,7 @@
    "lat": 68.273657,
    "lon": 13.568434
   },
-  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 285.0°: point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -46,7 +46,10 @@
   "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
   "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
   "_rettet": {
-   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert"
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (samme dal bak)",
+   "barentswatch_point": "beholdt ved ny facing (point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°)",
+   "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (samme dal bak)"
   }
  },
  "snitt": [
