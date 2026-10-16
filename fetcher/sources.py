@@ -231,6 +231,65 @@ def _parse_marine_hourly(h):
     return out
 
 
+def _secondary(src):
+    h, d, p = src.get("secondary_swell_height"), src.get("secondary_swell_dir"), src.get("secondary_swell_period")
+    if h in (None, 0) or d is None or (h == 0 and d == 0):
+        return {"secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+    return {"secondary_swell_height": h, "secondary_swell_dir": d, "secondary_swell_period": p}
+
+
+# 16.10.2026 (Theodor, Grøtfjord lørdag 17.10, punkt 3b): GFS Wave deler bølgefeltet i svellsystemer time for
+# time; når to systemer er like store kan det byttes om på hvilket som kalles «hovedsvellet» i én time (Grøtfjord
+# 17.10 12Z: hovedsvellet 1,94 m fra 293° → 0,7 m fra 282° → 2,34 m fra 307°, mens TOTALhøyden ute var stabil
+# 4,9/4,7/4,6 m). Havet endrer seg ikke slik på én time - totalhøyden viser det. En slik enkelttimes avviker
+# erstattes derfor av snittet av naboene (høyde, retning sirkulært, periode - hele trippelen samlet, fra samme
+# modell i alle tre timene, så CLAUDE.md sin regel om én modell per time holder). Aldri over et modellbytte, aldri
+# over manglende data (None forblir None), og aldri når totalhøyden også endrer seg (da er det ekte). False = av.
+ROBUST_SWELL = True
+SPIKE_REL = 0.40       # svellhøyden avviker mer enn 40 % fra begge naboene, i samme retning
+SPIKE_TOTAL_REL = 0.15  # mens totalhøyden er innen 15 % av naboenes snitt
+SPIKE_NB_AGREE = 0.25   # og naboene er innen 25 % av hverandre
+
+
+def _circ_mean2(a, b):
+    import math
+    x = math.cos(math.radians(a)) + math.cos(math.radians(b))
+    y = math.sin(math.radians(a)) + math.sin(math.radians(b))
+    return round(math.degrees(math.atan2(y, x)), 1) % 360
+
+
+def despike_swell(out):
+    """Erstatter enkelttimes avvikere i hovedsvellet (se ROBUST_SWELL). Muterer `out` (time → felt); returnerer
+    antall timer som ble erstattet. Bare timer med svell_model «gfs» eller «standard» i alle tre timene."""
+    keys = sorted(k for k in out if not k.startswith("_"))
+    hours = [dt.datetime.fromisoformat(k.replace("Z", "+00:00")) for k in keys]
+    fixes = []
+    for i in range(1, len(keys) - 1):
+        if hours[i] - hours[i - 1] != dt.timedelta(hours=1) or hours[i + 1] - hours[i] != dt.timedelta(hours=1):
+            continue
+        a, h, b = out[keys[i - 1]], out[keys[i]], out[keys[i + 1]]
+        if not (a.get("swell_model") == h.get("swell_model") == b.get("swell_model") and h.get("swell_model") in ("gfs", "standard")):
+            continue
+        vals = [(x.get("swell_height"), x.get("dir"), x.get("period"), x.get("height")) for x in (a, h, b)]
+        if any(v is None for t in vals for v in t):
+            continue
+        (sa, da, pa, ta), (sh, dh, ph, th), (sb, db, pb, tb) = vals
+        lo, hi = min(sa, sb), max(sa, sb)
+        if lo <= 0 or (hi - lo) / hi > SPIKE_NB_AGREE:
+            continue
+        spike = sh < (1 - SPIKE_REL) * lo or sh > hi / (1 - SPIKE_REL)
+        total_ok = abs(th - (ta + tb) / 2) <= SPIKE_TOTAL_REL * ((ta + tb) / 2)
+        if spike and total_ok:
+            fixes.append((keys[i], {"swell_height": round((sa + sb) / 2, 3), "dir": _circ_mean2(da, db),
+                                    "period": round((pa + pb) / 2, 2),
+                                    "peak_period": (round((a["peak_period"] + b["peak_period"]) / 2, 2)
+                                                    if a.get("peak_period") is not None and b.get("peak_period") is not None else None),
+                                    "swell_despiked": {"swell_height": sh, "dir": dh, "period": ph}}))
+    for k, v in fixes:   # etter løkka, så en rettet time aldri brukes som nabo for neste
+        out[k].update(v)
+    return len(fixes)
+
+
 def _has_real_swell(v):
     """True hvis kilden faktisk har svelldata for punktet. Enkelte modellpunkt
     (sett i smale fjordløp der GFS Wave sitt 0.25-graders rutenett ikke har
@@ -440,9 +499,9 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
             # eller selve "Periode"-visningen (period, over, uendret).
             "peak_period": src.get("swell_peak_period"),
             "swell_model": model,
-            "secondary_swell_height": src.get("secondary_swell_height"),
-            "secondary_swell_dir": src.get("secondary_swell_dir"),
-            "secondary_swell_period": src.get("secondary_swell_period"),
+            # 16.10.2026: GFS svarer bokstavelig 0,0 m fra 0° når det ikke finnes noe sekundærsvell - det er
+            # «mangler», ikke en måling (grunnregelen). Bare et ekte sekundærsvell (høyde > 0 og kjent retning) lagres.
+            **(_secondary(src)),
         }
     # 07.10.2026, Theodors instruks (bekreftet etter fysikk-kontrollørens
     # funn samme dag): korriger GFS sin svellhøyde etter at standardmodellen
@@ -477,6 +536,10 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
                 if k > seam and out.get(k, {}).get("swell_model") == "gfs":
                     out[k]["swell_height"] = round(v, 3)
             out["_meta"] = {"gfs_standard_ratio": round(ratio, 3), "ratio_seam": seam}
+    if ROBUST_SWELL:
+        n = despike_swell(out)
+        if n:
+            out.setdefault("_meta", {})["despiked_hours"] = n
     return out
 
 
