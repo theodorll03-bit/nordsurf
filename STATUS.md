@@ -27,8 +27,9 @@
 | Tidevannskortet: SVG-tekst i ekte piksler i alle grafer + nytt kort etter prototypen | i gang (forgrening) - PR, ikke merge før ja | design/tidevann |
 | Utforsk: Kartverkets topograatone som bakgrunn (OSM-reserve), vind og svellkile tilbake | i gang (forgrening) - PR, ikke merge før ja | design/kartverket |
 | #22 Lofoten og Vesterålen | venter på Claudes avgjørelser (under) | region/lofoten-vesteralen |
-| Tapte stjerner stiplet igjen | PR #24 - kontrollør, så merge etter grønn CI | design/stjerner |
-| Søyletallet (Grøtfjord 17.10) | PR #25 - kontrollør, så merge etter grønn CI | fiks/soyletall |
+| Tapte stjerner stiplet igjen | PR #24 - kontrollør GODKJENT, CI grønn - **merge stoppet av tillatelsene, Theodor merger** | design/stjerner |
+| Søyletallet (Grøtfjord 17.10) | PR #25 - kontrollør GODKJENT, CI grønn - **merge stoppet av tillatelsene, Theodor merger** (etter #24 trengs trolig ny sw.js-hash) | fiks/soyletall |
+| Tidevannskort og SVG-tekst | PR #26 - kontrollør kjører | design/tidevann |
 | Enkelttimes-hopp (robust svell, myk vinduskant) | i gang (forgrening) - PR, ikke merge før ja | fiks/hopp |
 
 ## #22 Lofoten og Vesterålen - 20 spots lagt inn som «forelopig» på grenen, IKKE klar for Theodors ja ennå (16.10 ca. 11Z)
@@ -43,6 +44,13 @@
 5. **soppelplassen:** facing 344,4 mot 282-315 → faktor ca. 0,67 (mildere, samme mønster).
 6. Mindre: **haukland** facing 225 ligger 27° utenfor vinduet [252,276] (retningen ved punktet er likevel 1,0; Hs stiger fortsatt utover); **ramberg** facing 287,7 9° utenfor [297,348] (faktor 0,78 - ca. 310-315 ville passet); **horseid** 305 er 3° utenfor [308,4]. De 11 andre: faktor 0,78-1,0, i orden.
 7. **Unstad mot nabospotene:** i prøvevarselet får Unstad 1,7 m i dag og 1,8 m (3★) i morgen, mens unstad-left/right får 3,9-5,2 m. Trolig fordi de nye spotene har BarentsWatch-punkt utenfor brytesonen (snittregelen 15.10) mens Unstads punkt ligger nær land (skyggemodusen undersøker nettopp dette - ROADMAP N). Bør avklares før merge, ellers viser appen to helt ulike høyder for samme bukt.
+
+**Claudes avgjørelser på funnene (16.10 ettermiddag, delegert):**
+1. g-frame: BarentsWatch flyttet til 1 900 m (9,9 m dyp, første punkt utenfor grunnfeltet) - `rett_bygget.py --bw-avstand`.
+2. eggum-ost-steinstrand: **parkert**. Eget snitt langs 11,5° (Actions 11:18Z) fant ikke 8 m innen 1,5 km - grunn hylle 6-7 m og skjær 1,2-1,4 km ut. Tatt ut av spots.json (bygget-fila beholdes), begrunnelse i status_overstyring.json. 27 spots totalt.
+3-5. Unstad-bukta (point/reef - strandnormalen var feil mål): facing etter bølgeretningen ved eget punkt i prøvevarselet - unstad-right 238,9 → 300, unstad-left 334,4 → 285, soppelplassen 344,4 → 300. Offshore-vind som Unstad [70,232] for right og left (samme dal bak); soppelplassen beholder [119,209]. Punktene beholdes (`--behold-bw`). Nytt verktøy `tools/synk_spot.py` fører rettingene inn i foreløpige spots.
+6. haukland, ramberg, horseid: ingen endring - retningsfaktoren ved punktet er 0,78-1,0 (som de 11 andre).
+7. Unstad mot nabospotene: **Theodors spørsmål** - Unstads BarentsWatch-punkt og surf_factor_prior står på ja-lista. De nye spotene har punkt utenfor brytesonen (snittregelen), Unstad har punktet nær land med prior 1,45 (skyggemodusen, ROADMAP N, undersøker nettopp dette). Til den er avgjort viser appen ulike høyder for samme bukt; tallene fra ny prøvehenting står under.
 
 **Første varsel (prøvehenting 16.10 kl. 10Z; beste time i dagslys i dag / i morgen, norsk tid):** dagen er preget av sterk vind (12-16 m/s) og stort svell (3-6 m) - mange «Blåst ut».
 
