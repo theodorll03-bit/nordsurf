@@ -17,7 +17,48 @@
 
   /* ---------- data (oversikt-2) ---------- */
   const regionOf = (s)=> s.region || s.area || "";
-  const stedText = (s)=>{ const r = regionOf(s); return s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r); };
+  /* ROADMAP K del C.4 (bare visning, ratingen røres ikke): nye spots (status «forelopig», tools/godkjenn_spot.py)
+     har merkelappen «Foreløpig» og er ikke med i «Beste økt» de første 14 dagene; spots med ferdsels- eller
+     surfeforbud (fra verneforskriften, data/kandidater/vern.json) vises med «Forbud nå» i perioden og er aldri
+     med i «Beste økt» da. Mangler forelopig_fra regnes spoten som ny (ikke anbefalt før datoen er kjent). */
+  const FORELOPIG_DAGER = 14;
+  const MD_FMT = new Intl.DateTimeFormat("en-CA", {month:"2-digit", day:"2-digit", timeZone:TZ});   // én gang - kalles per spot per bilde
+  const osloMD = (t)=>{ const p = MD_FMT.formatToParts(new Date(t)); return `${p.find(x=>x.type==="month").value}-${p.find(x=>x.type==="day").value}`; };
+  function forbudNa(s, t){
+    if(!s.restriksjoner || !s.restriksjoner.length) return false;   // de fleste spots: ingen datoregning
+    const md = osloMD(t==null ? Date.now() : t);
+    return (s.restriksjoner || []).some(r=> ["ferdselsforbud", "surfeforbud"].includes(r.type) && ["sjø", "strand", "begge"].includes(r.gjelder)
+      && (!r.fra || !r.til || (r.fra <= r.til ? md >= r.fra && md <= r.til : md >= r.fra || md <= r.til)));
+  }
+  // Theodor 16.10.2026: i forbudsperioden erstattes stjerner og ord med «Surfing forbudt nå» og perioden
+  // («1. okt–31. mars, fuglefredning»); utenfor perioden vises spoten vanlig, med en linje om forbudet.
+  const MND = ["jan", "feb", "mars", "april", "mai", "juni", "juli", "aug", "sep", "okt", "nov", "des"];
+  const mdTekst = (md)=>{ const [m, d] = md.split("-").map(Number); return `${d}. ${MND[m-1]}`; };
+  const forbudRestr = (s)=> (s.restriksjoner || []).filter(r=> ["ferdselsforbud", "surfeforbud"].includes(r.type) && ["sjø", "strand", "begge"].includes(r.gjelder));
+  const periodeTekst = (r)=> `${r.fra && r.til ? `${mdTekst(r.fra)}–${mdTekst(r.til)}` : "hele året"}${r.grunn ? ", " + r.grunn : ""}`;
+  function forbudInfo(s, t){
+    if(!s.restriksjoner || !s.restriksjoner.length) return null;
+    const md = osloMD(t==null ? Date.now() : t);
+    const r = forbudRestr(s).find(r=> !r.fra || !r.til || (r.fra <= r.til ? md >= r.fra && md <= r.til : md >= r.fra || md <= r.til));
+    return r ? {tittel: "Surfing forbudt nå", periode: periodeTekst(r), r} : null;
+  }
+  const forbudLinje = (s)=>{ const rs = forbudRestr(s); return rs.length ? rs.map(r=> `${r.type==="surfeforbud" ? "Surfing" : "Ferdsel"} forbudt ${periodeTekst(r)}`).join(" · ") : null; };
+  // nå-visningen i lister og kort: i forbudsperioden ingen stjerner, ordet «Surfing forbudt nå», ingen høyde
+  function naaVisning(s, h){
+    if(forbudNa(s)) return {st: 0, oh: {ord: "Surfing forbudt nå", hoyde: null, forbud: true}};
+    return {st: stars(h), oh: ordOgHoyde(h)};
+  }
+  // spotsiden: timene i forbudsperioden merkes (_forbud) i en kopi - grafen, dagfanene og kortene viser da ingen
+  // stjerner, ordet «Surfing forbudt» og ingen høyde. Selve varselet (og ratingen) er urørt.
+  function forbudKopi(s){
+    if(!forbudRestr(s).length || !s.hours) return s;
+    return {...s, hours: s.hours.map(h=> h && forbudInfo(s, Date.parse(h.t)) ? {...h, stars: 0, faded: 0, _forbud: true} : h)};
+  }
+  const nyForelopig = (s)=> s.status==="forelopig" && !(s.forelopig_fra && Date.now() - Date.parse(s.forelopig_fra) >= FORELOPIG_DAGER*864e5);
+  const iBesteOkt = (s, t)=> !nyForelopig(s) && !forbudNa(s, t);
+  const merker = (s)=> [s.status==="forelopig" ? "Foreløpig" : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
+  const omrMerker = (s)=> [s.area, ...merker(s)].filter(Boolean).join(" · ");
+  const stedText = (s)=>{ const r = regionOf(s); return [s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r), ...merker(s)].join(" · "); };
   const regions = ()=> (DATA.regions || []).map(r=>r.name);
   const REGION_KEY = "nordsurf.region";
   function chosenRegion(){
@@ -77,20 +118,21 @@
     // dagssammendraget fra publish.best_hour(): «miss» = tallet/lyset mangler, «dark» = mørkt hele dagen, «over» = dagens lys er over
     const d = (s.dager || []).find(x=>x.d===key);
     if(dayOver(d)) return {cls:"over", st:null, h:null, t:null};
+    if(forbudInfo(s, Date.parse(key + "T12:00:00Z"))) return {cls:"forbud", st:null, h:null, t:null};   // surfing forbudt den dagen
     if(d && d.status==="dark") return {cls:"dark", st:null, h:null, t:null};   // før !d.h - en mørk dag har ingen time
     if(!d || d.status==="miss" || !d.h) return {cls:"miss", st:null, h:null, t:null};
     const st = stars(d.h);
     return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, start:d.start || d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
   }
   function ukeHtml(s, days, withLetters){
-    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
+    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="forbud" ? `${d.lang}: surfing forbudt` : b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
     const letters = withLetters ? days.map((d, k)=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("") : "";
     return `<span class="uke" aria-hidden="true">${letters}${cells}</span>`;
   }
   function ukeAria(s, days){
-    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="over" ? `${cap(d.lang)}: dagens lys er over` : b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${b.st} ${b.st===1?"stjerne":"stjerner"}`; }).join(", ");
+    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="forbud" ? `${cap(d.lang)}: surfing forbudt` : b.cls==="over" ? `${cap(d.lang)}: dagens lys er over` : b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${b.st} ${b.st===1?"stjerne":"stjerner"}`; }).join(", ");
   }
-  function bestNow(s){ const h = naaOf(s); return {st: stars(h), hh: h ? (h.surf_height||0) : 0}; }
+  function bestNow(s){ const h = naaOf(s); const f = forbudNa(s); return {st: f ? 0 : stars(h), hh: f || !h ? 0 : (h.surf_height||0)}; }
   const byRatingNow = (a, b)=>{ const x = bestNow(a), y = bestNow(b); return y.st - x.st || y.hh - x.hh || a.name.localeCompare(b.name, "nb"); };
 
   /* ---------- hvem bryr brukeren seg om (Tillegg 2, punkt 3) ---------- */
@@ -106,7 +148,7 @@
   function bestSession(spots){
     let best = null;
     for(const s of spots) for(const [k, d] of (s.dager || []).slice(0, 3).entries()){
-      if(d.status!=="ok" || !d.h || stars(d.h) < 1) continue;
+      if(d.status!=="ok" || !d.h || stars(d.h) < 1 || !iBesteOkt(s, d.h.t)) continue;
       if(new Date(d.slutt || d.h.t).getTime() + 36e5 <= Date.now()) continue;   // vinduet er over siden oversikten ble laget (fysikk-kontrollør 15.10)
       const c = {s, d, st: stars(d.h), hh: d.h.surf_height||0, k};
       if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c;
@@ -115,7 +157,7 @@
   }
   function nextPossibility(spots){
     let first = null;
-    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1 && new Date(d.slutt || d.h.t).getTime() + 36e5 > Date.now()){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
+    for(const s of spots) for(const d of (s.dager || [])){ if(d.status==="ok" && d.h && stars(d.h) >= 1 && iBesteOkt(s, d.h.t) && new Date(d.slutt || d.h.t).getTime() + 36e5 > Date.now()){ const t = new Date(d.h.t).getTime(); if(!first || t < first.t) first = {s, d, t}; break; } }
     return first;
   }
   function nextBest(spots, exclude, n){
@@ -152,7 +194,7 @@
     const favs = DATA.spots.filter(s=>isFavSpot(s.id));
     if(!favs.length) return "";
     return `<section class="sek"><h2 class="h2">Favoritter</h2></section><div class="favrad">${favs.map(s=>{
-      const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h), vind = windText(h);
+      const h = naaOf(s), {st, oh} = naaVisning(s, h), vind = windText(h);
       return `<a class="kort tap favkort r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}${vind ? ", " + vind : ""}. ${ukeAria(s, days)}. Åpne spoten`)}">
         <div class="navn">${esc(s.name)}</div><div class="omr">${esc(s.area||"")} · nå</div>
         <div class="vurd"><div>${st ? starsSVG(st, 0) : ""}<div class="ord">${esc(oh.ord)}</div></div>${oh.hoyde ? `<div class="hoyde">${esc(oh.hoyde)}<small>m</small></div>` : ""}</div>
@@ -166,9 +208,9 @@
     return [...by.keys()].sort((a, b)=> (order.indexOf(a)+1 || 99) - (order.indexOf(b)+1 || 99) || a.localeCompare(b, "nb")).map(r=>({region: r, spots: by.get(r)}));
   }
   function radHtml(s, days){
-    const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h);
+    const h = naaOf(s), {st, oh} = naaVisning(s, h);
     return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
-      <span class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}</small><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
+      <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
       ${ukeHtml(s, days, false)}</a>`;
   }
   function regionChips(current, onPickAttr){
@@ -198,9 +240,10 @@
       const rows = [...g.spots].sort(byRatingNow).slice(0, all ? n : 5);
       return `<tr class="g"><td colspan="${2+days.length}">${esc(g.region)} <small>· ${n} ${n===1?"spot":"spots"}</small>${!all ? ` <button type="button" class="ghost liten visalle" data-region="${esc(g.region)}">Vis alle ${n}</button>` : ""}</td></tr>` +
         rows.map(s=>{
-          const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h);
+          const h = naaOf(s), {st, oh} = naaVisning(s, h);
           const cells = days.map(d=>{ const b = dayBest(s, d.key);
             if(b.cls==="over") return `<td class="c"><span class="celle over" title="${esc(d.lang)}: dagens lys er over"></span></td>`;
+            if(b.cls==="forbud") return `<td class="c"><span class="celle null" title="${esc(d.lang)}: surfing forbudt">Forbudt</span></td>`;
             if(b.cls==="miss") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mangler data">–</span></td>`;
             if(b.cls==="dark") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mørkt">–</span></td>`;
             // grunnregelen (PR #12 punkt b): tallet mangler → «–»; ekte 0 (flatt, treffer ikke …) → ordet i grå rute, aldri «0,0»
@@ -210,7 +253,7 @@
             if(!v || (!(v.a > 0) && !(b.st >= 1))){ const ord = ratingWord(b.h); return `<td class="c"><span class="celle null" title="${esc(`${d.lang}: ${ord}`)}">${esc(ord)}</span></td>`; }
             const hh = nf1.format(v.a);
             return `<td class="c"><span class="celle r-${min5(b.st)}" title="${esc(`${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}, ${hh} m`)}">${esc(hh)}${b.st>=1 ? `<small>★${b.st}</small>` : ""}</span></td>`; }).join("");
-          return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(s.area||"")}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
+          return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
         }).join("");
     }).join("");
     const chips = `<div class="chips regionvelger" role="group" aria-label="Region"><button type="button" class="chip" data-tabellregion="" aria-pressed="${!filt}">Alle</button>${regions().map(r=>`<button type="button" class="chip" data-tabellregion="${esc(r)}" aria-pressed="${r===filt}">${esc(r)}</button>`).join("")}</div>`;
@@ -250,7 +293,7 @@
     return DATA.spots.filter(hit).sort((a, b)=> pre(a) - pre(b) || byRatingNow(a, b));
   }
   function sradHtml(s){
-    const h = naaOf(s), st = stars(h), oh = ordOgHoyde(h);
+    const h = naaOf(s), {st, oh} = naaVisning(s, h);
     return `<a class="srad r-${min5(st)}" href="#spot=${esc(s.id)}" role="option"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
   }
   function resultsHtml(q){
@@ -376,7 +419,7 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, s, S, {regionOf, stedText, close: closeSpot, nowIdx, usable, known, stars, dkOf, heightText, isDesktop});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, known, stars, dkOf, heightText, isDesktop});
   }
   function render(){
     if(!DATA) return;
@@ -413,6 +456,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") render(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, nowIdx, usable, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

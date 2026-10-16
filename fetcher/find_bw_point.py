@@ -168,6 +168,21 @@ def search_spot(spot, now, cutoff):
 
 def main():
     spots = {s["id"]: s for s in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]}
+    # 16.10.2026 (nattjobben, ROADMAP K del C.1): BW_SEARCH_KANDIDATER=id,… henter snittet for spots fra
+    # spotfabrikken (data/kandidater/bygget/<id>.json) i stedet for spots.json - samme snitt og samme regel.
+    kand = [x.strip() for x in os.environ.get("BW_SEARCH_KANDIDATER", "").split(",") if x.strip()]
+    if kand:
+        spots = {}
+        for kid in kand:
+            f = ROOT / "data" / "kandidater" / "bygget" / f"{kid}.json"
+            if not f.exists():
+                print(f"Hopper over {kid}: {f} finnes ikke (kjør tools/bygg_spot.py først)")
+                continue
+            sp = json.loads(f.read_text(encoding="utf-8"))["spot"]
+            if sp.get("facing") is None or not sp.get("offshore"):
+                print(f"Hopper over {kid}: facing eller havpunkt mangler")
+                continue
+            spots[kid] = sp
     now = dt.datetime.now(dt.timezone.utc)
     cutoff = now + dt.timedelta(hours=HOURS_AHEAD)
 
