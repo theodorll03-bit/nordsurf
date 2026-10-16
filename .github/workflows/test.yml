@@ -37,6 +37,10 @@ jobs:
         run: python fetcher/test_docs_cache.py
       - name: Test de delte datafilene (S2)
         run: python fetcher/test_publish.py
+      - name: Matrisen (S6) gir samme varsel som den sekvensielle henteren
+        run: timeout 120 python fetcher/test_matrise.py
+      - name: Kallregnskapet (S6) under 50 % av kildenes grenser
+        run: python fetcher/test_kallregnskap.py
       - name: Designrunde 1 - bare visning (rating-/hentefiler og forecast.json lik main)
         run: |
           # uten --depth: en grunn henting av main ville kuttet den felles historikken igjen

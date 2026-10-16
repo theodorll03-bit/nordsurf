@@ -1,9 +1,28 @@
 name: Hent varsel
 
+# S6 (ROADMAP seksjon S, 16.10.2026): henteren kjører som matrise per region -
+#   forjobb  : testene, kjøringens tid og Open-Meteo-samlekallet for ALLE punkt (én takt mot Open-Meteo)
+#   region   : én jobb per region i spots.json (høyst 4 samtidig, fail-fast av) - met.no, BarentsWatch, Kartverket
+#   samle    : setter sammen i spots.json-rekkefølge, regner treffsikkerhet, kalibrering, varsler, kilderapport,
+#              lager appens filer og lagrer læringsdataene - byte for byte som den sekvensielle kjøringen
+#              (fetcher/test_matrise.py)
+#   publiser : som før (publiser.yml)
+# Reserve: «Run workflow» med «sekvensiell» = true kjører den gamle veien (alt i én jobb).
+# Loggene (privat repo) hentes i hver jobb og legges aldri i en artifact (artifacts er offentlige her).
+
 on:
   schedule:
     - cron: "17 */3 * * *"   # hver tredje time
   workflow_dispatch:          # kjør manuelt fra Actions-fanen
+    inputs:
+      sekvensiell:
+        description: "Reserve: kjør den gamle sekvensielle henteren (alle spots i én jobb)"
+        type: boolean
+        default: false
+      proeve:
+        description: "Prøvekjøring (f.eks. på en gren): hent og sett sammen, men ikke lagre læringsdataene i git"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -15,10 +34,172 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  fetch:
+  forjobb:
+    if: ${{ github.event.inputs.sekvensiell != 'true' }}
     runs-on: ubuntu-latest
-    # S2: publiseringen (jobben under) kjører når varselet er lastet opp - også om
-    # lagringen av læringsdataene i git skulle feile
+    timeout-minutes: 15
+    outputs:
+      regions: ${{ steps.forjobb.outputs.regions }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Test ratingen mot kjente dager
+        run: python fetcher/test_rating.py
+      - name: Test hele henteren uten nett
+        run: python fetcher/test_pipeline.py
+      - name: Test eksponering lært fra BarentsWatch (del B)
+        run: python fetcher/test_exposure_learn.py
+      - name: Sjekk at docs/sw.js sin cache-versjon stemmer med docs/
+        run: python fetcher/test_docs_cache.py
+      - name: Test de delte datafilene (S2)
+        run: python fetcher/test_publish.py
+      - name: Test matrisen mot den sekvensielle henteren (S6)
+        run: python fetcher/test_matrise.py
+      - name: Sjekk kallregnskapet mot kildenes vilkår (S6)
+        run: python fetcher/test_kallregnskap.py
+      - name: Tid og Open-Meteo-samlekall for alle punkt
+        id: forjobb
+        run: python fetcher/fetch.py --forjobb artifacts/forjobb
+        timeout-minutes: 10
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forjobb
+          path: artifacts/forjobb/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Varsle Theodor hvis forjobben feilet
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -sS -H "Title: Nordsurf: henteren feilet" -H "Priority: high" -H "Tags: warning" \
+              -H "Click: $RUN_URL" -d "Forjobben feilet, ikke noe nytt varsel. Se loggen: $RUN_URL" \
+              "https://ntfy.sh/$NTFY_TOPIC" || true
+          else
+            echo "Varsler: NTFY_TOPIC er ikke satt, hopper over."
+          fi
+
+  region:
+    needs: forjobb
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false        # en region som feiler stopper ikke de andre - spotene der mangler (aldri 0)
+      max-parallel: 4         # én takt mot met.no/BarentsWatch: høyst 4 jobber samtidig (ca. 4-7 kall/s samlet)
+      matrix:
+        region: ${{ fromJSON(needs.forjobb.outputs.regions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - uses: actions/download-artifact@v4
+        with:
+          name: forjobb
+          path: artifacts/forjobb
+      - name: Hent regionen ${{ matrix.region }}
+        run: python fetcher/fetch.py --region "${{ matrix.region }}" --fra artifacts/forjobb --til artifacts/regioner
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+          BW_POINT_URL: ${{ secrets.BW_POINT_URL }}
+          LOGS_REPO: ${{ secrets.LOGS_REPO }}
+          LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
+          BW_DEBUG: ${{ vars.BW_DEBUG }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: region-${{ strategy.job-index }}
+          path: artifacts/regioner/
+          retention-days: 1
+          if-no-files-found: error
+
+  samle:
+    needs: [forjobb, region]
+    # også når en region feilet: de andre regionene leveres (samle sier fra om den som mangler)
+    if: ${{ always() && needs.forjobb.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      varsel: ${{ steps.varsel.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - uses: actions/download-artifact@v4
+        with:
+          name: forjobb
+          path: artifacts/forjobb
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: region-*
+          path: artifacts/regioner
+          merge-multiple: true
+      - name: Sett sammen varselet, lær av logger og send varsler
+        run: python fetcher/fetch.py --samle artifacts/regioner --fra artifacts/forjobb
+        timeout-minutes: 15
+        env:
+          UA_CONTACT: ${{ secrets.UA_CONTACT }}
+          BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
+          LOGS_REPO: ${{ secrets.LOGS_REPO }}
+          LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APP_URL: ${{ secrets.APP_URL }}
+      - name: Lag appens datafiler (oversikt + én fil per spot)
+        run: python fetcher/publish.py
+      - name: Last opp varselet
+        id: varsel
+        uses: actions/upload-artifact@v4
+        with:
+          name: varsel
+          path: |
+            docs/data/forecast.json
+            docs/data/oversikt.json
+            docs/data/spots/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Varsle Theodor hvis kjøringen feilet
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -sS -H "Title: Nordsurf: henteren feilet" -H "Priority: high" -H "Tags: warning" \
+              -H "Click: $RUN_URL" -d "Samlejobben feilet, ikke noe nytt varsel. Se loggen: $RUN_URL" \
+              "https://ntfy.sh/$NTFY_TOPIC" || true
+          else
+            echo "Varsler: NTFY_TOPIC er ikke satt, hopper over."
+          fi
+      - name: Lagre læringsdataene (data/) i git
+        if: ${{ github.event.inputs.proeve != 'true' }}
+        run: |
+          git config user.name "nordsurf-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/notified.json 2>/dev/null || true
+          git add data/bw_calibration.json 2>/dev/null || true
+          git add data/exposure.json 2>/dev/null || true
+          git add -A data/forecast_archive 2>/dev/null || true
+          git add data/forecast_accuracy.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Nytt varsel (læringsdata)"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
+          git push
+
+  # Reserve (workflow_dispatch med sekvensiell = true): den gamle henteren, alle spots i én jobb - uendret fra før S6
+  sekvensiell:
+    if: ${{ github.event.inputs.sekvensiell == 'true' }}
+    runs-on: ubuntu-latest
     outputs:
       varsel: ${{ steps.varsel.outcome }}
     steps:
@@ -50,12 +231,8 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           APP_URL: ${{ secrets.APP_URL }}
           BW_DEBUG: ${{ vars.BW_DEBUG }}
-      # S2: appens filer - oversikten (åpning) og én fil per spot (når den åpnes).
-      # Ren omforming av forecast.json, ingen tall regnes (fetcher/publish.py).
       - name: Lag appens datafiler (oversikt + én fil per spot)
         run: python fetcher/publish.py
-      # S2: varselet publiseres via Pages (jobben «publiser») og ligger 7 dager som
-      # artifact for verktøyene (fetcher/hent_varsel.sh) - det committes ikke lenger.
       - name: Last opp varselet
         id: varsel
         uses: actions/upload-artifact@v4
@@ -67,10 +244,6 @@ jobs:
             docs/data/spots/
           retention-days: 7
           if-no-files-found: error
-      # ROADMAP oppgave G: si fra til Theodor hvis selve henteren (eller en
-      # test før den) feilet - da kommer det ikke noe nytt varsel, og appen
-      # viser bare at varselet er gammelt. Rent curl, ingen Python: skal
-      # virke selv om pip install var det som feilet.
       - name: Varsle Theodor hvis kjøringen feilet
         if: failure()
         env:
@@ -83,34 +256,24 @@ jobs:
               "https://ntfy.sh/$NTFY_TOPIC" || true
           fi
       - name: Lagre læringsdataene (data/) i git
+        if: ${{ github.event.inputs.proeve != 'true' }}
         run: |
           git config user.name "nordsurf-bot"
           git config user.email "actions@users.noreply.github.com"
-          # S2 (Theodor 10.10.2026): selve varselet (docs/data/) committes ikke
-          # lenger - det publiseres via Pages-artifact. Læringsdataene under er
-          # varige i git som før og går aldri tapt mellom kjøringer.
-          # Hver for seg, ikke i én kommando: git add feiler atomisk hvis én
-          # path mangler (f.eks. data/bw_calibration.json før den er skrevet
-          # første gang), og da ble de andre filene aldri lagt til heller.
           git add data/notified.json 2>/dev/null || true
           git add data/bw_calibration.json 2>/dev/null || true
-          # Theodors ja 14.10.2026: del B sine eksponeringspar lagres (før startet hver kjøring tom)
           git add data/exposure.json 2>/dev/null || true
-          # ROADMAP oppgave B: arkiv per kjøring (små filer) og målt treffsikkerhet
           git add -A data/forecast_archive 2>/dev/null || true
           git add data/forecast_accuracy.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel (læringsdata)"
-          # 07.10.2026: ta inn andres push under kjøringen (11 min) før push -
-          # ellers "fetch first"-avvisning (sett i praksis da STATUS.md ble
-          # pushet mens en manuell kjøring pågikk). Samme som de andre workflowene.
           git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push
 
   # S2: publiser siden (docs/ fra main + varselet fra denne kjøringen) via Pages
   publiser:
-    needs: fetch
-    # bare fra main (Pages-miljøet tillater bare main), og bare når varselet ble lastet opp
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.fetch.outputs.varsel == 'success' }}
+    needs: [samle, sekvensiell]
+    # bare fra main (Pages-miljøet tillater bare main), og bare når varselet ble lastet opp (av matrisen eller reserven)
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.samle.outputs.varsel == 'success' || needs.sekvensiell.outputs.varsel == 'success') }}
     uses: ./.github/workflows/publiser.yml
     with:
       samme_kjoring: true
