@@ -303,10 +303,22 @@ function isStale(){
   if(DATA.sample || !DATA.generated) return false;
   return Date.now() - new Date(DATA.generated).getTime() > STALE_HOURS*36e5;
 }
+// Theodor 16.10.2026 (punkt 1c): 15.-16.10 sto henteren stille, og live-siden hadde i tillegg et varsel i eldre
+// format enn appen (uten «naa»/«dager») - Utforsk og spotsiden viste bare «–» uten forklaring. Nå sier banneret fra
+// på Hjem, Utforsk og spotsiden: «Varselet er N timer gammelt», eller at formatet er eldre enn appen.
+function wrongFormat(){
+  if(DATA.sample || !DATA.spots || !DATA.spots.length) return false;
+  if(DATA.format && DATA.format !== "oversikt-2") return true;
+  return !DATA.spots.some(s=> s.naa || s.dager || s.hours);   // ingenting appen kan vise
+}
 function staleBanner(){
-  if(!isStale()) return "";
-  const gen = new Date(DATA.generated);
-  return `<p class="banner stale" role="alert"><b>${esc(STR.stale(relDay(gen), fmtTime.format(gen)))}.</b> ${esc(STR.staleMore)}</p>`;
+  const out = [];
+  if(wrongFormat()) out.push(`<p class="banner stale" role="alert"><b>${esc(STR.staleFormat)}</b> ${esc(STR.staleFormatMore)}</p>`);
+  if(isStale()){
+    const timer = Math.floor((Date.now() - new Date(DATA.generated).getTime()) / 36e5);
+    out.push(`<p class="banner stale" role="alert"><b>${esc(STR.staleHours(timer))}.</b> ${esc(STR.staleMore)}</p>`);
+  }
+  return out.join("");
 }
 function spotImg(id){ return `img/spots/${encodeURIComponent(id)}.jpg`; }
 
