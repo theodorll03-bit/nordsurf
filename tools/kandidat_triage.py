@@ -79,9 +79,9 @@ def parse_compass(txt):
     return circ_mean([COMPASS[t] for t in toks])
 
 
-def local_land(land, lat, lon):
-    """Land innenfor ca. 50 km, i meter i en asimut-ekvidistant projeksjon sentrert på pinnen."""
-    dlat, dlon = 0.5, 0.5 / math.cos(math.radians(lat)) * 1.05
+def local_land(land, lat, lon, half_deg=0.5):
+    """Land innenfor ca. 50 km (half_deg breddegrader), i meter i en asimut-ekvidistant projeksjon sentrert på pinnen."""
+    dlat, dlon = half_deg, half_deg / math.cos(math.radians(lat)) * 1.05
     clip = shapely.clip_by_rect(land, lon - dlon, lat - dlat, lon + dlon, lat + dlat)
     tr = Transformer.from_crs(4326, f"+proj=aeqd +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m", always_xy=True)
     g = shapely.transform(clip, lambda xy: np.column_stack(tr.transform(xy[:, 0], xy[:, 1])))
@@ -231,6 +231,58 @@ def fmt_sec(a):
     return f"{s['fra']}–{s['til']} ({s['fasing']:.0f}°)" if s else "ingen"
 
 
+def vern_forslag_md():
+    """Theodor 16.10.2026 (3b): vernesjekk på posisjonsforslagene (data/kandidater/posisjoner.json «forslag»). Naturbase
+    hentes rundt SELVE forslaget (innen 2 km, mellomlagret i privat/kandidater/bevis/vern/naturbase_<id>_forslag_<lat>_<lon>.json)
+    - ikke rundt listepinnen, som kan ligge km unna (kontrollør 16.10: Bunes er flyttet 2 km). Restriksjonene leses fra
+    vern_forskrifter.json; et verneområde innen 200 m der forskriften ikke er lest, står som «forskrift ikke lest»."""
+    pos_f = ROOT / "data" / "kandidater" / "posisjoner.json"
+    fs_f = ROOT / "data" / "kandidater" / "vern_forskrifter.json"
+    raw_d = ROOT / "privat" / "kandidater" / "bevis" / "vern"
+    if not pos_f.exists() or not fs_f.exists():
+        return []
+    import time
+    from shapely.geometry import shape
+    import kandidat_vern as kv
+    to = Transformer.from_crs(4326, 25833, always_xy=True)
+    pos = json.loads(pos_f.read_text(encoding="utf-8"))["kandidater"]
+    forskr = json.loads(fs_f.read_text(encoding="utf-8"))["forskrifter"]
+    rows = []
+    for kid, p in sorted(pos.items()):
+        for f in p.get("forslag") or []:
+            raw = raw_d / f"naturbase_{kid}_forslag_{f['lat']:.5f}_{f['lon']:.5f}.json"
+            if not raw.exists():
+                raw_d.mkdir(parents=True, exist_ok=True)
+                raw.write_text(json.dumps(kv.naturbase(f["lat"], f["lon"]), ensure_ascii=False), encoding="utf-8")
+                time.sleep(0.3)
+            x, y = to.transform(f["lon"], f["lat"])
+            for ft in json.loads(raw.read_text(encoding="utf-8")).get("features", []):
+                a = ft["properties"]
+                if not ft.get("geometry"):
+                    continue
+                d = shape(ft["geometry"]).distance(Point(x, y))
+                navn = a.get("offisieltNavn") or a.get("navn")
+                fid = kv.forskrift_id(a.get("verneforskrift"))
+                rs = [r for r in (forskr.get(fid) or {}).get("restriksjoner", [])
+                      if (not r.get("verneomrade") or r["verneomrade"] == navn) and not r.get("stedsbundet")
+                      and r.get("type") in ("ferdselsforbud", "surfeforbud") and r.get("gjelder") in ("sjø", "strand", "begge")]
+                if rs:
+                    hva = "; ".join(f"{r['type']} {r['fra'] + '–' + r['til'] if r.get('fra') else 'hele året'} ({r['gjelder']})" for r in rs)
+                elif fid not in forskr and d <= VERN_NEAR_M:
+                    hva = "forskrift ikke lest"
+                else:
+                    continue
+                rows.append(f"| {kid} | {f['satt_av']} ({f.get('sikkerhet') or '–'}, flyttet {f.get('flyttet_m') if f.get('flyttet_m') is not None else '–'} m) | "
+                            f"{navn} | {hva} | {'**INNE I**' if d == 0 else f'{d:.0f} m utenfor'} |")
+    head = ["", "## Vernesjekk på forslagsposisjonene (Theodor 16.10.2026)", "",
+            "Naturbase hentet rundt hvert posisjonsforslag (innen 2 km). Tabellen viser verneområder der forskriften har ferdsels- eller "
+            "surfeforbud for sjø/strand, og verneområder innen 200 m der forskriften ikke er lest. Ligger et forslag inne i et område med "
+            "forbud, må vern_vurdering.json vurderes på nytt før spoten kan bygges. (Teksten lenger opp gjelder listepinnene.)", ""]
+    if not rows:
+        return head + ["Ingen av forslagene har et verneområde med forbud innen 2 km."]
+    return head + ["| Kandidat | Forslag | Verneområde | Forbud | Avstand |", "|---|---|---|---|---|"] + rows
+
+
 def write_md(res, kand):
     order = ["posisjon", "vern", "sjekk", "klar"]
     cand = [r for r in res.values() if r["status_liste"] == "kandidat"]
@@ -272,6 +324,7 @@ def write_md(res, kand):
           "- Ellers funnet: **Eggum** (277 m fra Eggum naturreservat) og **The Frog** (579 m fra Nykvåg/Nykan naturreservat) - "
           "«Bruk av … surfebrett … er forbudt» hele året i begge reservatene; om spoten ligger i reservatet avgjøres av posisjonen (A2).",
           ""]
+    L += vern_forslag_md()
     kj = [r for r in res.values() if r["status_liste"] == "i_nordsurf"]
     L += ["", "## De 8 vi har fra før (kontroll av metoden - spots.json røres ikke)", "",
           "| Spot | Fasing OSM | Fasing GSHHS | spots.json facing | Vindu i spots.json | Sektor OSM | Kyst (OSM) |", "|---|---|---|---|---|---|---|"]
