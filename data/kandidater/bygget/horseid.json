@@ -29,7 +29,7 @@
    "lat": 68.028625,
    "lon": 12.978899
   },
-  "_barentswatch": "FORELØPIG: nytt snitt langs 305.0° til 1500 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T1029_kandidater.json), regelen fra 15.10: snitt 400m@305.0, 400 m ut, dybde 9,5 m, Hs 4,16 m kl. 2026-10-17T00:00Z.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -47,7 +47,8 @@
    "facing": "forslag fra Claude 16.10, ukalibrert",
    "offshore_wind": "forslag fra Claude 16.10, ukalibrert",
    "barentswatch_point": "nytt snitt langs 305.0° (forslag fra Claude 16.10, ukalibrert)"
-  }
+  },
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1029_kandidater.json"
  },
  "snitt": [
   {

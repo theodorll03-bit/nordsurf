@@ -1129,7 +1129,8 @@
     "https://www.wannasurf.com/spot/Europe/Norway/rorvika/index.html"
    ],
    "dokumentasjon": "god",
-   "status": "kandidat"
+   "status": "parkert",
+   "status_begrunnelse": "Parkeres. Vinduet er bare ca. 6 grader (222-234) mot Vestfjorden, så den vil nesten alltid vise «Treffer ikke», og BarentsWatch fant intet punkt. Vurderes igjen når vi har vindbølgemodell for innaskjærs spots."
   },
   {
    "id": "vikten",
@@ -1192,7 +1193,8 @@
     "https://thesurfatlas.com/surfing-in-norway/surfing-in-lofoten/"
    ],
    "dokumentasjon": "svak",
-   "status": "kandidat"
+   "status": "parkert",
+   "status_begrunnelse": "Parkeres. Ligger i le bak halvøya og får bare dønning som brekker rundt odden (wrap). Fabrikken finner ingen fri linje til havet, så ratingen ville alltid vist «Treffer ikke». Tas opp igjen når vi har en modell for wrap."
   },
   {
    "id": "skagsanden",

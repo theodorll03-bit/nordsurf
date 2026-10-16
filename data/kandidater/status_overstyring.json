@@ -1,0 +1,17 @@
+{
+ "_info": "Status satt i gjennomgangen (Claude, delegert av Theodor 16.10.2026) - leses av tools/importer_kandidater.py. «parkert»: bygges ikke nå, tas opp igjen når begrunnelsen ikke lenger gjelder.",
+ "kandidater": {
+  "rorvika": {
+   "status": "parkert",
+   "begrunnelse": "Parkeres. Vinduet er bare ca. 6 grader (222-234) mot Vestfjorden, så den vil nesten alltid vise «Treffer ikke», og BarentsWatch fant intet punkt. Vurderes igjen når vi har vindbølgemodell for innaskjærs spots.",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "dato": "2026-10-16"
+  },
+  "flakstad-beach-kirkesiden": {
+   "status": "parkert",
+   "begrunnelse": "Parkeres. Ligger i le bak halvøya og får bare dønning som brekker rundt odden (wrap). Fabrikken finner ingen fri linje til havet, så ratingen ville alltid vist «Treffer ikke». Tas opp igjen når vi har en modell for wrap.",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "dato": "2026-10-16"
+  }
+ }
+}
