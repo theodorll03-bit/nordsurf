@@ -41,6 +41,20 @@
     const st = H().stars(h), w = ratingWord(h);
     return {st, word:w, miss:false, h, t:h.t, aria:`${s.name}: ${w}${st ? ", " + STR.starsAria(st, 0) : ""}`};
   }
+  // vind og svellkile (fra «kart først», Theodor 16.10.2026): valgt spot gir kilen og vinden der for valgt time/dag;
+  // uten valgt spot vises vinden ved spoten nærmest kartets midte. Mangler timen, vises ingenting (aldri 0).
+  function lagene(){
+    const s = S.picked && DATA.spots.find(x=>x.id===S.picked);
+    if(s){ const h = valueFor(s, S.utforskDay).h; Kart.setWedge(s, h); Kart.setWind(h); return; }
+    Kart.setWedge(null, null);
+    const c = Kart.sentrum(); let best = null, bd = Infinity;
+    if(c) for(const x of DATA.spots){
+      if(!x.spot) continue;
+      const d = (x.spot.lat - c.lat) ** 2 + ((x.spot.lon - c.lng) * Math.cos(c.lat * Math.PI / 180)) ** 2;
+      if(d < bd){ bd = d; best = x; }
+    }
+    Kart.setWind(best ? valueFor(best, S.utforskDay).h : null);
+  }
   function regionsHere(){ return (DATA.regions || []).filter(r=> r.extent); }
   function ensureCoast(){
     // coast.json (SVG, Nord-Norge) - bare til miniatyren på Hjem (PC); kartet selv er MapLibre (S3)
@@ -57,7 +71,8 @@
     }
     Kart.init($("#kart"), coast, DATA.spots, {
       valueOf: (p)=> valueFor(p.s, S.utforskDay),
-      onPick: (id)=>{ S.picked = S.picked===id ? null : id; renderKort(); Kart.setSelected(S.picked); },
+      onPick: (id)=>{ S.picked = S.picked===id ? null : id; renderKort(); Kart.setSelected(S.picked); lagene(); },
+      onMoveEnd: ()=>{ if(S && S.view==="utforsk" && !S.picked) lagene(); },
       onCluster: (ids)=>{ const e = Kart.extentOf(ids); if(e){ S.utforskView = null; renderChips(); Kart.setExtent(e, true); } },
     });
     inited = true;
@@ -85,12 +100,12 @@
     $("#utforskChips").innerHTML = onMap.map(r=>`<button type="button" class="chip" data-view="${esc(r.name)}" aria-pressed="${S.utforskView===r.name}">${esc(r.name)}</button>`).join("")
       + `<button type="button" class="chip" data-view="" aria-pressed="${!S.utforskView}">Hele kartet</button>`
       + [...offBy.entries()].map(([k, ps])=>`<button type="button" class="chip dashed" data-off="${esc(k)}" aria-label="${esc(`${k}: ${ps.length} ${ps.length===1 ? "spot" : "spots"} utenfor kartet - vis lista`)}"><span aria-hidden="true">↓</span> ${esc(k)}${ps.length > 1 ? ` <span class="num">${ps.length}</span>` : ""}</button>`).join("");
-    $$("#utforskChips [data-view]").forEach(b=> b.onclick = ()=>{ S.utforskView = b.dataset.view || null; S.picked = null; renderChips(); const e = viewExtent(); if(e) Kart.setExtent(e, true); Kart.setSelected(null); renderKort(); renderListe(); });
+    $$("#utforskChips [data-view]").forEach(b=> b.onclick = ()=>{ S.utforskView = b.dataset.view || null; S.picked = null; renderChips(); const e = viewExtent(); if(e) Kart.setExtent(e, true); Kart.setSelected(null); renderKort(); renderListe(); lagene(); });
     $$("#utforskChips [data-off]").forEach(b=> b.onclick = ()=>{ S.offRegion = b.dataset.off; renderKort(); });
     { const row = $("#utforskChips"), c = row && row.querySelector('[aria-pressed="true"]'); if(c && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, c.offsetLeft - row.offsetLeft - (row.clientWidth - c.offsetWidth) / 2); }   // valgt brikke synlig (PR #12 punkt a)
     const chips = dayChips();
     $("#dagChips").innerHTML = chips.map(c=>`<button type="button" class="chip" data-day="${c.key||""}" aria-pressed="${(S.utforskDay||"")===(c.key||"")}" aria-label="${esc(c.key ? cap(c.lang) : "Nå")}">${esc(c.label)}</button>`).join("");
-    $$("#dagChips .chip").forEach(b=> b.onclick = ()=>{ S.utforskDay = b.dataset.day || null; $$("#dagChips .chip").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); Kart.redraw(); renderKort(); renderListe(); });
+    $$("#dagChips .chip").forEach(b=> b.onclick = ()=>{ S.utforskDay = b.dataset.day || null; $$("#dagChips .chip").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); Kart.redraw(); renderKort(); renderListe(); lagene(); });
   }
   function kortHtml(s){
     const v = valueFor(s, S.utforskDay); const h = v.h;
@@ -113,7 +128,7 @@
     el.hidden = !s && !off;
     if(!s && !off){ el.innerHTML = ""; return; }
     el.innerHTML = s ? kortHtml(s) : offListeHtml(S.offRegion);
-    $("#kortLukk", el).onclick = ()=>{ S.picked = null; S.offRegion = null; Kart.setSelected(null); renderKort(); };
+    $("#kortLukk", el).onclick = ()=>{ S.picked = null; S.offRegion = null; Kart.setSelected(null); renderKort(); lagene(); };
     const ap = $("#kortApne", el); if(ap){ const v = valueFor(s, S.utforskDay); ap.onclick = ()=> Front.openSpot(s.id, v.t || null); }
   }
   function renderListe(){
@@ -140,7 +155,7 @@
     Kart.setArea(area());
     const e = viewExtent(); if(e) Kart.setExtent(e, false);
     Kart.setSelected(S.picked);
-    renderKort(); renderListe();
+    renderKort(); renderListe(); lagene();
   }
   function thumb(){
     if(!ensureCoast()) return "";
