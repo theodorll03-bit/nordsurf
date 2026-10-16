@@ -915,24 +915,25 @@
     {
       "id": "soppelplassen",
       "name": "Søppelplassen",
-      "enabled": true,
+      "enabled": false,
       "status": "forelopig",
       "region": "Lofoten",
       "spot": {
         "lat": 68.265958,
         "lon": 13.558251
       },
-      "facing": 300.0,
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
       "swell_window": [
         262,
         6
       ],
       "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[262, 6]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
       "offshore_wind": [
-        119,
+        70,
         209
       ],
-      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "_offshore_vind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
       "offshore": {
         "lat": 68.3351,
         "lon": 13.3663
@@ -942,7 +943,7 @@
         "lat": 68.269442,
         "lon": 13.555641
       },
-      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°.",
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
       "ideal_height": [
         1.5,
         3.5
@@ -953,8 +954,9 @@
       "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
       "_rettet": {
         "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-        "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektoren [119,209] beholdes (land bak i sør)",
-        "barentswatch_point": "beholdt ved ny facing (reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°)"
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+        "offshore_wind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta"
       },
       "area": "Vestvågøy",
       "forelopig_fra": "2026-10-16"
@@ -1044,14 +1046,15 @@
     {
       "id": "unstad-left",
       "name": "Unstad Left",
-      "enabled": true,
+      "enabled": false,
       "status": "forelopig",
       "region": "Lofoten",
       "spot": {
         "lat": 68.267948,
         "lon": 13.575772
       },
-      "facing": 285.0,
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
       "swell_window": [
         257,
         344
@@ -1071,7 +1074,7 @@
         "lat": 68.273657,
         "lon": 13.568434
       },
-      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 285.0°: point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°.",
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 285.0°: point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
       "ideal_height": [
         1.5,
         3.5
@@ -1082,8 +1085,8 @@
       "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
       "_rettet": {
         "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-        "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (samme dal bak)",
-        "barentswatch_point": "beholdt ved ny facing (point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°)",
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
         "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (samme dal bak)"
       },
       "area": "Vestvågøy",
@@ -1092,14 +1095,15 @@
     {
       "id": "unstad-right",
       "name": "Unstad Right",
-      "enabled": true,
+      "enabled": false,
       "status": "forelopig",
       "region": "Lofoten",
       "spot": {
         "lat": 68.273399,
         "lon": 13.57749
       },
-      "facing": 300.0,
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
       "swell_window": [
         237,
         332
@@ -1119,7 +1123,7 @@
         "lat": 68.270129,
         "lon": 13.562945
       },
-      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@238.9, 700 m ut, dybde 8,6 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet).",
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@238.9, 700 m ut, dybde 8,6 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet). Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
       "ideal_height": [
         1.2,
         3.0
@@ -1130,8 +1134,8 @@
       "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
       "_rettet": {
         "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-        "facing": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)",
-        "barentswatch_point": "beholdt ved ny facing (point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet))",
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
         "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: facing etter bølgeretningen ved punktet; offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)"
       },
       "area": "Vestvågøy",
