@@ -86,7 +86,9 @@ def main():
             if dm is not None:
                 dyp[label] = {"depth_m": by_m.get(dm)}
         hours = sorted({k for p in sp["points"].values() for k in p["hours"]})
-        any_data = any(h.get("height") is not None for p in sp["points"].values() for h in p["hours"].values())
+        # BarentsWatch svarer bokstavelig 0,0 for tørre punkter/landpunkter - det er ikke data (grunnregelen, kontrollør 16.10)
+        har_data = lambda p: any((h.get("height") or 0) > 0 for h in p["hours"].values())
+        any_data = any(har_data(p) for p in sp["points"].values())
         win = b["spot"].get("swell_window")
         best = None
         if FORSTE_MED_DATA is not None:
@@ -95,7 +97,7 @@ def main():
             pts = sorted([(p["requested"]["dist_m"], label, p) for label, p in sp["points"].items() if p["requested"].get("dist_m") is not None])
             for dm, label, p in pts:
                 dep = by_m.get(dm)
-                if dep is not None and dep >= FORSTE_MED_DATA and any(h.get("height") is not None for h in p["hours"].values()):
+                if dep is not None and dep >= FORSTE_MED_DATA and har_data(p):
                     best = (0, "alle", {"label": label, "dist": dm, "depth": dep, "hs": None, "lat": p["requested"]["lat"], "lon": p["requested"]["lon"]})
                     break
             hours = []

@@ -43,7 +43,14 @@ def main():
         s = b["spot"]
         bw = s.get("barentswatch_point")
         if bw:
-            row = next((r for r in b.get("snitt", []) if abs(r["lat"] - bw["lat"]) < 1e-6 and abs(r["lon"] - bw["lon"]) < 1e-6), None)
+            snitt = list(b.get("snitt", []))
+            for f in BYGGET.glob("*.json"):   # punktet kan være lånt fra en nabospot (rett_bygget.py --bw-fra)
+                if f.stem not in (kid,) and not f.stem.startswith("validering"):
+                    try:
+                        snitt += json.loads(f.read_text(encoding="utf-8")).get("snitt", [])
+                    except (ValueError, KeyError):
+                        pass
+            row = next((r for r in snitt if abs(r["lat"] - bw["lat"]) < 1e-6 and abs(r["lon"] - bw["lon"]) < 1e-6), None)
             dyp = f"{row['dybde_m']} m dyp" if row and row.get("dybde_m") is not None else "dybde ukjent"
             bw_txt = f"{bw['lat']}, {bw['lon']} ({dyp}, {dist_m(s['spot'], bw):.0f} m ut)"
             if "FORELØPIG" in (s.get("_barentswatch") or ""):
@@ -53,11 +60,11 @@ def main():
         hav = s.get("offshore")
         rows.append(f"| {kid} | {kand[kid]['name']} | {kand[kid]['region']} | {s.get('facing') if s.get('facing') is not None else '–'}° | {fmt_w(s.get('swell_window'))} | "
                     f"{fmt_w(s.get('offshore_wind'))} | {f'{hav[chr(108)+chr(97)+chr(116)]}, {hav[chr(108)+chr(111)+chr(110)]}' if hav else '–'} | {bw_txt} | "
-                    f"{(s.get('tidevann') or {}).get('name') or '–'} | {'; '.join(b.get('flagg') or []) or '–'} |")
+                    f"{(s.get('tidevann') or {}).get('name') or '–'}{' (' + str(s['tidevann'].get('delay')) + ' min)' if (s.get('tidevann') or {}).get('delay') not in (None, '0') else ''} | {'; '.join(b.get('flagg') or []) or '–'} |")
     L = [f"# Spotfabrikken: {', '.join(sorted(regioner))} ({len(rows)} spots)", "",
          "Forslag fra tools/bygg_spot.py for posisjonene som er godkjent (Claude, delegert av Theodor 16.10.2026). Ingenting er lagt inn i "
          "spots.json - det skjer med tools/godkjenn_spot.py etter gjennomgang (privat/kandidater/bygg_godkjent_claude.csv). "
-         "Minikart per spot: data/kandidater/bygget/<id>.png. Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: "
+         "Tidevann: Kartverkets referansested for posisjonen (samme oppslag som henteren; mange steder bruker Andenes med egen forsinkelse og faktor). Minikart per spot: data/kandidater/bygget/<id>.png. Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: "
          "strandnormal ±150 m langs kysten. Offshore-vind: motsatt av facing ±45° (standard, ubekreftet). BarentsWatch: snittregelen 15.10.", "",
          "| id | Navn | Region | facing | Vindu | Offshore-vind | Havpunkt | BarentsWatch-punkt | Tidevann | Flagg |",
          "|---|---|---|---|---|---|---|---|---|---|"] + rows
