@@ -1,21 +1,39 @@
 # Nordsurf: status
 
-## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - I GANG
+## KLAR FOR CLAUDES GJENNOMGANG (16.10): Lofoten og Vesterålen, 22 bygde spots - PR #22 (utkast)
+
+Gren `region/lofoten-vesteralen`. Samletabell: `data/kandidater/bygget/lofoten-vesteralen.md`; minikart: `data/kandidater/bygget/<id>.png`; gjennomgangssiden (minikart ved siden av posisjonen): `git checkout region/lofoten-vesteralen && python3 tools/koordinatsjekk/server.py` → http://127.0.0.1:8765/. Neste: Claude skriver `privat/kandidater/bygg_godkjent_claude.csv` (id, beslutning godkjent/rett/avvis, kommentar) → godkjenn_spot.py for de godkjente (rettinger fra kommentaren først) → Theodor ja/nei til merge. Flagget: eggum-ost-steinstrand, g-frame, horseid, rorvika (BarentsWatch uten punkt), flakstad-beach-kirkesiden (ingen fri linje til åpent hav); høyder må settes for g-frame, soppelplassen, unstad-left, unstad-right.
+
+## Svar på rapporten 16.10 formiddag (punkt 1-8) - FERDIG; venter: #20, #21 (ja), #22 (Claudes gjennomgang)
 
 | Punkt | Status | Gren / PR |
 |---|---|---|
-| 1. #17 sw.js - CACHE-navnet endres ved neste publisering? | **Rettet:** nei, #17 ga samme navn som live-siden (845c929484b0), fordi hashen utelot sw.js selv. Nå tas sw.js med (CACHE-linja nøytralisert) → 36ed691acc3a; test_docs_cache sjekker at en SHELL-endring gir nytt navn og at SHELL bare har filer som finnes. Kontrollør: GODKJENT. Theodor merger. NB: #15 og #18 må kjøre update_sw_cache.py på nytt etter at #17 er merget (ny hash-formel). | fiks/sw-shell, #17 |
-| 2. #15 rettelser a-d + test_kart_browser i CI | i gang (forgrening i ../nordsurf-b) | s3/maplibre, #15 |
+| 1a Driftsregel i CLAUDE.md | ferdig (main) | - |
+| 1b Vakthund (ntfy ved varsel > 7 t eller to feilede «Hent varsel» på rad, maks ett per 6 t) | PR åpen, kontrollør GODKJENT - **venter på ja** | drift/vakthund, #20 |
+| 1c Banner ved gammelt varsel | Svar: **nei** - banneret fantes bare på Hjem, så 15.-16.10 viste Utforsk og spotsiden bare «–». Rettet i #20: «Varselet er N timer gammelt …» på Hjem, Utforsk og spotsiden, og eget banner når varselet har eldre format enn appen. | #20 |
+| 2 Hemmelige ut av git (NB 16.10: koordinatene sto også i en kommentar jeg skrev i test_kandidater.py - fjernet, testen fant det) | **ferdig, merget i #16**: kjennes igjen på hash, ligger bare i privat/kandidater/hemmelige.json; fetcher/test_kandidater.py (CI) feiler på status «hemmelig», id/navn og (lokalt) koordinatene. Historikken er ikke skrevet om. | #16 |
+| 3 PR #16 | **merget**: 26 flyfoto-forslag (4 A, 17 B, 5 C) importert; vernesjekk med Naturbase rundt hvert forslag (Eggum 277 m, Eggum øst 427 m, The Frog 626 m utenfor - triage.md); gjennomgangssiden forhåndsvelger forslaget og viser sikkerhet/begrunnelse og fabrikkens minikart | #16 |
+| 4 PR #18 | **merget**: godkjent posisjon påkrevd (Theodor eller Claude delegert), flagg krever --overstyr, BarentsWatch-valg med kjent dybde, test_spotfabrikk.py. Kontrollør: IKKE GODKJENT → rettet. Forbudssjekken gjorde Utforsk tregere i CI - rettet før merge | #18 |
+| 5 S6 | kontrollør GODKJENT (etter to rettelser: feilet region vises som «mangler», hemmelige spots holdes ute av offentlige artifacts) - **venter på ja**. Byte for byte likt med sekvensiell; Open-Meteo må tempobegrenses før ca. 80 spots | s6/region-matrise, #21 |
+| 7/8 Lofoten og Vesterålen | **klar for Claudes gjennomgang** (øverst) - 22 bygget, BarentsWatch-punkt for 17 | region/lofoten-vesteralen, #22 (utkast) |
+
+## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
+
+| Punkt | Status | Gren / PR |
+|---|---|---|
+| 1. #17 sw.js - CACHE-navnet endres ved neste publisering? (oppdatert: live-siden byttet fra 845c929484b0 til 089d76771f7c med gyldig SHELL da #15 ble publisert; #17 er nå bare hash-formelen) | **Rettet:** nei, #17 ga samme navn som live-siden (845c929484b0), fordi hashen utelot sw.js selv. Nå tas sw.js med (CACHE-linja nøytralisert) → 36ed691acc3a; test_docs_cache sjekker at en SHELL-endring gir nytt navn og at SHELL bare har filer som finnes. Kontrollør: GODKJENT. Theodor merger. NB: #15 og #18 må kjøre update_sw_cache.py på nytt etter at #17 er merget (ny hash-formel). | fiks/sw-shell, #17 |
+| 2. #15 rettelser a-d + test_kart_browser i CI | **ferdig, merget** (kontrollør GODKJENT). a: kysten fra OSM-kystlinjer, land klippet med ramme større enn maxBounds, test av alle fire kanter på z4-z12; b: lappene unngår kildemerket, brikkene og knappene; c: regionbrikker fra spots.json (feilen lå i testdataene, appen var riktig); d: maks zoom 12, ROADMAP S3 om finere kyst rundt spotene senere. Filer: norge-oversikt.pmtiles 1,12 MB (precachet), norge-detalj.pmtiles 33,1 MB (range). **CI bruker 30 fps / 3 s** (programvare-GPU på 2 kjerner målte 44 fps og 1,9 s); kravene 50 fps / 2 s sjekkes bare lokalt (62-63 fps, 0,85-0,88 s + 1,2 s WebGL-oppsett i emulert GPU) - **2 s på telefon er ikke bevist før Theodor har målt**. Live 16.10: kartet tegnes i WebKit og Chromium; range på .pmtiles gir riktige byte (Pages gzipper når klienten ber om det, men både Chromium og WebKit sender identity ved Range - sjekket). | s3/maplibre, #15 |
 | 3.1 Regioner + Hordaland | ferdig (Øygarden → Hordaland, 0 uten region) | kandidater/posisjoner, #16 |
-| 3.2 secret-revtangen, regestranda «hemmelig»; vetvika lav prioritet | ferdig - **se spørsmålet under om det offentlige repoet** | #16 |
-| 3.3 Forbud-visning | Hjem, tabell, søk og spotsiden ferdig på #18 («Surfing forbudt nå» + «1. okt–31. mars, fuglefredning», linje om forbudet utenfor perioden, ikke i Beste økt, testet); Utforsk-kartet og klyngefargen bygges når #15 er merget | #18 |
+| 3.2 to kandidater «hemmelig» (flyttet til privat/); vetvika lav prioritet | ferdig - **se spørsmålet under om det offentlige repoet** | #16 |
+| 3.3 Forbud-visning | **ferdig** på #18: i forbudsperioden «Surfing forbudt nå» + «1. okt–31. mars, fuglefredning» i stedet for stjerner og ord overalt (Hjem, tabell, søk, Utforsk-kort/-liste/-markører, spotsiden inkl. langtidsvarsel og dagfaner), aldri i Beste økt, farger ikke klyngen; utenfor perioden vises spoten vanlig med en linje om forbudet. Bare visning. Kontrollør: rettet → testet. | #18 |
 | 3.4 facing ±150 m langs kysten, offshore ±45 | ferdig: 5 av 8 (de samme fem som før, men mye tettere: Grøtfjord 1,5°, Tromvik 0,7°, Russelv 0,7°, Steinkrøssa 6,7°, Unstad 3,1°); utenfor: Ersfjordstranda 21°, Lenangsøyra 34° (ventet), Farstadsanden 61° (nålen i hjørnet av en buet strand - fabrikken varsler nå slike). Kontrollør: godkjent etter to tekstrettelser | spotfabrikken, #18 |
 | 3.5 posisjoner.json med listepinner, gjennomgangsside, importer_forslag.py | ferdig: 105 kandidater (listepinne, «ikke sjekket»), 386 alternative markører (OSM-strand, stedsnavn); siden region for region (Lofoten 17, Vesterålen 9 først) med teller; vernvarsel ved lagring i/nær forbudsområde; godkjenninger slettes aldri. Kontrollør: rettet → testet | #16 |
 | 4. Tidevannssted | **Stemmer:** bygg_spot.py gir nøyaktig samme referansested, forsinkelse og faktor som henterens eget oppslag (spotens posisjon, datatype=tab, 16 døgn) for alle 8 - Andenes (Grøtfjord, Tromvik, Ersfjordstranda, Steinkrøssa, Unstad), Hammerfest (Russelv, Lenangsøyra), Kristiansund (Farstadsanden). Andenes er Kartverkets eget referansested for de posisjonene. Ingen feil i bygg_spot.py. | - |
 | 5. NTFY_TOPIC | **Finnes ikke:** ikke som repo-nøkkel, ikke som repo-variabel (`gh variable list`: bare BW_DEBUG), og forecast.yml bruker ikke noe miljø (bare publiser.yml bruker github-pages). Den ekte henterkjøringen 15.10 kl. 15:53Z logget `NTFY_TOPIC:` tom og «Varsler: NTFY_TOPIC er ikke satt, hopper over.» («Varslet: …»-linjene i loggen er fra testene, med mock). **Ingen ntfy-varsler sendes i dag** - verken surfevarsler, driftsvarsler eller «Rått»-varselet - før Theodor legger inn NTFY_TOPIC som repo-nøkkel. | - |
 | 6. Ingen spot bygges | holdt | - |
+| **Driftsfeil funnet:** «Hent varsel» feilet fra 15.10 kl. 19Z | **Rettet og merget (#19):** forecast.yml kjørte fetcher/test_map_disc.py, som ble slettet i PR #7 - ingen nye varsler fra 15.10 kl. 15:53Z til 16.10 ca. 09Z (live-appen viste «–»). Steget fjernet; test_docs_cache sjekker nå at alle skript workflowene kjører finnes. «Hent varsel» startet manuelt: grønn, live-siden har varsel fra 16.10 kl. 08Z i nytt format. Kontrollør: GODKJENT. | fiks/forecast-test, #19 |
 
-**Spørsmål til Theodor (fra kontrolløren):** repoet er offentlig. secret-revtangen og regestranda ligger med listepinnens koordinater i data/kandidater/kandidater.json og triage.json på main siden PR #14 - nå i tillegg merket «hemmelig» (som du ba om). Skal de flyttes ut av repoet til privat/ (gitignored)? Det kan gjøres framover uten å slette noe, men de ligger i git-historikken; å renske historikken krever force-push og sletting - bare med ditt ja.
+**Spørsmål til Theodor (fra kontrolløren):** repoet er offentlig. de to hemmelige kandidatene ligger med listepinnens koordinater i data/kandidater/kandidater.json og triage.json på main siden PR #14 - nå i tillegg merket «hemmelig» (som du ba om). Skal de flyttes ut av repoet til privat/ (gitignored)? Det kan gjøres framover uten å slette noe, men de ligger i git-historikken; å renske historikken krever force-push og sletting - bare med ditt ja.
 
 **Eggum og The Frog (3.3):** kart i data/kandidater/vern/ (tools/vern_kart.py, Naturbase-grensen mot listepinnen). Eggum: reservatet (med sjøstripe) begynner ca. 270 m sørvest for pinnen - bølgen foran pinnen ligger utenfor, men stranda fortsetter mot reservatet. The Frog: reservatet ligger på andre siden av bukta, ca. 580 m - utenfor. Eggum øst: ca. 690 m - utenfor. Alle tre er vanlige kandidater med en linje om reservatet (data/kandidater/vern_vurdering.json → kandidater.json vern_merknad). Vurdert ut fra listepinnen, ikke flyfoto.
 
@@ -44,7 +62,7 @@
 
 **Spørsmål til deg:**
 1. **Regionnavnene** (forslag: Finnmark, Troms, Vesterålen, Lofoten, Salten, Møre og Romsdal, Stad og Nordfjord, Karmøy, Jæren, Dalane og Lista, Sørlandet, Østlandet). Hordaland/Øygarden passer ikke i noen (står uten region); Kinn/Sunnfjord er lagt i Stad og Nordfjord.
-2. **secret-revtangen:** skal den bygges? (Den ligger i Jærstrendene fuglefredningsområde med surfeforbud 1.10-31.3.) Lista kaller også **vetvika og regestranda** «secret».
+2. **En hemmelig kandidat (Jæren):** skal den bygges? (Den ligger i Jærstrendene fuglefredningsområde med surfeforbud 1.10-31.3.) Lista kaller også **vetvika og én til** «secret».
 3. **Forbudsspotene:** vise med «Forbud nå» (bygget slik i #18, ren visning) eller skjule helt i perioden? For Jæren betyr «Forbud nå» oktober-mars.
 4. (Nytt) **facing for nye spots:** strandas normal eller midten av vinduet? spots.json bruker begge.
 5. (Nytt) **Koordinatene:** listepinnen som utgangspunkt og din gjennomgang med flyfoto i `tools/koordinatsjekk/` - skal jeg lage en posisjoner.json med listepinnene så siden kan brukes?
@@ -55,7 +73,7 @@
 
 **Neste steg for en ny økt:** vent på Theodors svar; ingenting i nattjobben står halvferdig.
 
-**Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og regestranda «secret» - spørsmål til Theodor sammen med secret-revtangen.
+**Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og én til «secret» - spørsmål til Theodor sammen med en annen hemmelig kandidat.
 
 ## Tillegg 2: appen skal tåle 100+ spots (Theodor 15.10.2026, punkt 4) - gren `skalering/oversikt`, PR åpen, IKKE merget
 

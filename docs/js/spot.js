@@ -25,7 +25,7 @@
     // Theodors regel (c) 05.10.2026 (app.js heightMForDisplay): «Blåst ut» viser surfehøyden hvis
     // den er reell, ellers BarentsWatch sin totalhøyde; «Stormsjø» ALLTID totalhøyden; Flatt/Treffer
     // ikke har ikke noe pålitelig tall. Settene (1,27 × Hb) hører bare til surfehøyden.
-    if(!h) return null;
+    if(!h || h._forbud) return null;   // forbudsperiode: ingen høyde (Theodor 16.10.2026)
     const v = heightMForDisplay(h);
     if(v==null) return null;
     const sets = (!h.low_reason || (h.low_reason==="blown_out" && h.surf_height!=null && h.surf_height > 0)) && h.surf_height_sets!=null ? h.surf_height_sets : null;
@@ -197,7 +197,11 @@
     const topp = `<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>${pc ? "Tilbake" : ""}</button>
         <div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(H.stedText(s))}</div></div>${favBtnHtml(s.id, false)}</div>
       <div class="naa"><span>${tid}</span>${atNow ? "" : `<button type="button" class="tilbakena" id="tilbakeNa">Tilbake til nå</button>`}</div>`;
-    const vurdering = `<div class="vurdering"><div class="r-${Math.min(5,st)}">${st ? starsSVG(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;
+    // Theodor 16.10.2026: i forbudsperioden «Surfing forbudt nå» og perioden i stedet for stjerner og ord (bare visning)
+    const fb = H.forbudInfo ? H.forbudInfo(s, t.getTime()) : null;
+    const vurdering = fb
+      ? `<div class="vurdering"><div class="forbud"><div class="ord">${esc(fb.tittel)}</div><div class="periode">${esc(fb.periode)}${fb.r.verneomrade ? " · " + esc(fb.r.verneomrade) : ""}</div></div></div>`
+      : `<div class="vurdering"><div class="r-${Math.min(5,st)}">${st ? starsSVG(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;   // linja om forbudet står i overskriften (stedText)
     const venstre = `${vurdering}${kortHtml(s, h)}`;
     // åpnet på «nå» (S.idx null): grafen viser i dag bare hvis det er minst 2 lyse timer igjen, ellers i morgen -
     // kortene øverst viser fortsatt nå (Theodor 15.10, punkt 3)

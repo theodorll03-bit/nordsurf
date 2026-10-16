@@ -24,14 +24,19 @@
   }
   // verdi per spot for valgt dag: nå = nå-timen; ellers dagens beste dagslystime (publish.best_hour)
   function valueFor(s, dayKeyOrNull){
+    // Theodor 16.10.2026: i forbudsperioden ingen stjerner - ordet «Surfing forbudt (nå)», og st 0 så spoten aldri
+    // farger klyngen (klyngefargen er beste st i klyngen). Bare visning.
     if(dayKeyOrNull!=null){
       const b = H().dayBest(s, dayKeyOrNull);
+      if(b.cls==="forbud"){ const fi = H().forbudInfo(s, Date.parse(dayKeyOrNull + "T12:00:00Z")); return {st:0, word:"Surfing forbudt", forbud:fi, miss:false, h:null, t:null, aria:`${s.name}: surfing forbudt (${fi ? fi.periode : ""})`}; }
       if(b.cls==="miss") return {st:0, word:"–", miss:true, h:null, t:null, aria:`${s.name}: tallet mangler`};
       if(b.cls==="dark") return {st:0, word:"Mørkt", miss:false, h:null, t:null, aria:`${s.name}: mørkt hele dagen`};
       const w = b.h ? ratingWord(b.h) : "–";
       return {st:b.st, word:w, miss:false, h:b.h, t:b.t, aria:`${s.name}: ${w}${b.st ? ", " + STR.starsAria(b.st, 0) : ""}`};
     }
     const h = H().naaOf(s);
+    const fi = H().forbudInfo(s);
+    if(fi) return {st:0, word:fi.tittel, forbud:fi, miss:false, h, t: h ? h.t : null, aria:`${s.name}: ${fi.tittel} (${fi.periode})`};
     if(!H().known(h)) return {st:0, word:"–", miss:true, h, t: h ? h.t : null, aria:`${s.name}: tallet mangler`};
     const st = H().stars(h), w = ratingWord(h);
     return {st, word:w, miss:false, h, t:h.t, aria:`${s.name}: ${w}${st ? ", " + STR.starsAria(st, 0) : ""}`};
@@ -91,16 +96,16 @@
     const v = valueFor(s, S.utforskDay); const h = v.h;
     const t = v.t ? new Date(v.t) : null;
     const tid = S.utforskDay==null ? "nå" : t ? `${fmtWdLong.format(t)} kl. ${fmtHour.format(t)}` : cap(fmtWdLong.format(new Date(S.utforskDay + "T11:00:00Z")));
-    const hoyde = H().ordOgHoyde(h).hoyde;
+    const hoyde = v.forbud ? null : H().ordOgHoyde(h).hoyde;
     return `<div class="topp"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(H().stedText(s))} · ${esc(tid)}</div></div><button type="button" class="iconbtn lukk" id="kortLukk" aria-label="Lukk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
-      <div class="vurd r-${min5(v.st)}">${v.st ? starsSVG(v.st, 0) : ""}<span class="ord">${esc(v.word)}</span>${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</div>
-      <div class="fakta"><div>Surf<b>${hoyde ? `${esc(hoyde)} m` : h && h.surf_height!=null ? esc(Spot.kroppshoyde(h) || ratingWord(h)) : "–"}</b></div><div>Svell ute<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}${h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))}` : ""}` : "–"}</b></div><div>Vind<b>${h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s ${esc(windLabel(h))}` : "–"}</b></div></div>
+      <div class="vurd r-${min5(v.st)}">${v.st ? starsSVG(v.st, 0) : ""}<span class="ord">${esc(v.word)}</span>${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}${v.forbud ? `<span class="omr">${esc(v.forbud.periode)}</span>` : ""}</div>
+      <div class="fakta"><div>Surf<b>${v.forbud ? "–" : hoyde ? `${esc(hoyde)} m` : h && h.surf_height!=null ? esc(Spot.kroppshoyde(h) || ratingWord(h)) : "–"}</b></div><div>Svell ute<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}${h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))}` : ""}` : "–"}</b></div><div>Vind<b>${h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s ${esc(windLabel(h))}` : "–"}</b></div></div>
       <button type="button" class="primary" id="kortApne">Se hele varselet</button>`;
   }
   function offListeHtml(region){
     const ps = Kart.offMapSpots().filter(p=> H().regionOf(p.s)===region).map(p=>({s: p.s, v: valueFor(p.s, S.utforskDay)})).sort((a, b)=> b.v.st - a.v.st || a.s.name.localeCompare(b.s.name, "nb"));
     return `<div class="topp"><div><div class="navn">${esc(region)}</div><div class="omr">${ps.length} ${ps.length===1 ? "spot" : "spots"} utenfor kartet</div></div><button type="button" class="iconbtn lukk" id="kortLukk" aria-label="Lukk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
-      <div class="alfa offliste" role="list">${ps.map(({s, v})=>{ const hoyde = H().ordOgHoyde(v.h).hoyde; return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}"><span class="prikk${v.miss ? " miss" : ""}" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>`;
+      <div class="alfa offliste" role="list">${ps.map(({s, v})=>{ const hoyde = v.forbud ? null : H().ordOgHoyde(v.h).hoyde; return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}"><span class="prikk${v.miss ? " miss" : ""}" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>`;
   }
   function renderKort(){
     const el = $("#kartKort"); const s = S.picked && DATA.spots.find(x=>x.id===S.picked);
@@ -118,7 +123,7 @@
       .sort((a, b)=> b.v.st - a.v.st || ((b.v.h && b.v.h.surf_height)||0) - ((a.v.h && a.v.h.surf_height)||0) || a.s.name.localeCompare(b.s.name, "nb"));
     const dag = S.utforskDay==null ? "nå" : cap(fmtWdLong.format(new Date(S.utforskDay + "T11:00:00Z")));
     const shown = S.listeAlle ? spots : spots.slice(0, 30);
-    el.innerHTML = `<div class="kort"><h2 class="h2" style="margin-bottom:8px">Beste først</h2><p class="sub" style="margin:0 0 8px">${esc(dag)}${reg ? ` · ${esc(reg)}` : ""}</p><div class="alfa lang" role="list">${shown.map(({s, v})=>{ const hoyde = H().ordOgHoyde(v.h).hoyde;
+    el.innerHTML = `<div class="kort"><h2 class="h2" style="margin-bottom:8px">Beste først</h2><p class="sub" style="margin:0 0 8px">${esc(dag)}${reg ? ` · ${esc(reg)}` : ""}</p><div class="alfa lang" role="list">${shown.map(({s, v})=>{ const hoyde = v.forbud ? null : H().ordOgHoyde(v.h).hoyde;
       return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}"><span class="prikk${v.miss ? " miss" : ""}" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>${shown.length < spots.length ? `<button type="button" class="ghost visflere" id="listeFlere">Vis alle ${spots.length}</button>` : ""}</div>`;
     const more = $("#listeFlere", el); if(more) more.onclick = ()=>{ S.listeAlle = true; renderListe(); };
   }

@@ -5,7 +5,8 @@ kandidat, i privat/kandidater/bevis/<id>/ (aldri i git):
      alle aliaser i kommunen, og alle stedsnavn innen 3 km av søkesenteret; vi tar vare på typene i
      NAVNETYPER med representasjonspunkt og avstand.
   b. osm.json - OpenStreetMap via Overpass (ODbL, © OpenStreetMap-bidragsytere), innen 3 km:
-     natural=beach/sand/shingle (geometri), sport=surfing, og parkering (amenity=parking).
+     natural=beach/sand/shingle (geometri) og sport=surfing - fra et samlet uttrekk for hele Norge
+     (sju breddebånd, privat/geodata/strender_*.json). Parkering er ikke med (brukes ikke i valget).
   c. kystlinja kommer fra tools/kystdata.py (OSM-landpolygoner) - leses når hypotesene lages.
   d. Flyfoto: Norge i bilder (WMS) er «norway digital restricted» og krever innlogging (sjekket
      15.10.2026) - ingen flyfoto hentes. Theodor gjør den visuelle sjekken i tools/koordinatsjekk/.
@@ -16,6 +17,7 @@ listepinnen i praksis vår egen nål (1-5 m unna), så valideringen kjøres blin
 Kjør: python tools/koordinat_bevis.py [--blind] [id ...]   (standard: alle kandidater)"""
 import json
 import math
+import os
 import subprocess
 import sys
 import time
@@ -28,7 +30,7 @@ KAND = ROOT / "data" / "kandidater" / "kandidater.json"
 BEVIS = ROOT / "privat" / "kandidater" / "bevis"
 UA = {"User-Agent": "nordsurf/1.0 (ikke-kommersiell surfevarsel; github.com/theodorll03-bit/nordsurf)"}
 SN = "https://ws.geonorge.no/stedsnavn/v1"
-OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS = os.environ.get("NORDSURF_OVERPASS") or "https://overpass-api.de/api/interpreter"
 RADIUS_M = 3000
 NAVNETYPER = {"Strand", "Vik", "Bukt", "Odde", "Nes", "Tange", "Skjær", "Grunne", "Os", "Elv", "Havbukt", "Fjære", "Sand", "Halvøy", "Eid"}
 
@@ -74,24 +76,42 @@ def naer(lat, lon):
         side += 1
 
 
+GEO = ROOT / "privat" / "geodata"
+_BULK = None
+
+
+def _bulk():
+    """OSM-strender (natural=beach/sand/shingle) og sport=surfing for hele Norge, hentet én gang i sju
+    breddebånd fra Overpass (privat/geodata/strender_*.json) - ett kall per bånd i stedet for ett per
+    kandidat (Overpass svarte 429 på enkeltkallene 15.10.2026). Parkering er ikke med (brukes ikke i valget)."""
+    global _BULK
+    if _BULK is None:
+        seen, els = set(), []
+        for f in sorted(GEO.glob("strender_*.json")):
+            for e in json.loads(f.read_text(encoding="utf-8")).get("elements", []):
+                key = (e["type"], e["id"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                pts = [(n["lat"], n["lon"]) for n in e.get("geometry", [])] + [(n["lat"], n["lon"]) for m in e.get("members", []) for n in m.get("geometry", [])]
+                if "lat" in e:
+                    pts.append((e["lat"], e["lon"]))
+                if pts:
+                    e["_bb"] = (min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts))
+                    els.append(e)
+        if not els:
+            sys.exit(f"Mangler OSM-strender i {GEO} (strender_*.json) - se docstringen")
+        _BULK = els
+    return _BULK
+
+
 def overpass(lat, lon):
-    q = f"""[out:json][timeout:60];
-(
-  way(around:{RADIUS_M},{lat},{lon})[natural~"^(beach|sand|shingle)$"];
-  relation(around:{RADIUS_M},{lat},{lon})[natural~"^(beach|sand|shingle)$"];
-  nwr(around:{RADIUS_M},{lat},{lon})[sport=surfing];
-  nwr(around:{RADIUS_M},{lat},{lon})[amenity=parking];
-);
-out tags geom;"""
-    # via curl: Python 3.9 med LibreSSL får ikke TLS-håndtrykk mot overpass-api.de (15.10.2026)
-    for i in range(4):
-        p = subprocess.run(["curl", "-s", "--max-time", "120", "-A", UA["User-Agent"], "-w", "\n%{http_code}",
-                            "--data-urlencode", f"data={q}", OVERPASS], capture_output=True, text=True, timeout=150)
-        body, _, code = p.stdout.rpartition("\n")
-        if code == "200":
-            return json.loads(body)
-        time.sleep(15 * (i + 1))
-    raise RuntimeError(f"Overpass svarte ikke (siste kode {code})")
+    """Elementene fra båndfilene som ligger innen RADIUS_M (rammetest med margin)."""
+    dlat = RADIUS_M / 111000 + 0.01
+    dlon = dlat / max(0.2, math.cos(math.radians(lat)))
+    out = [{k: v for k, v in e.items() if k != "_bb"} for e in _bulk()
+           if not (e["_bb"][2] < lat - dlat or e["_bb"][0] > lat + dlat or e["_bb"][3] < lon - dlon or e["_bb"][1] > lon + dlon)]
+    return {"elements": out, "_kilde": "Overpass, bånd for hele Norge (privat/geodata/strender_*.json)"}
 
 
 def kandidat_bevis(k, blind=False):
@@ -111,7 +131,12 @@ def kandidat_bevis(k, blind=False):
                 pass
             time.sleep(0.2)
     if blind:
-        hits = [h for h in navn_treff if h["type"] in NAVNETYPER] or navn_treff
+        # startpunkt: stedsnavnet med spotens navn, helst en strand/sand/vik/bukt («Strand i sjø» osv.), ellers første treff
+        pri = ["Strand", "Sand", "Fjære", "Vik", "Bukt", "Havbukt", "Odde", "Nes", "Tange", "Os", "Skjær", "Grunne"]
+        main = k["name"].split("(")[0].strip().lower()
+        # hovednavnet foran aliaser, så typen (strand før vik før odde …)
+        rank = lambda h: (h["sok"].lower() != main, pri.index(h["type"].split(" ")[0]) if h["type"].split(" ")[0] in pri else len(pri))
+        hits = sorted(navn_treff, key=rank)
         if not hits:
             sn = {"senter": None, "navn_treff": navn_treff, "naer": [], "merknad": "blind: ingen stedsnavntreff å starte fra"}
             sn_f.write_text(json.dumps(sn, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -126,7 +151,6 @@ def kandidat_bevis(k, blind=False):
     sn = {"senter": {"lat": lat, "lon": lon, "kilde": "stedsnavn" if blind else "listepinne"}, "navn_treff": navn_treff, "naer": naer(lat, lon)}
     sn_f.write_text(json.dumps(sn, ensure_ascii=False, indent=1), encoding="utf-8")
     osm_f.write_text(json.dumps(overpass(lat, lon), ensure_ascii=False), encoding="utf-8")
-    time.sleep(1.0)
     return sn
 
 

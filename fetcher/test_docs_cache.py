@@ -44,4 +44,15 @@ finally:
 assert changed != want, "en SHELL-endring i sw.js ga samme CACHE-navn"
 assert same == want, "CACHE-linja selv påvirker hashen (sirkulært)"
 print("SHELL-endring gir nytt CACHE-navn, CACHE-linja er nøytral - OK")
+# 16.10.2026: forecast.yml kjørte fetcher/test_map_disc.py etter at fila ble pensjonert (PR #7, 15.10) -
+# «Hent varsel» feilet fra 15.10 kl. 19Z til 16.10 uten nytt varsel. Alle skript workflowene kjører må finnes.
+import pathlib, re as _re   # noqa: E402,E401
+_root = SW.parent.parent
+_mangler = []
+for _wf in sorted((_root / ".github" / "workflows").glob("*.yml")):
+    for _f in _re.findall(r"python3? ((?:fetcher|tools)/[\w./-]+\.py)", _wf.read_text(encoding="utf-8")):
+        if not (_root / _f).exists():
+            _mangler.append(f"{_wf.name}: {_f}")
+assert not _mangler, f"workflows kjører skript som ikke finnes: {_mangler}"
+print("Alle skript workflowene kjører finnes - OK")
 print("Alle tester ok")

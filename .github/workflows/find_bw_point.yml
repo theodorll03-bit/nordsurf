@@ -6,6 +6,15 @@ name: Finn BarentsWatch-punkt
 # resultatet til data/bw_point_search/, så det kan leses uten nøkler etterpå.
 on:
   workflow_dispatch:
+    inputs:
+      spots:
+        description: "Bare disse spots fra spots.json (komma, tom = alle)"
+        required: false
+        default: ""
+      kandidater:
+        description: "Spots fra spotfabrikken (data/kandidater/bygget/<id>.json, komma) - ROADMAP K del C"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -20,8 +29,14 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - name: Hent BarentsWatch for kandidatpunktene
-        run: python fetcher/find_bw_point.py
+        run: |
+          if [ -n "$BW_SEARCH_KANDIDATER" ] || [ -n "$BW_SEARCH_SPOTS" ]; then
+            export BW_SEARCH_OUT="result_$(date -u +%Y-%m-%dT%H%M)$( [ -n "$BW_SEARCH_KANDIDATER" ] && echo _kandidater ).json"
+          fi
+          python fetcher/find_bw_point.py
         env:
+          BW_SEARCH_SPOTS: ${{ inputs.spots }}
+          BW_SEARCH_KANDIDATER: ${{ inputs.kandidater }}
           UA_CONTACT: ${{ secrets.UA_CONTACT }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
@@ -30,6 +45,6 @@ jobs:
         run: |
           git config user.name "nordsurf-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/bw_point_search/result.json
+          git add data/bw_point_search/
           git diff --cached --quiet || git commit -m "Finn BarentsWatch-punkt: nytt søk"
           git push
