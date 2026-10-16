@@ -89,7 +89,8 @@ def main():
                 page.clock.set_fixed_time(T0)
                 page.on("pageerror", lambda e, label=label: errors.append(f"{label}: {e}"))
                 page.on("console", lambda m, label=label: errors.append(f"{label} console: {m.text}") if m.type == "error" and "ERR_FAILED" not in m.text and "404" not in m.text else None)
-                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"):
+                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**",
+                    "https://cache.kartverket.no/**"):   # Kartverket blokkert: Utforsk viser OSM-reserven, likt lokalt og i CI
                     page.route(pat, lambda r, req: r.abort())
                 loaded = {"ov": 0, "det": []}
                 def data_route(rt, req):
@@ -230,7 +231,8 @@ def main():
                 ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo")
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(klokke)
                 page.on("pageerror", lambda e, navn=navn: errors.append(f"banner {navn}: {e}"))
-                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"):
+                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**",
+                    "https://cache.kartverket.no/**"):   # Kartverket blokkert: Utforsk viser OSM-reserven, likt lokalt og i CI
                     page.route(pat, lambda r, req: r.abort())
                 page.route("**/data/oversikt.json", lambda rt, req, body=body: rt.fulfill(status=200, content_type="application/json", body=body))
                 page.route("**/data/spots/*.json", lambda rt, req: rt.fulfill(status=200, content_type="application/json", body=DET_BODY.get(req.url.split("?")[0].rsplit("/", 1)[-1][:-5], "{}")))

@@ -20,6 +20,7 @@
   --r5:#7360E3; --r5-ink:#5A47C9; --r5-on:#FFFFFF;
   --star:var(--r2);
   --glass:rgba(255,255,255,.80); --glass-edge:rgba(14,26,33,.08);
+  --mk-kant:rgba(14,26,33,.6);   /* ytre kant rundt prikker/klynger: Kartverket-kartet er lyst/grått, fargen alene gir < 3:1 mot terrenget */
   --window:var(--ink); --window-fill:rgba(14,26,33,.075); --swell:var(--ink); --swell-miss:var(--muted); --wind:var(--ink);
   --display:"Geist", system-ui, -apple-system, sans-serif;
   --body:"Geist", "Helvetica Neue", Helvetica, system-ui, -apple-system, sans-serif;
@@ -48,7 +49,7 @@
     --r3:#47C88E; --r3-ink:#47C88E; --r3-on:#0A1822;
     --r4:#2DC3D3; --r4-ink:#2DC3D3; --r4-on:#0A1822;
     --r5:#9A88FF; --r5-ink:#9A88FF; --r5-on:#0A1822;
-    --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10);
+    --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10); --mk-kant:rgba(234,242,244,.7);
     --window-fill:rgba(234,242,244,.075);
     --shadow:0 16px 40px -18px rgba(0,0,0,.7);
   }
@@ -67,7 +68,7 @@
   --r3:#47C88E; --r3-ink:#47C88E; --r3-on:#0A1822;
   --r4:#2DC3D3; --r4-ink:#2DC3D3; --r4-on:#0A1822;
   --r5:#9A88FF; --r5-ink:#9A88FF; --r5-on:#0A1822;
-  --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10);
+  --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10); --mk-kant:rgba(234,242,244,.7);
   --window-fill:rgba(234,242,244,.075);
   --shadow:0 16px 40px -18px rgba(0,0,0,.7);
 }
@@ -244,7 +245,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .utforsk-top .banner{margin:0 0 8px;pointer-events:auto}
 .utforsk-top .chip{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge)}
 .utforsk-top .chip[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
-.kart{position:absolute;inset:0}
+.kart{position:absolute;inset:0;overflow:hidden}
 .dagchips{position:absolute;left:16px;right:16px;bottom:calc(var(--nav-h) + 4px + env(safe-area-inset-bottom,0px));z-index:6}
 .dagchips .chip{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge)}
 .dagchips .chip[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
@@ -262,13 +263,27 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kartkort .lukk{position:absolute;right:8px;top:8px}
 /* kartet og merkene (kart.js): hele merket er én 44 px høy knapp (prikk + lapp), lappen 28 px, «Navn Ord» */
 .markers{position:absolute;inset:0;pointer-events:none}
-/* S3: MapLibre-kartet ligger under merkene; kildehenvisningen (OSM, ODbL) som liten «i»-knapp over dagbrikkene */
+/* S3: MapLibre-kartet ligger under merkene; kildemerket (.kartkilde) over dagbrikkene */
 .kart .ml-kart.maplibregl-map,.kart .ml-kart{position:absolute;inset:0;background:var(--sea)}   /* MapLibre-CSS (lastes senere) setter position:relative */
 .ml-kart .maplibregl-canvas:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-#viewUtforsk .maplibregl-ctrl-bottom-left{bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom,0px));left:8px}
-#viewUtforsk .maplibregl-ctrl-attrib{background:var(--glass);color:var(--ink);font-family:var(--body);font-size:0.75rem}
-#viewUtforsk .maplibregl-ctrl-attrib a{color:var(--ink)}
-#viewUtforsk .maplibregl-ctrl-attrib.maplibregl-compact{min-height:28px}
+/* Kartverket-bakgrunn (Theodor 16.10.2026): kildemerket nederst til venstre, alltid synlig, over dagbrikkene */
+.kartkilde{position:absolute;left:8px;bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom,0px));z-index:4;padding:3px 8px;border-radius:12px;background:var(--glass);color:var(--ink);font-size:0.75rem;line-height:1.4}
+.kartkilde a{color:var(--ink)}
+/* vind og svellkile (fra «kart først», dac1d4a): strekene i et stort, rotert lag over kartet; kilen ved valgt spot */
+.vindlag{position:absolute;left:50%;top:50%;width:2000px;height:2000px;margin:-1000px 0 0 -1000px;pointer-events:none;opacity:0;transition:transform 1.4s cubic-bezier(.2,.8,.2,1),opacity .8s ease;will-change:transform;color:var(--wind)}
+.vindlag svg{display:block}
+.vindlag line{stroke:currentColor;stroke-linecap:round;animation-name:ns-blow;animation-timing-function:linear;animation-iteration-count:infinite}
+.kilelag{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.kile .kile-fyll{fill:var(--kc);stroke:var(--kc);fill-opacity:.16;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
+.kile .kile-c{fill:var(--ink)}
+.kile .arc{fill:none;stroke:var(--kc);stroke-width:2.2;stroke-linecap:round;vector-effect:non-scaling-stroke;animation:ns-swell 3s linear infinite}
+.kile .arc.edge{stroke-opacity:.6;stroke-dasharray:6 4}
+.kile .arc.skjermet,.kile .arc.bekreftet{stroke-opacity:.45;stroke-dasharray:3 5}   /* bare en del når inn */
+.kile .arc-miss{stroke:var(--swell-miss);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-dasharray:4 5}
+/* stille mens kartet dras/zoomes og når fanen er skjult (kart.js setter klassene) */
+.kart.beveger .vindlag line,.kart.beveger .kile .arc,.kart.skjult-fane .vindlag line,.kart.skjult-fane .kile .arc{animation-play-state:paused}
+@keyframes ns-blow{0%{transform:translateX(-70px);opacity:0}25%{opacity:1}75%{opacity:1}100%{transform:translateX(150px);opacity:0}}
+@keyframes ns-swell{0%{transform:translateY(0);opacity:0}18%{opacity:1}82%{opacity:.95}100%{transform:translateY(46px);opacity:0}}
 .mk{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:none;z-index:2}
 /* trykkflatene er prikken (28 px) og lappen (44 px høy via ::before) - ikke hele 44 px-boksen: i tette utsnitt
    (Tromvik/Grøtfjord 10 px fra hverandre) ville naboens boks ellers dekket prikken, og lappene kolliderer aldri */
@@ -276,10 +291,10 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .mk-dot,.mk-pill{pointer-events:auto}
 .mk-pill::before{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px}
 .mk[hidden]{display:none}
-.mk-dot{position:absolute;left:16px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--rc,var(--r0));box-shadow:0 0 0 2px var(--raised);transition:background .3s ease,transform .2s ease}
+.mk-dot{position:absolute;left:16px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--rc,var(--r0));box-shadow:0 0 0 2px var(--raised),0 0 0 3px var(--mk-kant);transition:background .3s ease,transform .2s ease}
 .mk.sel .mk-dot{transform:scale(1.35);box-shadow:0 0 0 2.5px var(--ink)}
 .mk.miss .mk-dot{background:var(--raised);border:1.5px dashed var(--muted);box-sizing:border-box}
-.mk-pill{position:absolute;left:var(--lx,52px);top:var(--ly,8px);display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--raised);color:var(--ink);box-shadow:0 1px 0 var(--line),0 2px 8px rgba(0,0,0,.10);white-space:nowrap;font-size:0.9375rem;font-weight:700;line-height:1}
+.mk-pill{position:absolute;left:var(--lx,52px);top:var(--ly,8px);display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--line-strong),0 2px 8px rgba(0,0,0,.12);white-space:nowrap;font-size:0.9375rem;font-weight:700;line-height:1}
 .mk-pill .ord{color:var(--rc-ink);font-weight:600}
 .mk.bare .mk-pill{display:none}
 .mk.sel{z-index:3}
@@ -565,7 +580,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .sokgrupper h3{margin:14px 0 6px;font-size:var(--fs-secondary);color:var(--muted)}
 .sokgrupper h3 small{font-weight:500}
 .klynge{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:auto;z-index:2}
-.klynge .ring{position:absolute;left:5px;top:5px;width:34px;height:34px;border-radius:50%;background:var(--rc,var(--r0));color:var(--rc-on,var(--ink));display:grid;place-items:center;box-shadow:0 0 0 2.5px var(--raised),0 2px 8px rgba(0,0,0,.18);font-size:0.875rem;font-weight:700}
+.klynge .ring{position:absolute;left:5px;top:5px;width:34px;height:34px;border-radius:50%;background:var(--rc,var(--r0));color:var(--rc-on,var(--ink));display:grid;place-items:center;box-shadow:0 0 0 2.5px var(--raised),0 0 0 3.5px var(--mk-kant),0 2px 8px rgba(0,0,0,.18);font-size:0.875rem;font-weight:700}
 .offliste{max-height:40vh;overflow:auto;margin-top:8px}
 .tabellboks{max-height:70vh;overflow:auto}
 .tabellboks thead th{position:sticky;top:0;background:var(--raised);z-index:1;box-shadow:0 1px 0 var(--line)}
