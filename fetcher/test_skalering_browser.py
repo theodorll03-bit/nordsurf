@@ -67,7 +67,8 @@ def main():
     # surfeforbud som gjelder nå (1.10-31.3) - begge skal få merkelapp og holdes utenfor «Beste økt»
     by_id = {s["id"]: s for s in big["spots"]}
     by_id["test078"].update(status="forelopig", forelopig_fra=T0.date().isoformat())
-    by_id["test079"]["restriksjoner"] = [{"type": "surfeforbud", "fra": "10-01", "til": "03-31", "gjelder": "sjø"}]
+    by_id["test079"]["restriksjoner"] = [{"type": "surfeforbud", "fra": "10-01", "til": "03-31", "gjelder": "sjø", "grunn": "fuglefredning",
+                                          "verneomrade": "Testfredning fuglefredningsområde"}]
     overview, details = publish.split(big, regions_cfg=regions_cfg)
     OV_BODY = json.dumps(overview, ensure_ascii=False, separators=(",", ":"))
     DET_BODY = {sid: json.dumps(d, ensure_ascii=False, separators=(",", ":")) for sid, d in details.items()}
@@ -147,11 +148,15 @@ def main():
                 lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr.s')]
                     .map(r => [r.querySelector('b').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
                 if lbl:   # radene vises (mobil: 5 beste; nett: tabellen)
-                    assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Forbud nå" in t) for n, t in lbl.items()), lbl
+                    assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Surfing forbudt nå" in t) for n, t in lbl.items()), lbl
                 f79 = page.evaluate("""() => { const H = Front.helpers, s = DATA.spots.find(x => x.id === 'test079'), n = DATA.spots.find(x => x.id === 'test000');
-                    return [H.forbudNa(s), H.stedText(s), H.forbudNa(s, Date.parse('2026-05-01T12:00:00Z')), H.forbudNa(n), H.iBesteOkt(s, Date.parse('2026-05-01T12:00:00Z'))]; }""")
-                assert f79[0] is True and "Forbud nå" in f79[1] and f79[2] is False and f79[3] is False and f79[4] is True, f79
-                print(f"C.4 ({label}): Beste økt = {best_name}, merkelapper {sorted(lbl)}, Forbud nå 1.10-31.3 (ikke 1.5) - OK")
+                    const fi = H.forbudInfo(s), v = H.naaVisning(s, H.naaOf(s));
+                    return [H.forbudNa(s), H.stedText(s), H.forbudNa(s, Date.parse('2026-05-01T12:00:00Z')), H.forbudNa(n), H.iBesteOkt(s, Date.parse('2026-05-01T12:00:00Z')),
+                            fi && fi.tittel, fi && fi.periode, v.st, v.oh.ord, v.oh.hoyde]; }""")
+                # Theodor 16.10: i perioden «Surfing forbudt nå» + «1. okt–31. mars, fuglefredning», ingen stjerner/høyde; linje om forbudet alltid
+                assert f79[0] is True and "Surfing forbudt 1. okt–31. mars" in f79[1] and f79[2] is False and f79[3] is False and f79[4] is True, f79
+                assert f79[5] == "Surfing forbudt nå" and f79[6] == "1. okt–31. mars, fuglefredning" and f79[7] == 0 and f79[8] == "Surfing forbudt nå" and f79[9] is None, f79
+                print(f"C.4 ({label}): Beste økt = {best_name}, merkelapper {sorted(lbl)}, «Surfing forbudt nå» 1.10-31.3 (ikke 1.5) - OK")
                 shot("hjem")
                 # 8. nett-tabellen: regionfilter, «Vis alle», sticky
                 if not mobile:
@@ -196,12 +201,24 @@ def main():
                 reg_chip = page.query_selector("#utforskChips [data-view='Troms']")
                 assert reg_chip, "regionbrikken Troms mangler"
                 reg_chip.click(); page.wait_for_timeout(900); pills_ok("Troms"); shot("utforsk-troms")
+                if not mobile:   # Theodor 16.10: forbudt spot i Utforsk-lista - ordet i stedet for stjerner, st 0 (farger ikke klyngen)
+                    row = page.evaluate("""() => { const a = [...document.querySelectorAll('#utforskListe .srad')].find(r => r.textContent.includes('Testspot 079'));
+                        return a ? [a.textContent, a.className, a.getAttribute('aria-label')] : null; }""")
+                    assert row and "Surfing forbudt nå" in row[0] and "r-0" in row[1] and "1. okt–31. mars" in row[2], row
+                    print(f"Utforsk ({label}): forbudt spot vises som «Surfing forbudt nå», r-0 - OK")
                 print(f"2/3 ({label}): Utforsk hele kartet ({n_cl} klynger) og Troms uten overlappende lapper - OK")
                 # 4. åpne en spot laster nøyaktig én detaljfil
                 first = overview["spots"][0]["id"] if any(s["region"] == "Troms" for s in overview["spots"]) else overview["spots"][0]["id"]
                 troms_id = next(s["id"] for s in overview["spots"] if s["region"] == "Troms")
                 go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .vurdering .ord")
                 assert loaded["det"] == [troms_id], loaded["det"]
+                # Theodor 16.10: spotsiden i forbudsperioden - «Surfing forbudt nå» og perioden, ingen stjerner
+                go("#spot=test079", "#viewSpot:not([hidden]) .vurdering .forbud")
+                vt = page.text_content("#viewSpot .vurdering").strip()
+                assert "Surfing forbudt nå" in vt and "1. okt–31. mars, fuglefredning" in vt and not page.query_selector("#viewSpot .vurdering .stars"), vt
+                lt = page.text_content("#viewSpot #langtid") or ""
+                assert "Surfing forbudt" in lt and not page.query_selector("#viewSpot #langtid .stars"), lt[:200]
+                print(f"Forbud på spotsiden ({label}): «{vt[:60]}», langtidsvarselet uten stjerner - OK")
                 ctx.close()
             browser.close()
     finally:

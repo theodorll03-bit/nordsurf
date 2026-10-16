@@ -35,6 +35,17 @@ VERN_NEAR_M = 200
 KILDE = "liste 15.10 + spotfabrikken"
 
 
+def grunn(navn):
+    """Kort grunn til visningen («1. okt-31. mars, fuglefredning») ut fra verneområdets navn."""
+    n = (navn or "").lower()
+    for nokkel, ord_ in (("fuglefred", "fuglefredning"), ("dyrelivsfred", "dyrelivsfredning"), ("plantefred", "plantefredning"),
+                         ("naturreservat", "naturreservat"), ("nasjonalpark", "nasjonalpark"), ("landskapsvern", "landskapsvern"),
+                         ("marin", "marint verneområde")):
+        if nokkel in n:
+            return ord_
+    return navn
+
+
 def restriksjoner(sid):
     if not VERN.exists():
         return []
@@ -47,7 +58,7 @@ def restriksjoner(sid):
                 continue
             if r.get("type") in ("ferdselsforbud", "surfeforbud"):
                 out.append({"type": r["type"], "fra": r.get("fra"), "til": r.get("til"), "gjelder": r["gjelder"],
-                            "verneomrade": h["navn"], "kilde": r.get("kilde")})
+                            "grunn": grunn(h["navn"]), "verneomrade": h["navn"], "kilde": r.get("kilde")})
     return out
 
 
