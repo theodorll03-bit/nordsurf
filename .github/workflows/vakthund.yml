@@ -7,6 +7,9 @@ name: Vakthund
 # Vakthunden committer aldri til main og rører ikke data/.
 # Test: workflow_dispatch med «test_alder_timer» (virker bare utenfor main) later som varselet er så gammelt.
 on:
+  push:   # MIDLERTIDIG: ekte test på grenen (fjernes før merge)
+    branches: [drift/vakthund]
+    paths: [".github/workflows/vakthund.yml"]
   schedule:
     - cron: "47 1-23/3 * * *"   # 01:47, 04:47 … - 1,5 t etter hver «Hent varsel» (17 */3)
   workflow_dispatch:
@@ -43,7 +46,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           GITHUB_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/forecast.yml
-          VAKTHUND_TEST_ALDER_T: ${{ github.ref != 'refs/heads/main' && inputs.test_alder_timer || '' }}
+          VAKTHUND_TEST_ALDER_T: ${{ github.event_name == 'push' && '30' || (github.ref != 'refs/heads/main' && inputs.test_alder_timer || '') }}
       - name: Lagre tilstanden
         if: always() && hashFiles('vakthund_state.json') != ''
         uses: actions/cache/save@v4
