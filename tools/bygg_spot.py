@@ -17,7 +17,8 @@ Samme konvensjoner som spots.json og fetcher/check_spot.py:
 - ideal_height/max_height: beachbreak som Tromsø-spotene ([0.8, 2.0] / 3.5); point/reef tomt + «Theodor må sette».
 - Ingen local_rules.
 
-  python tools/bygg_spot.py <kandidat-id …>
+  python tools/bygg_spot.py <kandidat-id …> | --alle-godkjente   posisjoner godkjent av Theodor eller Claude (delegert)
+  python tools/bygg_spot.py --forslag <kilde> [--region Lofoten,Vesterålen] [id …]   fra posisjonsforslag med sikkerhet A/B
   python tools/bygg_spot.py --kjent <spots.json-id …>   validering mot de 8 (posisjonen fra spots.json)
 Kystdata fra tools/kystdata.py (privat/geodata/, sett NORDSURF_PRIVAT hvis privat/ ligger et annet sted)."""
 import datetime as dt
@@ -50,6 +51,7 @@ SKJAER_MAX_M2 = 20000   # 2 ha
 FACING_HALF_M = 150   # Theodor 16.10: ±150 m langs kysten fra nærmeste kystpunkt
 BW_STEP_M, BW_MAX_M, BW_MIN_DEPTH = 100, 1500, 8.0
 OFFSHORE_HALF_DEG = 45
+GODKJENNERE = {"theodor", "claude (delegert av Theodor 16.10.2026)"}   # Theodor 16.10 (punkt 8)
 BEACH_IDEAL, BEACH_MAX = [0.8, 2.0], 3.5
 
 
@@ -341,24 +343,53 @@ def main():
         (OUT / "validering_kjente.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         return
     if not POS.exists():
-        sys.exit("Mangler data/kandidater/posisjoner.json - spotfabrikken bygger bare fra en kontrollert posisjon (A2), aldri fra listepinnen.")
+        sys.exit("Mangler data/kandidater/posisjoner.json - spotfabrikken bygger bare fra en kontrollert posisjon, aldri fra listepinnen.")
     pos = json.loads(POS.read_text(encoding="utf-8"))["kandidater"]
     kand = {k["id"]: k for k in json.loads(KAND.read_text(encoding="utf-8"))["kandidater"]}
-    for sid in args:
-        p = pos.get(sid)
-        if not p or not p.get("spot") or not (p.get("sikkerhet") in ("A", "B") or p.get("vurdering") == "godkjent"):
-            print(f"{sid}: hopper over - posisjonen er ikke A/B eller godkjent av Theodor")
-            continue
-        if kand[sid].get("venter_pa_theodor"):
-            print(f"{sid}: hopper over - {kand[sid]['venter_pa_theodor']}")
-            continue
+    # Theodor 16.10.2026: fabrikken lager et FORSLAG. Standard: bare posisjoner Theodor har godkjent (G). Med
+    # --forslag <kilde> [--region R1,R2]: bygger fra posisjonsforslagene fra kilden med sikkerhet A eller B
+    # (f.eks. flyfoto-runden), så Theodor kan godkjenne posisjon og bygget spot i samme runde.
+    opts, args, it = {}, [], iter(sys.argv[1:])
+    for a in it:
+        if a in ("--forslag", "--region"):
+            opts[a] = next(it, None)
+        elif not a.startswith("--"):
+            args.append(a)
+    if any(k in opts and not opts[k] for k in ("--forslag", "--region")):
+        sys.exit("--forslag og --region trenger en verdi")
+    kilde = opts.get("--forslag")
+    regioner = set(opts["--region"].split(",")) if opts.get("--region") else None
+    jobs = []
+    if kilde:
+        for sid, p in pos.items():
+            k = kand.get(sid)
+            if not k or k["status"] != "kandidat" or (args and sid not in args) or (regioner and k.get("region") not in regioner):
+                continue
+            f = next((x for x in p.get("forslag", []) if x.get("satt_av") == kilde), None)
+            if f and f.get("sikkerhet") in ("A", "B"):
+                jobs.append((sid, {"lat": f["lat"], "lon": f["lon"]}, {"kilde": kilde, "sikkerhet": f["sikkerhet"]}))
+    else:
+        if "--alle-godkjente" in sys.argv:
+            args = [sid for sid, p in pos.items() if p.get("vurdering") == "godkjent" and p.get("satt_av") in GODKJENNERE
+                    and (not regioner or (kand.get(sid) or {}).get("region") in regioner)]
+        for sid in args:
+            p = pos.get(sid) or {}
+            if not (p.get("satt_av") in GODKJENNERE and p.get("vurdering") == "godkjent" and p.get("spot")):
+                print(f"{sid}: hopper over - posisjonen er ikke godkjent (bruk --forslag <kilde> for å bygge fra et forslag)")
+                continue
+            jobs.append((sid, p["spot"], {"kilde": f"godkjent ({p['satt_av']})"}))
+    for sid, ll, fra in jobs:
         k = kand[sid]
+        if k.get("venter_pa_theodor"):
+            print(f"{sid}: hopper over - {k['venter_pa_theodor']}")
+            continue
         bt = (k["hint"].get("break_type") or "").lower()
         typ = "beach" if bt.startswith("beach") else "point" if bt.startswith("point") else "reef" if bt.startswith("reef") else "ukjent"
-        b = build(sid, k["name"], p["spot"]["lat"], p["spot"]["lon"], typ, "liste 15.10 + spotfabrikken", region=k.get("region"))
+        b = build(sid, k["name"], ll["lat"], ll["lon"], typ, "liste 15.10 + spotfabrikken", region=k.get("region"))
+        b["bygget_fra"] = {**fra, "lat": ll["lat"], "lon": ll["lon"]}
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT / f"{sid}.json").write_text(json.dumps(b, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        print(f"{sid}: skrev {OUT / (sid + '.json')} (flagg: {b['flagg'] or 'ingen'})")
+        print(f"{sid}: skrev {OUT / (sid + '.json')} (flagg: {b['flagg'] or 'ingen'})", flush=True)
 
 
 if __name__ == "__main__":

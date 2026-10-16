@@ -1,7 +1,7 @@
 """Flytter en bygget spot inn i spots.json (ROADMAP K del C.4, 16.10.2026). LAGET, IKKE KJØRT - bare Theodor
 kjører den, én spot (eller én region) av gangen, med sitt ja.
 
-    python tools/godkjenn_spot.py <id> [--tørr]
+    python tools/godkjenn_spot.py <id> [--tørr] [--overstyr "<kommentar>" [--av "claude (delegert av Theodor 16.10.2026)"]]
 
 Leser data/kandidater/bygget/<id>.json (tools/bygg_spot.py) og legger spoten til i spots.json med
   status "forelopig", forelopig_fra (dagens dato), region, kilde «liste 15.10 + spotfabrikken» og
@@ -12,10 +12,11 @@ Appen viser da merkelappen «Foreløpig», holder spoten utenfor «Beste økt» 
 røres ikke. Regionen legges i spots.json sin «regions» først når den første spoten i regionen kommer inn
 (rekkefølge nord til sør etter regionforslagene i data/kandidater/kandidater.json).
 
-Stopper (endrer ingenting) hvis: id-en allerede finnes; posisjonen ikke er A/B eller godkjent av Theodor;
-kandidaten venter på Theodor (f.eks. secret-revtangen); BarentsWatch-punktet fortsatt er foreløpig (snittet
+Stopper (endrer ingenting) hvis: id-en allerede finnes; posisjonen ikke er godkjent av Theodor (satt_av «theodor»);
+kandidaten venter på Theodor; BarentsWatch-punktet fortsatt er foreløpig (snittet
 må kjøres i Actions først); ideal_height/max_height mangler (point/reef - Theodor setter dem); facing,
-vindu eller havpunkt mangler. spots.json er håndformatert - spoten settes inn som tekst, og resten av fila
+vindu eller havpunkt mangler. Har fabrikken flagget spoten (buet strand, facing utenfor vinduet, BarentsWatch uten
+data), kreves --overstyr med Theodors kommentar (lagres i _overstyrt). spots.json er håndformatert - spoten settes inn som tekst, og resten av fila
 sjekkes uendret etterpå. Etter innlegging: fysikk-kontrollør, alle tester, og CLAUDE.md sin stopp-regel.
 NB: vindu, havpunkt, BarentsWatch-punkt og offshorevind er felt som krever Theodors ja (CLAUDE.md) - å kjøre
 skriptet ER det ja-et for den ene spoten, og offshore_wind (±45°, «standard, ubekreftet») bør sjekkes mot kart
@@ -33,6 +34,9 @@ KAND = ROOT / "data" / "kandidater" / "kandidater.json"
 VERN = ROOT / "data" / "kandidater" / "vern.json"
 VERN_NEAR_M = 200
 KILDE = "liste 15.10 + spotfabrikken"
+# Theodor 16.10.2026 (punkt 8): gjennomgangen av posisjoner og bygde spots er delegert til Claude (chatten);
+# Theodor beholder ja/nei til merge av region-PR-ene
+GODKJENNERE = {"theodor", "claude (delegert av Theodor 16.10.2026)"}
 
 
 def grunn(navn):
@@ -63,28 +67,32 @@ def restriksjoner(sid):
 
 
 def check(sid, b, spots, pos, kand):
+    """(stopp, flagg): «stopp» kan aldri overstyres; «flagg» er fabrikkens egne varsler (buet strand, facing utenfor
+    vinduet, BarentsWatch uten data …) og krever --overstyr "<Theodors kommentar>" (Theodor 16.10.2026)."""
     s = b["spot"]
     why = []
     if any(x["id"] == sid for x in spots["spots"]):
         why.append("id-en finnes alt i spots.json")
     p = pos.get(sid, {})
-    if not (p.get("sikkerhet") in ("A", "B") or p.get("vurdering") == "godkjent"):
-        why.append("posisjonen er ikke A/B eller godkjent av Theodor (data/kandidater/posisjoner.json)")
-    elif p.get("spot") != s.get("spot") or p.get("vurdering") == "avvist":
-        why.append("posisjonen i bygget-fila er ikke lik den i posisjoner.json (flyttet eller avvist etter byggingen) - bygg på nytt")
+    if not (p.get("satt_av") in GODKJENNERE and p.get("vurdering") == "godkjent"):
+        why.append("posisjonen er ikke godkjent (satt_av «theodor» eller Claude delegert av Theodor, vurdering «godkjent» i data/kandidater/posisjoner.json)")
+    elif p.get("spot") != s.get("spot"):
+        why.append("posisjonen i bygget-fila er ikke lik den Theodor godkjente - bygg på nytt (python tools/bygg_spot.py <id>)")
+    if kand.get(sid, {}).get("status") != "kandidat":
+        why.append(f"kandidaten har status «{kand.get(sid, {}).get('status')}»")
     if kand.get(sid, {}).get("venter_pa_theodor"):
         why.append(kand[sid]["venter_pa_theodor"])
-    snitt = s.get("_barentswatch_snitt")   # sti til resultatfila fra find_bw_point.yml (data/bw_point_search/…)
-    if (not s.get("barentswatch_point") or "FORELØPIG" in (s.get("_barentswatch") or "")
-            or not snitt or not (ROOT / snitt).exists()):
-        why.append("BarentsWatch-punktet er ikke valgt fra et snitt - kjør find_bw_point.yml med kandidater, velg punktet etter regelen "
-                   "(tools/snitt_rapport.py) og sett barentswatch_point + _barentswatch_snitt (stien til resultatfila) i bygget-fila")
+    if "FORELØPIG" in (s.get("_barentswatch") or "") or not s.get("_barentswatch_snitt") or not (ROOT / s["_barentswatch_snitt"]).exists():
+        why.append("BarentsWatch-snittet er ikke kjørt/valgt - kjør find_bw_point.yml med kandidater og tools/velg_bw_punkt.py først")
     if s.get("ideal_height") is None or s.get("max_height") is None:
-        why.append("ideal_height/max_height mangler - Theodor setter dem")
+        why.append("ideal_height/max_height mangler - Theodor setter dem i bygget-fila")
     for f in ("facing", "swell_window", "offshore", "offshore_wind"):
         if s.get(f) is None or s.get(f) in ([], {}):
             why.append(f"{f} mangler")
-    return why
+    flagg = list(b.get("flagg") or [])
+    if not s.get("barentswatch_point") and s.get("_barentswatch_snitt") and not any("BarentsWatch" in f for f in flagg):
+        flagg.append("BarentsWatch uten data i snittet - spoten får ikke barentswatch_point (reservemodellen brukes)")
+    return why, flagg
 
 
 def insert_text(text, spots, entry, new_region):
@@ -104,7 +112,8 @@ def insert_text(text, spots, entry, new_region):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    args = [a for i, a in enumerate(argv) if not a.startswith("--") and not (i > 0 and argv[i - 1] in ("--overstyr", "--av"))]
     dry = "--tørr" in sys.argv or "--torr" in sys.argv
     if len(args) != 1:
         sys.exit(__doc__)
@@ -118,12 +127,21 @@ def main():
     pos = json.loads(POS.read_text(encoding="utf-8"))["kandidater"] if POS.exists() else {}
     kand_doc = json.loads(KAND.read_text(encoding="utf-8"))
     kand = {k["id"]: k for k in kand_doc["kandidater"]}
-    why = check(sid, b, spots, pos, kand)
+    why, flagg = check(sid, b, spots, pos, kand)
     if why:
         sys.exit(f"{sid}: legges IKKE inn:\n  - " + "\n  - ".join(why))
+    overstyr = next((sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--overstyr" and i + 1 < len(sys.argv)), None)
+    av = next((sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--av" and i + 1 < len(sys.argv)), "theodor")
+    if av not in GODKJENNERE:
+        sys.exit(f"--av må være en av {sorted(GODKJENNERE)}")
+    if flagg and not (overstyr and overstyr.strip()):
+        sys.exit(f"{sid}: legges IKKE inn - fabrikken har flagget den:\n  - " + "\n  - ".join(flagg)
+                 + '\nTheodor kan overstyre: python tools/godkjenn_spot.py ' + sid + ' --overstyr "<kommentar>"')
     s = dict(b["spot"])
     s.pop("tidevann", None)   # henteren slår opp tidevann fra posisjonen selv; referansestedet står i bygget-fila
     s.update(status="forelopig", forelopig_fra=dt.date.today().isoformat(), kilde=KILDE)
+    if flagg:
+        s["_overstyrt"] = {"kommentar": overstyr.strip(), "flagg": flagg, "dato": dt.date.today().isoformat(), "av": av}
     rs = restriksjoner(sid)
     if rs:
         s["restriksjoner"] = rs
