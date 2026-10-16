@@ -72,6 +72,29 @@ def evidence(kid):
 FORSTE_REGIONER = ["Lofoten", "Vesterålen"]   # Theodor 16.10: disse først, så resten nord til sør
 
 
+BYGGET = ROOT / "data" / "kandidater" / "bygget"
+
+
+def valgt_forslag(p):
+    """Forhåndsvalget (Theodor 16.10): det siste flyfoto-forslaget hvis det finnes, ellers det siste forslaget. Ikke godkjent før G."""
+    fs = p.get("forslag") or []
+    fly = [f for f in fs if str(f.get("satt_av", "")).startswith("claude-flyfoto")]
+    return (fly or fs or [None])[-1]
+
+
+def bygget(kid):
+    """Spotfabrikkens forslag for kandidaten (tools/bygg_spot.py), med minikart - vises ved siden av posisjonen."""
+    f = BYGGET / f"{kid}.json"
+    if not f.exists():
+        return None
+    b = json.loads(f.read_text(encoding="utf-8"))
+    sp = b["spot"]
+    return {"spot": sp.get("spot"), "facing": sp.get("facing"), "swell_window": sp.get("swell_window"), "offshore_wind": sp.get("offshore_wind"),
+            "offshore": sp.get("offshore"), "barentswatch_point": sp.get("barentswatch_point"), "barentswatch": sp.get("_barentswatch"),
+            "ideal_height": sp.get("ideal_height"), "max_height": sp.get("max_height"), "tidevann": (sp.get("tidevann") or {}).get("name"),
+            "flagg": b.get("flagg", []), "png": f"/bygget/{kid}.png" if (BYGGET / f"{kid}.png").exists() else None}
+
+
 def payload():
     pos = json.loads(POS.read_text(encoding="utf-8"))["kandidater"]
     kdoc = json.loads(KAND.read_text(encoding="utf-8"))
@@ -96,7 +119,8 @@ def payload():
                      "coord_confidence": k.get("coord_confidence"), "vern": k.get("vern_merknad"),
                      "flagg": (t.get("osm") or {}).get("hvorfor", []), "gruppe": grp,
                      "alternativer": p.get("alternativer", []), "andre_forslag": p.get("forslag", []),
-                     "bevis": evidence(kid), "utm33": {"e": round(e), "n": round(n)}})
+                     "bevis": evidence(kid), "utm33": {"e": round(e), "n": round(n)},
+                     "forslag_valgt": valgt_forslag(p), "bygget": bygget(kid)})
     ri = lambda r: regs.index(r) if r in regs else len(regs)
     rows.sort(key=lambda r: (ri(r["region"]), r["gruppe"], r["navn"]))
     return rows
@@ -171,6 +195,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
         if path == "/api/kandidater":
             return self._send(200, json.dumps(payload(), ensure_ascii=False), "application/json")
+        if path.startswith("/bygget/") and path.endswith(".png"):
+            f = BYGGET / Path(path).name
+            return self._send(200, f.read_bytes(), "image/png") if f.exists() else self._send(404, "ikke funnet", "text/plain")
         if path in ("/vendor/maplibre-gl.js", "/vendor/maplibre-gl.css"):
             f = vendor(path.rsplit("/", 1)[1])
             return self._send(200, f.read_bytes(), "text/css" if path.endswith(".css") else "application/javascript")

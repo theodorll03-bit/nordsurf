@@ -1,7 +1,7 @@
 """Legger inn posisjonsforslag fra en CSV som egne markører på gjennomgangssiden (Theodor 16.10.2026, svar
 3.5) - f.eks. fra en flyfoto-runde i chatten. Leser privat/kandidater/forslag.csv med kolonnene
 
-    id,lat,lon,kilde,begrunnelse
+    id,lat,lon,kilde,begrunnelse[,sikkerhet,flyttet_m,alternativ]
 
 og legger hvert forslag i «forslag»-lista til kandidaten i data/kandidater/posisjoner.json (satt_av = kilden).
 Overskriver ALDRI posisjonen («spot») eller en vurdering Theodor har gjort - forslaget blir bare en markør
@@ -48,8 +48,18 @@ def main():
                 continue
             kilde = (row.get("kilde") or "ukjent").strip()[:60]
             fs = [x for x in pos[kid].get("forslag", []) if x.get("satt_av") != kilde]
-            fs.append({"lat": round(lat, 6), "lon": round(lon, 6), "satt_av": kilde,
-                       "begrunnelse": (row.get("begrunnelse") or "").strip()[:500], "dato": dt.date.today().isoformat()})
+            rec = {"lat": round(lat, 6), "lon": round(lon, 6), "satt_av": kilde,
+                   "begrunnelse": (row.get("begrunnelse") or "").strip()[:800], "dato": dt.date.today().isoformat()}
+            sik = (row.get("sikkerhet") or "").strip().upper()
+            if sik in ("A", "B", "C"):
+                rec["sikkerhet"] = sik
+            try:
+                rec["flyttet_m"] = round(float(row["flyttet_m"])) if (row.get("flyttet_m") or "").strip() else None
+            except ValueError:
+                rec["flyttet_m"] = None
+            if (row.get("alternativ") or "").strip():
+                rec["alternativ"] = row["alternativ"].strip()[:300]
+            fs.append(rec)
             pos[kid]["forslag"] = fs
             n += 1
     POS.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

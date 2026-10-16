@@ -15,7 +15,7 @@
   "Sørlandet",
   "Østlandet"
  ],
- "antall": 115,
+ "antall": 113,
  "kandidater": [
   {
    "id": "porsangvika",
@@ -2483,39 +2483,6 @@
    "status": "kandidat"
   },
   {
-   "id": "regestranda",
-   "name": "Regestranda",
-   "aliases": [
-    "Rege",
-    "Ræge",
-    "Regestranden"
-   ],
-   "fylke": "Rogaland",
-   "kommune": "Sola",
-   "region": "Jæren",
-   "pin_liste": {
-    "lat": 58.855,
-    "lon": 5.56
-   },
-   "coord_confidence": "estimated",
-   "hint": {
-    "break_type": "beach break",
-    "bottom": "sand",
-    "best_swell_dir": "unknown",
-    "best_wind_dir": "unknown",
-    "skill_level": "unknown",
-    "_kilde": "fra lista, ubekreftet"
-   },
-   "source_count": 3,
-   "sources": [
-    "https://www.fjordnorway.com/en/inspiration/fjord-norways-10-best-kept-secrets",
-    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
-    "https://sandee.com/norway/rogaland/rege/ølbergstranden"
-   ],
-   "dokumentasjon": "svak",
-   "status": "hemmelig"
-  },
-  {
    "id": "hellesto",
    "name": "Hellestø",
    "aliases": [
@@ -2895,39 +2862,6 @@
    ],
    "dokumentasjon": "god",
    "status": "kandidat",
-   "vern_mistanke": true
-  },
-  {
-   "id": "secret-revtangen",
-   "name": "Secret (Revtangen)",
-   "aliases": [
-    "Secret (NO",
-    "surfing)",
-    "Orre nordre point"
-   ],
-   "fylke": "Rogaland",
-   "kommune": "Klepp",
-   "region": "Jæren",
-   "pin_liste": {
-    "lat": 58.7505,
-    "lon": 5.4896
-   },
-   "coord_confidence": "good",
-   "hint": {
-    "break_type": "beach break",
-    "bottom": "sand",
-    "best_swell_dir": "S, SE",
-    "best_wind_dir": "E, SE",
-    "skill_level": "unknown",
-    "_kilde": "fra lista, ubekreftet"
-   },
-   "source_count": 2,
-   "sources": [
-    "https://windy.app/forecast2/spot/551967/Secret+NO+surfing",
-    "https://www.wannasurf.com/spot/Europe/Norway/orre/index.html"
-   ],
-   "dokumentasjon": "svak",
-   "status": "hemmelig",
    "vern_mistanke": true
   },
   {

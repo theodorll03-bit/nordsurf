@@ -31,8 +31,14 @@ HEMMELIGE_SHA256 = {
     "58e28d08733f9d5b4e0b508a6ccd6ab988b865726c756bed3c2e48ac7474e2d6",
     "2007adaed5630bd1ec35ab1211417b572bada24910b55f70bd22997eff56c27e",
 }
-# Theodor 16.10.2026: bygges ikke - status «hemmelig» (publiseres aldri, heller ikke i oversikten)
-HEMMELIGE_IDER = {"secret-revtangen", "regestranda"}
+# Theodor 16.10.2026: to kandidater er hemmelige - bygges ikke, og ingen id, navn eller koordinater i git. De kjennes
+# igjen på SHA-256 av id/navn (som den utelatte over) og skrives bare til privat/kandidater/hemmelige.json.
+HEMMELIG_SHA256 = {
+    "ba1d1270c59cfc646104d71135cfafa674f187058bba6ba75b9adf639f3a5f1b",
+    "e909f8cfab26c651456268a168823d319782afdf23afc92897de2e430369578f",
+    "dd170ec624305a0d560682111e40f417b5a90a8d67c15c17fff1de6d6a00f022",
+}
+HEMMELIGE_FIL = PRIVAT / "kandidater" / "hemmelige.json"
 # Theodor 16.10.2026: vanlig kandidat, men lavest prioritet
 LAV_PRIORITET = {"vetvika"}
 VENTER_PA_SVAR = {}
@@ -70,6 +76,10 @@ HINT_FELT = ["break_type", "bottom", "best_swell_dir", "best_wind_dir", "skill_l
 
 def sha(v):
     return hashlib.sha256(v.encode("utf-8")).hexdigest()
+
+
+def is_secret(s):
+    return sha(s["id"]) in HEMMELIG_SHA256 or sha(s["name"].lower()) in HEMMELIG_SHA256
 
 
 def is_hidden(s):
@@ -125,7 +135,7 @@ def main():
             "source_count": s.get("source_count"),
             "sources": urls(s.get("sources")),
             "dokumentasjon": s.get("dokumentasjon"),
-            "status": "i_nordsurf" if known_id else "hemmelig" if s["id"] in HEMMELIGE_IDER else "kandidat",
+            "status": "i_nordsurf" if known_id else "hemmelig" if is_secret(s) else "kandidat",
         }
         if s["id"] in LAV_PRIORITET:
             rec["prioritet"] = "lav"
@@ -147,6 +157,13 @@ def main():
             rec["avstand_pinne_nal_m"] = round(haversine_m(rec["pin_liste"], pin))
         out.append(rec)
 
+    hemmelige = [r for r in out if r["status"] == "hemmelig"]
+    out = [r for r in out if r["status"] != "hemmelig"]
+    if len(hemmelige) != 2:
+        sys.exit(f"Forventet to hemmelige kandidater, fant {len(hemmelige)} - sjekk HEMMELIG_SHA256 før import")
+    HEMMELIGE_FIL.parent.mkdir(parents=True, exist_ok=True)
+    HEMMELIGE_FIL.write_text(json.dumps({"_info": "Hemmelige kandidater (Theodor 16.10.2026) - aldri i git.", "kandidater": hemmelige},
+                                        ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     doc = {"_info": "Kandidater fra Theodors liste 15.10.2026 (ROADMAP K del A). Bare posisjon, kommune og hint - "
                     "ingen tekst fra lista. Hint og pin_liste er ubekreftet. Ikke publisert i appen; ingen spot i spots.json herfra. "
                     "Regionene er forslag til Theodor.",
@@ -154,14 +171,15 @@ def main():
            "antall": len(out),
            "kandidater": out}
     text = json.dumps(doc, ensure_ascii=False, indent=1)
-    h = hidden[0]
-    assert h["id"] not in text and h["name"] not in text and h["name"].lower() not in text.lower(), "den hemmelige spoten lekket inn i utdata"
+    for h in hidden + [x for x in raw if is_secret(x)]:
+        assert h["id"] not in text and h["name"].lower() not in text.lower(), "en hemmelig spot lekket inn i utdata"
+        assert f'"lat": {h["lat"]}' not in text, "koordinatene til en hemmelig spot lekket inn i utdata"
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text + "\n", encoding="utf-8")
     kj = [r for r in out if r["status"] == "i_nordsurf"]
-    print(f"Skrev {OUT.relative_to(ROOT)}: {len(out)} spots ({len(kj)} i Nordsurf fra før, {len(out) - len(kj)} kandidater og hemmelige), "
+    print(f"Skrev {OUT.relative_to(ROOT)}: {len(out)} spots ({len(kj)} i Nordsurf fra før, {len(out) - len(kj)} kandidater), "
           f"{sum(1 for r in out if r.get('vern_mistanke'))} med vern_mistanke, {sum(1 for r in out if r['region'] is None)} uten region, "
-          f"{sum(1 for r in out if r['status'] == 'hemmelig')} hemmelige")
+          f"{len(hemmelige)} hemmelige skrevet til privat/")
     for r in kj:
         print(f"  {r['id']:16} → {r['nordsurf_id']:16} pinne-nål {r['avstand_pinne_nal_m']} m")
 

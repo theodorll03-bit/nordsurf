@@ -195,6 +195,16 @@ Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 4
 - Ellers funnet: **Eggum** (277 m fra Eggum naturreservat) og **The Frog** (579 m fra Nykvåg/Nykan naturreservat) - «Bruk av … surfebrett … er forbudt» hele året i begge reservatene; om spoten ligger i reservatet avgjøres av posisjonen (A2).
 
 
+## Vernesjekk på forslagsposisjonene (Theodor 16.10.2026)
+
+Naturbase hentet rundt hvert posisjonsforslag (innen 2 km). Tabellen viser verneområder der forskriften har ferdsels- eller surfeforbud for sjø/strand, og verneområder innen 200 m der forskriften ikke er lest. Ligger et forslag inne i et område med forbud, må vern_vurdering.json vurderes på nytt før spoten kan bygges. (Teksten lenger opp gjelder listepinnene.)
+
+| Kandidat | Forslag | Verneområde | Forbud | Avstand |
+|---|---|---|---|---|
+| eggum | claude-flyfoto-2026-10-16 (B, flyttet 0 m) | Eggum naturreservat | surfeforbud hele året (sjø) | 277 m utenfor |
+| eggum-ost-steinstrand | claude-flyfoto-2026-10-16 (B, flyttet 316 m) | Eggum naturreservat | surfeforbud hele året (sjø) | 427 m utenfor |
+| the-frog | claude-flyfoto-2026-10-16 (B, flyttet 66 m) | Nykvåg/Nykan naturreservat | surfeforbud hele året (sjø); ferdselsforbud 04-15–07-31 (strand) | 626 m utenfor |
+
 ## De 8 vi har fra før (kontroll av metoden - spots.json røres ikke)
 
 | Spot | Fasing OSM | Fasing GSHHS | spots.json facing | Vindu i spots.json | Sektor OSM | Kyst (OSM) |

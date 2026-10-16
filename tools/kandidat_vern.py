@@ -119,8 +119,9 @@ def skriv():
     hits = json.loads((RAW / "treff.json").read_text(encoding="utf-8"))
     fs = json.loads(FORSKRIFTER.read_text(encoding="utf-8"))["forskrifter"] if FORSKRIFTER.exists() else {}
     out = {}
+    ids = {k["id"] for k in json.loads(KAND.read_text(encoding="utf-8"))["kandidater"]}   # hemmelige er ikke med (privat/)
     for sid, hs in hits.items():
-        if not hs:
+        if not hs or sid not in ids:
             continue
         rows = []
         for h in hs:
