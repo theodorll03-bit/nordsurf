@@ -61,6 +61,27 @@ assert sum(1 for x in gh.logg if x[0] == "ny") == 1
 senere = now + dt.timedelta(hours=9)
 assert v.vakt(gh, {"generated": (senere - dt.timedelta(hours=1)).isoformat()}, ok, senere) == ("lukket", nr)
 assert [x[0] for x in gh.logg[-2:]] == ["kommentar", "lukk"] and gh.apen is None
+# 5b. kjøringene ukjente (API-feil): et ferskt varsel lukker IKKE en åpen issue (kontrollør 16.10)
+apen = {"number": 7, "title": v.TITTEL, "created_at": now.isoformat(), "updated_at": now.isoformat()}
+gh = FalskGitHub(apen=dict(apen))
+assert v.vakt(gh, fersk, None, now) == ("ukjent", 7) and gh.logg == [] and gh.apen is not None
+assert v.vakt(FalskGitHub(), fersk, None, now) == ("ukjent", None)
+# ugyldig «generated» er et problem, ikke en krasj
+assert "ugyldig «generated»" in v.problemer({"generated": "i går"}, ok, now)[0]
+# ett nytt forsøk før «kunne ikke leses»
+kall = []
+def get_feil_en_gang(url, params=None, headers=None, timeout=None):
+    kall.append(1)
+    if len(kall) == 1:
+        raise v.requests.ConnectionError("nede")
+    return type("R", (), {"raise_for_status": lambda s: None, "json": lambda s: fersk})()
+assert v.les_oversikt(now, get=get_feil_en_gang, sleep=lambda s: None) == fersk and len(kall) == 2
+kall.clear()
+def get_alltid_feil(url, params=None, headers=None, timeout=None):
+    kall.append(1)
+    raise v.requests.ConnectionError("nede")
+assert v.les_oversikt(now, get=get_alltid_feil, sleep=lambda s: None) is None and len(kall) == 2
+print("5b: ukjente kjøringer lukker ikke, ugyldig generated, nytt forsøk før «kunne ikke leses» - OK")
 # test-merket issue
 gh = FalskGitHub()
 v.vakt(gh, gammel, ok, now, test=True)

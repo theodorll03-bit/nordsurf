@@ -43,9 +43,13 @@ def problemer(oversikt, kjoringer, now):
         if not gen:
             out.append("varselet på live-siden mangler «generated»")
         else:
-            alder = (now - dt.datetime.fromisoformat(gen.replace("Z", "+00:00"))).total_seconds() / 3600
-            if alder > MAKS_ALDER_T:
-                out.append(f"varselet er {alder:.0f} timer gammelt (generert {gen})")
+            try:
+                alder = (now - dt.datetime.fromisoformat(str(gen).replace("Z", "+00:00"))).total_seconds() / 3600
+            except (ValueError, TypeError):
+                out.append(f"varselet på live-siden har ugyldig «generated» ({gen!r})")
+            else:
+                if alder > MAKS_ALDER_T:
+                    out.append(f"varselet er {alder:.0f} timer gammelt (generert {gen})")
     if kjoringer:
         siste = kjoringer[:FEIL_PA_RAD]
         if len(siste) == FEIL_PA_RAD and all(k.get("conclusion") == "failure" for k in siste):
@@ -105,9 +109,14 @@ def iso(t):
 
 
 def vakt(gh, oversikt, kjoringer, now, test=False):
-    """Hovedlogikken for issuen. Returnerer (hva, nr): «ny», «kommentert», «dedupe», «lukket» eller «i orden»."""
+    """Hovedlogikken for issuen. Returnerer (hva, nr): «ny», «kommentert», «dedupe», «lukket», «ukjent» (ferskt
+    varsel, men kjøringene kunne ikke leses - issuen blir stående) eller «i orden»."""
     probs = problemer(oversikt, kjoringer, now)
     issue = gh.apen_issue()
+    if not probs and kjoringer is None:
+        # kjøringene kunne ikke leses: ikke bevis for at alt er i orden - la en åpen issue stå (kontrollør 16.10)
+        print("Vakthund: varselet er ferskt, men «Hent varsel»-kjøringene er ukjente - lar issuen stå")
+        return "ukjent", issue["number"] if issue else None
     if not probs:
         if issue:
             gh.kommenter(issue["number"], f"**{now:%d.%m.%Y kl. %H:%M} UTC** - varselet er ferskt igjen og «Hent varsel» feiler ikke. Lukker.")
@@ -151,14 +160,19 @@ def ntfy(probs, now, state, post=None):
     return True
 
 
-def les_oversikt(now):
-    try:
-        r = requests.get(LIVE, params={"v": int(now.timestamp())}, headers=UA, timeout=30)
-        r.raise_for_status()
-        return r.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"Kunne ikke lese {LIVE}: {e}")
-        return None
+def les_oversikt(now, forsok=2, pause_s=10, get=None, sleep=None):
+    """oversikt.json fra live-siden; ett nytt forsøk etter noen sekunder før «kunne ikke leses» regnes som et problem."""
+    get, sleep = get or requests.get, sleep or __import__("time").sleep
+    for i in range(forsok):
+        try:
+            r = get(LIVE, params={"v": int(now.timestamp()) + i}, headers=UA, timeout=30)
+            r.raise_for_status()
+            return r.json()
+        except (requests.RequestException, ValueError) as e:
+            print(f"Kunne ikke lese {LIVE} (forsøk {i + 1} av {forsok}): {e}")
+            if i + 1 < forsok:
+                sleep(pause_s)
+    return None
 
 
 def main():
@@ -176,11 +190,11 @@ def main():
         gh = GitHub(repo, token)
         try:
             kj = gh.kjoringer()
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             print(f"Kunne ikke lese «Hent varsel»-kjøringene: {e}")
         try:
             vakt(gh, oversikt, kj, now, test=bool(test_alder))
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             print(f"Vakthund: GitHub-issue feilet: {e}")
     else:
         print("GITHUB_REPOSITORY/GITHUB_TOKEN ikke satt - ingen issue, bare logg")
