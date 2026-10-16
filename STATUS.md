@@ -1,5 +1,13 @@
 # Nordsurf: status
 
+## Pågår (16.10 ettermiddag)
+
+| Oppgave | Status | Gren |
+|---|---|---|
+| Tidevannskortet: SVG-tekst i ekte piksler i alle grafer + nytt kort etter prototypen | i gang (forgrening) - PR, ikke merge før ja | design/tidevann |
+| Utforsk: Kartverkets topograatone som bakgrunn (OSM-reserve), vind og svellkile tilbake | i gang (forgrening) - PR, ikke merge før ja | design/kartverket |
+| #22 Lofoten og Vesterålen | venter på Claudes avgjørelser (under) | region/lofoten-vesteralen |
+
 ## #22 Lofoten og Vesterålen - 20 spots lagt inn som «forelopig» på grenen, IKKE klar for Theodors ja ennå (16.10 ca. 11Z)
 
 **Gjort (punkt 9a-c, 10e):** rettingene fra Claudes gjennomgang (horseid facing 305 + offshore [80,170] + nytt snitt → BarentsWatch 400 m/9,5 m; eggum-ost-steinstrand låner Eggums punkt; g-frame snitt til 3 km → 1 400 m/6,0 m; høyder for soppelplassen, unstad-left, unstad-right, g-frame - alle merket «forslag fra Claude 16.10, ukalibrert»). godkjenn_spot.py for 14 godkjent + 6 rettet = 20 nye (status «forelopig», kilde «liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10»). rorvika og flakstad-beach-kirkesiden «parkert». Regionene: Troms, Vesterålen, Lofoten, Møre og Romsdal. Grenen bygger på main etter S6 (#21). Alle tester grønne, test_display_only grønn (de 8 gamle urørt); kallregnskap 30 spots: Open-Meteo døgn 8 %, minutt 18 %. Skjermbilder: docs/design/region/lofoten-vesteralen/ (Hjem med Lofoten, Utforsk Lofoten og Vesterålen, Bleik og Unstad Left med «Foreløpig»), tatt med prøvevarselet (ny workflow provehent.yml: henter på grenen, ingen commit/publisering).
