@@ -52,4 +52,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/bw_point_search/
           git diff --cached --quiet || git commit -m "Finn BarentsWatch-punkt: nytt søk"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true   # to kjøringer samtidig på samme gren (16.10)
           git push
