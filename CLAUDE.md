@@ -57,6 +57,9 @@ En statisk, offentlig side kan ikke holde noe hemmelig. `status: hemmelig` i spo
 ## Open-Meteo
 Gratisversjonen av Open-Meteo er bare for ikke-kommersiell bruk (under 10 000 kall per døgn, 5 000 per time, 600 per minutt). Nordsurf er ikke-kommersiell. Blir det noen gang betaling eller reklame, må Open-Meteo byttes til betalt plan eller en annen kilde FØR det.
 
+## Driftsrettelser uten ja (Theodor 16.10.2026)
+Når henteren eller publiseringen står stille, kan en ren driftsrettelse merges uten å vente på ja, hvis den (1) ikke rører rating.py, spots.json, docs/ eller dataene i data/, (2) har grønn CI, og (3) står øverst i STATUS.md med hva, hvorfor og når. Alt annet krever ja som før. (Bakgrunn: «Hent varsel» feilet 15.10 kl. 19Z-16.10 ca. 09Z fordi forecast.yml kjørte en slettet test - PR #19.)
+
 ## Krever Theodors ja (stopp og spør)
 - Endringer i svellvinduer, havpunkter, barentswatch_point, facing, offshorevind, exposure_override, ideal_height, max_height, SHADOW_CURVE, DEFAULT_TRANSFER, vindtabellen eller stjernegrenser.
 - Diffraksjonsdempingens p(T)-kurve (`rating.DIFFRACTION_PERIOD_SHORT`/`_LONG`/`_LONG_WEIGHT`: 1,0 ved 8 s eller kortere, 0,6 ved 14 s eller lengre - Theodors rettelse 07.10.2026, samme kurve som skjermingen i oppgave I).
