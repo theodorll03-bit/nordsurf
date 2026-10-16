@@ -208,6 +208,11 @@ def main():
                 prev = n_tiles
                 page.wait_for_timeout(500)
             assert n_tiles > 0, "ingen detaljbiter lagret i mellomlageret"
+            online_feats = page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-hoy']}).length")
+            keys_js = "caches.keys().then(ks => Promise.all(ks.filter(k => k.endsWith('-fliser')).map(k => caches.open(k).then(c => c.keys())))).then(a => a.flat().map(r => r.url.split('/').pop()))"
+            keys_before = page.evaluate(keys_js)
+            failed = []
+            page.on("requestfailed", lambda r: failed.append(f"{r.url.split('/')[-1]} {r.headers.get('range', '')} {r.failure}"))
             ctx.set_offline(True)
             page.reload()
             page.wait_for_function(READY_JS)
@@ -218,7 +223,8 @@ def main():
             except Exception:
                 pass
             feats = page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-hoy']}).length")
-            assert feats > 0, "detaljflisene som er sett med nett, vises ikke uten nett"
+            assert feats > 0, (f"detaljflisene som er sett med nett, vises ikke uten nett (med nett: {online_feats} flater; "
+                               f"lagret: {keys_before[:12]}; feilet uten nett: {failed[:12]})")
             page.evaluate("window.__kart.jumpTo({center: [10, 63], zoom: 5})")
             page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
             feats_lav = page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-lav']}).length")
