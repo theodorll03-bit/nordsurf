@@ -103,7 +103,7 @@
     const top = mini ? 18 : T, bunn = mini ? Hh - 22 : B;
     const L = PAD, R = W - PAD;
     const X = (t)=> L + (R - L) * (t - d0) / (d1 - d0);
-    const pts = []; for(let i = 0; i <= 240; i++){ const t = d0 + (d1 - d0) * i / 240; const lv = nivaa(ev, t); pts.push(lv ? [t, lv.cm] : null); }
+    const pts = []; for(let i = 0; i <= 240; i++){ const t = d0 + (d1 - d0) * i / 240; const lv = nivaa(ev, t); pts.push(lv ? [t, lv.cm, lv] : null); }
     const ok = pts.filter(Boolean);
     if(ok.length < 2){ el.innerHTML = `<p class="tv-mangler">Tidevann mangler</p>`; return null; }
     const dagEv = ev.filter(e=> e.ms >= d0 && e.ms <= d1);
@@ -114,21 +114,22 @@
     for(const p of pts){ if(!p){ pen = false; continue; } d += `${pen ? "L" : "M"}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`; pen = true; }
     const forste = ok[0], siste = ok[ok.length - 1];
     const omraade = `${d}L${X(siste[0]).toFixed(1)} ${bunn + 10}L${X(forste[0]).toFixed(1)} ${bunn + 10}Z`;
-    // foretrukket vannstand: per halvsyklus (fjære→flo eller flo→fjære) er grensen en andel av den syklusens spenn
-    let baand = "";
+    // foretrukket vannstand (Theodor 16.10): selve kurven tegnes tykkere der vannstanden er innenfor spotens preferanse -
+    // ikke et bånd. Andelen av veien fra fjære til flo regnes per halvsyklus (som tide.state_at), så grensen følger kurven.
+    let dPref = "";
     const r = s.tide_regel;
     if(!mini && r && r.prefer && r.prefer.length){
       const iv = intervaller(r);
-      for(let i = 0; i < ev.length - 1; i++){
-        const a = ev[i], b = ev[i+1]; if(a.type === b.type || b.ms < d0 || a.ms > d1) continue;
-        const fj = a.type === "fjære" ? a : b, fl = a.type === "flo" ? a : b;
-        const x0 = X(Math.max(a.ms, d0)), x1 = X(Math.min(b.ms, d1));
-        for(const [l0, l1] of iv){
-          const yTop = l1 >= 1 ? top - 14 : Y(fj.cm + l1 * (fl.cm - fj.cm)), yBun = l0 <= 0 ? bunn + 10 : Y(fj.cm + l0 * (fl.cm - fj.cm));
-          baand += `<rect class="tv-band" x="${x0.toFixed(1)}" y="${yTop.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${Math.max(0, yBun - yTop).toFixed(1)}"/>`;
-          if(l1 < 1) baand += `<line class="tv-band-kant" x1="${x0.toFixed(1)}" x2="${x1.toFixed(1)}" y1="${yTop.toFixed(1)}" y2="${yTop.toFixed(1)}"/>`;
-          if(l0 > 0) baand += `<line class="tv-band-kant" x1="${x0.toFixed(1)}" x2="${x1.toFixed(1)}" y1="${yBun.toFixed(1)}" y2="${yBun.toFixed(1)}"/>`;
-        }
+      const inne = (p)=>{
+        const lv = p[2], fj = lv.a.type === "fjære" ? lv.a : lv.b, fl = lv.a.type === "flo" ? lv.a : lv.b;
+        if(fl.cm === fj.cm) return false;
+        const f = (p[1] - fj.cm) / (fl.cm - fj.cm);
+        return iv.some(([l0, l1])=> f >= l0 - 1e-9 && f <= l1 + 1e-9);
+      };
+      let penP = false;
+      for(const p of pts){
+        if(!p || !inne(p)){ penP = false; continue; }
+        dPref += `${penP ? "L" : "M"}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`; penP = true;
       }
     }
     const smal = W < 520 || mini;
@@ -148,9 +149,9 @@
     const id = `${esc(s.id)}${mini ? "-m" : ""}`;
     el.innerHTML = `<svg class="tv-svg${mini ? " mini" : ""}" viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" aria-hidden="true">
       <defs><linearGradient id="tvWg-${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="tv-g0"/><stop offset="1" class="tv-g1"/></linearGradient></defs>
-      <g class="tv-baand">${baand}</g>
       <path class="tv-area" d="${omraade}" fill="url(#tvWg-${id})"/>
       <path class="tv-curve" d="${d}"/>
+      ${dPref ? `<path class="tv-pref" d="${dPref}"/>` : ""}
       ${gatt}
       <g>${etiketter}</g><g>${akse}</g>
       <g class="tv-marker"><line class="tv-mline" x1="0" x2="0" y1="${top - 14}" y2="${bunn + 10}"/><circle class="tv-ring" r="${mini ? 5 : 7}"/><circle class="tv-dot" r="${mini ? 5 : 7}"/></g>

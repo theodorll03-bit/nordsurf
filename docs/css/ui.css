@@ -398,7 +398,8 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .tv-curve{fill:none;stroke:var(--water);stroke-width:2;stroke-linecap:round}
 .tv-past{fill:var(--raised);opacity:.5}   /* demper delen av dagen som har gått (bare i dag) */
 .tv-g0{stop-color:var(--water-top)} .tv-g1{stop-color:var(--water-soft);stop-opacity:.15}
-.tv-band{fill:var(--band)} .tv-band-kant{stroke:var(--band-edge);stroke-width:1;stroke-dasharray:4 4}
+.tv-pref{fill:none;stroke:var(--water);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;transition:opacity .4s 1s}   /* foretrukket vannstand: tykkere kurve, samme farge */
+.tv-svg.intro .tv-pref{opacity:0} .tv-svg.intro.go .tv-pref{opacity:1}
 .tv-ext circle{fill:var(--raised);stroke:var(--water);stroke-width:2}
 .tv-lbl{font-family:var(--body);font-size:12px;font-weight:600;fill:var(--ink)}
 .tv-lbl .t{font-family:var(--mono);font-weight:500;fill:var(--muted)}
@@ -409,7 +410,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .tv-ring{fill:none;stroke:var(--water);stroke-width:2;transform-origin:center;transform-box:fill-box;animation:tvPuls 2.6s ease-out infinite}
 .tv-marker{transition:transform .45s cubic-bezier(.3,.7,.2,1)}
 .tv-fot{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:var(--fs-caption)}
-.tv-sw{display:inline-block;width:14px;height:10px;border-radius:2px;background:var(--band);border-top:1px dashed var(--band-edge);margin-right:6px;vertical-align:-1px}
+.tv-sw{display:inline-block;width:16px;height:5px;border-radius:3px;background:var(--water);margin-right:6px;vertical-align:2px}
 /* animasjon bare første gang kortet kommer i bildet (IntersectionObserver legger på .go) */
 .tv-svg.intro .tv-curve{stroke-dasharray:var(--len);stroke-dashoffset:var(--len)}
 .tv-svg.intro.go .tv-curve{animation:tvTegn 1.1s cubic-bezier(.3,.7,.2,1) forwards}
@@ -423,6 +424,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 @keyframes tvPuls{0%{transform:scale(1);opacity:.45}80%,100%{transform:scale(2.6);opacity:0}}
 @media (prefers-reduced-motion: reduce){
   .tv-svg.intro .tv-curve{stroke-dasharray:none;stroke-dashoffset:0;animation:none!important}
+  .tv-svg.intro .tv-pref{opacity:1;transition:none}
   .tv-svg.intro .tv-area,.tv-svg.intro .tv-ext{opacity:1;transform:none;animation:none!important}
   .tv-marker{transition:none} .tv-ring{animation:none;opacity:0}
 }
