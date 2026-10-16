@@ -2,7 +2,7 @@
 
 Jobb ovenfra og ned. Hopp over oppgaver merket "Venter på Theodor", og ta neste.
 
-## K. 116 spots fra Theodors liste (15.10.2026) - NATTJOBBEN 15.-16.10, se STATUS.md øverst for hvor langt den er kommet
+## K. 116 spots fra Theodors liste (15.10.2026) - NATTJOBBEN FERDIG 16.10: 0 og A merget; A2 og C STOPPET etter validering; B som PR - VENTER PÅ THEODOR (se morgenrapporten i STATUS.md)
 
 Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det er gitt ja på forhånd. STOPP = parker delen, skriv i STATUS.md hva som venter, gå videre til neste del som ikke avhenger av den. Fysikk-kontrollør før commit på alt som rører fysikk, ingen force-push, ingen sletting av data/logger, aldri secrets eller GitHub-innstillinger. Etter HVERT ferdige steg: STATUS.md øverst («Nattjobben 15.-16.10: ferdig / i gang / venter på Theodor», gren, PR, neste steg), commit og push. STATUS.md er fasiten.
 
@@ -176,6 +176,12 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 - **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
 - **S5. spots.json per region med status.**
 - **S6. Parallell henter per region (matrise) - VENTER: ikke før det er minst 30 spots.**
+  **Plan (skrevet 16.10.2026, nattjobben K del C.5 - IKKE bygget; bygges før spot nr. 30 blir aktiv):**
+  1. *Kallregnskap først* - `tools/kallregnskap.py` (nytt) teller kall per kjøring og døgn per kilde ut fra spots.json (aktive spots, havpunkt og deling på API-ets eget rutenettpunkt, `offshore_longrange`, BarentsWatch-punkt/-near/-skygge, tidevannssted) og sammenligner med vilkårene: Open-Meteo under 10 000/døgn, 5 000/time, 600/min (samlekall teller hvert punkt; 16-dagers og mange variabler kan vektes som flere kall - les vektingen på open-meteo.com før tallet regnes som endelig); met.no uten tall, men «ikke overbelast», spre kall, maks 4 desimaler, cache til Expires, ca. 20/s som uformell grense; BarentsWatch uten formelle grenser, kreditering kreves; Kartverket uten dokumentert grense. Testen feiler hvis et anslag passerer 50 % av en kjent grense. Grovt anslag i dag (8 spots per kjøring): met.no 24, Open-Meteo 3 samlekall (ca. 25 vektede punkt), BarentsWatch ca. 24 (punkt, near, skygge), Kartverket 8. Ved 30 spots: met.no ca. 90, Open-Meteo ca. 90-180 vektet (ca. 700-1 450/døgn), BarentsWatch ca. 90, Kartverket ca. 30 - godt innenfor; Open-Meteo blir første grense ved ca. 150-300 spots.
+  2. *Matrise per region* i forecast.yml: én forjobb henter Open-Meteo for alle unike rutenettpunkt (samlekall, én takt), og deler svaret som artifact; `strategy.matrix.region` fra spots.json sin `regions` henter met.no, BarentsWatch og Kartverket for sine spots (4 tråder, én takt per kilde på tvers av jobber: met.no ≤ 5/s, BarentsWatch ≤ 5/s, Kartverket ≤ 2/s, tilfeldig startforskyvning); en samlejobb slår sammen, kalibrerer, skriver treffsikkerhet og publiserer (publish.py/publiser.yml som i dag). `fail-fast: false` - en region som feiler gir «mangler» for sine spots (grunnregelen), ikke en stoppet kjøring; samlejobben sier det i kilderapporten.
+  3. *Deling* bare på identiske punkt eller API-ets eget rutenettpunkt (som S1) - aldri egen avrunding. Tidevann deles på Kartverkets referansested (spotfabrikken lagrer det allerede, `tidevann.code`).
+  4. *Test:* test_pipeline kjører henteren uten nett for 2 regioner + samlejobben og sjekker at resultatet er byte for byte det samme som én sekvensiell kjøring (rating urørt).
+  5. *Ja fra Theodor* før det bygges: endrer hvordan forecast.yml kjører (flere jobber, flere Actions-minutter - gratis bare i offentlig repo).
 
 ### Rekkefølge slik den sto i planen (erstattet av lista over)
 
