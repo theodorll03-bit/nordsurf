@@ -53,6 +53,18 @@ os.environ["NTFY_TOPIC"] = "test-topic"
 for k in ("BW_CLIENT_ID", "BW_CLIENT_SECRET", "LOGS_REPO", "LOGS_TOKEN", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY"):
     os.environ.pop(k, None)
 
+# én spot gjøres «hemmelig» i en kopi av spots.json: den skal aldri havne i en artifact (forjobb/region), men
+# samlejobben henter den selv, så resultatet fortsatt er likt den sekvensielle kjøringen
+HEMMELIG_ID = "grotfjord"
+_cfg = json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))
+for _s in _cfg["spots"]:
+    if _s["id"] == HEMMELIG_ID:
+        _s["status"] = "hemmelig"
+        HEMMELIG_PUNKT = [f"{_s[k]['lat']}" for k in ("spot", "offshore") if _s.get(k)]
+SPOTS_TEST = Path(tempfile.mkdtemp()) / "spots.json"
+SPOTS_TEST.write_text(json.dumps(_cfg, ensure_ascii=False), encoding="utf-8")
+fetch.SPOTS = SPOTS_TEST
+
 SEED = {"bw_calibration.json": ROOT / "data" / "bw_calibration.json", "exposure.json": ROOT / "data" / "exposure.json",
         "forecast_accuracy.json": ROOT / "data" / "forecast_accuracy.json"}
 
@@ -105,6 +117,14 @@ fresh(mat)
 fetch.samle(work / "regioner", work / "forjobb")
 B = snapshot(mat)
 
+# ingen artifact (forjobb, regioner) inneholder den hemmelige spoten - verken status, id, navn eller koordinater
+for p in sorted(work.rglob("*.json")):
+    t = p.read_text(encoding="utf-8")
+    lekk = [x for x in ["hemmelig", HEMMELIG_ID, "Grøtfjord", *HEMMELIG_PUNKT] if x in t]
+    assert not lekk, f"{p.relative_to(work)} inneholder den hemmelige spoten: {lekk}"
+assert HEMMELIG_ID not in json.dumps(meta), meta
+print(f"0: ingen artifact inneholder den hemmelige spoten ({len(list(work.rglob('*.json')))} filer sjekket) - OK")
+
 assert set(A) == set(B), f"ulike filer: bare sekvensiell {sorted(set(A) - set(B))}, bare matrise {sorted(set(B) - set(A))}"
 diff = [k for k in A if A[k] != B[k]]
 assert not diff, f"matrisen gir andre bytes enn den sekvensielle kjøringen i: {diff}"
@@ -123,13 +143,27 @@ for r in regions[1:]:
 fresh(mat)
 fetch.samle(work / "regioner", work / "forjobb")
 fc2 = json.loads((mat / "docs" / "forecast.json").read_text(encoding="utf-8"))
-mangler = {s["id"] for s in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"] if s.get("enabled") and fetch.region_of(s) == regions[0]}
-assert mangler and not mangler & {s["id"] for s in fc2["spots"]}, "spotene i regionen som feilet skal mangle, ikke stå med 0"
+ids2 = {s["id"]: s for s in fc2["spots"]}
+mangler = {s["id"] for s in _cfg["spots"] if s.get("enabled") and fetch.region_of(s) == regions[0] and s.get("status") != "hemmelig"}
+assert mangler, "testen trenger spots i regionen som feiler"
+# spotene i regionen som feilet står med meta og UTEN timer (mangler - aldri 0), de forsvinner ikke
+for i in mangler:
+    sp = ids2.get(i)
+    assert sp and sp["hours"] == [] and sp.get("henting_feilet") is True and sp.get("name"), (i, sp and list(sp)[:8])
+assert [s["id"] for s in fc2["spots"]] == [s["id"] for s in _cfg["spots"] if s.get("enabled")], "rekkefølgen skal være som i spots.json"
 assert any(r[1] == f"Region {regions[0]}" and r[2] == "feil" for r in fetch.REPORT), "kilderapporten skal si at regionen feilet"
-print(f"2: regionen «{regions[0]}» feiler - {len(fc2['spots'])} spots leveres, {len(mangler)} mangler (ikke 0), kilderapporten sier fra - OK")
+# appens filer: spotene står i oversikten med «mangler» (ingen nå-time, alle dager «miss») og flagget
+import publish  # noqa: E402
+ov, det = publish.split(fc2, regions_cfg=_cfg["regions"])
+for o in ov["spots"]:
+    if o["id"] in mangler:
+        assert o["naa"] == [] and all(d["status"] == "miss" for d in o["dager"]) and o.get("henting_feilet") is True, o
+assert not any(o.get("status") == "hemmelig" for o in ov["spots"]), "publish.py skal fortsatt utelate hemmelige"
+print(f"2: regionen «{regions[0]}» feiler - {len(mangler)} spots står uten timer («mangler», aldri 0) og med "
+      f"henting_feilet i oversikten, kilderapporten sier fra - OK")
 
 # 4. regionlista følger spots.json sin «regions» (nord til sør), og alle aktive spots har en region
-cfg = json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))
+cfg = _cfg
 want = [r["name"] for r in sorted(cfg["regions"], key=lambda r: r.get("order", 999))]
 assert regions == [r for r in want if r in regions], (regions, want)
 assert all(s.get("region") for s in cfg["spots"] if s.get("enabled")), "en aktiv spot mangler region - havner i «Uten region»"

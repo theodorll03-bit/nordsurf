@@ -9,6 +9,8 @@ name: Hent varsel
 #   publiser : som før (publiser.yml)
 # Reserve: «Run workflow» med «sekvensiell» = true kjører den gamle veien (alt i én jobb).
 # Loggene (privat repo) hentes i hver jobb og legges aldri i en artifact (artifacts er offentlige her).
+# Spots med status «hemmelig» er aldri med i forjobbens eller regionenes artifacts eller jobbnavn - samlejobben
+# henter dem selv (fetch.py offentlige()).
 
 on:
   schedule:
@@ -124,8 +126,8 @@ jobs:
 
   samle:
     needs: [forjobb, region]
-    # også når en region feilet: de andre regionene leveres (samle sier fra om den som mangler)
-    if: ${{ always() && needs.forjobb.result == 'success' }}
+    # også når en region feilet: de andre regionene leveres (samle sier fra om den som mangler) - men ikke ved avbrudd
+    if: ${{ !cancelled() && needs.forjobb.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:

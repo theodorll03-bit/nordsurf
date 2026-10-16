@@ -1266,6 +1266,13 @@ def main():
 # Byte for byte samme forecast.json og læringsdata som main() - test_matrise.py sjekker det.
 # ---------------------------------------------------------------------------
 UTEN_REGION = "Uten region"
+HEMMELIG = "hemmelig"
+
+
+def offentlige(enabled):
+    """Spots som kan gå gjennom matrisens artifacts (offentlige i et offentlig repo) - aldri status «hemmelig»
+    (CLAUDE.md). De hemmelige hentes av samlejobben selv, uten artifact, så henteren kan fortsatt lære på dem."""
+    return [s for s in enabled if s.get("status") != HEMMELIG]
 
 
 def region_of(spot):
@@ -1304,7 +1311,7 @@ def forjobb(out_dir):
     out_dir.mkdir(parents=True, exist_ok=True)
     now = run_now()
     config = json.loads(SPOTS.read_text(encoding="utf-8"))
-    enabled = [s for s in config["spots"] if s.get("enabled")]
+    enabled = offentlige([s for s in config["spots"] if s.get("enabled")])
     prefetch_openmeteo(enabled)
     regions = regions_in_order(config, enabled)
     (out_dir / "meta.json").write_text(json.dumps({"now": now.isoformat(), "regions": regions, "report": REPORT}, ensure_ascii=False), encoding="utf-8")
@@ -1325,7 +1332,7 @@ def region_job(name, from_dir, out_dir):
     _meta(from_dir)
     _om_cache_load(json.loads((Path(from_dir) / "openmeteo.json").read_text(encoding="utf-8")))
     ctx = prepare(run_now())
-    subset = [s for s in ctx["enabled"] if region_of(s) == name]
+    subset = [s for s in offentlige(ctx["enabled"]) if region_of(s) == name]
     spots = build_spots(ctx, subset)
     ids = [s["id"] for s in subset]
     out = {"region": name, "spots": spots,
@@ -1360,8 +1367,19 @@ def samle(regions_dir, from_dir):
         CONVENTION_WARNINGS.extend(r["convention"])
         LOW_ADJUSTMENT_WARNINGS.extend(r["low_adjustment"])
         BW_LEE_WARNINGS.extend(r["bw_lee"])
+    # hemmelige spots: hentes her (aldri i en artifact) - eget Open-Meteo-kall for punktene deres
+    hemmelige = [s for s in ctx["enabled"] if s.get("status") == HEMMELIG]
+    if hemmelige:
+        prefetch_openmeteo(hemmelige)
+        for sp in build_spots(ctx, hemmelige):
+            by_id[sp["id"]] = sp
+    # en region som feilet: spotene tas med uten timer (grunnregelen - mangler, aldri 0), så de ikke forsvinner
+    # fra oversikten, kartet og favorittene; appen viser «–»/«mangler» for alle timer (publish.py: naa tom, dager «miss»)
     for name in missing:
-        REPORT.append(("alle", f"Region {name}", "feil", "regionjobben leverte ikke - spotene mangler i dette varselet"))
+        REPORT.append(("alle", f"Region {name}", "feil", "regionjobben leverte ikke - spotene står uten timer (mangler) i dette varselet"))
+        for s in ctx["enabled"]:
+            if region_of(s) == name and s["id"] not in by_id:
+                by_id[s["id"]] = mangler_spot(s)
     # samme rekkefølge og samme nøkkelrekkefølge i kalibreringsfilene som den sekvensielle kjøringen
     ordered_ids = [s["id"] for s in ctx["enabled"]]
     bw_old = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
@@ -1371,6 +1389,13 @@ def samle(regions_dir, from_dir):
     finish(ctx, [by_id[i] for i in ordered_ids if i in by_id])
     if missing:
         notify.alert("Nordsurf: en region feilet", f"Regionjobb(er) uten resultat: {', '.join(missing)}", "region:" + ",".join(missing), ctx["now"])
+
+
+def mangler_spot(s):
+    """Spoten med meta fra spots.json og ingen timer - for en region der hentingen feilet (aldri 0-verdier)."""
+    out = {k: v for k, v in s.items() if not k.startswith("_")}
+    out.update(hours=[], henting_feilet=True, bw_until=None)
+    return out
 
 
 def _ordered(old, merged, ids):

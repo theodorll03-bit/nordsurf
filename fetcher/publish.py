@@ -88,7 +88,8 @@ BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
-META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled", "local_rules", "calibration")
+META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled", "local_rules", "calibration",
+               "henting_feilet")   # S6: regionjobben feilet - spoten står uten timer («mangler»), aldri 0
 # kalibreringen i oversikten uten de tunge delene (eksponeringskurven 4 KiB og accuracy 1 KiB per spot) -
 # Logger-siden viser transfer/surf-faktor/par for alle spots uten å laste detaljfilene (fysikk-kontrollør
 # 15.10.2026: ellers vises standardverdier som fakta); kurven tegnes når spoten er åpnet (detaljfila)
