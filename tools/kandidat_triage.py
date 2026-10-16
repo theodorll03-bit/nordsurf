@@ -79,9 +79,9 @@ def parse_compass(txt):
     return circ_mean([COMPASS[t] for t in toks])
 
 
-def local_land(land, lat, lon):
-    """Land innenfor ca. 50 km, i meter i en asimut-ekvidistant projeksjon sentrert på pinnen."""
-    dlat, dlon = 0.5, 0.5 / math.cos(math.radians(lat)) * 1.05
+def local_land(land, lat, lon, half_deg=0.5):
+    """Land innenfor ca. 50 km (half_deg breddegrader), i meter i en asimut-ekvidistant projeksjon sentrert på pinnen."""
+    dlat, dlon = half_deg, half_deg / math.cos(math.radians(lat)) * 1.05
     clip = shapely.clip_by_rect(land, lon - dlon, lat - dlat, lon + dlon, lat + dlat)
     tr = Transformer.from_crs(4326, f"+proj=aeqd +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m", always_xy=True)
     g = shapely.transform(clip, lambda xy: np.column_stack(tr.transform(xy[:, 0], xy[:, 1])))

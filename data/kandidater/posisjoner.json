@@ -1,0 +1,3831 @@
+{
+ "_info": "Posisjoner for kandidatene (Theodor 16.10.2026, svar 3.5). Startpunkt: listepinnen (satt_av «liste», ikke sjekket). Theodor godkjenner/flytter i tools/koordinatsjekk/ (satt_av «theodor»); forslag fra andre (tools/importer_forslag.py) ligger i «forslag» og overskriver aldri en godkjent posisjon. Spotfabrikken bygger bare fra godkjente posisjoner.",
+ "kandidater": {
+  "porsangvika": {
+   "spot": {
+    "lat": 70.8714,
+    "lon": 25.8403
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Porsangvika (Vik i sjø)",
+     "lat": 70.87414,
+     "lon": 25.86133
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hjellnes (Gammel bosettingsplass)",
+     "lat": 70.87639,
+     "lon": 25.84519
+    }
+   ],
+   "forslag": []
+  },
+  "berlevag-sandfjorden": {
+   "spot": {
+    "lat": 70.7979,
+    "lon": 29.2671
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandfjorden (Vik i sjø)",
+     "lat": 70.80058,
+     "lon": 29.28191
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandfjordelva (Elv)",
+     "lat": 70.78704,
+     "lon": 29.23025
+    }
+   ],
+   "forslag": []
+  },
+  "persfjord": {
+   "spot": {
+    "lat": 70.4209,
+    "lon": 30.7834
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 70.422227,
+     "lon": 30.777117,
+     "merknad": "midt på sjøkanten (2058 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Persfjord (Bygdelag (bygd))",
+     "lat": 70.42029,
+     "lon": 30.79107
+    }
+   ],
+   "forslag": []
+  },
+  "skallelv": {
+   "spot": {
+    "lat": 70.1882,
+    "lon": 30.361
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 70.171851,
+     "lon": 30.329128,
+     "merknad": "midt på sjøkanten (3412 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallelv (Bygdelag (bygd))",
+     "lat": 70.18923,
+     "lon": 30.33424
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallelva (Elv)",
+     "lat": 70.234,
+     "lon": 30.17884
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Lille Skallelva (Elv)",
+     "lat": 70.1573,
+     "lon": 30.24524
+    }
+   ],
+   "forslag": []
+  },
+  "skallneset": {
+   "spot": {
+    "lat": 70.1397,
+    "lon": 30.349
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallnes (Nes i sjø)",
+     "lat": 70.13974,
+     "lon": 30.34904
+    }
+   ],
+   "forslag": []
+  },
+  "laukvika-senja": {
+   "spot": {
+    "lat": 69.4745,
+    "lon": 17.2249
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 69.462943,
+     "lon": 17.240436,
+     "merknad": "midt på sjøkanten (154 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Laukvika (Vik i sjø)",
+     "lat": 69.47451,
+     "lon": 17.22489
+    }
+   ],
+   "forslag": []
+  },
+  "bovaer": {
+   "spot": {
+    "lat": 69.4682,
+    "lon": 17.2303
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 69.462943,
+     "lon": 17.240436,
+     "merknad": "midt på sjøkanten (154 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bøvær (Fyrlykt)",
+     "lat": 69.46628,
+     "lon": 17.22304
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bøvær (Grend)",
+     "lat": 69.46654,
+     "lon": 17.231
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bøvær (Bruk)",
+     "lat": 69.46484,
+     "lon": 17.22541
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bøstranda (Strand i sjø)",
+     "lat": 69.46821,
+     "lon": 17.23032
+    }
+   ],
+   "forslag": []
+  },
+  "hamn-senja": {
+   "spot": {
+    "lat": 69.4172,
+    "lon": 17.1641
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 69.416517,
+     "lon": 17.163551,
+     "merknad": "midt på sjøkanten (132 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hamn (Fyrlykt)",
+     "lat": 69.41356,
+     "lon": 17.14013
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hamn (Gard)",
+     "lat": 69.41435,
+     "lon": 17.21532
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hamn (Bruk)",
+     "lat": 69.40663,
+     "lon": 17.15874
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hamn (Grend)",
+     "lat": 69.41725,
+     "lon": 17.16405
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hamn (Bruk)",
+     "lat": 69.41539,
+     "lon": 17.21298
+    }
+   ],
+   "forslag": []
+  },
+  "andenes": {
+   "spot": {
+    "lat": 69.3218,
+    "lon": 16.1165
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Andenes (Tettsted)",
+     "lat": 69.31435,
+     "lon": 16.1194
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Andenes (Fyrstasjon)",
+     "lat": 69.32398,
+     "lon": 16.11593
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Andenes (Flyplass)",
+     "lat": 69.30109,
+     "lon": 16.12682
+    }
+   ],
+   "forslag": []
+  },
+  "bleik": {
+   "spot": {
+    "lat": 69.28,
+    "lon": 15.975
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bleik (Tettsted)",
+     "lat": 69.27262,
+     "lon": 15.95544
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bleik (Gard)",
+     "lat": 69.27344,
+     "lon": 15.96181
+    }
+   ],
+   "forslag": []
+  },
+  "hoyvika": {
+   "spot": {
+    "lat": 69.2323,
+    "lon": 15.8572
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Høyvika (Vik i sjø)",
+     "lat": 69.23234,
+     "lon": 15.85715
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Høyvika (Gard)",
+     "lat": 69.23434,
+     "lon": 15.87267
+    }
+   ],
+   "forslag": []
+  },
+  "stave": {
+   "spot": {
+    "lat": 69.2049,
+    "lon": 15.8635
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Stave (Gard)",
+     "lat": 69.21387,
+     "lon": 15.86163
+    }
+   ],
+   "forslag": []
+  },
+  "ducks": {
+   "spot": {
+    "lat": 69.068,
+    "lon": 15.5223
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "aknes": {
+   "spot": {
+    "lat": 68.9715,
+    "lon": 15.4423
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Åknes (Fyrlykt)",
+     "lat": 68.97642,
+     "lon": 15.4309
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Åknes (Gard)",
+     "lat": 68.9713,
+     "lon": 15.44428
+    }
+   ],
+   "forslag": []
+  },
+  "the-frog": {
+   "spot": {
+    "lat": 68.7575,
+    "lon": 14.4709
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.756768,
+     "lon": 14.470482,
+     "merknad": "midt på sjøkanten (330 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "g-frame": {
+   "spot": {
+    "lat": 68.6389,
+    "lon": 14.4275
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "g-force": {
+   "spot": {
+    "lat": 68.6381,
+    "lon": 14.4251
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Nordahlstranda",
+     "lat": 68.625878,
+     "lon": 14.431868,
+     "merknad": "midt på sjøkanten (1008 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "kvalnes": {
+   "spot": {
+    "lat": 68.3449,
+    "lon": 13.93
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvalnes (Bygdelag (bygd))",
+     "lat": 68.3417,
+     "lon": 13.97327
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvalnes (Fyrlykt)",
+     "lat": 68.3468,
+     "lon": 13.97079
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvalnes (Gard)",
+     "lat": 68.34289,
+     "lon": 13.96002
+    }
+   ],
+   "forslag": []
+  },
+  "eggum-ost-steinstrand": {
+   "spot": {
+    "lat": 68.3135,
+    "lon": 13.668
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "eggum": {
+   "spot": {
+    "lat": 68.3107,
+    "lon": 13.6548
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Eggum (Tettbebyggelse)",
+     "lat": 68.30807,
+     "lon": 13.68454
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Eggum (Fyrlykt)",
+     "lat": 68.31057,
+     "lon": 13.68469
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Eggum (Gard)",
+     "lat": 68.30867,
+     "lon": 13.68776
+    }
+   ],
+   "forslag": []
+  },
+  "unstad-right": {
+   "spot": {
+    "lat": 68.2734,
+    "lon": 13.5775
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Unnstad (Gard)",
+     "lat": 68.26748,
+     "lon": 13.58752
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Unstad (Grend)",
+     "lat": 68.26732,
+     "lon": 13.58758
+    }
+   ],
+   "forslag": []
+  },
+  "unstad-left": {
+   "spot": {
+    "lat": 68.2692,
+    "lon": 13.5696
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "soppelplassen": {
+   "spot": {
+    "lat": 68.2665,
+    "lon": 13.5572
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "utakleiv": {
+   "spot": {
+    "lat": 68.2109,
+    "lon": 13.5001
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.19741,
+     "lon": 13.489397,
+     "merknad": "midt på sjøkanten (479 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Utakleiv (Gard)",
+     "lat": 68.21257,
+     "lon": 13.52047
+    }
+   ],
+   "forslag": []
+  },
+  "haukland": {
+   "spot": {
+    "lat": 68.2045,
+    "lon": 13.529
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Haukland (Navnegard)",
+     "lat": 68.19866,
+     "lon": 13.53726
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Haukland (Grend)",
+     "lat": 68.19984,
+     "lon": 13.54135
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Haukland (Adressenavn)",
+     "lat": 68.19864,
+     "lon": 13.53395
+    }
+   ],
+   "forslag": []
+  },
+  "rorvika": {
+   "spot": {
+    "lat": 68.186,
+    "lon": 14.229
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rørvika (Vik i sjø)",
+     "lat": 68.20355,
+     "lon": 14.23114
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rørvika (Gard)",
+     "lat": 68.2026,
+     "lon": 14.24084
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rørvikelva (Elv)",
+     "lat": 68.20523,
+     "lon": 14.24532
+    }
+   ],
+   "forslag": []
+  },
+  "vikten": {
+   "spot": {
+    "lat": 68.1401,
+    "lon": 13.3163
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.135575,
+     "lon": 13.303566,
+     "merknad": "midt på sjøkanten (458 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vikten (Gard)",
+     "lat": 68.14028,
+     "lon": 13.31579
+    }
+   ],
+   "forslag": []
+  },
+  "flakstad-beach-kirkesiden": {
+   "spot": {
+    "lat": 68.109,
+    "lon": 13.315
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.115047,
+     "lon": 13.34034,
+     "merknad": "midt på sjøkanten (195 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.097721,
+     "lon": 13.322348,
+     "merknad": "midt på sjøkanten (184 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Flakstadsanden (Strand i sjø)",
+     "lat": 68.10933,
+     "lon": 13.3019
+    }
+   ],
+   "forslag": []
+  },
+  "skagsanden": {
+   "spot": {
+    "lat": 68.1048,
+    "lon": 13.2868
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skagsanden (Strand i sjø)",
+     "lat": 68.10884,
+     "lon": 13.29806
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Flakstad (Gard)",
+     "lat": 68.10598,
+     "lon": 13.30085
+    }
+   ],
+   "forslag": []
+  },
+  "ramberg": {
+   "spot": {
+    "lat": 68.0899,
+    "lon": 13.2299
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ramberg (Tettsted)",
+     "lat": 68.08991,
+     "lon": 13.22989
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ramberg (Fyrlykt)",
+     "lat": 68.08808,
+     "lon": 13.20038
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ramberg (Eiendom)",
+     "lat": 68.09036,
+     "lon": 13.23595
+    }
+   ],
+   "forslag": []
+  },
+  "kvalvika": {
+   "spot": {
+    "lat": 68.0772,
+    "lon": 13.0924
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "broken-hearts": {
+   "spot": {
+    "lat": 68.065,
+    "lon": 13.52
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.065253,
+     "lon": 13.543331,
+     "merknad": "midt på sjøkanten (60 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.062743,
+     "lon": 13.540667,
+     "merknad": "midt på sjøkanten (59 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 68.062117,
+     "lon": 13.542409,
+     "merknad": "midt på sjøkanten (151 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "horseid": {
+   "spot": {
+    "lat": 68.033,
+    "lon": 13.0
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Horseid (Gammel bosettingsplass)",
+     "lat": 68.02799,
+     "lon": 12.99576
+    }
+   ],
+   "forslag": []
+  },
+  "bunes": {
+   "spot": {
+    "lat": 67.982,
+    "lon": 13.01
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "lop": {
+   "spot": {
+    "lat": 67.3245,
+    "lon": 14.477
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Bremnesstranda",
+     "lat": 67.319216,
+     "lon": 14.455826,
+     "merknad": "midt på sjøkanten (262 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Storvollen (Tettsted)",
+     "lat": 67.31654,
+     "lon": 14.45512
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Storvollen (Adressenavn)",
+     "lat": 67.31464,
+     "lon": 14.45513
+    }
+   ],
+   "forslag": []
+  },
+  "seines": {
+   "spot": {
+    "lat": 67.2098,
+    "lon": 14.353
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Seines (Grend)",
+     "lat": 67.2086,
+     "lon": 14.37658
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Seines (Gard)",
+     "lat": 67.21189,
+     "lon": 14.37747
+    }
+   ],
+   "forslag": []
+  },
+  "monumentet": {
+   "spot": {
+    "lat": 66.9504,
+    "lon": 13.6317
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ureddplassen (Rasteplass)",
+     "lat": 66.95044,
+     "lon": 13.63167
+    }
+   ],
+   "forslag": []
+  },
+  "storvika": {
+   "spot": {
+    "lat": 66.9488,
+    "lon": 13.7183
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "farstad-reef-hustadvika-gjestegard": {
+   "spot": {
+    "lat": 62.9851,
+    "lon": 7.1466
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Farstadsanden",
+     "lat": 62.984554,
+     "lon": 7.153027,
+     "merknad": "midt på sjøkanten (1293 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Breivika",
+     "lat": 62.991487,
+     "lon": 7.153041,
+     "merknad": "midt på sjøkanten (464 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Farstadbukta (Vik i sjø)",
+     "lat": 62.98409,
+     "lon": 7.14917
+    }
+   ],
+   "forslag": []
+  },
+  "ulla": {
+   "spot": {
+    "lat": 62.6918,
+    "lon": 6.1984
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ulla (Fyrstasjon)",
+     "lat": 62.68509,
+     "lon": 6.16512
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ulla (Gard)",
+     "lat": 62.67844,
+     "lon": 6.19072
+    }
+   ],
+   "forslag": []
+  },
+  "krakevika": {
+   "spot": {
+    "lat": 62.6726,
+    "lon": 6.1681
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Liabukta (Vik i sjø)",
+     "lat": 62.67093,
+     "lon": 6.16523
+    }
+   ],
+   "forslag": []
+  },
+  "alnes": {
+   "spot": {
+    "lat": 62.4885,
+    "lon": 5.9666
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Alnes fyr (Fyrstasjon)",
+     "lat": 62.48996,
+     "lon": 5.96733
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Alnes (Tettbebyggelse)",
+     "lat": 62.48539,
+     "lon": 5.97551
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Alnes (Gard)",
+     "lat": 62.48497,
+     "lon": 5.9735
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Godøy (Gard)",
+     "lat": 62.47278,
+     "lon": 6.01063
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandvika (Vik i sjø)",
+     "lat": 62.48651,
+     "lon": 5.9652
+    }
+   ],
+   "forslag": []
+  },
+  "flo": {
+   "spot": {
+    "lat": 62.4071,
+    "lon": 5.852
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Flømolostrand",
+     "lat": 62.402254,
+     "lon": 5.847548,
+     "merknad": "midt på sjøkanten (402 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.399601,
+     "lon": 5.84817,
+     "merknad": "midt på sjøkanten (348 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.400301,
+     "lon": 5.848378,
+     "merknad": "midt på sjøkanten (286 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "ervik-north-right": {
+   "spot": {
+    "lat": 62.1672,
+    "lon": 5.109
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "ervik": {
+   "spot": {
+    "lat": 62.165,
+    "lon": 5.104
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ervik kyrkje (Kirke)",
+     "lat": 62.16705,
+     "lon": 5.11662
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ervik (Grend)",
+     "lat": 62.16602,
+     "lon": 5.12344
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ervika (Gard)",
+     "lat": 62.16504,
+     "lon": 5.12265
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ervika (Vik i sjø)",
+     "lat": 62.1683,
+     "lon": 5.10339
+    }
+   ],
+   "forslag": []
+  },
+  "ervik-wreck-left": {
+   "spot": {
+    "lat": 62.162,
+    "lon": 5.099
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "hoddevik-right": {
+   "spot": {
+    "lat": 62.1262,
+    "lon": 5.1555
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "hoddevik": {
+   "spot": {
+    "lat": 62.1236,
+    "lon": 5.1539
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Gard)",
+     "lat": 62.12311,
+     "lon": 5.1677
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12293,
+     "lon": 5.17012
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Våg i sjø)",
+     "lat": 62.12706,
+     "lon": 5.14506
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11796,
+     "lon": 5.18151
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11828,
+     "lon": 5.1763
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12232,
+     "lon": 5.17
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12108,
+     "lon": 5.1708
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11644,
+     "lon": 5.18563
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12051,
+     "lon": 5.1721
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12786,
+     "lon": 5.16353
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11783,
+     "lon": 5.17711
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11852,
+     "lon": 5.17475
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.11836,
+     "lon": 5.17987
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12564,
+     "lon": 5.16785
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddevika (Bruk)",
+     "lat": 62.12571,
+     "lon": 5.16837
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hoddeviksanden (Strand i sjø)",
+     "lat": 62.12283,
+     "lon": 5.16006
+    }
+   ],
+   "forslag": []
+  },
+  "hoddevik-left": {
+   "spot": {
+    "lat": 62.1208,
+    "lon": 5.156
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "refviksanden-left": {
+   "spot": {
+    "lat": 62.004,
+    "lon": 5.078
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Refviksanden",
+     "lat": 62.002773,
+     "lon": 5.081364,
+     "merknad": "midt på sjøkanten (320 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.009605,
+     "lon": 5.09254,
+     "merknad": "midt på sjøkanten (191 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.007651,
+     "lon": 5.091348,
+     "merknad": "midt på sjøkanten (217 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refviksanden (Sand)",
+     "lat": 62.00209,
+     "lon": 5.08527
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvikelva (Elv)",
+     "lat": 61.99959,
+     "lon": 5.09475
+    }
+   ],
+   "forslag": []
+  },
+  "refviksanden": {
+   "spot": {
+    "lat": 62.0017,
+    "lon": 5.0863
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Refviksanden",
+     "lat": 62.002773,
+     "lon": 5.081364,
+     "merknad": "midt på sjøkanten (320 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.009605,
+     "lon": 5.09254,
+     "merknad": "midt på sjøkanten (191 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 62.007651,
+     "lon": 5.091348,
+     "merknad": "midt på sjøkanten (217 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refviksanden (Sand)",
+     "lat": 62.00209,
+     "lon": 5.08527
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refviksanden (Adressenavn)",
+     "lat": 61.9991,
+     "lon": 5.09124
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvika (Våg i sjø)",
+     "lat": 62.00895,
+     "lon": 5.08024
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvika (Gard)",
+     "lat": 61.99741,
+     "lon": 5.09048
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvika (Grend)",
+     "lat": 61.9984,
+     "lon": 5.08989
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvika (Bruk)",
+     "lat": 61.99893,
+     "lon": 5.08187
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvika (Bruk)",
+     "lat": 62.00141,
+     "lon": 5.0786
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refvikelva (Elv)",
+     "lat": 61.99959,
+     "lon": 5.09475
+    }
+   ],
+   "forslag": []
+  },
+  "vetvika": {
+   "spot": {
+    "lat": 61.8832,
+    "lon": 4.9304
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Vetvika",
+     "lat": 61.882515,
+     "lon": 4.926195,
+     "merknad": "midt på sjøkanten (608 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vetvika (Våg i sjø)",
+     "lat": 61.88552,
+     "lon": 4.91027
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vetvik (Gard)",
+     "lat": 61.88157,
+     "lon": 4.92063
+    }
+   ],
+   "forslag": []
+  },
+  "hovden-kvanhovden": {
+   "spot": {
+    "lat": 61.686,
+    "lon": 4.8209
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hovden (Øy i sjø)",
+     "lat": 61.6789,
+     "lon": 4.86026
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvannhovden fyr (Fyrstasjon)",
+     "lat": 61.69713,
+     "lon": 4.83135
+    }
+   ],
+   "forslag": []
+  },
+  "fjern-z": {
+   "spot": {
+    "lat": 60.5995,
+    "lon": 4.763
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "akrasanden": {
+   "spot": {
+    "lat": 59.252,
+    "lon": 5.1885
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.251958,
+     "lon": 5.188175,
+     "merknad": "midt på sjøkanten (81 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.246529,
+     "lon": 5.193509,
+     "merknad": "midt på sjøkanten (458 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.249211,
+     "lon": 5.192411,
+     "merknad": "midt på sjøkanten (830 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.251799,
+     "lon": 5.190734,
+     "merknad": "midt på sjøkanten (618 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.245061,
+     "lon": 5.191877,
+     "merknad": "midt på sjøkanten (511 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.247752,
+     "lon": 5.194079,
+     "merknad": "midt på sjøkanten (86 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Åkrasanden (Strand)",
+     "lat": 59.25199,
+     "lon": 5.18846
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Åkrasanden (Strand i sjø)",
+     "lat": 59.24867,
+     "lon": 5.1968
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Åkra (Tettsted)",
+     "lat": 59.25922,
+     "lon": 5.19264
+    }
+   ],
+   "forslag": []
+  },
+  "stavasanden": {
+   "spot": {
+    "lat": 59.2335,
+    "lon": 5.1831
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.246529,
+     "lon": 5.193509,
+     "merknad": "midt på sjøkanten (458 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.245061,
+     "lon": 5.191877,
+     "merknad": "midt på sjøkanten (511 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Stavasanden",
+     "lat": 59.233552,
+     "lon": 5.184122,
+     "merknad": "midt på sjøkanten (577 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Stavasanden (Strand)",
+     "lat": 59.23222,
+     "lon": 5.1837
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ferkingstad (Gard)",
+     "lat": 59.22416,
+     "lon": 5.19689
+    }
+   ],
+   "forslag": []
+  },
+  "sandhaland": {
+   "spot": {
+    "lat": 59.205,
+    "lon": 5.186
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Håland-sand",
+     "lat": 59.196213,
+     "lon": 5.183665,
+     "merknad": "midt på sjøkanten (299 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Hemnessand",
+     "lat": 59.198626,
+     "lon": 5.180285,
+     "merknad": "midt på sjøkanten (301 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandhåland (Gard)",
+     "lat": 59.19235,
+     "lon": 5.18294
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hålandsand (Strand)",
+     "lat": 59.19661,
+     "lon": 5.18428
+    }
+   ],
+   "forslag": []
+  },
+  "sandvesanden": {
+   "spot": {
+    "lat": 59.1701,
+    "lon": 5.1937
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.169945,
+     "lon": 5.193671,
+     "merknad": "midt på sjøkanten (332 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.168755,
+     "lon": 5.194044,
+     "merknad": "midt på sjøkanten (162 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandvesanden (Strand i sjø)",
+     "lat": 59.17092,
+     "lon": 5.19547
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandve (Tettsted)",
+     "lat": 59.17523,
+     "lon": 5.19586
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandve lykt (Fyrlykt)",
+     "lat": 59.17714,
+     "lon": 5.19111
+    }
+   ],
+   "forslag": []
+  },
+  "mjolhus": {
+   "spot": {
+    "lat": 59.163,
+    "lon": 5.196
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.169945,
+     "lon": 5.193671,
+     "merknad": "midt på sjøkanten (332 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.168755,
+     "lon": 5.194044,
+     "merknad": "midt på sjøkanten (162 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Mjølhus (Gard)",
+     "lat": 59.16907,
+     "lon": 5.2037
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Mjølhussand (Strand i sjø)",
+     "lat": 59.16855,
+     "lon": 5.19624
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Mjølhussanden (Nes i sjø)",
+     "lat": 59.16773,
+     "lon": 5.19417
+    }
+   ],
+   "forslag": []
+  },
+  "solastranden": {
+   "spot": {
+    "lat": 58.8774,
+    "lon": 5.5898
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sola (Flyplass)",
+     "lat": 58.88322,
+     "lon": 5.62475
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sola kirke (Kirke)",
+     "lat": 58.89013,
+     "lon": 5.61915
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sola (Bru)",
+     "lat": 58.89972,
+     "lon": 5.61418
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sola (Gard)",
+     "lat": 58.89134,
+     "lon": 5.61369
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Solamarka (Bruk)",
+     "lat": 58.86987,
+     "lon": 5.61654
+    }
+   ],
+   "forslag": []
+  },
+  "point-seldom": {
+   "spot": {
+    "lat": 58.874,
+    "lon": 5.583
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "olbergstranden": {
+   "spot": {
+    "lat": 58.87,
+    "lon": 5.575
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "vigdel": {
+   "spot": {
+    "lat": 58.8615,
+    "lon": 5.557
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vigdel (Gard)",
+     "lat": 58.85649,
+     "lon": 5.55422
+    }
+   ],
+   "forslag": []
+  },
+  "hellesto": {
+   "spot": {
+    "lat": 58.8429,
+    "lon": 5.5571
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hellestø (Gard)",
+     "lat": 58.84869,
+     "lon": 5.55858
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hellestøstranden (Strand i sjø)",
+     "lat": 58.84763,
+     "lon": 5.55869
+    }
+   ],
+   "forslag": []
+  },
+  "byberg": {
+   "spot": {
+    "lat": 58.8342,
+    "lon": 5.5505
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Byberg (Gard)",
+     "lat": 58.82925,
+     "lon": 5.57929
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Byberg (Bruk)",
+     "lat": 58.82294,
+     "lon": 5.58835
+    }
+   ],
+   "forslag": []
+  },
+  "suppa": {
+   "spot": {
+    "lat": 58.8223,
+    "lon": 5.5369
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "sele": {
+   "spot": {
+    "lat": 58.8135,
+    "lon": 5.5427
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sele (Bru)",
+     "lat": 58.81419,
+     "lon": 5.55577
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sele (Gard)",
+     "lat": 58.81788,
+     "lon": 5.56876
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sele (Bruk)",
+     "lat": 58.81678,
+     "lon": 5.56514
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sele (Bruk)",
+     "lat": 58.80659,
+     "lon": 5.55854
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Selestranda (Strand i sjø)",
+     "lat": 58.81598,
+     "lon": 5.54188
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Selestranda (Adressenavn)",
+     "lat": 58.81359,
+     "lon": 5.55189
+    }
+   ],
+   "forslag": []
+  },
+  "bore-elvemunning": {
+   "spot": {
+    "lat": 58.8095,
+    "lon": 5.5445
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Elvenes (Nes)",
+     "lat": 58.80653,
+     "lon": 5.54836
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Figgjo (Elv)",
+     "lat": 58.79687,
+     "lon": 5.58358
+    }
+   ],
+   "forslag": []
+  },
+  "bore": {
+   "spot": {
+    "lat": 58.7992,
+    "lon": 5.5459
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bore (Navnegard)",
+     "lat": 58.78866,
+     "lon": 5.58099
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Boresanden (Strand i sjø)",
+     "lat": 58.79485,
+     "lon": 5.54673
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Borestranda (Adressenavn)",
+     "lat": 58.7877,
+     "lon": 5.57803
+    }
+   ],
+   "forslag": []
+  },
+  "toveisbukta": {
+   "spot": {
+    "lat": 58.7905,
+    "lon": 5.54
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "fuglingane": {
+   "spot": {
+    "lat": 58.7873,
+    "lon": 5.5373
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "steinen": {
+   "spot": {
+    "lat": 58.7847,
+    "lon": 5.5344
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "reve-havn": {
+   "spot": {
+    "lat": 58.7721,
+    "lon": 5.5164
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Reve (Gard)",
+     "lat": 58.7684,
+     "lon": 5.51495
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Jærens rev (Grunne i sjø)",
+     "lat": 58.75259,
+     "lon": 5.48266
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Revevika (Vik)",
+     "lat": 58.76118,
+     "lon": 5.52254
+    }
+   ],
+   "forslag": []
+  },
+  "pigsty": {
+   "spot": {
+    "lat": 58.7634,
+    "lon": 5.4992
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Revtangen (Nes i sjø)",
+     "lat": 58.7558,
+     "lon": 5.49328
+    }
+   ],
+   "forslag": []
+  },
+  "orrestranda": {
+   "spot": {
+    "lat": 58.728,
+    "lon": 5.515
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Orre gamle kyrkje (Kirke)",
+     "lat": 58.73139,
+     "lon": 5.52975
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Orre (Bru)",
+     "lat": 58.73122,
+     "lon": 5.5279
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Orre (Gard)",
+     "lat": 58.72915,
+     "lon": 5.52883
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Orretangen (Nes)",
+     "lat": 58.73031,
+     "lon": 5.54797
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Orreelva (Elv)",
+     "lat": 58.72809,
+     "lon": 5.52114
+    }
+   ],
+   "forslag": []
+  },
+  "point-perfect": {
+   "spot": {
+    "lat": 58.6969,
+    "lon": 5.5382
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "refsnes": {
+   "spot": {
+    "lat": 58.6915,
+    "lon": 5.5486
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refsnes (Bru)",
+     "lat": 58.68716,
+     "lon": 5.56101
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Refsnes (Gard)",
+     "lat": 58.6945,
+     "lon": 5.56584
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Jæren (Landskapsområde)",
+     "lat": 58.68892,
+     "lon": 5.58043
+    }
+   ],
+   "forslag": []
+  },
+  "naerlandsanden": {
+   "spot": {
+    "lat": 58.678,
+    "lon": 5.556
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nærland (Bruk)",
+     "lat": 58.6706,
+     "lon": 5.55553
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nærland (Gard)",
+     "lat": 58.67571,
+     "lon": 5.56532
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nærland (Adressenavn)",
+     "lat": 58.67039,
+     "lon": 5.55742
+    }
+   ],
+   "forslag": []
+  },
+  "kvassheim": {
+   "spot": {
+    "lat": 58.5488,
+    "lon": 5.6695
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvassheim fyr (Fyrstasjon)",
+     "lat": 58.54404,
+     "lon": 5.68179
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvassheim lykt (Fyrlykt)",
+     "lat": 58.54443,
+     "lon": 5.68041
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvassheim (Bru)",
+     "lat": 58.54771,
+     "lon": 5.6908
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvassheim (Adressenavn)",
+     "lat": 58.54487,
+     "lon": 5.69146
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kvassheim (Gard)",
+     "lat": 58.54495,
+     "lon": 5.69454
+    }
+   ],
+   "forslag": []
+  },
+  "brusand": {
+   "spot": {
+    "lat": 58.5285,
+    "lon": 5.7695
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Brusand (Tettsted)",
+     "lat": 58.54063,
+     "lon": 5.74463
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Brusand (Bru)",
+     "lat": 58.54098,
+     "lon": 5.73254
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Brusanden (Strand i sjø)",
+     "lat": 58.53594,
+     "lon": 5.74365
+    }
+   ],
+   "forslag": []
+  },
+  "ognasanden": {
+   "spot": {
+    "lat": 58.5195,
+    "lon": 5.788
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ognasanden (Strand i sjø)",
+     "lat": 58.51382,
+     "lon": 5.79533
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ogna (Gard)",
+     "lat": 58.51527,
+     "lon": 5.8092
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ogna kyrkje (Kirke)",
+     "lat": 58.51561,
+     "lon": 5.80828
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ogna (Bru)",
+     "lat": 58.51389,
+     "lon": 5.80557
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ogna (Bruk)",
+     "lat": 58.51541,
+     "lon": 5.80959
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ogna (Skole)",
+     "lat": 58.5176,
+     "lon": 5.80923
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Ognaelva (Elv)",
+     "lat": 58.51461,
+     "lon": 5.80905
+    }
+   ],
+   "forslag": []
+  },
+  "utenfor-eigeroy": {
+   "spot": {
+    "lat": 58.4039,
+    "lon": 5.9237
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "hove-tango": {
+   "spot": {
+    "lat": 58.434,
+    "lon": 8.829
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.440439,
+     "lon": 8.829426,
+     "merknad": "midt på sjøkanten (99 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Bukkevika",
+     "lat": 58.439138,
+     "lon": 8.812279,
+     "merknad": "midt på sjøkanten (96 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Hove strand",
+     "lat": 58.437094,
+     "lon": 8.826458,
+     "merknad": "midt på sjøkanten (148 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hove (Gard)",
+     "lat": 58.44255,
+     "lon": 8.846
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Hove (Skole)",
+     "lat": 58.44609,
+     "lon": 8.84301
+    }
+   ],
+   "forslag": []
+  },
+  "lista-bausje": {
+   "spot": {
+    "lat": 58.09,
+    "lon": 6.6
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Bausje",
+     "lat": 58.089108,
+     "lon": 6.611297,
+     "merknad": "midt på sjøkanten (2353 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Bispen",
+     "lat": 58.095456,
+     "lon": 6.592629,
+     "merknad": "midt på sjøkanten (260 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Litlerauna",
+     "lat": 58.080812,
+     "lon": 6.615167,
+     "merknad": "midt på sjøkanten (763 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Lista fyr (Fyrstasjon)",
+     "lat": 58.10929,
+     "lon": 6.56691
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Lista (Flyplass)",
+     "lat": 58.10022,
+     "lon": 6.62497
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Bausje (Strand i sjø)",
+     "lat": 58.09035,
+     "lon": 6.6128
+    }
+   ],
+   "forslag": []
+  },
+  "renna-pisserenna": {
+   "spot": {
+    "lat": 58.0854,
+    "lon": 6.6114
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Bausje",
+     "lat": 58.089108,
+     "lon": 6.611297,
+     "merknad": "midt på sjøkanten (2353 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Litlerauna",
+     "lat": 58.080812,
+     "lon": 6.615167,
+     "merknad": "midt på sjøkanten (763 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "osthassel": {
+   "spot": {
+    "lat": 58.08,
+    "lon": 6.652
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Kådesanden",
+     "lat": 58.075209,
+     "lon": 6.653352,
+     "merknad": "midt på sjøkanten (591 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Gard)",
+     "lat": 58.0839,
+     "lon": 6.65536
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.07172,
+     "lon": 6.64805
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08274,
+     "lon": 6.64728
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08248,
+     "lon": 6.64321
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.0816,
+     "lon": 6.64703
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08462,
+     "lon": 6.65649
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08323,
+     "lon": 6.65287
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08324,
+     "lon": 6.64454
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhassel (Bruk)",
+     "lat": 58.08223,
+     "lon": 6.64816
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhasselstrand (Strand i sjø)",
+     "lat": 58.07534,
+     "lon": 6.6514
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Østhasselstrand (Adressenavn)",
+     "lat": 58.07155,
+     "lon": 6.64734
+    }
+   ],
+   "forslag": []
+  },
+  "kviljo": {
+   "spot": {
+    "lat": 58.069,
+    "lon": 6.695
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Kviljoodden",
+     "lat": 58.065021,
+     "lon": 6.699161,
+     "merknad": "midt på sjøkanten (483 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kviljo (Gard)",
+     "lat": 58.07541,
+     "lon": 6.68572
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kviljo (Grend)",
+     "lat": 58.07512,
+     "lon": 6.68576
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kviljosanden (Strand i sjø)",
+     "lat": 58.06933,
+     "lon": 6.68368
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kviljoodden (Nes i sjø)",
+     "lat": 58.06616,
+     "lon": 6.70059
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Kviljobukta (Vik)",
+     "lat": 58.07887,
+     "lon": 6.6791
+    }
+   ],
+   "forslag": []
+  },
+  "radiosletta": {
+   "spot": {
+    "lat": 58.0655,
+    "lon": 6.742
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.066618,
+     "lon": 6.726319,
+     "merknad": "midt på sjøkanten (400 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "havika": {
+   "spot": {
+    "lat": 58.064,
+    "lon": 6.731
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.066619,
+     "lon": 6.726319,
+     "merknad": "midt på sjøkanten (400 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Havika (Vik i sjø)",
+     "lat": 58.06269,
+     "lon": 6.72925
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Haviksanden (Adressenavn)",
+     "lat": 58.07361,
+     "lon": 6.72052
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Store Havika (Vik i sjø)",
+     "lat": 58.06541,
+     "lon": 6.73395
+    }
+   ],
+   "forslag": []
+  },
+  "lille-havika": {
+   "spot": {
+    "lat": 58.0625,
+    "lon": 6.726
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.066619,
+     "lon": 6.726319,
+     "merknad": "midt på sjøkanten (400 m), 100 m ut"
+    }
+   ],
+   "forslag": []
+  },
+  "lista": {
+   "spot": {
+    "lat": 58.0512,
+    "lon": 6.6476
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "njervesanden": {
+   "spot": {
+    "lat": 58.0436,
+    "lon": 7.1664
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Sandvikstranna",
+     "lat": 58.038747,
+     "lon": 7.147139,
+     "merknad": "midt på sjøkanten (162 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.042607,
+     "lon": 7.156171,
+     "merknad": "midt på sjøkanten (171 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.042597,
+     "lon": 7.156361,
+     "merknad": "midt på sjøkanten (43 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.044263,
+     "lon": 7.155709,
+     "merknad": "midt på sjøkanten (460 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.042173,
+     "lon": 7.144102,
+     "merknad": "midt på sjøkanten (43 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Njervesanden (Adressenavn)",
+     "lat": 58.04686,
+     "lon": 7.16433
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Njerve (Gard)",
+     "lat": 58.04769,
+     "lon": 7.15667
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Njerve (Adressenavn)",
+     "lat": 58.04423,
+     "lon": 7.15397
+    }
+   ],
+   "forslag": []
+  },
+  "tjom": {
+   "spot": {
+    "lat": 58.0332,
+    "lon": 7.2745
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.044827,
+     "lon": 7.268186,
+     "merknad": "midt på sjøkanten (147 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Tjøm (Gard)",
+     "lat": 58.03481,
+     "lon": 7.29089
+    }
+   ],
+   "forslag": []
+  },
+  "sjosanden": {
+   "spot": {
+    "lat": 58.0195,
+    "lon": 7.4455
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Lordens",
+     "lat": 58.015588,
+     "lon": 7.442731,
+     "merknad": "midt på sjøkanten (325 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Stumpestrendene",
+     "lat": 58.013948,
+     "lon": 7.439706,
+     "merknad": "midt på sjøkanten (295 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Kanelstranda",
+     "lat": 58.014193,
+     "lon": 7.439242,
+     "merknad": "midt på sjøkanten (368 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Storebanken",
+     "lat": 58.016697,
+     "lon": 7.4289,
+     "merknad": "midt på sjøkanten (423 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Lillebanken",
+     "lat": 58.01966,
+     "lon": 7.430638,
+     "merknad": "midt på sjøkanten (430 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Spindsbo",
+     "lat": 58.013933,
+     "lon": 7.434145,
+     "merknad": "midt på sjøkanten (110 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Trappestranda",
+     "lat": 58.013873,
+     "lon": 7.433926,
+     "merknad": "midt på sjøkanten (49 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Torkilshåla",
+     "lat": 58.018467,
+     "lon": 7.426648,
+     "merknad": "midt på sjøkanten (39 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.018085,
+     "lon": 7.461672,
+     "merknad": "midt på sjøkanten (51 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sjøsanden (Fyrlykt)",
+     "lat": 58.02027,
+     "lon": 7.44835
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sjøsanden (Strand i sjø)",
+     "lat": 58.02057,
+     "lon": 7.45045
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Mandalselva (Elv)",
+     "lat": 58.09163,
+     "lon": 7.5249
+    }
+   ],
+   "forslag": []
+  },
+  "hollen-lindesnes-usikkert-navn": {
+   "spot": {
+    "lat": 58.0125,
+    "lon": 7.1494
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [],
+   "forslag": []
+  },
+  "krabberodstrand": {
+   "spot": {
+    "lat": 59.0499,
+    "lon": 9.6832
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.04845,
+     "lon": 9.658103,
+     "merknad": "midt på sjøkanten (104 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.053865,
+     "lon": 9.707529,
+     "merknad": "midt på sjøkanten (70 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Krabberødstrand (Adressenavn)",
+     "lat": 59.04693,
+     "lon": 9.69551
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Krabberød (Bruk)",
+     "lat": 59.04129,
+     "lon": 9.68932
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Krabberødstranda (Strand i sjø)",
+     "lat": 59.05042,
+     "lon": 9.67857
+    }
+   ],
+   "forslag": []
+  },
+  "skallevold": {
+   "spot": {
+    "lat": 59.292,
+    "lon": 10.5023
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.293284,
+     "lon": 10.516083,
+     "merknad": "midt på sjøkanten (131 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Skallevoldstranda",
+     "lat": 59.29042,
+     "lon": 10.501649,
+     "merknad": "midt på sjøkanten (1261 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.280719,
+     "lon": 10.503951,
+     "merknad": "midt på sjøkanten (688 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.281829,
+     "lon": 10.503,
+     "merknad": "midt på sjøkanten (77 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.280623,
+     "lon": 10.503519,
+     "merknad": "midt på sjøkanten (193 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.287821,
+     "lon": 10.500212,
+     "merknad": "midt på sjøkanten (153 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.279118,
+     "lon": 10.503643,
+     "merknad": "midt på sjøkanten (371 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.279058,
+     "lon": 10.503628,
+     "merknad": "midt på sjøkanten (135 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.278387,
+     "lon": 10.503266,
+     "merknad": "midt på sjøkanten (424 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.283438,
+     "lon": 10.50181,
+     "merknad": "midt på sjøkanten (524 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.287565,
+     "lon": 10.499105,
+     "merknad": "midt på sjøkanten (516 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.292932,
+     "lon": 10.515091,
+     "merknad": "midt på sjøkanten (215 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.2928,
+     "lon": 10.516687,
+     "merknad": "midt på sjøkanten (231 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.292668,
+     "lon": 10.51458,
+     "merknad": "midt på sjøkanten (86 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.293148,
+     "lon": 10.516315,
+     "merknad": "midt på sjøkanten (40 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallevollbukta (Vik i sjø)",
+     "lat": 59.29164,
+     "lon": 10.50285
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallevoll (Gard)",
+     "lat": 59.29655,
+     "lon": 10.50095
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Skallevoll (Bruk)",
+     "lat": 59.2931,
+     "lon": 10.4955
+    }
+   ],
+   "forslag": []
+  },
+  "vora": {
+   "spot": {
+    "lat": 59.0721,
+    "lon": 10.2587
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.069802,
+     "lon": 10.255533,
+     "merknad": "midt på sjøkanten (287 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.072938,
+     "lon": 10.257448,
+     "merknad": "midt på sjøkanten (415 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.077857,
+     "lon": 10.259862,
+     "merknad": "midt på sjøkanten (388 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vøra badestrand (Strand i sjø)",
+     "lat": 59.07251,
+     "lon": 10.25926
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Langebystranda (Strand i sjø)",
+     "lat": 59.08381,
+     "lon": 10.27604
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Vøra (Strand)",
+     "lat": 59.07121,
+     "lon": 10.25823
+    }
+   ],
+   "forslag": []
+  },
+  "batteritomta": {
+   "spot": {
+    "lat": 59.0475,
+    "lon": 10.0345
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Karistranda",
+     "lat": 59.044956,
+     "lon": 10.040142,
+     "merknad": "midt på sjøkanten (101 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.042133,
+     "lon": 10.019302,
+     "merknad": "midt på sjøkanten (161 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Jordfallet",
+     "lat": 59.04229,
+     "lon": 10.019173,
+     "merknad": "midt på sjøkanten (215 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.03617,
+     "lon": 10.047933,
+     "merknad": "midt på sjøkanten (222 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.035329,
+     "lon": 10.042424,
+     "merknad": "midt på sjøkanten (113 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.037448,
+     "lon": 10.053872,
+     "merknad": "midt på sjøkanten (488 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Batteristranda",
+     "lat": 59.04833,
+     "lon": 10.020892,
+     "merknad": "midt på sjøkanten (680 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.043617,
+     "lon": 10.043982,
+     "merknad": "midt på sjøkanten (200 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.044122,
+     "lon": 10.042779,
+     "merknad": "midt på sjøkanten (158 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.044448,
+     "lon": 10.04204,
+     "merknad": "midt på sjøkanten (144 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.046983,
+     "lon": 10.017489,
+     "merknad": "midt på sjøkanten (129 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Batteritomta (Bydel)",
+     "lat": 59.04944,
+     "lon": 10.02083
+    }
+   ],
+   "forslag": []
+  },
+  "rekkevik": {
+   "spot": {
+    "lat": 59.0285,
+    "lon": 10.0747
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.03256,
+     "lon": 10.057397,
+     "merknad": "midt på sjøkanten (192 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.037074,
+     "lon": 10.057874,
+     "merknad": "midt på sjøkanten (364 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.021694,
+     "lon": 10.069979,
+     "merknad": "midt på sjøkanten (170 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.027055,
+     "lon": 10.070083,
+     "merknad": "midt på sjøkanten (219 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rekkevik (Tettbebyggelse)",
+     "lat": 59.02848,
+     "lon": 10.07475
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rekkevik (Gard)",
+     "lat": 59.02934,
+     "lon": 10.07748
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Rekkevikbukta (Vik i sjø)",
+     "lat": 59.02625,
+     "lon": 10.06667
+    }
+   ],
+   "forslag": []
+  },
+  "naverfjorden": {
+   "spot": {
+    "lat": 58.9814,
+    "lon": 9.9812
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Stretrestranda",
+     "lat": 58.983351,
+     "lon": 9.973906,
+     "merknad": "midt på sjøkanten (800 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.978694,
+     "lon": 9.96744,
+     "merknad": "midt på sjøkanten (366 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.976585,
+     "lon": 9.965753,
+     "merknad": "midt på sjøkanten (240 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Lydhusstranda",
+     "lat": 58.980303,
+     "lon": 9.968919,
+     "merknad": "midt på sjøkanten (451 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.981561,
+     "lon": 9.969333,
+     "merknad": "midt på sjøkanten (375 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.979349,
+     "lon": 9.985895,
+     "merknad": "midt på sjøkanten (192 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.97835,
+     "lon": 9.983129,
+     "merknad": "midt på sjøkanten (51 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.97616,
+     "lon": 9.970066,
+     "merknad": "midt på sjøkanten (65 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.976716,
+     "lon": 9.969204,
+     "merknad": "midt på sjøkanten (28 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.978355,
+     "lon": 9.96703,
+     "merknad": "midt på sjøkanten (63 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Naverfjorden (Våg i sjø)",
+     "lat": 58.97691,
+     "lon": 9.97739
+    }
+   ],
+   "forslag": []
+  },
+  "saltstein": {
+   "spot": {
+    "lat": 58.9685,
+    "lon": 9.8375
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Mølen",
+     "lat": 58.972081,
+     "lon": 9.820386,
+     "merknad": "midt på sjøkanten (1973 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Skitnerødstranda",
+     "lat": 58.981724,
+     "lon": 9.840809,
+     "merknad": "midt på sjøkanten (212 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Gurvika",
+     "lat": 58.963999,
+     "lon": 9.862386,
+     "merknad": "midt på sjøkanten (243 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Oddane Sand",
+     "lat": 58.963519,
+     "lon": 9.861183,
+     "merknad": "midt på sjøkanten (237 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Saltstein (Berg)",
+     "lat": 58.96864,
+     "lon": 9.83787
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nevlunghavn (Tettsted)",
+     "lat": 58.96741,
+     "lon": 9.86748
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nevlunghavn (Fyrlykt)",
+     "lat": 58.96522,
+     "lon": 9.86893
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Mølen (Nes i sjø)",
+     "lat": 58.97563,
+     "lon": 9.82125
+    }
+   ],
+   "forslag": []
+  },
+  "nevlungstranda": {
+   "spot": {
+    "lat": 58.9665,
+    "lon": 9.862
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Gurvika",
+     "lat": 58.963999,
+     "lon": 9.862387,
+     "merknad": "midt på sjøkanten (243 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Oddane Sand",
+     "lat": 58.963519,
+     "lon": 9.861184,
+     "merknad": "midt på sjøkanten (237 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.97366,
+     "lon": 9.86533,
+     "merknad": "midt på sjøkanten (980 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.970161,
+     "lon": 9.868112,
+     "merknad": "midt på sjøkanten (69 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.970753,
+     "lon": 9.867675,
+     "merknad": "midt på sjøkanten (49 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 58.970826,
+     "lon": 9.86727,
+     "merknad": "midt på sjøkanten (131 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nevlungstranda (Strand)",
+     "lat": 58.96838,
+     "lon": 9.84603
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Nevlungstranda (Adressenavn)",
+     "lat": 58.96823,
+     "lon": 9.85107
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Gurvika (Vik i sjø)",
+     "lat": 58.96463,
+     "lon": 9.86153
+    }
+   ],
+   "forslag": []
+  },
+  "fiske-beach": {
+   "spot": {
+    "lat": 59.4242,
+    "lon": 10.6107
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421039,
+     "lon": 10.615152,
+     "merknad": "midt på sjøkanten (551 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.422621,
+     "lon": 10.622562,
+     "merknad": "midt på sjøkanten (863 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.425825,
+     "lon": 10.586666,
+     "merknad": "midt på sjøkanten (4076 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417323,
+     "lon": 10.596301,
+     "merknad": "midt på sjøkanten (210 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417497,
+     "lon": 10.598488,
+     "merknad": "midt på sjøkanten (143 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417455,
+     "lon": 10.607519,
+     "merknad": "midt på sjøkanten (512 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417084,
+     "lon": 10.607083,
+     "merknad": "midt på sjøkanten (264 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Albystranda",
+     "lat": 59.417177,
+     "lon": 10.602198,
+     "merknad": "midt på sjøkanten (460 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417456,
+     "lon": 10.599709,
+     "merknad": "midt på sjøkanten (187 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421445,
+     "lon": 10.585305,
+     "merknad": "midt på sjøkanten (39 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421242,
+     "lon": 10.585531,
+     "merknad": "midt på sjøkanten (62 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.418298,
+     "lon": 10.588724,
+     "merknad": "midt på sjøkanten (91 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.417778,
+     "lon": 10.589395,
+     "merknad": "midt på sjøkanten (278 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.419801,
+     "lon": 10.585927,
+     "merknad": "midt på sjøkanten (81 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.420652,
+     "lon": 10.585864,
+     "merknad": "midt på sjøkanten (148 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.418415,
+     "lon": 10.608258,
+     "merknad": "midt på sjøkanten (152 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.420863,
+     "lon": 10.612426,
+     "merknad": "midt på sjøkanten (820 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.416297,
+     "lon": 10.593255,
+     "merknad": "midt på sjøkanten (27 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.416277,
+     "lon": 10.593919,
+     "merknad": "midt på sjøkanten (165 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.42111,
+     "lon": 10.63636,
+     "merknad": "midt på sjøkanten (135 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.418475,
+     "lon": 10.633682,
+     "merknad": "midt på sjøkanten (2025 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.422998,
+     "lon": 10.637967,
+     "merknad": "midt på sjøkanten (622 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.423007,
+     "lon": 10.637989,
+     "merknad": "midt på sjøkanten (42 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421167,
+     "lon": 10.635969,
+     "merknad": "midt på sjøkanten (66 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421145,
+     "lon": 10.63612,
+     "merknad": "midt på sjøkanten (99 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.42294,
+     "lon": 10.63791,
+     "merknad": "midt på sjøkanten (329 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.423606,
+     "lon": 10.619391,
+     "merknad": "midt på sjøkanten (742 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.420952,
+     "lon": 10.612372,
+     "merknad": "midt på sjøkanten (64 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.420745,
+     "lon": 10.612445,
+     "merknad": "midt på sjøkanten (136 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.423028,
+     "lon": 10.618851,
+     "merknad": "midt på sjøkanten (214 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.418255,
+     "lon": 10.608177,
+     "merknad": "midt på sjøkanten (54 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.421936,
+     "lon": 10.585121,
+     "merknad": "midt på sjøkanten (32 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.416889,
+     "lon": 10.590178,
+     "merknad": "midt på sjøkanten (57 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.423356,
+     "lon": 10.619196,
+     "merknad": "midt på sjøkanten (229 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Alby (Bruk)",
+     "lat": 59.4242,
+     "lon": 10.61073
+    }
+   ],
+   "forslag": []
+  },
+  "storesand": {
+   "spot": {
+    "lat": 59.0258,
+    "lon": 11.0168
+   },
+   "sikkerhet": "ikke sjekket",
+   "satt_av": "liste",
+   "metode": "listepinne",
+   "dato": "2026-10-16",
+   "alternativer": [
+    {
+     "kilde": "osm-strand",
+     "navn": "Kroksand",
+     "lat": 59.025422,
+     "lon": 11.042032,
+     "merknad": "midt på sjøkanten (424 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Storesand",
+     "lat": 59.02428,
+     "lon": 11.016217,
+     "merknad": "midt på sjøkanten (604 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": "Ørekroken",
+     "lat": 59.030964,
+     "lon": 11.01338,
+     "merknad": "midt på sjøkanten (886 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.031424,
+     "lon": 11.007574,
+     "merknad": "midt på sjøkanten (158 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.0201,
+     "lon": 11.033705,
+     "merknad": "midt på sjøkanten (65 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.023064,
+     "lon": 11.016149,
+     "merknad": "midt på sjøkanten (136 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.022085,
+     "lon": 11.017439,
+     "merknad": "midt på sjøkanten (135 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.023413,
+     "lon": 11.040115,
+     "merknad": "midt på sjøkanten (38 m), 100 m ut"
+    },
+    {
+     "kilde": "osm-strand",
+     "navn": null,
+     "lat": 59.021866,
+     "lon": 11.01285,
+     "merknad": "midt på sjøkanten (69 m), 100 m ut"
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Storesand (Strand i sjø)",
+     "lat": 59.02501,
+     "lon": 11.01759
+    }
+   ],
+   "forslag": []
+  }
+ }
+}

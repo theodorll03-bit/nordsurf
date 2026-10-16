@@ -90,11 +90,11 @@ def kind(k):
 class Lokal:
     """Lokal asimut-ekvidistant projeksjon rundt søkesenteret, med OSM-land og vannkant."""
 
-    def __init__(self, land, lat, lon):
+    def __init__(self, land, lat, lon, half_deg=0.5):
         self.lat, self.lon = lat, lon
         self.fwd = Transformer.from_crs(4326, f"+proj=aeqd +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m", always_xy=True)
         self.inv = Transformer.from_crs(f"+proj=aeqd +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m", 4326, always_xy=True)
-        self.land, edge = kt.local_land(land, lat, lon)
+        self.land, edge = kt.local_land(land, lat, lon, half_deg)
         self.coast = self.land.boundary.difference(edge.buffer(1))
         shapely.prepare(self.land)
 

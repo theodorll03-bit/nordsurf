@@ -31,21 +31,27 @@ HEMMELIGE_SHA256 = {
     "58e28d08733f9d5b4e0b508a6ccd6ab988b865726c756bed3c2e48ac7474e2d6",
     "2007adaed5630bd1ec35ab1211417b572bada24910b55f70bd22997eff56c27e",
 }
-# kandidater Theodor må svare på før noe bygges (flagg, men med i lista)
-VENTER_PA_SVAR = {"secret-revtangen": "hemmelig/«secret» i lista - ikke bygg før Theodor har svart"}
+# Theodor 16.10.2026: bygges ikke - status «hemmelig» (publiseres aldri, heller ikke i oversikten)
+HEMMELIGE_IDER = {"secret-revtangen", "regestranda"}
+# Theodor 16.10.2026: vanlig kandidat, men lavest prioritet
+LAV_PRIORITET = {"vetvika"}
+VENTER_PA_SVAR = {}
+VURDERING = {}
 
 # lista sitt id → spots.json sin id for de 8 vi har fra før (røres ikke)
 KJENTE = {"unstad-beach": "unstad"}
 
 # Regionforslag (Theodor godkjenner senere; legges i spots.json først når første spot i regionen bygges)
+# Theodors ja 16.10.2026: forslaget pluss «Hordaland» (Øygarden og andre uten region); nord til sør
 REGIONER = ["Finnmark", "Troms", "Vesterålen", "Lofoten", "Salten", "Møre og Romsdal", "Stad og Nordfjord",
-            "Karmøy", "Jæren", "Dalane og Lista", "Sørlandet", "Østlandet"]
+            "Hordaland", "Karmøy", "Jæren", "Dalane og Lista", "Sørlandet", "Østlandet"]
 REGION_FRA_LISTA = {
     "Finnmark": "Finnmark", "Varanger": "Finnmark",
     "Troms": "Troms", "Senja": "Troms",
     "Vesterålen": "Vesterålen", "Lofoten": "Lofoten", "Salten": "Salten",
     "Sunnmøre": "Møre og Romsdal", "Romsdal/Hustadvika": "Møre og Romsdal",
     "Stad": "Stad og Nordfjord", "Nordfjord/Sunnfjord-kysten": "Stad og Nordfjord", "Sogn og Fjordane / Kinn": "Stad og Nordfjord",
+    "Hordaland / Øygarden": "Hordaland",
     "Karmøy": "Karmøy", "Jæren": "Jæren",
     "Dalane": "Dalane og Lista", "Lista": "Dalane og Lista",
     "Lindesnes": "Sørlandet", "Sørlandet": "Sørlandet",
@@ -54,7 +60,6 @@ REGION_FRA_LISTA = {
 }
 # regioner i lista som ikke passer i noen av forslagene - region null + merknad (spørsmål til Theodor)
 REGION_MERKNAD = {
-    "Hordaland / Øygarden": "ingen av regionforslagene dekker Hordaland (ligger mellom Karmøy og Stad og Nordfjord)",
     "Sogn og Fjordane / Kinn": "Kinn (Florø) er Sunnfjord, lagt i Stad og Nordfjord som nærmeste forslag",
     "Nordfjord/Sunnfjord-kysten": "Sunnfjord-kysten lagt i Stad og Nordfjord som nærmeste forslag",
 }
@@ -93,6 +98,9 @@ def main():
     if len(hidden) != 1:
         sys.exit(f"Forventet nøyaktig én hemmelig spot i lista, fant {len(hidden)} - sjekk utelukkelsen før import")
     spots_cfg = {s["id"]: s for s in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]}
+    global VURDERING
+    vf = ROOT / "data" / "kandidater" / "vern_vurdering.json"
+    VURDERING = json.loads(vf.read_text(encoding="utf-8"))["kandidater"] if vf.exists() else {}
 
     out = []
     for s in raw:
@@ -117,8 +125,16 @@ def main():
             "source_count": s.get("source_count"),
             "sources": urls(s.get("sources")),
             "dokumentasjon": s.get("dokumentasjon"),
-            "status": "i_nordsurf" if known_id else "kandidat",
+            "status": "i_nordsurf" if known_id else "hemmelig" if s["id"] in HEMMELIGE_IDER else "kandidat",
         }
+        if s["id"] in LAV_PRIORITET:
+            rec["prioritet"] = "lav"
+        vv = VURDERING.get(s["id"])
+        if vv:   # Theodor 16.10: bølgen i verneområdet → «forbudt»; ellers en linje om verneområdet
+            if vv.get("status") == "forbudt" and rec["status"] == "kandidat":
+                rec["status"] = "forbudt"
+            if vv.get("merknad"):
+                rec["vern_merknad"] = vv["merknad"]
         if REGION_MERKNAD.get(reg_liste):
             rec["region_merknad"] = REGION_MERKNAD[reg_liste]
         if VERN_ORD.search((s.get("hazards") or "") + " " + (s.get("access") or "")):
@@ -143,8 +159,9 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text + "\n", encoding="utf-8")
     kj = [r for r in out if r["status"] == "i_nordsurf"]
-    print(f"Skrev {OUT.relative_to(ROOT)}: {len(out)} spots ({len(kj)} i Nordsurf fra før, {len(out) - len(kj)} kandidater), "
-          f"{sum(1 for r in out if r.get('vern_mistanke'))} med vern_mistanke, {sum(1 for r in out if r['region'] is None)} uten region")
+    print(f"Skrev {OUT.relative_to(ROOT)}: {len(out)} spots ({len(kj)} i Nordsurf fra før, {len(out) - len(kj)} kandidater og hemmelige), "
+          f"{sum(1 for r in out if r.get('vern_mistanke'))} med vern_mistanke, {sum(1 for r in out if r['region'] is None)} uten region, "
+          f"{sum(1 for r in out if r['status'] == 'hemmelig')} hemmelige")
     for r in kj:
         print(f"  {r['id']:16} → {r['nordsurf_id']:16} pinne-nål {r['avstand_pinne_nal_m']} m")
 

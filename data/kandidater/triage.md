@@ -2,12 +2,12 @@
 
 Generert av `tools/kandidat_triage.py`. Status fra OSM-kysten (i Norge i stor grad N50), GSHHS f (fysikken i dag) ved siden av. Fasing = sirkelsnittet av den største sammenhengende sektoren med minst 20 km fri strekning (stråler hver 5. grad, 40 km). Posisjonen er listepinnen - ikke kontrollert ennå (det er del A2). Ingenting her er publisert.
 
-**107 kandidater** (de 8 vi har fra før står nederst):
+**105 kandidater** (de 8 vi har fra før står nederst):
 
 | Kyst | posisjon | vern | sjekk | klar |
 |---|---|---|---|---|
-| osm | 17 | 12 | 37 | 41 |
-| gshhs | 22 | 12 | 40 | 33 |
+| osm | 16 | 11 | 37 | 41 |
+| gshhs | 21 | 11 | 40 | 33 |
 
 Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 43 sjekk, 18 posisjon, 5 vern.
 
@@ -21,7 +21,6 @@ Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 4
 | Lista (Bausje) | Dalane og Lista | land | 227 m | land 369 m | ingen | ingen åpen sektor (≥ 20 km); 227 m inne på land; vern ikke lest: 1 område(r) 600 m-2 km unna (Slevdalsvannet naturreservat (1269 m)) |
 | Østhassel | Dalane og Lista | land | 418 m | land 584 m | ingen | 418 m inne på land; ingen åpen sektor (≥ 20 km); anslått posisjon; vern ikke lest: 2 område(r) 600 m-2 km unna (Nesheimvann naturreservat (665 m), Fuglevika fuglefredningsområde (980 m)) |
 | Nærlandsanden | Jæren | land | 515 m | land 687 m | ingen | 515 m inne på land; ingen åpen sektor (≥ 20 km); forbud i nærheten: Jærstrendene fuglefredningsområde (415 m): surfeforbud 10-01–03-31 (sjø); anslått posisjon |
-| Regestranda | Jæren | land | 623 m | land 539 m | ingen | 623 m inne på land; ingen åpen sektor (≥ 20 km); anslått posisjon; svak dokumentasjon |
 | Sandhåland | Karmøy | land | 681 m | land 904 m | ingen | 681 m inne på land; ingen åpen sektor (≥ 20 km); anslått posisjon |
 | Bunes | Lofoten | sjø | 137 m | land 31 m | ingen | ingen åpen sektor (≥ 20 km); anslått posisjon |
 | Haukland | Lofoten | land | 606 m | land 552 m | ingen | 606 m inne på land; ingen åpen sektor (≥ 20 km) |
@@ -116,6 +115,12 @@ Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 4
 | Refviksanden | klar | klar | land 127 m | 320–350 (335°) | 320–345 (332°) | – | – | vern ikke lest: 1 område(r) 600 m-2 km unna (Refvikvatnet naturreservat (1067 m)) |
 | Vetvika | klar | klar | land 16 m | 265–295 (280°) | 280–300 (290°) | 338° | 58° | – |
 
+## Hordaland
+
+| Kandidat | Status | GSHHS | Kyst | Sektor OSM | Sektor GSHHS | Lista | Avvik | Hvorfor |
+|---|---|---|---|---|---|---|---|---|
+| Fjern-z | sjekk | sjekk | sjø 179 m | 215–290 (252°) | 170–345 (258°) | 202° | 50° | forbud i nærheten: Teistholmen naturreservat (514 m): ferdselsforbud 04-15–07-31 (begge) |
+
 ## Karmøy
 
 | Kandidat | Status | GSHHS | Kyst | Sektor OSM | Sektor GSHHS | Lista | Avvik | Hvorfor |
@@ -135,7 +140,6 @@ Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 4
 | Pigsty | vern | vern | sjø 85 m | 210–340 (275°) | 215–355 (285°) | 315° | 40° | vern_mistanke i lista; vern: Jærstrendene fuglefredningsområde (0 m): surfeforbud 10-01–03-31 (sjø) |
 | Point Seldom | vern | vern | land 149 m | 290–310 (300°) | 285–310 (298°) | 225° | 75° | vern_mistanke i lista; forbud i nærheten: Jærstrendene fuglefredningsområde (1693 m): surfeforbud 10-01–03-31 (sjø); anslått posisjon; svak dokumentasjon; avvik 75° mot best_swell_dir |
 | Refsnes | vern | vern | sjø 65 m | 195–315 (255°) | 200–305 (252°) | 270° | 15° | vern_mistanke i lista; forbud i nærheten: Jærstrendene fuglefredningsområde (953 m): surfeforbud 10-01–03-31 (sjø) |
-| Secret (Revtangen) | vern | vern | sjø 149 m | 165–345 (255°) | 165–320 (242°) | 158° | 98° | vern_mistanke i lista; vern: Jærstrendene fuglefredningsområde (0 m): surfeforbud 10-01–03-31 (sjø); svak dokumentasjon; avvik 98° mot best_swell_dir |
 | Fuglingane | sjekk | sjekk | land 14 m | 225–325 (275°) | 225–340 (282°) | 270° | 5° | anslått posisjon |
 | Ognasanden | sjekk | sjekk | land 35 m | 225–225 (225°) | 190–250 (220°) | – | – | smal åpen sektor (0°); anslått posisjon |
 | Ølbergstranden | sjekk | posisjon | land 267 m | 285–290 (288°) | ingen | – | – | smal åpen sektor (5°); anslått posisjon; 267 m inne på land |
@@ -183,12 +187,6 @@ Til sammenligning (Claudes kjøring med GSHHS f, i Theodors melding): 41 klar, 4
 | Nevlungstranda | sjekk | sjekk | land 186 m | 170–170 (170°) | 95–130 (112°) | 180° | 10° | smal åpen sektor (0°); anslått posisjon; svak dokumentasjon; 186 m inne på land; vern ikke lest: 1 område(r) 600 m-2 km unna (Langholmene fuglefredningsområde (897 m)) |
 | Saltstein | klar | sjekk | land 49 m | 145–225 (185°) | 180–225 (202°) | 202° | 18° | vern ikke lest: 1 område(r) 600 m-2 km unna (Fugløyrogn naturreservat (1699 m)) |
 | Skallevold | klar | klar | sjø 44 m | 130–155 (142°) | 130–155 (142°) | 180° | 38° | – |
-
-## Uten region
-
-| Kandidat | Status | GSHHS | Kyst | Sektor OSM | Sektor GSHHS | Lista | Avvik | Hvorfor |
-|---|---|---|---|---|---|---|---|---|
-| Fjern-z | sjekk | sjekk | sjø 179 m | 215–290 (252°) | 170–345 (258°) | 202° | 50° | forbud i nærheten: Teistholmen naturreservat (514 m): ferdselsforbud 04-15–07-31 (begge) |
 
 ## Listas påstander om forbud og vern (punkt 5)
 

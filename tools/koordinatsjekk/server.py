@@ -3,10 +3,13 @@ publisert. Theodor går gjennom forslagene i rekkefølge C, B, «posisjon» fra 
 
     python3 tools/koordinatsjekk/server.py      → åpne http://127.0.0.1:8765/
 
-Viser per kandidat listepinnen (grå), forslaget (farget etter sikkerhet A/B/C, kan dras), stedsnavntreff
-(blå prikker) og OSM-strender (omriss) på Kartverkets topografiske kart (cache.kartverket.no, CC BY 4.0).
-G = godkjenn, U = usikker, A = avvis, ←/→ = forrige/neste. Lenker til Norgeskart og Google Maps satellitt
-på samme punkt (flyfoto er ikke åpent som tjeneste, så den visuelle sjekken gjøres der).
+Viser per kandidat listepinnen (grå), posisjonen som skal godkjennes (stor, kan dras), alternative markører
+(OSM-strand brun, stedsnavn blå, forslag fra tools/importer_forslag.py lilla - klikk for å flytte posisjonen dit)
+og OSM-strender (omriss) på Kartverkets topografiske kart (cache.kartverket.no, CC BY 4.0). Region for region
+(Lofoten og Vesterålen først) med teller «12 av 27 sjekket»; i regionen «posisjon» fra triagen først, så anslått
+posisjon, så resten. G = godkjenn, U = usikker, A = avvis, ←/→ = forrige/neste. Lenke til Norgeskart med
+FLYFOTO-laget og markør på punktet (backgroundLayer=Nibcache_UTM33_EUREF89_v2, sok=lat,lon - testet 16.10),
+og Google Maps satellitt som reserve.
 
 Hver vurdering lagres med POST til denne serveren i data/kandidater/posisjoner.json (satt_av «theodor»,
 tidspunkt). MapLibre GL JS 5.24.0: docs/vendor/ fra S3 hvis den finnes, ellers lastet ned én gang til
@@ -66,28 +69,64 @@ def evidence(kid):
     return out
 
 
+FORSTE_REGIONER = ["Lofoten", "Vesterålen"]   # Theodor 16.10: disse først, så resten nord til sør
+
+
 def payload():
-    pos = json.loads(POS.read_text(encoding="utf-8"))
-    kand = {k["id"]: k for k in json.loads(KAND.read_text(encoding="utf-8"))["kandidater"]}
+    pos = json.loads(POS.read_text(encoding="utf-8"))["kandidater"]
+    kdoc = json.loads(KAND.read_text(encoding="utf-8"))
+    kand = {k["id"]: k for k in kdoc["kandidater"]}
+    regs = FORSTE_REGIONER + [r for r in kdoc.get("regioner_forslag", []) if r not in FORSTE_REGIONER]
     tri = json.loads(TRIAGE.read_text(encoding="utf-8"))["kandidater"] if TRIAGE.exists() else {}
     rows = []
-    for kid, p in pos["kandidater"].items():
+    for kid, p in pos.items():
         k = kand.get(kid)
         if not k or k["status"] != "kandidat":
-            continue
+            continue   # hemmelige og forbudte er aldri med
         t = tri.get(kid, {})
-        grp = {"C": 0, "B": 1}.get(p.get("sikkerhet"), 3)
-        if grp == 3 and t.get("status") == "posisjon":
-            grp = 2
-        rows.append({"id": kid, "navn": k["name"], "region": k.get("region"), "kommune": k.get("kommune"), "type": k["hint"].get("break_type"),
-                     "pinne": k["pin_liste"], "forslag": p.get("spot"), "sikkerhet": p.get("sikkerhet"), "metode": p.get("metode"),
-                     "begrunnelse": p.get("begrunnelse"), "flagg": p.get("flagg", []), "triage": t.get("status"),
-                     "vurdering": p.get("vurdering"), "satt_av": p.get("satt_av"), "gruppe": grp, "bevis": evidence(kid)})
-        f = rows[-1]["forslag"] or rows[-1]["pinne"]
+        # rekkefølge i regionen: «posisjon» i triagen, så anslått posisjon, så resten; lav prioritet sist
+        grp = 0 if t.get("status") == "posisjon" else 1 if k.get("coord_confidence") == "estimated" else 2
+        if k.get("prioritet") == "lav":
+            grp = 3
+        f = p.get("spot") or k["pin_liste"]
         e, n = UTM33.transform(f["lon"], f["lat"])
-        rows[-1]["utm33"] = {"e": round(e), "n": round(n)}
-    rows.sort(key=lambda r: (r["gruppe"], r["region"] or "", r["id"]))
+        rows.append({"id": kid, "navn": k["name"], "region": k.get("region"), "kommune": k.get("kommune"), "type": k["hint"].get("break_type"),
+                     "pinne": k["pin_liste"], "forslag": f, "sikkerhet": p.get("sikkerhet"), "metode": p.get("metode"),
+                     "satt_av": p.get("satt_av"), "vurdering": p.get("vurdering"), "triage": t.get("status"),
+                     "coord_confidence": k.get("coord_confidence"), "vern": k.get("vern_merknad"),
+                     "flagg": (t.get("osm") or {}).get("hvorfor", []), "gruppe": grp,
+                     "alternativer": p.get("alternativer", []), "andre_forslag": p.get("forslag", []),
+                     "bevis": evidence(kid), "utm33": {"e": round(e), "n": round(n)}})
+    ri = lambda r: regs.index(r) if r in regs else len(regs)
+    rows.sort(key=lambda r: (ri(r["region"]), r["gruppe"], r["navn"]))
     return rows
+
+
+VERN = ROOT / "data" / "kandidater" / "vern.json"
+VERN_VARSEL_M = 200
+
+
+def vern_sjekk(kid, lat, lon):
+    """Ligger posisjonen i (eller innen 200 m av) et verneområde der forskriften har ferdsels- eller surfeforbud
+    for sjø/strand? Bruker Naturbase-geometrien som er mellomlagret i privat/ (tools/kandidat_vern.py)."""
+    from shapely.geometry import Point, shape
+    raw = BEVIS / "vern" / f"naturbase_{kid}.json"
+    if not raw.exists() or not VERN.exists():
+        return None
+    forbud = {h["navn"]: h["restriksjoner"] for h in json.loads(VERN.read_text(encoding="utf-8")).get("kandidater", {}).get(kid, [])
+              if any(r.get("type") in ("ferdselsforbud", "surfeforbud") and r.get("gjelder") in ("sjø", "strand", "begge")
+                     and not r.get("stedsbundet") for r in h.get("restriksjoner") or [])}
+    if not forbud:
+        return None
+    x, y = UTM33.transform(lon, lat)
+    out = []
+    for f in json.loads(raw.read_text(encoding="utf-8")).get("features", []):
+        navn = f["properties"].get("offisieltNavn") or f["properties"].get("navn")
+        if navn in forbud and f.get("geometry"):
+            d = shape(f["geometry"]).distance(Point(x, y))
+            if d <= VERN_VARSEL_M:
+                out.append(f"{'INNE I' if d == 0 else f'{d:.0f} m fra'} {navn} - vurder forbudet på nytt (data/kandidater/vern_vurdering.json)")
+    return "; ".join(out) or None
 
 
 def save(body):
@@ -98,16 +137,22 @@ def save(body):
     if body.get("lat") is not None and body.get("lon") is not None:
         new = {"lat": round(float(body["lat"]), 6), "lon": round(float(body["lon"]), 6)}
         if new != p.get("spot"):
-            p.setdefault("forslag_claude", p.get("spot"))
+            p.setdefault("startpunkt", p.get("spot"))
             p["spot"] = new
-            p["metode"] = "flyttet av Theodor i koordinatsjekk"
+            p["metode"] = body.get("kilde") or "flyttet av Theodor i koordinatsjekk"
     p["vurdering"] = {"G": "godkjent", "U": "usikker", "A": "avvist"}[body["valg"]]
+    p["sikkerhet"] = {"G": "godkjent", "U": "usikker", "A": "avvist"}[body["valg"]]
     p["satt_av"] = "theodor"
     p["dato"] = dt.datetime.now().astimezone().isoformat(timespec="minutes")
     if body.get("notat"):
         p["notat_theodor"] = str(body["notat"])[:500]
+    varsel = vern_sjekk(body["id"], p["spot"]["lat"], p["spot"]["lon"])
+    if varsel:
+        p["vern_varsel"] = varsel
+    else:
+        p.pop("vern_varsel", None)
     POS.write_text(json.dumps(pos, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    return True
+    return varsel or True
 
 
 class H(BaseHTTPRequestHandler):
@@ -136,10 +181,10 @@ class H(BaseHTTPRequestHandler):
             return self._send(404, "ikke funnet", "text/plain")
         n = int(self.headers.get("Content-Length") or 0)
         try:
-            ok = save(json.loads(self.rfile.read(n)))
+            r = save(json.loads(self.rfile.read(n)))
         except (ValueError, KeyError):
-            ok = False
-        self._send(200 if ok else 400, json.dumps({"ok": ok}), "application/json")
+            r = False
+        self._send(200 if r else 400, json.dumps({"ok": bool(r), "vern_varsel": r if isinstance(r, str) else None}, ensure_ascii=False), "application/json")
 
     def log_message(self, *a):
         pass
@@ -147,6 +192,6 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     if not POS.exists():
-        sys.exit(f"Mangler {POS} - kjør python3 tools/koordinatjakt.py først")
+        sys.exit(f"Mangler {POS} - kjør python3 tools/lag_posisjoner.py først")
     print(f"Koordinatsjekk: http://127.0.0.1:{PORT}/  (Ctrl-C for å stoppe; vurderingene lagres i {POS.relative_to(ROOT)})")
     ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()

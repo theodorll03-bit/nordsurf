@@ -11303,7 +11303,7 @@
   "fjern-z": {
    "id": "fjern-z",
    "name": "Fjern-z",
-   "region": null,
+   "region": "Hordaland",
    "status_liste": "kandidat",
    "best_swell_dir_grader": 202.5,
    "osm": {
@@ -13160,7 +13160,7 @@
    "id": "regestranda",
    "name": "Regestranda",
    "region": "Jæren",
-   "status_liste": "kandidat",
+   "status_liste": "hemmelig",
    "best_swell_dir_grader": null,
    "osm": {
     "paa_land": true,
@@ -15390,7 +15390,7 @@
    "id": "secret-revtangen",
    "name": "Secret (Revtangen)",
    "region": "Jæren",
-   "status_liste": "kandidat",
+   "status_liste": "hemmelig",
    "best_swell_dir_grader": 157.5,
    "osm": {
     "paa_land": false,
