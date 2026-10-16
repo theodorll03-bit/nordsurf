@@ -30,8 +30,9 @@ def docs_hash():
     utenom docs/data/ (ferske varseldata, uendret av PWA-shell-cachen),
     docs/design/ (skjermbilder og designnotater fra designrundene, ikke en
     del av appen - lagt til 09.10.2026, designrunde 1, fordi nettlesertesten
-    skriver dem på nytt ved hver kjøring) og sw.js selv (ville vært
-    sirkulært - fila kan ikke hashe sin egen verdi)."""
+    skriver dem på nytt ved hver kjøring). sw.js tas med uten sin egen
+    CACHE-verdi (den kan ikke hashe seg selv), så SHELL- og logikkendringer
+    også gir nytt navn."""
     h = hashlib.sha256()
     files = [
         p.relative_to(DOCS) for p in DOCS.rglob("*")
@@ -40,6 +41,10 @@ def docs_hash():
     for rel in sorted(files, key=str):
         h.update(str(rel).encode("utf-8"))
         h.update((DOCS / rel).read_bytes())
+    # 16.10.2026: sw.js selv også, med CACHE-linja nøytralisert - ellers endres ikke CACHE når bare
+    # SHELL-lista eller logikken i sw.js endres (PR #17: SHELL rettet, men samme navn som før)
+    h.update(b"sw.js")
+    h.update(CACHE_ANY_RE.sub('const CACHE = "nordsurf-";', SW.read_text(encoding="utf-8")).encode("utf-8"))
     return h.hexdigest()[:12]
 
 
