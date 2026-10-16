@@ -175,7 +175,10 @@ def main():
             # ---- 3. tema live ----
             before = page.evaluate("window.__kart.getPaintProperty('hav', 'background-color')")
             page.emulate_media(color_scheme="dark")
-            page.wait_for_timeout(200)
+            try:
+                page.wait_for_function("String(window.__kart.getPaintProperty('hav', 'background-color')).toUpperCase() === '#0A1923'")
+            except Exception:
+                pass
             after = page.evaluate("window.__kart.getPaintProperty('hav', 'background-color')")
             assert before.upper() == "#B7D3DF" and after.upper() == "#0A1923", (before, after)
             print(f"3: havfargen følger systemtemaet live ({before} → {after}) - OK")

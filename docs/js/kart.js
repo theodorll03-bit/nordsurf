@@ -54,7 +54,9 @@
     };
   }
   function applyColors(){
-    if(!map || !map.isStyleLoaded()) return;
+    if(!map) return;
+    // isStyleLoaded() er usann mens fliser lastes - prøv igjen når kartet er ferdig, ellers blir et temabytte borte
+    if(!map.isStyleLoaded()){ map.once("idle", applyColors); return; }
     const c = colors();
     map.setPaintProperty("hav", "background-color", c.sea);
     for(const id of ["land-lav", "kjerne-lav", "land-hoy"]) map.setPaintProperty(id, "fill-color", c.land);
