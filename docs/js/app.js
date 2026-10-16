@@ -218,7 +218,8 @@ function starsSVG(solid, faded, big){
   let out = "";
   for(let i=0;i<5;i++){
     const cls = i<solid ? "st" : i<solid+faded ? "st f" : "st e";
-    out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" d="${STAR_PATH}"/></svg>`;
+    // pathLength 100: stiplingen på tapte stjerner (.st.f) fordeles likt rundt hele stjerna i alle størrelser (Theodor 16.10)
+    out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" pathLength="100" d="${STAR_PATH}"/></svg>`;
   }
   return `<span class="stars${big?" big":""} r-${Math.min(5,solid||0)}" role="img" aria-label="${STR.starsAria(solid, faded)}">${out}</span>`;
 }
