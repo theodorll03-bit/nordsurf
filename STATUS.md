@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - I GANG
+## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
 
 | Punkt | Status | Gren / PR |
 |---|---|---|
@@ -8,7 +8,7 @@
 | 2. #15 rettelser a-d + test_kart_browser i CI | **ferdig, merget** (kontrollør GODKJENT). a: kysten fra OSM-kystlinjer, land klippet med ramme større enn maxBounds, test av alle fire kanter på z4-z12; b: lappene unngår kildemerket, brikkene og knappene; c: regionbrikker fra spots.json (feilen lå i testdataene, appen var riktig); d: maks zoom 12, ROADMAP S3 om finere kyst rundt spotene senere. Filer: norge-oversikt.pmtiles 1,12 MB (precachet), norge-detalj.pmtiles 33,1 MB (range). **CI bruker 30 fps / 3 s** (programvare-GPU på 2 kjerner målte 44 fps og 1,9 s); kravene 50 fps / 2 s sjekkes bare lokalt (62-63 fps, 0,85-0,88 s + 1,2 s WebGL-oppsett i emulert GPU) - **2 s på telefon er ikke bevist før Theodor har målt**. Live 16.10: kartet tegnes i WebKit og Chromium; range på .pmtiles gir riktige byte (Pages gzipper når klienten ber om det, men både Chromium og WebKit sender identity ved Range - sjekket). | s3/maplibre, #15 |
 | 3.1 Regioner + Hordaland | ferdig (Øygarden → Hordaland, 0 uten region) | kandidater/posisjoner, #16 |
 | 3.2 secret-revtangen, regestranda «hemmelig»; vetvika lav prioritet | ferdig - **se spørsmålet under om det offentlige repoet** | #16 |
-| 3.3 Forbud-visning | Hjem, tabell, søk og spotsiden ferdig på #18 («Surfing forbudt nå» + «1. okt–31. mars, fuglefredning», linje om forbudet utenfor perioden, ikke i Beste økt, testet); Utforsk-kartet og klyngefargen bygges når #15 er merget | #18 |
+| 3.3 Forbud-visning | **ferdig** på #18: i forbudsperioden «Surfing forbudt nå» + «1. okt–31. mars, fuglefredning» i stedet for stjerner og ord overalt (Hjem, tabell, søk, Utforsk-kort/-liste/-markører, spotsiden inkl. langtidsvarsel og dagfaner), aldri i Beste økt, farger ikke klyngen; utenfor perioden vises spoten vanlig med en linje om forbudet. Bare visning. Kontrollør: rettet → testet. | #18 |
 | 3.4 facing ±150 m langs kysten, offshore ±45 | ferdig: 5 av 8 (de samme fem som før, men mye tettere: Grøtfjord 1,5°, Tromvik 0,7°, Russelv 0,7°, Steinkrøssa 6,7°, Unstad 3,1°); utenfor: Ersfjordstranda 21°, Lenangsøyra 34° (ventet), Farstadsanden 61° (nålen i hjørnet av en buet strand - fabrikken varsler nå slike). Kontrollør: godkjent etter to tekstrettelser | spotfabrikken, #18 |
 | 3.5 posisjoner.json med listepinner, gjennomgangsside, importer_forslag.py | ferdig: 105 kandidater (listepinne, «ikke sjekket»), 386 alternative markører (OSM-strand, stedsnavn); siden region for region (Lofoten 17, Vesterålen 9 først) med teller; vernvarsel ved lagring i/nær forbudsområde; godkjenninger slettes aldri. Kontrollør: rettet → testet | #16 |
 | 4. Tidevannssted | **Stemmer:** bygg_spot.py gir nøyaktig samme referansested, forsinkelse og faktor som henterens eget oppslag (spotens posisjon, datatype=tab, 16 døgn) for alle 8 - Andenes (Grøtfjord, Tromvik, Ersfjordstranda, Steinkrøssa, Unstad), Hammerfest (Russelv, Lenangsøyra), Kristiansund (Farstadsanden). Andenes er Kartverkets eget referansested for de posisjonene. Ingen feil i bygg_spot.py. | - |
