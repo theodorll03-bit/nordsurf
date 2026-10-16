@@ -1,20 +1,63 @@
 # Nordsurf: status
 
+## #22 Lofoten og Vesterålen - 20 spots lagt inn som «forelopig» på grenen, IKKE klar for Theodors ja ennå (16.10 ca. 11Z)
+
+**Gjort (punkt 9a-c, 10e):** rettingene fra Claudes gjennomgang (horseid facing 305 + offshore [80,170] + nytt snitt → BarentsWatch 400 m/9,5 m; eggum-ost-steinstrand låner Eggums punkt; g-frame snitt til 3 km → 1 400 m/6,0 m; høyder for soppelplassen, unstad-left, unstad-right, g-frame - alle merket «forslag fra Claude 16.10, ukalibrert»). godkjenn_spot.py for 14 godkjent + 6 rettet = 20 nye (status «forelopig», kilde «liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10»). rorvika og flakstad-beach-kirkesiden «parkert». Regionene: Troms, Vesterålen, Lofoten, Møre og Romsdal. Grenen bygger på main etter S6 (#21). Alle tester grønne, test_display_only grønn (de 8 gamle urørt); kallregnskap 30 spots: Open-Meteo døgn 8 %, minutt 18 %. Skjermbilder: docs/design/region/lofoten-vesteralen/ (Hjem med Lofoten, Utforsk Lofoten og Vesterålen, Bleik og Unstad Left med «Foreløpig»), tatt med prøvevarselet (ny workflow provehent.yml: henter på grenen, ingen commit/publisering).
+
+**Fysikk-kontrollør på hele #22: IKKE GODKJENT** - ikke kodefeil, men facing/BarentsWatch-punkt som gir systematisk retningsstraff (BarentsWatch-retningen i valgt punkt mot rating.spot_direction_factor). **Må avgjøres i Claudes gjennomgang (felt på CLAUDE.md sin ja-liste - jeg har ikke endret dem selv):**
+1. **g-frame:** punktet 1 400 m (6,0 m) ligger i et grunnfelt (1 700-1 800 m er 2-3 m dypt; Hs 1,2 m der mot 3,2-3,7 m 1 900-2 800 m ut; retningsfaktor ca. 0,40). Forslag: 1 900 m (9,9 m dyp, første punkt utenfor siste grunne).
+2. **eggum-ost-steinstrand:** Eggums punkt ligger 1 458 m unna (ikke ca. 500 m), og BarentsWatch-retningen der (268-314) er 57-103° fra facing 11,5 → faktor nesten 0. Trenger eget snitt langs 11,5° eller annen facing.
+3. **unstad-right:** facing 238,9 (kanten av vinduet [237,332]); punktet 700 m ut i Unstad-bukta har bølger fra 288-310 → faktor ca. 0,16; offshore-vind [14,104] gjør S/SSV-vinden som var offshore på alle Unstad-observasjonene til «onshore». Strandnormal er feil mål for et point/reef - forslag: facing etter bølgeretningen ved breaket (ca. 290-300) og offshore-sektor som Unstad.
+4. **unstad-left:** facing 334,4 mot BarentsWatch 276-289 → faktor ca. 0,52; vil rates langt under Unstad på dager som 28.09.
+5. **soppelplassen:** facing 344,4 mot 282-315 → faktor ca. 0,67 (mildere, samme mønster).
+6. Mindre: **haukland** facing 225 ligger 27° utenfor vinduet [252,276] (retningen ved punktet er likevel 1,0; Hs stiger fortsatt utover); **ramberg** facing 287,7 9° utenfor [297,348] (faktor 0,78 - ca. 310-315 ville passet); **horseid** 305 er 3° utenfor [308,4]. De 11 andre: faktor 0,78-1,0, i orden.
+7. **Unstad mot nabospotene:** i prøvevarselet får Unstad 1,7 m i dag og 1,8 m (3★) i morgen, mens unstad-left/right får 3,9-5,2 m. Trolig fordi de nye spotene har BarentsWatch-punkt utenfor brytesonen (snittregelen 15.10) mens Unstads punkt ligger nær land (skyggemodusen undersøker nettopp dette - ROADMAP N). Bør avklares før merge, ellers viser appen to helt ulike høyder for samme bukt.
+
+**Første varsel (prøvehenting 16.10 kl. 10Z; beste time i dagslys i dag / i morgen, norsk tid):** dagen er preget av sterk vind (12-16 m/s) og stort svell (3-6 m) - mange «Blåst ut».
+
+| Spot | Region | I dag | I morgen |
+|---|---|---|---|
+| Bleik | Vesterålen | 0★ Blåst ut, 4,6-5,9 m | 0★ Blåst ut, 4,9-6,2 m |
+| Ducks | Vesterålen | 0★ Blåst ut, 3,9-4,9 m | 0★ Blåst ut, 4,7-5,9 m |
+| G-frame | Vesterålen | 0★ Blåst ut, 0,9-1,1 m | 0★ Blåst ut, 0,8-0,9 m |
+| Høyvika | Vesterålen | 0★ Blåst ut, 4,1-5,2 m | 0★ Blåst ut, 4,0-5,1 m |
+| Stave | Vesterålen | 0★ Blåst ut, 3,5-4,5 m | 0★ Blåst ut, 3,8-4,8 m |
+| The Frog | Vesterålen | 0★ Blåst ut, 2,9-3,7 m | 3★ kl. 09, 1,7-2,2 m |
+| Bunes | Lofoten | 0★ Blåst ut, 2,8-3,6 m | 0★ Blåst ut, 4,7-6,0 m |
+| Eggum | Lofoten | 0★ Blåst ut, 3,9-5,0 m | 0★ Blåst ut, 4,6-5,8 m |
+| Eggum øst | Lofoten | 0★ Treffer ikke | 0★ Blåst ut, 4,9-6,3 m |
+| Haukland | Lofoten | 2★ kl. 13, 1,6-2,0 m | 4★ kl. 09, 1,4-1,8 m |
+| Horseid | Lofoten | 1★ Blåst ut, 2,1-2,7 m | 1★ Blåst ut, 3,2-4,1 m |
+| Kvalnes | Lofoten | 0★ Treffer ikke | 1★ kl. 11, 3,8-4,9 m |
+| Kvalvika | Lofoten | 0★ Blåst ut, 4,6-5,9 m | 0★ Blåst ut, 4,7-6,0 m |
+| Ramberg | Lofoten | 0★ Flatt | 2★ kl. 09, 3,1-4,0 m |
+| Skagsanden | Lofoten | 2★ kl. 17, 1,8-2,2 m | 1★ Blåst ut, 3,4-4,3 m |
+| Søppelplassen | Lofoten | 1★ Blåst ut, 4,0-5,1 m | 2★ kl. 09, 4,1-5,2 m |
+| Unstad Left | Lofoten | 1★ Blåst ut, 3,9-4,9 m | 2★ kl. 08, 3,9-5,0 m |
+| Unstad Right | Lofoten | 0★ Blåst ut, 3,8-4,8 m | 2★ kl. 09, 4,1-5,2 m |
+| Utakleiv | Lofoten | 0★ Blåst ut, 2,5-3,2 m | 1★ Blåst ut, 3,4-4,3 m |
+| Vikten | Lofoten | 0★ Blåst ut, 3,5-4,5 m | 0★ Blåst ut, 3,9-4,9 m |
+| *Unstad (eksisterende)* | Lofoten | 1★ Blåst ut, 1,7 m | 3★, 1,8 m |
+
+Til sammenligning samme kjøring: Grøtfjord 0★ Blåst ut / 2★ 1,6 m; Farstadsanden 2★ 2,3 m / 1★ Blåst ut 2,3 m. Ramberg «Flatt» i dag med 3-4 m i morgen og Eggum øst «Treffer ikke» med 4,9-6,3 m i morgen henger trolig sammen med svellretningen (vest i dag); bør ses på i gjennomgangen sammen med punktene over.
+
+**Neste:** Claude avgjør punkt 1-7 (privat/kandidater/bygg_godkjent_claude.csv på nytt, eller en ny csv med rettinger) → jeg retter, kjører snitt i Actions, ny prøvehenting og kontrollør → da er #22 klar for Theodors ja.
+
 ## KLAR FOR CLAUDES GJENNOMGANG (16.10): Lofoten og Vesterålen, 22 bygde spots - PR #22 (utkast)
 
 Gren `region/lofoten-vesteralen`. Samletabell: `data/kandidater/bygget/lofoten-vesteralen.md`; minikart: `data/kandidater/bygget/<id>.png`; gjennomgangssiden (minikart ved siden av posisjonen): `git checkout region/lofoten-vesteralen && python3 tools/koordinatsjekk/server.py` → http://127.0.0.1:8765/. Neste: Claude skriver `privat/kandidater/bygg_godkjent_claude.csv` (id, beslutning godkjent/rett/avvis, kommentar) → godkjenn_spot.py for de godkjente (rettinger fra kommentaren først) → Theodor ja/nei til merge. Flagget: eggum-ost-steinstrand, g-frame, horseid, rorvika (BarentsWatch uten punkt), flakstad-beach-kirkesiden (ingen fri linje til åpent hav); høyder må settes for g-frame, soppelplassen, unstad-left, unstad-right.
 
-## Svar på rapporten 16.10 formiddag (punkt 1-8) - FERDIG; venter: #20, #21 (ja), #22 (Claudes gjennomgang)
+## Svar på rapporten 16.10 formiddag (punkt 1-10) - #17, #20, #21 merget og sjekket live (nye CACHE-navn 435fb4b1147a → 8012f75c2662, ferskt varsel); #22 venter på Claudes avgjørelser (over)
 
 | Punkt | Status | Gren / PR |
 |---|---|---|
 | 1a Driftsregel i CLAUDE.md | ferdig (main) | - |
-| 1b Vakthund (ntfy ved varsel > 7 t eller to feilede «Hent varsel» på rad, maks ett per 6 t) | PR åpen, kontrollør GODKJENT - **venter på ja** | drift/vakthund, #20 |
+| 1b Vakthund | **merget (#20)**: GitHub-issue «Varselet står stille» (åpne/kommentere/lukke; testet ekte som issue #23), ntfy bare hvis NTFY_TOPIC finnes. Kontrollør: IKKE GODKJENT (lukket uten bevis ved API-feil) → rettet → merget | #20 |
 | 1c Banner ved gammelt varsel | Svar: **nei** - banneret fantes bare på Hjem, så 15.-16.10 viste Utforsk og spotsiden bare «–». Rettet i #20: «Varselet er N timer gammelt …» på Hjem, Utforsk og spotsiden, og eget banner når varselet har eldre format enn appen. | #20 |
 | 2 Hemmelige ut av git (NB 16.10: koordinatene sto også i en kommentar jeg skrev i test_kandidater.py - fjernet, testen fant det) | **ferdig, merget i #16**: kjennes igjen på hash, ligger bare i privat/kandidater/hemmelige.json; fetcher/test_kandidater.py (CI) feiler på status «hemmelig», id/navn og (lokalt) koordinatene. Historikken er ikke skrevet om. | #16 |
 | 3 PR #16 | **merget**: 26 flyfoto-forslag (4 A, 17 B, 5 C) importert; vernesjekk med Naturbase rundt hvert forslag (Eggum 277 m, Eggum øst 427 m, The Frog 626 m utenfor - triage.md); gjennomgangssiden forhåndsvelger forslaget og viser sikkerhet/begrunnelse og fabrikkens minikart | #16 |
 | 4 PR #18 | **merget**: godkjent posisjon påkrevd (Theodor eller Claude delegert), flagg krever --overstyr, BarentsWatch-valg med kjent dybde, test_spotfabrikk.py. Kontrollør: IKKE GODKJENT → rettet. Forbudssjekken gjorde Utforsk tregere i CI - rettet før merge | #18 |
-| 5 S6 | kontrollør GODKJENT (etter to rettelser: feilet region vises som «mangler», hemmelige spots holdes ute av offentlige artifacts) - **venter på ja**. Byte for byte likt med sekvensiell; Open-Meteo må tempobegrenses før ca. 80 spots | s6/region-matrise, #21 |
+| 5 S6 | **merget (#21)** og kjørt i produksjon 16.10 kl. 11Z: forjobb, region (Troms, Møre og Romsdal, Lofoten), samle og publiser grønne; live-siden ferskt varsel. Open-Meteo må tempobegrenses før ca. 80 spots | #21 |
 | 7/8 Lofoten og Vesterålen | **klar for Claudes gjennomgang** (øverst) - 22 bygget, BarentsWatch-punkt for 17 | region/lofoten-vesteralen, #22 (utkast) |
 
 ## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
