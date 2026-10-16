@@ -187,6 +187,20 @@ def main():
     assert len(ov100["spots"]) == 100 and len(de100) == 100 and len(ov100["regions"]) >= 8
     assert gz100 < 60 * 1024, f"oversikten med 100 spots er {gz100 / 1024:.1f} KiB gzip (grense 60)"
     print(f"10: 100 syntetiske spots i {len(ov100['regions'])} regioner: oversikt.json {gz100 / 1024:.1f} KiB gzip ({len(raw100) // 1024} KiB rå) - under 60 KiB - OK")
+
+    # 11. tidevannskortets foretrukne vannstand (Theodor 16.10.2026): samme regel og terskler som ratingen
+    import math
+    import tide as tidemod
+    assert details["farstadsanden"]["tide_regel"]["prefer"] == ["lav", "middels"] and details["unstad"]["tide_regel"] is None
+    tr = publish.tide_terskler()
+    t0 = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+    ev = [{"time": t0.isoformat(), "type": "fjære"}, {"time": (t0 + dt.timedelta(hours=6)).isoformat(), "type": "flo"}]
+    for k in range(1, 360):   # hvert minutt fra fjære til flo: nivået mot tersklene gir samme ord som tide.state_at
+        lv = (1 - math.cos(math.pi * k / 360)) / 2
+        want = tidemod.state_at(ev, t0 + dt.timedelta(minutes=k))["state"]
+        got = "lav" if lv < tr["lav_maks"] - 1e-4 else "høy" if lv > tr["hoy_min"] + 1e-4 else "middels" if tr["lav_maks"] + 1e-4 < lv < tr["hoy_min"] - 1e-4 else want
+        assert got == want, (k, lv, got, want, tr)
+    print(f"11: tide_regel i detaljfila (Farstadsanden lav+middels, Unstad ingen) med tersklene fra tide.state_at {tr} - OK")
     print("Alle tester ok")
 
 
