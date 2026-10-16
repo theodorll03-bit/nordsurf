@@ -8,7 +8,7 @@ som GitHub Pages (fetcher/testserver.py), fast klokke.
       WebGL-oppsettet i SwiftShader (ca. 1,2 s i headless uansett CPU - se kommentaren i testen);
    b. panorering og zoom (easeTo, 1 s hver) minst 50 bilder per sekund (requestAnimationFrame);
    c. klyngene oppdateres på under 100 ms ved dagbytte (kart.js måler draw() i dataset.ms).
-2. Samhandling: ingen rotasjon eller tilt (bearing/pitch 0 etter forsøk), zoom 4-14, maxBounds rundt
+2. Samhandling: ingen rotasjon eller tilt (bearing/pitch 0 etter forsøk), zoom 4-12, maxBounds rundt
    Norge, trykk på en klynge zoomer inn, regionene i sør er vanlige brikker (ingen «↓»-brikker).
 3. Tema følger systemet live: bytte prefers-color-scheme uten omlasting endrer havfargen i kartet.
 4. Uten nett (service worker): kartet åpnes og oversiktsflisene tegnes; detaljfliser som er sett
@@ -61,8 +61,9 @@ def _watchdog():
 
 
 def bodies(n=None):
-    fc = FORECAST
-    regions_cfg = json.loads((ROOT / "spots.json").read_text(encoding="utf-8")).get("regions")
+    # de 8 ekte: regions_cfg=None, så publish henter region (og rekkefølgen) fra spots.json som i produksjonen
+    # (16.10: med regions_cfg sendt inn falt regionen tilbake til område - brikkene ble Kvaløya/Lyngen/Senja)
+    fc, regions_cfg = FORECAST, None
     if n:
         fc, regions_cfg = synthetic_spots.make(FORECAST, n)
     overview, details = publish.split(fc, regions_cfg=regions_cfg)
@@ -154,7 +155,7 @@ def main():
             m = page.evaluate("""() => { const m = window.__kart; m.setBearing(40); m.setPitch(50);
                 return {b: m.getBearing(), p: m.getPitch(), rot: m.dragRotate.isEnabled(), min: m.getMinZoom(), max: m.getMaxZoom(), mb: m.getMaxBounds().toArray()}; }""")
             # setBearing via API er lov for koden, men brukeren skal ikke kunne rotere: dra/klyp/tastatur er av
-            assert m["p"] == 0 and not m["rot"] and m["min"] == 4 and m["max"] == 14, m
+            assert m["p"] == 0 and not m["rot"] and m["min"] == 4 and m["max"] == 12, m   # maks zoom 12: det detaljflisene har detaljer for (Theodor 16.10)
             page.evaluate("window.__kart.setBearing(0)")
             page.keyboard.press("Shift+ArrowLeft")
             assert abs(page.evaluate("window.__kart.getBearing()")) < 1e-6, "tastaturet roterer kartet"
@@ -165,7 +166,7 @@ def main():
             assert kl, "fant ingen klynge å trykke på"
             kl.click()
             page.wait_for_function(f"window.__kart.getZoom() > {z0 + 0.5} && !window.__kart.isMoving()")
-            print(f"2: ingen rotasjon/tilt, zoom 4-14, maxBounds rundt Norge, ingen «↓»-brikker, klynge zoomer inn ({z0:.1f} → {page.evaluate('window.__kart.getZoom()'):.1f}) - OK")
+            print(f"2: ingen rotasjon/tilt, zoom 4-12, maxBounds rundt Norge, ingen «↓»-brikker, klynge zoomer inn ({z0:.1f} → {page.evaluate('window.__kart.getZoom()'):.1f}) - OK")
 
             # ---- 3. tema live ----
             before = page.evaluate("window.__kart.getPaintProperty('hav', 'background-color')")
@@ -210,6 +211,42 @@ def main():
             ctx.set_offline(False)
             ctx.close()
 
+            # ---- 4b. kanten (Theodor 16.10: landet stoppet i en loddrett strek i øst) ----
+            # dataene er klippet mot en ramme STØRRE enn maxBounds, og kysten er OSM-linjer: ved alle fire kanter av
+            # maxBounds og på zoom 4-12 skal ingen kyststrek ligge langs rammen, og i øst skal det være land helt ut
+            ctx, page = new_page((1440, 900))
+            route_data(page, ov8, det8)
+            page.goto(base + "#utforsk")
+            page.wait_for_function(READY_JS)
+            FRAME = (-1.0, 55.0, 36.0, 73.5)
+            edges = {"vest": (1.6, 62.0), "øst": (33.4, 69.2), "sør": (9.0, 56.9), "nord": (25.0, 71.7)}
+            checked = 0
+            for name, (lon, lat) in edges.items():
+                for z in (4, 6, 8, 10, 12):
+                    page.evaluate(f"window.__kart.jumpTo({{center: [{lon}, {lat}], zoom: {z}}})")
+                    page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
+                    # (1) ingen segment langs dagens dataramme; (2) generelt: ingen helt loddrett/vannrett kyststrek over 64 px
+                    # på skjermen (en klippekant, uansett hvor rammen ligger - slik den gamle kanten ved 33° Ø så ut; korte
+                    # akserette biter finnes naturlig fordi flisekoordinatene er heltall)
+                    on_frame = page.evaluate("""(F) => { const near = (a, b) => Math.abs(a - b) < 1e-3; let n = 0;
+                        const px = (a, b) => { const p = window.__kart.project(a), q = window.__kart.project(b); return Math.hypot(p.x - q.x, p.y - q.y); };
+                        for(const f of window.__kart.queryRenderedFeatures({layers: ['kyst-lav', 'kyst-hoy']})){
+                          const g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+                          for(const l of lines) for(let i = 1; i < l.length; i++){ const [a, b] = [l[i-1], l[i]];
+                            if((near(a[0], F[0]) && near(b[0], F[0])) || (near(a[0], F[2]) && near(b[0], F[2])) || (near(a[1], F[1]) && near(b[1], F[1])) || (near(a[1], F[3]) && near(b[1], F[3]))) n++;
+                            else if((Math.abs(a[0] - b[0]) < 1e-6 || Math.abs(a[1] - b[1]) < 1e-6) && px(a, b) > 64) n++; } }
+                        return n; }""", list(FRAME))
+                    assert on_frame == 0, f"kyststrek langs datarammen ved {name}-kanten, zoom {z}: {on_frame} segmenter"
+                    checked += 1
+            # øst: kartets høyre kant (34° Ø) ved 69° N er land (Russland) - fylt, ikke en strek
+            page.evaluate("window.__kart.jumpTo({center: [33.0, 69.0], zoom: 6})")
+            page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
+            x_edge = page.evaluate("window.__kart.project([33.95, 69.0]).x")
+            land_e = page.evaluate(f"window.__kart.queryRenderedFeatures([{x_edge}, window.__kart.project([33.95, 69.0]).y], {{layers: ['land-lav', 'land-hoy']}}).length")
+            assert land_e > 0, "ikke land helt ut i østkanten (34° Ø, 69° N)"
+            print(f"4b: ingen kyststrek langs datarammen ved fire kanter × fem zoomnivåer ({checked} sjekker), land helt ut i øst - OK")
+            ctx.close()
+
             # ---- 5. skjermbilder (varselets 8 spots) ----
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
                 for scheme, sname in (("light", "lys"), ("dark", "mork")):
@@ -222,8 +259,24 @@ def main():
                         page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
                         page.wait_for_timeout(250)
                         page.screenshot(path=str(SHOT_DIR / f"{name}_{label}_{sname}.png"))
+                    # brikkene er regionene fra spots.json i rekkefølgen der (nord til sør), aldri område
+                    chips = page.evaluate("[...document.querySelectorAll('#utforskChips [data-view]')].map(b => b.textContent.trim())")
+                    want = [r["name"] for r in json.loads(ov8)["regions"]]
+                    assert chips == want + ["Hele kartet"], (chips, want)
                     page.click("#utforskChips [data-view='']")
                     shot("hele-kysten")
+                    # ingen lapp oppå kildemerket, tids-/regionbrikkene eller andre knapper over kartet
+                    bad = page.evaluate("""() => { const pills = [...document.querySelectorAll('#markersLayer .mk-pill')].map(e => e.getBoundingClientRect());
+                        const obs = [...document.querySelectorAll('.maplibregl-ctrl-attrib, #utforskChips .chip, #dagChips .chip, #viewUtforsk button:not(.mk):not(.klynge)')]
+                            .filter(e => !e.closest('#markersLayer')).map(e => [e.className || e.id, e.getBoundingClientRect()]).filter(([, r]) => r.width && r.height);
+                        const out = []; for(const p of pills) for(const [n, r] of obs)
+                            if(p.left < r.right - 1 && p.right > r.left + 1 && p.top < r.bottom - 1 && p.bottom > r.top + 1) out.push(n); return out; }""")
+                    assert not bad, f"lapp over {bad} ({label}, {sname})"
+                    # ingen spot-prikk under kildemerket i «Hele kartet»
+                    under = page.evaluate("""() => { const a = document.querySelector('.maplibregl-ctrl-attrib').getBoundingClientRect();
+                        return [...document.querySelectorAll('#markersLayer .mk-dot, #markersLayer .klynge .ring')].map(e => e.getBoundingClientRect())
+                          .filter(r => r.left < a.right && r.right > a.left && r.top < a.bottom && r.bottom > a.top).length; }""")
+                    assert under == 0, f"{under} prikker under kildemerket ({label}, {sname})"
                     page.click("#utforskChips [data-view='Lofoten']")
                     shot("region-lofoten")
                     page.evaluate("window.__kart.jumpTo({center: [13.585, 68.268], zoom: 13})")
@@ -233,6 +286,7 @@ def main():
                         mk.click()
                     shot("spot-unstad")
                     ctx.close()
+            print("5b: Utforsk-brikkene er regionene (nord til sør), ingen lapp over kildemerket/brikkene/knappene - OK")
             print(f"5: {len(list(SHOT_DIR.glob('*.png')))} skjermbilder i {SHOT_DIR.relative_to(ROOT)} - OK")
             browser.close()
     finally:

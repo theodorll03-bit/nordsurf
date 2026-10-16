@@ -5,7 +5,7 @@
    (docs/vendor/, selvhostet) med land og kyst for hele Norge fra docs/geo/norge-*.pmtiles
    (tools/lag_kartfliser.py, OpenStreetMap, ODbL). MapLibre tegner bare land/hav/kyst - merker,
    klynger, lapper og kort er HTML over kartet som før (ingen tekst i kartstilen, ingen glyph-filer).
-   Ingen rotasjon eller tilt; maxBounds rundt Norge, zoom 4-14; fargene følger systemtemaet live.
+   Ingen rotasjon eller tilt; maxBounds rundt Norge, zoom 4-12 (MAX_ZOOM); fargene følger systemtemaet live.
 
    Merker: prikk + lapp «Navn Ord», lappen prøver høyre, venstre, over og under - er det ikke
    plass, bare prikken. Klynging: merker nærmere hverandre enn CLUSTER_PX på skjermen slås
@@ -17,7 +17,11 @@
 (function(){
   const CLUSTER_PX = 48, PH = 28, GAP = 12;
   const BOUNDS = [[1.0, 56.3], [34.0, 72.3]];          // maxBounds: fastlands-Norge med luft
-  const COVER = {s: 56.8, w: 2.0, n: 71.8, e: 33.0};     // flisene dekker dette (tools/lag_kartfliser.py)
+  // flisene dekker mer enn maxBounds (tools/lag_kartfliser.py, ramme -1..36 Ø, 55..73,5 N), så hele det synlige kartet har land
+  const COVER = {s: BOUNDS[0][1], w: BOUNDS[0][0], n: BOUNDS[1][1], e: BOUNDS[1][0]};
+  // Theodor 16.10: kysten er grov helt inne på en spot. Detaljflisene går til z12 (forenklet til en halv piksel der) -
+  // over z12 forstørres de bare, så maks zoom settes dit dataene faktisk har detaljer. Finere kyst rundt spotene: ROADMAP S3.
+  const MAX_ZOOM = 12;
   const OVERSIKT_MAX = 7;                                 // norge-oversikt.pmtiles z0-7, norge-detalj.pmtiles z8+
   const merc = (lat)=> Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
   const esc = (s)=> String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -39,9 +43,10 @@
       },
       layers: [
         {id: "hav", type: "background", paint: {"background-color": c.sea}},
-        // oversikten (precachet) til og med z7; detaljen fra z8 (hentes og mellomlagres ved bruk). Den grove
-        // oversikten kan ikke ligge under detaljen på høy zoom - den dekker sjø nær kysten.
+        // oversikten (precachet) til og med z7. Fra z8: detaljflisene finnes bare der det er kyst innen 1 km; inne på land
+        // fyller oversiktens «kjerne» (landet krympet 600 m innover, tools/lag_kartfliser.py) - den når aldri ut i sjøen.
         {id: "land-lav", type: "fill", source: "lav", "source-layer": "land", maxzoom: OVERSIKT_MAX + 1, paint: {"fill-color": c.land}},
+        {id: "kjerne-lav", type: "fill", source: "lav", "source-layer": "kjerne", minzoom: OVERSIKT_MAX + 1, paint: {"fill-color": c.land}},
         {id: "land-hoy", type: "fill", source: "hoy", "source-layer": "land", minzoom: OVERSIKT_MAX + 1, paint: {"fill-color": c.land}},
         {id: "kyst-lav", type: "line", source: "lav", "source-layer": "kyst", maxzoom: OVERSIKT_MAX + 1, paint: {"line-color": c.coast, "line-width": 1}},
         {id: "kyst-hoy", type: "line", source: "hoy", "source-layer": "kyst", minzoom: OVERSIKT_MAX + 1, paint: {"line-color": c.coast, "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 1.6]}},
@@ -52,7 +57,7 @@
     if(!map || !map.isStyleLoaded()) return;
     const c = colors();
     map.setPaintProperty("hav", "background-color", c.sea);
-    for(const id of ["land-lav", "land-hoy"]) map.setPaintProperty(id, "fill-color", c.land);
+    for(const id of ["land-lav", "kjerne-lav", "land-hoy"]) map.setPaintProperty(id, "fill-color", c.land);
     for(const id of ["kyst-lav", "kyst-hoy"]) map.setPaintProperty(id, "line-color", c.coast);
   }
   // MapLibre (1 MB) og PMTiles lastes først når Utforsk åpnes - Hjem skal ikke vente på dem
@@ -85,7 +90,7 @@
       const tGl = performance.now();
       map = new maplibregl.Map({
         container: root.querySelector("#mlKart"), style: style(), bounds: [[4, 57.5], [31.5, 71.3]],
-        maxBounds: BOUNDS, minZoom: 4, maxZoom: 14, maxPitch: 0, pitchWithRotate: false, dragRotate: false, touchPitch: false,
+        maxBounds: BOUNDS, minZoom: 4, maxZoom: MAX_ZOOM, maxPitch: 0, pitchWithRotate: false, dragRotate: false, touchPitch: false,
         renderWorldCopies: false, attributionControl: false, fadeDuration: 0, keyboard: true,
       });
       window.__kartOppsettMs = performance.now() - tGl;   // WebGL-kontekst og shadere (testene skiller dette ut)
@@ -105,13 +110,15 @@
     setExtent(ext, animate){
       if(!map) return;
       const W = root.clientWidth || 390, Hh = root.clientHeight || 600, pad = Math.min(60, area.w * 0.08);
-      const padding = {top: area.y + pad, bottom: Math.max(pad, Hh - (area.y + area.h) + pad), left: area.x + pad, right: Math.max(pad, W - (area.x + area.w) + pad)};
-      map.fitBounds([[ext[1], ext[0]], [ext[3], ext[2]]], {padding, duration: animate && !reduced() ? 700 : 0, maxZoom: 13});
+      // ekstra luft nederst til kildemerket (© OpenStreetMap-bidragsytere), så ingen spot havner under det
+      const attr = root.querySelector(".maplibregl-ctrl-bottom-left"), aH = attr ? attr.getBoundingClientRect().height : 30;
+      const padding = {top: area.y + pad, bottom: Math.max(pad, Hh - (area.y + area.h) + pad) + aH, left: area.x + pad, right: Math.max(pad, W - (area.x + area.w) + pad)};
+      map.fitBounds([[ext[1], ext[0]], [ext[3], ext[2]]], {padding, duration: animate && !reduced() ? 700 : 0, maxZoom: MAX_ZOOM});
     },
     toScreen(lat, lon){ if(!map) return {x: -1e4, y: -1e4}; const p = map.project([lon, lat]); return {x: p.x, y: p.y}; },
     extent(){ if(!map) return null; const b = map.getBounds(); return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]; },
     resize(){ if(map) map.resize(); },
-    zoomIn(lat, lon){ if(map) map.easeTo({center: [lon, lat], zoom: Math.min(14, map.getZoom() + 2), duration: reduced() ? 0 : 500}); },
+    zoomIn(lat, lon){ if(map) map.easeTo({center: [lon, lat], zoom: Math.min(MAX_ZOOM, map.getZoom() + 2), duration: reduced() ? 0 : 500}); },
     drawCoast(){ /* MapLibre tegner kysten selv (flisene) */ },
     thumbSvg(points, colorOf){
       if(!coast || !thumbProj) return "";
@@ -160,14 +167,28 @@
     }
     return groups;
   }
+  const OVERLAY_SEL = ".maplibregl-ctrl-attrib, .maplibregl-ctrl, #viewUtforsk button, #viewUtforsk a, #viewUtforsk [data-kart-hinder]";
+  function overlays(){
+    // boksene (i markørlagets koordinater, med 4 px luft) til alt som ligger over kartet og ikke er merker/klynger
+    const base = markersEl.getBoundingClientRect(), out = [];
+    for(const e of document.querySelectorAll(OVERLAY_SEL)){
+      if(markersEl.contains(e)) continue;
+      const r = e.getBoundingClientRect();
+      if(!r.width || !r.height || r.right <= base.left || r.left >= base.right || r.bottom <= base.top || r.top >= base.bottom) continue;
+      out.push({x: r.left - base.left - 4, y: r.top - base.top - 4, w: r.width + 8, h: r.height + 8});
+    }
+    return out;
+  }
   function draw(){
     if(!markersEl) return;
     const t0 = performance.now();
     const groups = clusters();
     const html = [];
     const placed = [];   // lapper plassert, til kollisjonssjekk
-    // hindre for lappene: prikker (14 px) og klyngeringer (34 px)
+    // hindre for lappene: prikker (14 px) og klyngeringer (34 px), og det som ligger over kartet - kildemerket,
+    // tids- og regionbrikkene og andre knapper (Theodor 16.10: kildemerket kolliderte med Farstadsanden-lappen på PC)
     const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 17, y: g.y - 17, w: 34, h: 34} : {x: g.x - 7, y: g.y - 7, w: 14, h: 14});
+    dots.push(...overlays());
     const hit = (r)=> placed.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y) || dots.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
     // valgt først (beholder lappen), så flest stjerner
     const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.st||0)));
