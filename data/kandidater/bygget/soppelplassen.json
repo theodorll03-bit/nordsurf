@@ -1,0 +1,161 @@
+{
+ "spot": {
+  "id": "soppelplassen",
+  "name": "Søppelplassen",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Lofoten",
+  "spot": {
+   "lat": 68.265958,
+   "lon": 13.558251
+  },
+  "facing": 294.8,
+  "swell_window": [
+   262,
+   6
+  ],
+  "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[262, 6]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   70,
+   209
+  ],
+  "_offshore_vind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
+  "offshore": {
+   "lat": 68.3351,
+   "lon": 13.3663
+  },
+  "_havpunkt": "Langs midten av vinduet (314.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 68.269442,
+   "lon": 13.555641
+  },
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
+  "tidevann": {
+   "name": "Andenes",
+   "code": "ANX",
+   "delay": "-5",
+   "factor": "1.01",
+   "obsname": "Andenes"
+  },
+  "ideal_height": [
+   1.5,
+   3.5
+  ],
+  "max_height": 5.0,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+  "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+  "_rettet": {
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
+   "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+   "offshore_wind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta"
+  }
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 68.265958,
+   "lon": 13.558251,
+   "dybde_m": 2.3
+  },
+  {
+   "m": 100,
+   "lat": 68.266829,
+   "lon": 13.557599,
+   "dybde_m": 3.6
+  },
+  {
+   "m": 200,
+   "lat": 68.2677,
+   "lon": 13.556946,
+   "dybde_m": 3.9
+  },
+  {
+   "m": 300,
+   "lat": 68.268571,
+   "lon": 13.556294,
+   "dybde_m": 4.6
+  },
+  {
+   "m": 400,
+   "lat": 68.269442,
+   "lon": 13.555641,
+   "dybde_m": 10.1
+  },
+  {
+   "m": 500,
+   "lat": 68.270313,
+   "lon": 13.554989,
+   "dybde_m": 14.1
+  },
+  {
+   "m": 600,
+   "lat": 68.271185,
+   "lon": 13.554337,
+   "dybde_m": 15.5
+  },
+  {
+   "m": 700,
+   "lat": 68.272056,
+   "lon": 13.553684,
+   "dybde_m": 16.5
+  },
+  {
+   "m": 800,
+   "lat": 68.272927,
+   "lon": 13.553032,
+   "dybde_m": 17.7
+  },
+  {
+   "m": 900,
+   "lat": 68.273798,
+   "lon": 13.55238,
+   "dybde_m": 17.7
+  },
+  {
+   "m": 1000,
+   "lat": 68.274669,
+   "lon": 13.551727,
+   "dybde_m": 18.6
+  },
+  {
+   "m": 1100,
+   "lat": 68.27554,
+   "lon": 13.551075,
+   "dybde_m": 20.3
+  },
+  {
+   "m": 1200,
+   "lat": 68.276411,
+   "lon": 13.550422,
+   "dybde_m": 20.8
+  },
+  {
+   "m": 1300,
+   "lat": 68.277282,
+   "lon": 13.54977,
+   "dybde_m": 19.5
+  },
+  {
+   "m": 1400,
+   "lat": 68.278153,
+   "lon": 13.549118,
+   "dybde_m": 17.9
+  },
+  {
+   "m": 1500,
+   "lat": 68.279024,
+   "lon": 13.548465,
+   "dybde_m": 18.5
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-10-16T09:48+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
+  "lat": 68.265958,
+  "lon": 13.558251
+ },
+ "rettet": "2026-10-16"
+}

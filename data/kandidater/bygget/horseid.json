@@ -1,0 +1,159 @@
+{
+ "spot": {
+  "id": "horseid",
+  "name": "Horseid",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Lofoten",
+  "spot": {
+   "lat": 68.02655,
+   "lon": 12.986765
+  },
+  "facing": 305.0,
+  "swell_window": [
+   308,
+   4
+  ],
+  "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[308, 4]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   80,
+   170
+  ],
+  "_offshore_vind": "forslag fra Claude 16.10, ukalibrert",
+  "offshore": {
+   "lat": 68.1505,
+   "lon": 12.8403
+  },
+  "_havpunkt": "Langs midten av vinduet (336.0°), 15 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 68.028625,
+   "lon": 12.978899
+  },
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T1029_kandidater.json), regelen fra 15.10: snitt 400m@305.0, 400 m ut, dybde 9,5 m, Hs 4,16 m kl. 2026-10-17T00:00Z.",
+  "tidevann": {
+   "name": "Andenes",
+   "code": "ANX",
+   "delay": "-10",
+   "factor": "1.05",
+   "obsname": "Andenes"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_rettet": {
+   "facing": "forslag fra Claude 16.10, ukalibrert",
+   "offshore_wind": "forslag fra Claude 16.10, ukalibrert",
+   "barentswatch_point": "nytt snitt langs 305.0° (forslag fra Claude 16.10, ukalibrert)"
+  },
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1029_kandidater.json"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 68.02655,
+   "lon": 12.986765,
+   "dybde_m": 0.1
+  },
+  {
+   "m": 100,
+   "lat": 68.027069,
+   "lon": 12.984798,
+   "dybde_m": 3.0
+  },
+  {
+   "m": 200,
+   "lat": 68.027587,
+   "lon": 12.982832,
+   "dybde_m": 5.8
+  },
+  {
+   "m": 300,
+   "lat": 68.028106,
+   "lon": 12.980865,
+   "dybde_m": 6.4
+  },
+  {
+   "m": 400,
+   "lat": 68.028625,
+   "lon": 12.978899,
+   "dybde_m": 9.5
+  },
+  {
+   "m": 500,
+   "lat": 68.029144,
+   "lon": 12.976932,
+   "dybde_m": 9.4
+  },
+  {
+   "m": 600,
+   "lat": 68.029662,
+   "lon": 12.974965,
+   "dybde_m": 11.7
+  },
+  {
+   "m": 700,
+   "lat": 68.030181,
+   "lon": 12.972999,
+   "dybde_m": 12.1
+  },
+  {
+   "m": 800,
+   "lat": 68.0307,
+   "lon": 12.971032,
+   "dybde_m": 15.9
+  },
+  {
+   "m": 900,
+   "lat": 68.031219,
+   "lon": 12.969066,
+   "dybde_m": 17.2
+  },
+  {
+   "m": 1000,
+   "lat": 68.031737,
+   "lon": 12.967099,
+   "dybde_m": 21.7
+  },
+  {
+   "m": 1100,
+   "lat": 68.032256,
+   "lon": 12.965132,
+   "dybde_m": 22.7
+  },
+  {
+   "m": 1200,
+   "lat": 68.032775,
+   "lon": 12.963166,
+   "dybde_m": 25.4
+  },
+  {
+   "m": 1300,
+   "lat": 68.033294,
+   "lon": 12.961199,
+   "dybde_m": 26.7
+  },
+  {
+   "m": 1400,
+   "lat": 68.033812,
+   "lon": 12.959233,
+   "dybde_m": 29.0
+  },
+  {
+   "m": 1500,
+   "lat": 68.034331,
+   "lon": 12.957266,
+   "dybde_m": 29.0
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-10-16T09:49+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
+  "lat": 68.02655,
+  "lon": 12.986765
+ },
+ "rettet": "2026-10-16"
+}

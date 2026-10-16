@@ -2,8 +2,9 @@
   "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten). 26.09.2026: ideal_height og max_height er SURFEHØYDE (høyden der bølgene brekker, se rating.breaking_height) for alle spots, ikke Hs - Tromsø-spotene beholder samme tall som før ([0.8,2.0]/3.5), bare tolkningen er ny; Unstad er justert opp ([1.5,3.5]/5.5, tåler mer).",
   "regions": [
     {"name": "Troms", "order": 1},
-    {"name": "Lofoten", "order": 2},
-    {"name": "Møre og Romsdal", "order": 3}
+    {"name": "Vesterålen", "order": 2},
+    {"name": "Lofoten", "order": 3},
+    {"name": "Møre og Romsdal", "order": 4}
   ],
   "_regions": "15.10.2026 (Tillegg 2): regionnavn og rekkefølge for Hjem/Utforsk/søk - ingen hardkodede lister i JS. Hver spot har «region» (og valgfritt «aliases» for søk). Kartutsnittet per region regnes av publish.py: rammen rundt spotene i regionen pluss margin.",
   "spots": [
@@ -408,6 +409,820 @@
       "_havpunkt": "63,0526/6,9402 (Theodors egen beregning), 13 km ut, retning 305 grader - check_spot.py foreslår uavhengig 63,0534/6,9415 (13 km, 306 grader), praktisk talt identisk. Bekreftet utenfor land (GSHHS) og at Open-Meteo Marine gir ekte svelldata der (120 timer, GFS Wave/standardmodell).",
       "_barentswatch": "06.10.2026: barentswatch_point VALGT MANUELT AV THEODOR direkte i BarentsWatch sitt eget kart (oppgitt som 62°59,12781′N 7°08,99530′Ø, regnet om til desimalgrader her - en tidligere oppgitt koordinat, 62°59,16027′N 7°08,82452′Ø, ble korrigert av Theodor samme dag) - ca. 58 m fra DENNE pinnen i retning 307 grader (egen geodesiberegning), nesten rett ut langs facing, IKKE beregnet med pt()-formelen som ellers brukes i dette prosjektet. barentswatch_point_near er fortsatt det beregnede 150 m-punktet (310 grader, samme metode som andre spots), beholdt til sammenligning. Et tredje kandidatpunkt, 500 m ut i retning 310 (62,988060/7,143264), tas med i workflowen 'Finn BarentsWatch-punkt' sammen med de to andre - ingen av de tre er valgt som DET endelige punktet ennå, det avgjøres når ekte BarentsWatch-tall er hentet for alle tre (se STATUS.md). Bekreftet utenfor land (GSHHS) for alle tre. https://www.barentswatch.no/bolgevarsel/point/7.149922_62.985464 (manuelt valgt), https://www.barentswatch.no/bolgevarsel/point/7.148566_62.986025 (150 m), https://www.barentswatch.no/bolgevarsel/point/7.143264_62.98806 (500 m). 15.10.2026 (Theodors ja): barentswatch_point FLYTTET til snittpunktet 900 m@310 (62.990385/7.137204, 8,8 m dyp - EMODnet) etter regelen i oppgaven (første punkt utover der Hs har flatet ut (<10 % per 100 m), retning innenfor 30° av svellet ute, dybde >= 8 m, på vann). Det gamle punktet (62.985464/7.149922, 58 m fra pinnen, 0,1 m dyp) lå i brytesonen: 15.10 kl. 14 ga det 0,85 m mens 900 m ga 2,55 m og observasjonen var hodehøyt til godt over hodet. Hvorfor det gamle punktet: ikke snappet av API-et (requested = chosen_point i alle søk) - Theodor rettet selv 06.10 fra 62.986005/7.147075 til 62.985464/7.149922 (se over). Snittet: data/bw_point_search/snitt_2026-10-15.md. barentswatch_point_near uendret. FORBEHOLD (fysikk-kontrollør 15.10.2026, Theodors beslutning samme dag: behold 900 m): Hs fortsetter å øke til 3,8 m ved 1 200-1 500 m (15-24 m dyp) - 900 m er «første punkt på det indre platået med EMODnet-dybde >= 8 m», ikke der Hs har flatet ut; modellens bunn (hustadvika3x2v) og EMODnet er ikke samme bunn; valget er gjort med observasjonen 15.10 i hånden, og ÉN logg er ikke nok - neste uavhengige logg (helst en mindre dag) avgjør om punktet og surf_factor stemmer.",
       "_ideal_height": "05.10.2026: eksponert strand/rev (surf-forecast.com) - satt til å tåle mer enn fjordspotene i Tromsø (ideal_height [0.8,2.0]/3.5 der), men mindre enn Unstad (tåler mest av alle, [1.2,3.5]/5.5). Ingen observasjoner ennå til å justere fra. Uendret av pinneflyttingen 06.10.2026."
+    },
+    {
+      "id": "bleik",
+      "name": "Bleik",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 69.280925,
+        "lon": 15.968012
+      },
+      "facing": 299.5,
+      "swell_window": [
+        237,
+        24
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[237, 24]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        74,
+        164
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.3455,
+        "lon": 15.7556
+      },
+      "_havpunkt": "Langs midten av vinduet (310.5°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.284933,
+        "lon": 15.948122
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 900m@299.5, 900 m ut, dybde 10,0 m, Hs 5,58 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Andøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "bunes",
+      "name": "Bunes",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 67.981162,
+        "lon": 12.960482
+      },
+      "facing": 331.9,
+      "swell_window": [
+        271,
+        352
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[271, 352]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        107,
+        197
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.0591,
+        "lon": 12.7272
+      },
+      "_havpunkt": "Langs midten av vinduet (311.5°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 67.985151,
+        "lon": 12.954839
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 500m@331.9, 500 m ut, dybde 9,2 m, Hs 5,04 m kl. 2026-10-17T00:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Moskenes",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "ducks",
+      "name": "Ducks",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 69.067999,
+        "lon": 15.522294
+      },
+      "facing": 323.0,
+      "swell_window": [
+        252,
+        22
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[252, 22]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        98,
+        188
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.1408,
+        "lon": 15.3337
+      },
+      "_havpunkt": "Langs midten av vinduet (317.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.073055,
+        "lon": 15.511701
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@323.0, 700 m ut, dybde 17,6 m, Hs 6,72 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Andøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "eggum",
+      "name": "Eggum",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.310696,
+        "lon": 13.654805
+      },
+      "facing": 330.7,
+      "swell_window": [
+        234,
+        31
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[234, 31]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        106,
+        196
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.3718,
+        "lon": 13.4756
+      },
+      "_havpunkt": "Langs midten av vinduet (312.5°), 10 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.319372,
+        "lon": 13.64172
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 1100m@330.7, 1100 m ut, dybde 13,0 m, Hs 4,54 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "g-frame",
+      "name": "G-frame",
+      "enabled": false,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 68.6389,
+        "lon": 14.427489
+      },
+      "facing": 330.0,
+      "_holdt_tilbake": "Holdt tilbake (Theodors ja 16.10, chat): retningen ved BarentsWatch-punktet 1 900 m ut (251-284° i prøvevarselet 16.10 11Z) ligger 46-79° fra facing 330 → retningsfaktor 0-0,6. Slås på når retningen ved punktet er avklart.",
+      "swell_window": [
+        246,
+        334
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[225, 225], [246, 334]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        105,
+        195
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.6791,
+        "lon": 14.1262
+      },
+      "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.653782,
+        "lon": 14.40406
+      },
+      "_barentswatch": "Flyttet til 1900 m ut i snittet langs 330.0° (dybde 9.9 m) - kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne. Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m.",
+      "ideal_height": [
+        1.0,
+        2.5
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+      "_rettet": {
+        "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+        "barentswatch_point": "1900 m ut (kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne)"
+      },
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1036_kandidater.json",
+      "area": "Bø",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "haukland",
+      "name": "Haukland",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.197515,
+        "lon": 13.525391
+      },
+      "facing": 225.0,
+      "swell_window": [
+        252,
+        276
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[252, 276]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        0,
+        90
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.1729,
+        "lon": 12.9
+      },
+      "_havpunkt": "Langs midten av vinduet (264.0°), 26 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.194957,
+        "lon": 13.51855
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@225.0, 400 m ut, dybde 8,0 m, Hs 1,27 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "horseid",
+      "name": "Horseid",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.02655,
+        "lon": 12.986765
+      },
+      "facing": 305.0,
+      "swell_window": [
+        308,
+        4
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[308, 4]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        80,
+        170
+      ],
+      "_offshore_vind": "forslag fra Claude 16.10, ukalibrert",
+      "offshore": {
+        "lat": 68.1505,
+        "lon": 12.8403
+      },
+      "_havpunkt": "Langs midten av vinduet (336.0°), 15 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.028625,
+        "lon": 12.978899
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T1029_kandidater.json), regelen fra 15.10: snitt 400m@305.0, 400 m ut, dybde 9,5 m, Hs 4,16 m kl. 2026-10-17T00:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_rettet": {
+        "facing": "forslag fra Claude 16.10, ukalibrert",
+        "offshore_wind": "forslag fra Claude 16.10, ukalibrert",
+        "barentswatch_point": "nytt snitt langs 305.0° (forslag fra Claude 16.10, ukalibrert)"
+      },
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1029_kandidater.json",
+      "area": "Moskenes",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "hoyvika",
+      "name": "Høyvika",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 69.233414,
+        "lon": 15.863562
+      },
+      "facing": 261.5,
+      "swell_window": [
+        233,
+        296
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[233, 296]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        36,
+        126
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.223,
+        "lon": 15.5609
+      },
+      "_havpunkt": "Langs midten av vinduet (264.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.232612,
+        "lon": 15.848527
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 600m@261.5, 600 m ut, dybde 8,8 m, Hs 4,50 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Andøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "kvalnes",
+      "name": "Kvalnes",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.344902,
+        "lon": 13.929991
+      },
+      "facing": 346.2,
+      "swell_window": [
+        269,
+        23
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[269, 23]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        121,
+        211
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.4274,
+        "lon": 13.7803
+      },
+      "_havpunkt": "Langs midten av vinduet (326.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.347537,
+        "lon": 13.928249
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 300m@346.2, 300 m ut, dybde 9,9 m, Hs 4,38 m kl. 2026-10-17T00:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "kvalvika",
+      "name": "Kvalvika",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.077201,
+        "lon": 13.092411
+      },
+      "facing": 307.2,
+      "swell_window": [
+        270,
+        348
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[270, 348]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        82,
+        172
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.1512,
+        "lon": 12.8493
+      },
+      "_havpunkt": "Langs midten av vinduet (309.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.080482,
+        "lon": 13.080912
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 600m@307.2, 600 m ut, dybde 12,0 m, Hs 5,45 m kl. 2026-10-17T00:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Moskenes/Flakstad",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "ramberg",
+      "name": "Ramberg",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.097007,
+        "lon": 13.238991
+      },
+      "facing": 287.7,
+      "swell_window": [
+        297,
+        348
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[297, 348]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        63,
+        153
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.2046,
+        "lon": 13.0191
+      },
+      "_havpunkt": "Langs midten av vinduet (322.5°), 15 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.099482,
+        "lon": 13.218344
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 900m@287.7, 900 m ut, dybde 9,6 m, Hs 3,22 m kl. 2026-10-17T03:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Flakstad",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "skagsanden",
+      "name": "Skagsanden",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.10708,
+        "lon": 13.290916
+      },
+      "facing": 319.2,
+      "swell_window": [
+        280,
+        4
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[280, 4]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        94,
+        184
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.2069,
+        "lon": 13.0833
+      },
+      "_havpunkt": "Langs midten av vinduet (322.0°), 14 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.110503,
+        "lon": 13.283045
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 500m@319.2, 500 m ut, dybde 9,3 m, Hs 3,59 m kl. 2026-10-17T03:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Flakstad",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "soppelplassen",
+      "name": "Søppelplassen",
+      "enabled": false,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.265958,
+        "lon": 13.558251
+      },
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
+      "swell_window": [
+        262,
+        6
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[262, 6]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        70,
+        209
+      ],
+      "_offshore_vind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
+      "offshore": {
+        "lat": 68.3351,
+        "lon": 13.3663
+      },
+      "_havpunkt": "Langs midten av vinduet (314.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.269442,
+        "lon": 13.555641
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 400m@344.4, 400 m ut, dybde 10,1 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: reef på sørvestsiden av Unstad-bukta - bølgene ved punktet kom fra 282-315°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
+      "ideal_height": [
+        1.5,
+        3.5
+      ],
+      "max_height": 5.0,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+      "_rettet": {
+        "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+        "offshore_wind": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet; offshore [70,209]: geometrisk offshore for 294,8 (70-160) pluss land bak i sør som før (til 209) - S/SSV-kanaliseringen fra Unstad-observasjonene (til 232) er ikke overført til denne siden av bukta"
+      },
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "stave",
+      "name": "Stave",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 69.205654,
+        "lon": 15.856756
+      },
+      "facing": 266.4,
+      "swell_window": [
+        237,
+        342
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[237, 342]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        41,
+        131
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.2419,
+        "lon": 15.5705
+      },
+      "_havpunkt": "Langs midten av vinduet (289.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.205143,
+        "lon": 15.834028
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 900m@266.4, 900 m ut, dybde 8,1 m, Hs 3,60 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Andøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "the-frog",
+      "name": "The Frog",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Vesterålen",
+      "spot": {
+        "lat": 68.757033,
+        "lon": 14.469888
+      },
+      "facing": 250.0,
+      "swell_window": [
+        220,
+        275
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[220, 275]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        25,
+        115
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.7051,
+        "lon": 14.1263
+      },
+      "_havpunkt": "Langs midten av vinduet (247.5°), 15 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.756414,
+        "lon": 14.465228
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 200m@250.0, 200 m ut, dybde 9,3 m, Hs 2,97 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Bø",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "unstad-left",
+      "name": "Unstad Left",
+      "enabled": false,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.267948,
+        "lon": 13.575772
+      },
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
+      "swell_window": [
+        257,
+        344
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[257, 344]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        70,
+        232
+      ],
+      "_offshore_vind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (samme dal bak)",
+      "offshore": {
+        "lat": 68.323,
+        "lon": 13.3249
+      },
+      "_havpunkt": "Langs midten av vinduet (300.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.273657,
+        "lon": 13.568434
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 285.0°: point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
+      "ideal_height": [
+        1.5,
+        3.5
+      ],
+      "max_height": 5.0,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+      "_rettet": {
+        "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+        "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (samme dal bak)"
+      },
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "unstad-right",
+      "name": "Unstad Right",
+      "enabled": false,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.273399,
+        "lon": 13.57749
+      },
+      "facing": 294.8,
+      "_holdt_tilbake": "Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad.",
+      "swell_window": [
+        237,
+        332
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[237, 332]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        70,
+        232
+      ],
+      "_offshore_vind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)",
+      "offshore": {
+        "lat": 68.3006,
+        "lon": 13.2956
+      },
+      "_havpunkt": "Langs midten av vinduet (284.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.270129,
+        "lon": 13.562945
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@238.9, 700 m ut, dybde 8,6 m, Hs 4,87 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 300.0°: point/reef på nordøstsiden av Unstad-bukta - strandnormalen 238,9 var feil mål; punktet 700 m ut ligger der bølgene kommer inn (288-310° i prøvevarselet). Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
+      "ideal_height": [
+        1.2,
+        3.0
+      ],
+      "max_height": 4.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+      "_rettet": {
+        "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+        "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet",
+        "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+        "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (S/SSV offshore på alle fem Unstad-observasjonene)"
+      },
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "utakleiv",
+      "name": "Utakleiv",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.21318,
+        "lon": 13.503398
+      },
+      "facing": 292.4,
+      "swell_window": [
+        245,
+        6
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[245, 6]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        67,
+        157
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.2762,
+        "lon": 13.2669
+      },
+      "_havpunkt": "Langs midten av vinduet (305.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.214214,
+        "lon": 13.496685
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 300m@292.4, 300 m ut, dybde 10,0 m, Hs 2,82 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Vestvågøy",
+      "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "vikten",
+      "name": "Vikten",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Lofoten",
+      "spot": {
+        "lat": 68.140622,
+        "lon": 13.310596
+      },
+      "facing": 278.5,
+      "swell_window": [
+        254,
+        2
+      ],
+      "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 2]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        54,
+        144
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 68.2074,
+        "lon": 13.0825
+      },
+      "_havpunkt": "Langs midten av vinduet (308.0°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 68.141023,
+        "lon": 13.303437
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 300m@278.5, 300 m ut, dybde 9,5 m, Hs 3,43 m kl. 2026-10-16T06:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken + Claude-gjennomgang 16.10",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+      "area": "Flakstad",
+      "forelopig_fra": "2026-10-16"
     }
   ]
 }

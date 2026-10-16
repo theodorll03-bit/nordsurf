@@ -43,6 +43,7 @@ HEMMELIGE_FIL = PRIVAT / "kandidater" / "hemmelige.json"
 LAV_PRIORITET = {"vetvika"}
 VENTER_PA_SVAR = {}
 VURDERING = {}
+STATUS_OVERSTYRING = {}
 
 # lista sitt id → spots.json sin id for de 8 vi har fra før (røres ikke)
 KJENTE = {"unstad-beach": "unstad"}
@@ -108,7 +109,9 @@ def main():
     if len(hidden) != 1:
         sys.exit(f"Forventet nøyaktig én hemmelig spot i lista, fant {len(hidden)} - sjekk utelukkelsen før import")
     spots_cfg = {s["id"]: s for s in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]}
-    global VURDERING
+    global VURDERING, STATUS_OVERSTYRING
+    sf = ROOT / "data" / "kandidater" / "status_overstyring.json"
+    STATUS_OVERSTYRING = json.loads(sf.read_text(encoding="utf-8"))["kandidater"] if sf.exists() else {}
     vf = ROOT / "data" / "kandidater" / "vern_vurdering.json"
     VURDERING = json.loads(vf.read_text(encoding="utf-8"))["kandidater"] if vf.exists() else {}
 
@@ -139,6 +142,10 @@ def main():
         }
         if s["id"] in LAV_PRIORITET:
             rec["prioritet"] = "lav"
+        so = STATUS_OVERSTYRING.get(s["id"])
+        if so and rec["status"] == "kandidat":   # f.eks. «parkert» fra gjennomgangen (16.10)
+            rec["status"] = so["status"]
+            rec["status_begrunnelse"] = so.get("begrunnelse")
         vv = VURDERING.get(s["id"])
         if vv:   # Theodor 16.10: bølgen i verneområdet → «forbudt»; ellers en linje om verneområdet
             if vv.get("status") == "forbudt" and rec["status"] == "kandidat":

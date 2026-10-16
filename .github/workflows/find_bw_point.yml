@@ -15,6 +15,10 @@ on:
         description: "Spots fra spotfabrikken (data/kandidater/bygget/<id>.json, komma) - ROADMAP K del C"
         required: false
         default: ""
+      maks_m:
+        description: "Snittets lengde i meter (standard 1500)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -37,6 +41,7 @@ jobs:
         env:
           BW_SEARCH_SPOTS: ${{ inputs.spots }}
           BW_SEARCH_KANDIDATER: ${{ inputs.kandidater }}
+          BW_SEARCH_MAX_M: ${{ inputs.maks_m }}
           UA_CONTACT: ${{ secrets.UA_CONTACT }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
@@ -47,4 +52,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/bw_point_search/
           git diff --cached --quiet || git commit -m "Finn BarentsWatch-punkt: nytt søk"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true   # to kjøringer samtidig på samme gren (16.10)
           git push

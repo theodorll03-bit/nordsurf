@@ -57,7 +57,7 @@ def pt(lat, lon, bearing, d):
 # utover tyder på at punktet ligger inne i brytesonen). Farstadsanden får i
 # tillegg dagens punkt og _near (legges til av grid_points), Theodors
 # opprinnelige punkt 62.986005/7.147075 og nålen 62.98688/7.14407.
-TRANSECT_DISTS_M = list(range(0, 1501, 100))
+TRANSECT_DISTS_M = list(range(0, int(os.environ.get("BW_SEARCH_MAX_M") or 1500) + 1, 100))   # 16.10: kan forlenges (G-frame til 3 km)
 TRANSECTS = {
     "farstadsanden": {
         "bearing": 310,
