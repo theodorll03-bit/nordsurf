@@ -5,6 +5,9 @@ name: Prøvehenting (gren)
 # ALDRI og publiserer ALDRI (ingen Pages, ingen læringsdata) - bare til gjennomgang og skjermbilder.
 on:
   workflow_dispatch:
+  push:
+    branches: ["region/**"]     # en ny region skal ha et ekte prøvevarsel før merge
+    paths: ["spots.json", ".github/workflows/provehent.yml"]
 
 permissions:
   contents: read
