@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-089d76771f7c";
+const CACHE = "nordsurf-435fb4b1147a";
 const TILES = CACHE + "-fliser";   // detaljflisene (range-biter), eget tak - byttes sammen med CACHE
 const TILES_MAX_ENTRIES = 600;      // ca. 600 range-biter à 1-60 KB: under ca. 15 MB
 // S3 (16.10.2026): listen hadde to filer som ikke finnes (css/kart.css, js/front.js) - da feiler

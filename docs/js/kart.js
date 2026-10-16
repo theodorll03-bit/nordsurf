@@ -196,7 +196,8 @@
     const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.st||0)));
     for(const {g} of order){
       if(g.members.length > 1){
-        const best = g.members.reduce((a, b)=> (b.v.st||0) > (a.v.st||0) ? b : a);
+        // ved likhet foretrekkes et medlem som ikke er forbudt (aria-teksten «beste …»); fargen er uansett beste st
+        const best = g.members.reduce((a, b)=> (b.v.st||0) > (a.v.st||0) || ((b.v.st||0) === (a.v.st||0) && a.v.forbud && !b.v.forbud) ? b : a);
         const ids = g.members.map(m=>m.p.id).join(",");
         html.push(`<button type="button" class="klynge r-${Math.min(5, best.v.st||0)}" style="transform:translate3d(${(g.x-22).toFixed(1)}px,${(g.y-22).toFixed(1)}px,0)" data-ids="${esc(ids)}" aria-label="${esc(`${g.members.length} spots, beste ${best.v.word || "–"}. Zoom inn`)}"><span class="ring"><b>${g.members.length}</b></span></button>`);
         continue;

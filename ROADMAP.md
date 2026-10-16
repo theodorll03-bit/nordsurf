@@ -14,7 +14,7 @@ Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det
 
 ### Grunnregler for spot-lista (Del A-C)
 - Lista ligger i privat/kandidater/ (json, csv, xlsx). privat/ i .gitignore FØR alt annet; ingenting under privat/ i git - den har tekst fra andre nettsider og én hemmelig spot.
-- **Den hemmelige spoten i lista skal ikke være med noe sted i repoet, i noen fil, heller ikke som id** (navnet står derfor ikke her heller). secret-revtangen: kandidat med flagg, ikke bygg før Theodor har svart.
+- **Den hemmelige spoten i lista skal ikke være med noe sted i repoet, i noen fil, heller ikke som id** (navnet står derfor ikke her heller). En kandidat merket «secret» i lista: med flagg, ikke bygg før Theodor har svart (16.10: hemmelig, flyttet til privat/).
 - Ingen henting fra Surfline, surf-forecast, Windy eller Breakfinder (heller ikke for å sjekke). Bare egne beregninger og åpne data: Kartverket (CC BY 4.0), OSM (ODbL, kreditering), BarentsWatch, met.no, Naturbase (NLOD).
 - Tekst i appen (beskrivelse, adkomst, farer) skrives av oss senere - ingen tekst fra lista publiseres.
 - Ingenting fra lista publiseres i appen i natt. Ingen spot inn i spots.json i natt.
@@ -56,7 +56,7 @@ Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det
 Lofoten og Vesterålen → Møre og Romsdal og Stad → Finnmark → Troms (resten) → Rogaland (når vernet er avklart) → Dalane og Lista → Sørlandet → Østlandet. Per region: BarentsWatch og WW3 4 km dekker punktene, Kartverket har tidevann. Østlandet: vurder om vindbølgemodellen holder før noe bygges.
 
 ### Når ferdig eller stoppet
-Morgenrapport øverst i STATUS.md: merget, PR-er som venter (lenke + én linje), hva som stoppet og hvorfor, og tre åpne spørsmål: regionnavnene, secret-revtangen, og om forbudsspotene skal vises med «Forbud nå» eller skjules helt.
+Morgenrapport øverst i STATUS.md: merget, PR-er som venter (lenke + én linje), hva som stoppet og hvorfor, og tre åpne spørsmål: regionnavnene, den hemmelige Jæren-kandidaten, og om forbudsspotene skal vises med «Forbud nå» eller skjules helt.
 
 ## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 FERDIG, S2 FERDIG og i drift 14.10.2026 (PR #6), neste er S3
 

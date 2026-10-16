@@ -89,6 +89,7 @@ SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter p�
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
 META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "enabled", "local_rules", "calibration",
+               "forelopig_fra", "restriksjoner",   # ROADMAP K del C.4: «Foreløpig» 14 dager og «Forbud nå» (bare visning)
                "henting_feilet")   # S6: regionjobben feilet - spoten står uten timer («mangler»), aldri 0
 # kalibreringen i oversikten uten de tunge delene (eksponeringskurven 4 KiB og accuracy 1 KiB per spot) -
 # Logger-siden viser transfer/surf-faktor/par for alle spots uten å laste detaljfilene (fysikk-kontrollør
