@@ -20,4 +20,24 @@ assert have == want, (
     f"commit resultatet sammen med de andre docs/-endringene."
 )
 print(f"docs/sw.js sin cache-versjon stemmer med docs/ sitt innhold ({want})")
+
+# S3 (16.10.2026): alle filene i SHELL må finnes - ellers feiler cache.addAll() i install, og en ny
+# sw.js blir aldri tatt i bruk (listen hadde css/kart.css og js/front.js, som ikke fantes).
+import json, re  # noqa: E402
+sw = SW.read_text(encoding="utf-8")
+shell = json.loads("[" + re.search(r"const SHELL = \[(.*?)\];", sw, re.S).group(1).replace("\n", " ") + "]")
+missing = [f for f in shell if f != "./" and not (SW.parent / f).is_file()]
+assert not missing, f"sw.js sin SHELL har filer som ikke finnes i docs/: {missing}"
+print(f"Alle {len(shell)} filene i sw.js sin SHELL finnes")
+# 16.10.2026: forecast.yml kjørte fetcher/test_map_disc.py etter at fila ble pensjonert (PR #7, 15.10) -
+# «Hent varsel» feilet fra 15.10 kl. 19Z til 16.10 uten nytt varsel. Alle skript workflowene kjører må finnes.
+import pathlib, re as _re   # noqa: E402,E401
+_root = SW.parent.parent
+_mangler = []
+for _wf in sorted((_root / ".github" / "workflows").glob("*.yml")):
+    for _f in _re.findall(r"python3? ((?:fetcher|tools)/[\w./-]+\.py)", _wf.read_text(encoding="utf-8")):
+        if not (_root / _f).exists():
+            _mangler.append(f"{_wf.name}: {_f}")
+assert not _mangler, f"workflows kjører skript som ikke finnes: {_mangler}"
+print("Alle skript workflowene kjører finnes - OK")
 print("Alle tester ok")

@@ -256,9 +256,14 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kartkort .primary{width:100%;margin-top:12px}
 .kartkort .lukk{position:absolute;right:8px;top:8px}
 /* kartet og merkene (kart.js): hele merket er én 44 px høy knapp (prikk + lapp), lappen 28 px, «Navn Ord» */
-.map-layer{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
-.map-layer .coast{fill:var(--land);stroke:var(--coast);stroke-width:1.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .markers{position:absolute;inset:0;pointer-events:none}
+/* S3: MapLibre-kartet ligger under merkene; kildehenvisningen (OSM, ODbL) som liten «i»-knapp over dagbrikkene */
+.kart .ml-kart.maplibregl-map,.kart .ml-kart{position:absolute;inset:0;background:var(--sea)}   /* MapLibre-CSS (lastes senere) setter position:relative */
+.ml-kart .maplibregl-canvas:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+#viewUtforsk .maplibregl-ctrl-bottom-left{bottom:calc(var(--nav-h) + 52px + env(safe-area-inset-bottom,0px));left:8px}
+#viewUtforsk .maplibregl-ctrl-attrib{background:var(--glass);color:var(--ink);font-family:var(--body);font-size:0.75rem}
+#viewUtforsk .maplibregl-ctrl-attrib a{color:var(--ink)}
+#viewUtforsk .maplibregl-ctrl-attrib.maplibregl-compact{min-height:28px}
 .mk{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;pointer-events:none;z-index:2}
 /* trykkflatene er prikken (28 px) og lappen (44 px høy via ::before) - ikke hele 44 px-boksen: i tette utsnitt
    (Tromvik/Grøtfjord 10 px fra hverandre) ville naboens boks ellers dekket prikken, og lappene kolliderer aldri */

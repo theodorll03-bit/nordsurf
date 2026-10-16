@@ -37,10 +37,17 @@
     return {st, word:w, miss:false, h, t:h.t, aria:`${s.name}: ${w}${st ? ", " + STR.starsAria(st, 0) : ""}`};
   }
   function regionsHere(){ return (DATA.regions || []).filter(r=> r.extent); }
+  function ensureCoast(){
+    // coast.json (SVG, Nord-Norge) - bare til miniatyren på Hjem (PC); kartet selv er MapLibre (S3)
+    if(coast) return true;
+    coastLoading = coastLoading || fetch("geo/coast.json", {cache:"force-cache"}).then(r=>r.json()).then(c=>{ coast = c; Kart.setCoast(c); if(!(S && S.view==="utforsk") && window.Front) Front.refresh(); }).catch(e=>console.error(e));
+    return false;
+  }
+  let libReady = false, libLoading = null;
   function ensureInit(){
     if(inited) return true;
-    if(!coast){
-      coastLoading = coastLoading || fetch("geo/coast.json", {cache:"force-cache"}).then(r=>r.json()).then(c=>{ coast = c; if(S && S.view==="utforsk") render(S); else if(window.Front) Front.refresh(); }).catch(e=>console.error(e));
+    if(!libReady){
+      libLoading = libLoading || Kart.loadLib().then(()=>{ libReady = true; if(S && S.view==="utforsk") render(S); }).catch(e=>{ libLoading = null; console.error(e); });
       return false;
     }
     Kart.init($("#kart"), coast, DATA.spots, {
@@ -130,8 +137,8 @@
     renderKort(); renderListe();
   }
   function thumb(){
-    if(!ensureInit()) return "";
-    return Kart.thumb((p)=> valueFor(p.s, null).st);
+    if(!ensureCoast()) return "";
+    return Kart.thumb((p)=> valueFor(p.s, null).st, DATA.spots);
   }
   window.addEventListener("resize", ()=>{ if(inited && S && S.view==="utforsk"){ Kart.setArea(area()); const e = viewExtent(); if(e) Kart.setExtent(e, false); } });
   window.Utforsk = { render, thumb, valueFor };

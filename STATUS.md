@@ -1,5 +1,27 @@
 # Nordsurf: status
 
+## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
+
+| Punkt | Status | Gren / PR |
+|---|---|---|
+| 1. #17 sw.js - CACHE-navnet endres ved neste publisering? (oppdatert: live-siden byttet fra 845c929484b0 til 089d76771f7c med gyldig SHELL da #15 ble publisert; #17 er nå bare hash-formelen) | **Rettet:** nei, #17 ga samme navn som live-siden (845c929484b0), fordi hashen utelot sw.js selv. Nå tas sw.js med (CACHE-linja nøytralisert) → 36ed691acc3a; test_docs_cache sjekker at en SHELL-endring gir nytt navn og at SHELL bare har filer som finnes. Kontrollør: GODKJENT. Theodor merger. NB: #15 og #18 må kjøre update_sw_cache.py på nytt etter at #17 er merget (ny hash-formel). | fiks/sw-shell, #17 |
+| 2. #15 rettelser a-d + test_kart_browser i CI | **ferdig, merget** (kontrollør GODKJENT). a: kysten fra OSM-kystlinjer, land klippet med ramme større enn maxBounds, test av alle fire kanter på z4-z12; b: lappene unngår kildemerket, brikkene og knappene; c: regionbrikker fra spots.json (feilen lå i testdataene, appen var riktig); d: maks zoom 12, ROADMAP S3 om finere kyst rundt spotene senere. Filer: norge-oversikt.pmtiles 1,12 MB (precachet), norge-detalj.pmtiles 33,1 MB (range). **CI bruker 30 fps / 3 s** (programvare-GPU på 2 kjerner målte 44 fps og 1,9 s); kravene 50 fps / 2 s sjekkes bare lokalt (62-63 fps, 0,85-0,88 s + 1,2 s WebGL-oppsett i emulert GPU) - **2 s på telefon er ikke bevist før Theodor har målt**. Live 16.10: kartet tegnes i WebKit og Chromium; range på .pmtiles gir riktige byte (Pages gzipper når klienten ber om det, men både Chromium og WebKit sender identity ved Range - sjekket). | s3/maplibre, #15 |
+| 3.1 Regioner + Hordaland | ferdig (Øygarden → Hordaland, 0 uten region) | kandidater/posisjoner, #16 |
+| 3.2 to kandidater «hemmelig» (flyttet til privat/); vetvika lav prioritet | ferdig - **se spørsmålet under om det offentlige repoet** | #16 |
+| 3.3 Forbud-visning | **ferdig** på #18: i forbudsperioden «Surfing forbudt nå» + «1. okt–31. mars, fuglefredning» i stedet for stjerner og ord overalt (Hjem, tabell, søk, Utforsk-kort/-liste/-markører, spotsiden inkl. langtidsvarsel og dagfaner), aldri i Beste økt, farger ikke klyngen; utenfor perioden vises spoten vanlig med en linje om forbudet. Bare visning. Kontrollør: rettet → testet. | #18 |
+| 3.4 facing ±150 m langs kysten, offshore ±45 | ferdig: 5 av 8 (de samme fem som før, men mye tettere: Grøtfjord 1,5°, Tromvik 0,7°, Russelv 0,7°, Steinkrøssa 6,7°, Unstad 3,1°); utenfor: Ersfjordstranda 21°, Lenangsøyra 34° (ventet), Farstadsanden 61° (nålen i hjørnet av en buet strand - fabrikken varsler nå slike). Kontrollør: godkjent etter to tekstrettelser | spotfabrikken, #18 |
+| 3.5 posisjoner.json med listepinner, gjennomgangsside, importer_forslag.py | ferdig: 105 kandidater (listepinne, «ikke sjekket»), 386 alternative markører (OSM-strand, stedsnavn); siden region for region (Lofoten 17, Vesterålen 9 først) med teller; vernvarsel ved lagring i/nær forbudsområde; godkjenninger slettes aldri. Kontrollør: rettet → testet | #16 |
+| 4. Tidevannssted | **Stemmer:** bygg_spot.py gir nøyaktig samme referansested, forsinkelse og faktor som henterens eget oppslag (spotens posisjon, datatype=tab, 16 døgn) for alle 8 - Andenes (Grøtfjord, Tromvik, Ersfjordstranda, Steinkrøssa, Unstad), Hammerfest (Russelv, Lenangsøyra), Kristiansund (Farstadsanden). Andenes er Kartverkets eget referansested for de posisjonene. Ingen feil i bygg_spot.py. | - |
+| 5. NTFY_TOPIC | **Finnes ikke:** ikke som repo-nøkkel, ikke som repo-variabel (`gh variable list`: bare BW_DEBUG), og forecast.yml bruker ikke noe miljø (bare publiser.yml bruker github-pages). Den ekte henterkjøringen 15.10 kl. 15:53Z logget `NTFY_TOPIC:` tom og «Varsler: NTFY_TOPIC er ikke satt, hopper over.» («Varslet: …»-linjene i loggen er fra testene, med mock). **Ingen ntfy-varsler sendes i dag** - verken surfevarsler, driftsvarsler eller «Rått»-varselet - før Theodor legger inn NTFY_TOPIC som repo-nøkkel. | - |
+| 6. Ingen spot bygges | holdt | - |
+| **Driftsfeil funnet:** «Hent varsel» feilet fra 15.10 kl. 19Z | **Rettet og merget (#19):** forecast.yml kjørte fetcher/test_map_disc.py, som ble slettet i PR #7 - ingen nye varsler fra 15.10 kl. 15:53Z til 16.10 ca. 09Z (live-appen viste «–»). Steget fjernet; test_docs_cache sjekker nå at alle skript workflowene kjører finnes. «Hent varsel» startet manuelt: grønn, live-siden har varsel fra 16.10 kl. 08Z i nytt format. Kontrollør: GODKJENT. | fiks/forecast-test, #19 |
+
+**Spørsmål til Theodor (fra kontrolløren):** repoet er offentlig. de to hemmelige kandidatene ligger med listepinnens koordinater i data/kandidater/kandidater.json og triage.json på main siden PR #14 - nå i tillegg merket «hemmelig» (som du ba om). Skal de flyttes ut av repoet til privat/ (gitignored)? Det kan gjøres framover uten å slette noe, men de ligger i git-historikken; å renske historikken krever force-push og sletting - bare med ditt ja.
+
+**Eggum og The Frog (3.3):** kart i data/kandidater/vern/ (tools/vern_kart.py, Naturbase-grensen mot listepinnen). Eggum: reservatet (med sjøstripe) begynner ca. 270 m sørvest for pinnen - bølgen foran pinnen ligger utenfor, men stranda fortsetter mot reservatet. The Frog: reservatet ligger på andre siden av bukta, ca. 580 m - utenfor. Eggum øst: ca. 690 m - utenfor. Alle tre er vanlige kandidater med en linje om reservatet (data/kandidater/vern_vurdering.json → kandidater.json vern_merknad). Vurdert ut fra listepinnen, ikke flyfoto.
+
+**Norgeskart-lenken (3.5):** `https://norgeskart.no/?backgroundLayer=Nibcache_UTM33_EUREF89_v2&lat=<lat>&lon=<lon>&zoom=15&sok=<lat>,<lon>` åpner flyfoto-laget med markør på punktet (parametrene lest fra Norgeskart sin egen kode, testet i nettleser 16.10). Brukes bare som lenke for Theodor - ingen flyfoto hentes automatisk.
+
 ## Morgenrapport 16.10 - nattjobben (ROADMAP K, 116 spots) - FERDIG FOR NATTEN, venter på Theodor
 
 **Merget til main (alle med grønn CI og fysikk-kontrollør):**
@@ -23,7 +45,7 @@
 
 **Spørsmål til deg:**
 1. **Regionnavnene** (forslag: Finnmark, Troms, Vesterålen, Lofoten, Salten, Møre og Romsdal, Stad og Nordfjord, Karmøy, Jæren, Dalane og Lista, Sørlandet, Østlandet). Hordaland/Øygarden passer ikke i noen (står uten region); Kinn/Sunnfjord er lagt i Stad og Nordfjord.
-2. **secret-revtangen:** skal den bygges? (Den ligger i Jærstrendene fuglefredningsområde med surfeforbud 1.10-31.3.) Lista kaller også **vetvika og regestranda** «secret».
+2. **En hemmelig kandidat (Jæren):** skal den bygges? (Den ligger i Jærstrendene fuglefredningsområde med surfeforbud 1.10-31.3.) Lista kaller også **vetvika og én til** «secret».
 3. **Forbudsspotene:** vise med «Forbud nå» (bygget slik i #18, ren visning) eller skjule helt i perioden? For Jæren betyr «Forbud nå» oktober-mars.
 4. (Nytt) **facing for nye spots:** strandas normal eller midten av vinduet? spots.json bruker begge.
 5. (Nytt) **Koordinatene:** listepinnen som utgangspunkt og din gjennomgang med flyfoto i `tools/koordinatsjekk/` - skal jeg lage en posisjoner.json med listepinnene så siden kan brukes?
@@ -34,7 +56,7 @@
 
 **Neste steg for en ny økt:** vent på Theodors svar; ingenting i nattjobben står halvferdig.
 
-**Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og regestranda «secret» - spørsmål til Theodor sammen med secret-revtangen.
+**Notater Del A (detaljer i PR #14):** vern-regelen avviker bevisst fra «alle Naturbase-treff innen 2 km = vern»: 76 av 115 har et verneområde innen 2 km, de fleste uten restriksjoner. Brukt: forbud (ferdsel/surfing) for sjø eller strand ≤ 200 m fra pinnen → vern; 200 m-2 km → sjekk; forskrifter for områder 600 m-2 km unna er ikke lest («vern ikke lest» i triage.md). Derfor 12 vern og flere sjekk enn Claudes kjøring (5 vern, 43 sjekk), og sektorer under 10° gir sjekk. Lista selv kaller også vetvika og én til «secret» - spørsmål til Theodor sammen med en annen hemmelig kandidat.
 
 ## Tillegg 2: appen skal tåle 100+ spots (Theodor 15.10.2026, punkt 4) - gren `skalering/oversikt`, PR åpen, IKKE merget
 

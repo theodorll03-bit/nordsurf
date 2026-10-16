@@ -14,7 +14,7 @@ Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det
 
 ### Grunnregler for spot-lista (Del A-C)
 - Lista ligger i privat/kandidater/ (json, csv, xlsx). privat/ i .gitignore FØR alt annet; ingenting under privat/ i git - den har tekst fra andre nettsider og én hemmelig spot.
-- **Den hemmelige spoten i lista skal ikke være med noe sted i repoet, i noen fil, heller ikke som id** (navnet står derfor ikke her heller). secret-revtangen: kandidat med flagg, ikke bygg før Theodor har svart.
+- **Den hemmelige spoten i lista skal ikke være med noe sted i repoet, i noen fil, heller ikke som id** (navnet står derfor ikke her heller). En kandidat merket «secret» i lista: med flagg, ikke bygg før Theodor har svart (16.10: hemmelig, flyttet til privat/).
 - Ingen henting fra Surfline, surf-forecast, Windy eller Breakfinder (heller ikke for å sjekke). Bare egne beregninger og åpne data: Kartverket (CC BY 4.0), OSM (ODbL, kreditering), BarentsWatch, met.no, Naturbase (NLOD).
 - Tekst i appen (beskrivelse, adkomst, farer) skrives av oss senere - ingen tekst fra lista publiseres.
 - Ingenting fra lista publiseres i appen i natt. Ingen spot inn i spots.json i natt.
@@ -56,7 +56,7 @@ Theodor er borte til 16.10. Jobbes i rekkefølge, uten å vente på svar der det
 Lofoten og Vesterålen → Møre og Romsdal og Stad → Finnmark → Troms (resten) → Rogaland (når vernet er avklart) → Dalane og Lista → Sørlandet → Østlandet. Per region: BarentsWatch og WW3 4 km dekker punktene, Kartverket har tidevann. Østlandet: vurder om vindbølgemodellen holder før noe bygges.
 
 ### Når ferdig eller stoppet
-Morgenrapport øverst i STATUS.md: merget, PR-er som venter (lenke + én linje), hva som stoppet og hvorfor, og tre åpne spørsmål: regionnavnene, secret-revtangen, og om forbudsspotene skal vises med «Forbud nå» eller skjules helt.
+Morgenrapport øverst i STATUS.md: merget, PR-er som venter (lenke + én linje), hva som stoppet og hvorfor, og tre åpne spørsmål: regionnavnene, den hemmelige Jæren-kandidaten, og om forbudsspotene skal vises med «Forbud nå» eller skjules helt.
 
 ## S. Skalering til mange spots (Theodor, 09.10.2026) - PLAN godkjent av Theodor 10.10.2026 med svar under; S1 FERDIG, S2 FERDIG og i drift 14.10.2026 (PR #6), neste er S3
 
@@ -173,6 +173,7 @@ Med dagens sekvensielle løkke: 500 spots × 94 s = **13 timer** - **går i styk
 - **S2. Publisering via Pages-artifact og delte datafiler:** én oversiktsfil og én detaljfil per spot; appen laster oversikten ved åpning og detaljfila når en spot åpnes; `data/` varig i git eller egen datagren. **FERDIG og i drift 14.10.2026 (PR #6, se STATUS.md):** `fetcher/publish.py`, `publiser.yml`, læringsdataene committes til main som før. NB for S4: oversikten har timene forsiden leser i 9 døgn (svarlinja og avspillingen fra 13.10 trenger dem) - 626 KiB rå for 8 spots; ved hundrevis av spots må forsiden bruke dagsoppsummering i stedet (punkt 4 under).
 - **Tillegg 2 (15.10.2026, gren `skalering/oversikt`, PR åpen):** oversikt-2 (nå-time + dagssammendrag, regioner fra spots.json), app mot sammendrag, klynger/lapper/regionbrikker, 100-spot-test. Kartlaget ligger bak `Kart.lag` - S3 bytter laget.
 - **S3. MapLibre-kart** med den mørke stilen fra dagens design, klynger med antall og beste rating, lapper bare der det er plass og alltid for favoritter, vind og svell som eget lag oppå.
+  - *Senere (Theodor 16.10.2026):* finere kyst rundt spotene - f.eks. egne fliser med høy zoom (z13-16) innen 5 km fra hver spot. Til da er maks zoom i Utforsk 12, det detaljflisene faktisk har detaljer for (tools/lag_kartfliser.py, forenklet til en halv piksel på z12).
 - **S4. Forside:** Beste nå, Nær meg, Favoritter, søk og filter.
 - **S5. spots.json per region med status.**
 - **S6. Parallell henter per region (matrise) - VENTER: ikke før det er minst 30 spots.**
