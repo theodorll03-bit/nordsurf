@@ -1,0 +1,158 @@
+{
+ "spot": {
+  "id": "rorvika",
+  "name": "Rørvika",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Lofoten",
+  "spot": {
+   "lat": 68.203945,
+   "lon": 14.229408
+  },
+  "facing": 182.9,
+  "swell_window": [
+   [
+    222,
+    226
+   ],
+   [
+    232,
+    234
+   ]
+  ],
+  "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[222, 226], [232, 234]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   318,
+   48
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": {
+   "lat": 67.9893,
+   "lon": 13.6748
+  },
+  "_havpunkt": "Langs midten av vinduet (224.0°), 33 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": null,
+  "_barentswatch": null,
+  "tidevann": {
+   "name": "Kabelvåg",
+   "code": "KAB",
+   "delay": "0",
+   "factor": "0.98",
+   "obsname": "Kabelvåg"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 68.203945,
+   "lon": 14.229408,
+   "dybde_m": 2.0
+  },
+  {
+   "m": 100,
+   "lat": 68.203042,
+   "lon": 14.229286,
+   "dybde_m": 1.5
+  },
+  {
+   "m": 200,
+   "lat": 68.202139,
+   "lon": 14.229163,
+   "dybde_m": 2.4
+  },
+  {
+   "m": 300,
+   "lat": 68.201235,
+   "lon": 14.229041,
+   "dybde_m": -3.1
+  },
+  {
+   "m": 400,
+   "lat": 68.200332,
+   "lon": 14.228918,
+   "dybde_m": -36.3
+  },
+  {
+   "m": 500,
+   "lat": 68.199429,
+   "lon": 14.228796,
+   "dybde_m": -89.5
+  },
+  {
+   "m": 600,
+   "lat": 68.198526,
+   "lon": 14.228674,
+   "dybde_m": -194.4
+  },
+  {
+   "m": 700,
+   "lat": 68.197622,
+   "lon": 14.228551,
+   "dybde_m": -320.0
+  },
+  {
+   "m": 800,
+   "lat": 68.196719,
+   "lon": 14.228429,
+   "dybde_m": -405.7
+  },
+  {
+   "m": 900,
+   "lat": 68.195816,
+   "lon": 14.228306,
+   "dybde_m": -356.0
+  },
+  {
+   "m": 1000,
+   "lat": 68.194913,
+   "lon": 14.228184,
+   "dybde_m": -356.0
+  },
+  {
+   "m": 1100,
+   "lat": 68.194009,
+   "lon": 14.228062,
+   "dybde_m": -323.9
+  },
+  {
+   "m": 1200,
+   "lat": 68.193106,
+   "lon": 14.227939,
+   "dybde_m": -257.0
+  },
+  {
+   "m": 1300,
+   "lat": 68.192203,
+   "lon": 14.227817,
+   "dybde_m": -176.9
+  },
+  {
+   "m": 1400,
+   "lat": 68.1913,
+   "lon": 14.227694,
+   "dybde_m": -89.6
+  },
+  {
+   "m": 1500,
+   "lat": 68.190396,
+   "lon": 14.227572,
+   "dybde_m": -44.6
+  }
+ ],
+ "flagg": [
+  "facing 182.9° er 50° fra midten av vinduet [232, 234], og nærmeste kystpunkt er 112 m unna - står nålen i hjørnet av en buet strand? Sjekk facing",
+  "ingen snittpunkt med EMODnet-dybde ≥ 8 m innen 1,5 km"
+ ],
+ "bygget": "2026-10-16T09:48+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
+  "lat": 68.203945,
+  "lon": 14.229408
+ }
+}

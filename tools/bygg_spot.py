@@ -183,7 +183,7 @@ def tide_zone(lat, lon):
         return None
 
 
-def minikart(path, osm, lat, lon, spot, win, fac, offw, hav, bw, rows):
+def minikart(path, osm, lat, lon, spot, win, fac, offw, hav, bw, rows, bw_label="BarentsWatch (foreløpig)"):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -214,7 +214,7 @@ def minikart(path, osm, lat, lon, spot, win, fac, offw, hav, bw, rows):
         ax.plot(x, y, "o", ms=2.5, color="#55656E")
     if bw:
         x, y = tr.transform(bw["lon"], bw["lat"])
-        ax.plot(x, y, "s", ms=7, color="#BF8A00", label="BarentsWatch (foreløpig)")
+        ax.plot(x, y, "s", ms=7, color="#BF8A00", label=bw_label)
     ax.plot(0, 0, "o", ms=9, color="#E0623A", mec="white", label="spot")
     ax.set_xlim(-R, R)
     ax.set_ylim(-R, R)

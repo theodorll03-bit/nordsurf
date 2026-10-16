@@ -44,6 +44,19 @@ def choose_strict(rows):
     return None
 
 
+def tegn(sid, b):
+    """Minikartet på nytt med det valgte BarentsWatch-punktet (bygg_spot.minikart)."""
+    try:
+        import bygg_spot
+        import kystdata
+        s = b["spot"]
+        bygg_spot.minikart(BYGGET / f"{sid}.png", kystdata.land("osm"), s["spot"]["lat"], s["spot"]["lon"], sid, s.get("swell_window"),
+                           s.get("facing"), s.get("offshore_wind"), s.get("offshore") or {"lat": "–", "lon": "–"},
+                           s.get("barentswatch_point"), b.get("snitt", []), bw_label="BarentsWatch (snitt 15.10-regelen)")
+    except Exception as e:  # noqa: BLE001 - kartet er pynt; valget står i json-fila
+        print(f"{sid}: minikartet ble ikke tegnet på nytt ({e})")
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -96,6 +109,7 @@ def main():
             b["flagg"].append("BarentsWatch uten data" if not any_data else "BarentsWatch: regelen fant ikke noe punkt (Hs flater ikke ut / for grunt / retning) - Theodor må velge")
             print(f"{sid}: ikke noe punkt ({'ingen data' if not any_data else 'regelen fant ingenting'})")
         bf.write_text(json.dumps(b, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        tegn(sid, b)
 
 
 if __name__ == "__main__":
