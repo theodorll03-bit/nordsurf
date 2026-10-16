@@ -61,7 +61,7 @@ print(f"1-2: {len(files)} filer i git - ingen status «hemmelig», ingen id/navn
 
 priv = ROOT / "privat" / "kandidater" / "hemmelige.json"
 if priv.exists():
-    # kontrollør 16.10: også korte skrivemåter (58.855, 5.56) - tallene som i kilden, uten etterfølgende nuller
+    # kontrollør 16.10: også korte skrivemåter (tallene som i kilden, uten etterfølgende nuller)
     coords = [(repr(float(k["pin_liste"]["lat"])), repr(float(k["pin_liste"]["lon"]))) for k in json.loads(priv.read_text(encoding="utf-8"))["kandidater"]]
     hits = []
     for f in files:
