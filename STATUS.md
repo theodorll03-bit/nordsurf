@@ -1,5 +1,18 @@
 # Nordsurf: status
 
+## Svar på rapporten 16.10 formiddag (punkt 1-8) - I GANG
+
+| Punkt | Status | Gren / PR |
+|---|---|---|
+| 1a Driftsregel i CLAUDE.md | ferdig (main) | - |
+| 1b Vakthund (ntfy ved varsel > 7 t eller to feilede «Hent varsel» på rad, maks ett per 6 t) | PR åpen, kontrollør kjører - venter på ja | drift/vakthund, #20 |
+| 1c Banner ved gammelt varsel | Svar: **nei** - banneret fantes bare på Hjem, så 15.-16.10 viste Utforsk og spotsiden bare «–». Rettet i #20: «Varselet er N timer gammelt …» på Hjem, Utforsk og spotsiden, og eget banner når varselet har eldre format enn appen. | #20 |
+| 2 Hemmelige ut av git | **ferdig, merget i #16**: kjennes igjen på hash, ligger bare i privat/kandidater/hemmelige.json; fetcher/test_kandidater.py (CI) feiler på status «hemmelig», id/navn og (lokalt) koordinatene. Historikken er ikke skrevet om. | #16 |
+| 3 PR #16 | **merget**: 26 flyfoto-forslag (4 A, 17 B, 5 C) importert; vernesjekk med Naturbase rundt hvert forslag (Eggum 277 m, Eggum øst 427 m, The Frog 626 m utenfor - triage.md); gjennomgangssiden forhåndsvelger forslaget og viser sikkerhet/begrunnelse og fabrikkens minikart | #16 |
+| 4 PR #18 | rettet (godkjent posisjon påkrevd - Theodor eller Claude delegert; flagg krever --overstyr; test_spotfabrikk.py), kontrollør kjører, så merge | spotfabrikken, #18 |
+| 5 S6 | bygget, CI grønn, kontrollør kjører - **venter på ja**. Byte for byte likt med sekvensiell; Open-Meteo må tempobegrenses før ca. 80 spots; hemmelige spots må stenges ute av regionartifactene før første «hemmelig» i spots.json | s6/region-matrise, #21 |
+| 7/8 Lofoten og Vesterålen | venter på #18: import av godkjent_claude.csv (22 godkjent, 4 venter) og nytt rorvika-forslag, bygg_spot for de 22, BarentsWatch-snitt i Actions, samletabell | region/lofoten-vesteralen |
+
 ## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
 
 | Punkt | Status | Gren / PR |
