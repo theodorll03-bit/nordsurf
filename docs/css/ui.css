@@ -191,7 +191,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .uke i.forbud{background:var(--sunken);color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .uke b{color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
-.stars .st.f{fill:var(--rc);stroke:var(--rc-ink);stroke-width:1;stroke-dasharray:none;opacity:.32}   /* tapt stjerne: dempet fyll, ikke stiplet (Theodor 15.10); aria sier «tapt på vind eller tidevann» */
+.stars .st.f{fill:none;stroke:var(--rc-ink);stroke-width:1.5;stroke-dasharray:5 3.33;stroke-linecap:round;stroke-linejoin:round;opacity:1}   /* tapt stjerne (vind/tidevann): stiplet omriss i ratingfargen (Theodor 16.10, tilbake fra 15.10). pathLength 100 → 12 like streker; 1,5 i viewBox-enheter = 1,5 px ved 24 px og skaleres med størrelsen (1 px ved 16, 2 px ved 32). aria: «tapt på vind eller tidevann» */
 .gruppe{margin-top:22px}
 .gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 14px 8px}   /* samme sidepadding som .rad, så ukedagene står rett over rutene (Theodor 15.10) */
 .gruppe-topp h3{font-size:1.0625rem;font-weight:700}
