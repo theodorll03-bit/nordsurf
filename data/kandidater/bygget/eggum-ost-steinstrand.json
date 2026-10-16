@@ -26,7 +26,7 @@
   },
   "_havpunkt": "Langs midten av vinduet (337.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": null,
-  "_barentswatch": "FORELØPIG: nytt snitt langs 11.5° til 1500 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T1118_kandidater.json): regelen fant ikke noe punkt i noen time.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -42,7 +42,8 @@
   "kilde": "liste 15.10 + spotfabrikken",
   "_rettet": {
    "barentswatch_point": "nytt snitt langs 11.5° (kontrollør 16.10: Eggums punkt 1 458 m unna, retning 57-103° fra facing - eget snitt langs facing (Claude, delegert))"
-  }
+  },
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1118_kandidater.json"
  },
  "snitt": [
   {
@@ -142,7 +143,9 @@
    "dybde_m": 6.3
   }
  ],
- "flagg": [],
+ "flagg": [
+  "BarentsWatch: regelen fant ikke noe punkt (Hs flater ikke ut / for grunt / retning) - Theodor må velge"
+ ],
  "bygget": "2026-10-16T09:47+00:00",
  "bygget_fra": {
   "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",

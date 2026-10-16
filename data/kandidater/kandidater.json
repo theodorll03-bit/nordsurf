@@ -840,7 +840,8 @@
     "https://www.surfnerd.com/surf-forecast/eggum"
    ],
    "dokumentasjon": "svak",
-   "status": "kandidat",
+   "status": "parkert",
+   "status_begrunnelse": "Parkeres. Eggums BarentsWatch-punkt ligger 1 458 m unna med bølger fra 268-314° (57-103° fra facing 11,5°, retningsfaktor ca. 0). Eget snitt langs facing (16.10, result_2026-10-16T1118_kandidater.json) fant ikke noe punkt: grunn hylle 6-7 m dyp og skjær 1,2-1,4 km ut, aldri 8 m innen 1,5 km. Tas opp igjen med et lengre snitt eller et punkt utenfor skjærene (Theodor velger).",
    "vern_merknad": "Listepinnen ligger ca. 690 m utenfor Eggum naturreservat (surfebrett forbudt hele året). Ikke sjekket på flyfoto - forutsetter at pinnen står der bølgen er."
   },
   {
