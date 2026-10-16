@@ -9,3 +9,5 @@ docs/data/oversikt.json
 docs/data/spots/
 docs/data/.publish-tmp/
 privat/
+# Lokal forhåndsvisning (tools/forhandsvis.sh): repokopi, docs-kopi og ferske data - aldri i git
+forhandsvis/
