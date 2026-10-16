@@ -26,10 +26,10 @@
   },
   "_havpunkt": "Langs midten av vinduet (309.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": {
-   "lat": 68.079935,
-   "lon": 13.082829
+   "lat": 68.080482,
+   "lon": 13.080912
   },
-  "_barentswatch": "FORELØPIG: første snittpunkt langs facing med EMODnet-dybde ≥ 8 m (500 m ut, 9.5 m dyp). Venter på BarentsWatch-snitt i Actions (find_bw_point.yml) for flat Hs - regelen fra 15.10.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 600m@307.2, 600 m ut, dybde 12,0 m, Hs 5,45 m kl. 2026-10-17T00:00Z.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -42,7 +42,8 @@
    2.0
   ],
   "max_height": 3.5,
-  "kilde": "liste 15.10 + spotfabrikken"
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json"
  },
  "snitt": [
   {

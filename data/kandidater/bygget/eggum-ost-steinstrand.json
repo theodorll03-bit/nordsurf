@@ -26,7 +26,7 @@
   },
   "_havpunkt": "Langs midten av vinduet (337.0°), 11 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": null,
-  "_barentswatch": null,
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json): regelen fant ikke noe punkt i noen time.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -39,7 +39,8 @@
    2.0
   ],
   "max_height": 3.5,
-  "kilde": "liste 15.10 + spotfabrikken"
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json"
  },
  "snitt": [
   {
@@ -140,7 +141,8 @@
   }
  ],
  "flagg": [
-  "ingen snittpunkt med EMODnet-dybde ≥ 8 m innen 1,5 km"
+  "ingen snittpunkt med EMODnet-dybde ≥ 8 m innen 1,5 km",
+  "BarentsWatch: regelen fant ikke noe punkt (Hs flater ikke ut / for grunt / retning) - Theodor må velge"
  ],
  "bygget": "2026-10-16T09:47+00:00",
  "bygget_fra": {
