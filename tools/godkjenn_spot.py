@@ -18,7 +18,7 @@ må kjøres i Actions først); ideal_height/max_height mangler (point/reef - The
 vindu eller havpunkt mangler. spots.json er håndformatert - spoten settes inn som tekst, og resten av fila
 sjekkes uendret etterpå. Etter innlegging: fysikk-kontrollør, alle tester, og CLAUDE.md sin stopp-regel.
 NB: vindu, havpunkt, BarentsWatch-punkt og offshorevind er felt som krever Theodors ja (CLAUDE.md) - å kjøre
-skriptet ER det ja-et for den ene spoten, og offshore_wind (±60°, «standard, ubekreftet») bør sjekkes mot kart
+skriptet ER det ja-et for den ene spoten, og offshore_wind (±45°, «standard, ubekreftet») bør sjekkes mot kart
 eller lokale før kjøring."""
 import datetime as dt
 import json

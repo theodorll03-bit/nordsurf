@@ -6,9 +6,9 @@ spots.json (det gjør tools/godkjenn_spot.py, og bare når Theodor kjører den).
 Samme konvensjoner som spots.json og fetcher/check_spot.py:
 - swell_window: retningene (hver grad) med fri linje til åpent hav (150 km) over GSHHS f, med 300 m
   kysttoleranse - største sammenhengende sektor.
-- facing: strandas normal ut mot sjøen, fra OSM-kystlinja innen 500 m (i spots.json er facing strandas
-  retning, ikke midten av vinduet - f.eks. Steinkrøssa: vindu [315,16], facing 45).
-- offshore_wind: motsatt av facing ±60°, merket «standard, ubekreftet».
+- facing (Theodor 16.10): strandas normal der bølgene brekker, fra OSM-kystlinja ±150 m langs kysten fra
+  nærmeste kystpunkt til nålen - ikke midten av vinduet (vinduet regnes for seg).
+- offshore_wind: motsatt av facing ±45° (Theodor 16.10; ±60 var feil), merket «standard, ubekreftet».
 - offshore (havpunkt): som check_spot.py - langs midten av vinduet, minst 5 km ut og 10 km åpent hav rundt.
 - barentswatch_point: snittregelen 15.10 (første punkt ut fra stranda med minst 8 m dyp og flat Hs). Hs må
   hentes fra BarentsWatch i Actions (find_bw_point.yml) - lokalt finnes bare dybden (EMODnet Bathymetry REST),
@@ -32,7 +32,7 @@ from pathlib import Path
 import numpy as np
 import shapely
 import shapely.ops
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -46,8 +46,10 @@ UA = "nordsurf/1.0 (ikke-kommersiell surfevarsel; github.com/theodorll03-bit/nor
 OPEN_KM = 150
 COAST_FUZZ_M = 300
 WIN_MIN_DEG = 3      # smalere åpne sektorer er støy (én-to stråler forbi en odde)
-FACING_R_M = 500
+SKJAER_MAX_M2 = 20000   # 2 ha
+FACING_HALF_M = 150   # Theodor 16.10: ±150 m langs kysten fra nærmeste kystpunkt
 BW_STEP_M, BW_MAX_M, BW_MIN_DEPTH = 100, 1500, 8.0
+OFFSHORE_HALF_DEG = 45
 BEACH_IDEAL, BEACH_MAX = [0.8, 2.0], 3.5
 
 
@@ -95,31 +97,39 @@ def window(gshhs_local):
 
 
 def facing_from_coast(osm_local):
-    """Strandas normal ut mot sjøen: lengdevektet hovedretning for kystlinja innen 500 m (aksial snitt),
-    og den av de to normalene som peker mot sjø."""
+    """Strandas normal der bølgene brekker (Theodor 16.10.2026): kystlinja (OSM) ±150 m langs kysten fra
+    nærmeste kystpunkt til nålen; retningen er korden mellom endene, og normalen er den av de to som peker ut
+    i sjøen fra kystpunktet. Ikke 500 m-snitt og ikke midten av vinduet. Returnerer (facing, usikker)."""
     o = Point(0, 0)
-    coast = osm_local.boundary.intersection(o.buffer(FACING_R_M))
-    segs = []
-    for ln in getattr(coast, "geoms", [coast]):
-        if ln.geom_type != "LineString":
+    near = osm_local.intersection(o.buffer(3000))
+    rings = []
+    for poly in getattr(near, "geoms", [near]):
+        # holmer og skjær under 2 ha er ikke stranda der bølgene brekker (Farstadsanden: et skjær foran stranda
+        # var nærmeste kyst og ga en normal inn i land) - de tas bort fra «nærmeste kyst»
+        if poly.geom_type != "Polygon" or poly.area < SKJAER_MAX_M2:
             continue
-        c = list(ln.coords)
-        for (x1, y1), (x2, y2) in zip(c, c[1:]):
-            L = math.hypot(x2 - x1, y2 - y1)
-            if L > 0:
-                segs.append((math.atan2(x2 - x1, y2 - y1), L))
-    if not segs:
-        return None, False
-    sx = sum(L * math.sin(2 * a) for a, L in segs)
-    cx = sum(L * math.cos(2 * a) for a, L in segs)
-    axis = math.degrees(math.atan2(sx, cx) / 2) % 180
+        rings.append(LineString(poly.exterior.coords))   # ikke innsjøer (interiors) - bare sjøkysten
+    if not rings:
+        return None, False, None
+    line = min(rings, key=lambda r: r.distance(o))
+    c = shapely.ops.nearest_points(line, o)[0]
+    s0, L = line.project(c), line.length
+    closed = line.is_ring or line.coords[0] == line.coords[-1]
+    a, b = s0 - FACING_HALF_M, s0 + FACING_HALF_M
+    if closed and L > 2 * FACING_HALF_M:
+        p1, p2 = line.interpolate(a % L), line.interpolate(b % L)
+    else:
+        p1, p2 = line.interpolate(max(0.0, a)), line.interpolate(min(L, b))
+    if p1.distance(p2) < 1:
+        return None, False, None
+    axis = math.degrees(math.atan2(p2.x - p1.x, p2.y - p1.y)) % 360
     cand = []
     for n in ((axis + 90) % 360, (axis + 270) % 360):
-        q = [Point(d * math.sin(math.radians(n)), d * math.cos(math.radians(n))) for d in (150, 300, 600)]
+        q = [Point(c.x + d * math.sin(math.radians(n)), c.y + d * math.cos(math.radians(n))) for d in (30, 100, 200, 400)]
         cand.append((sum(not osm_local.contains(p) for p in q), n))
     tie = cand[0][0] == cand[1][0]
-    best = max(cand, key=lambda c: c[0])
-    return round(best[1], 1), tie
+    best = max(cand, key=lambda x: x[0])
+    return round(best[1], 1), tie, round(c.distance(o))
 
 
 def pt(lat, lon, bearing, d_km):
@@ -227,7 +237,7 @@ def build(sid, name, lat, lon, typ, kilde, region=None, png=True):
     g150 = local(gs, 1.6, 1.6 / math.cos(math.radians(lat)) * 1.05)
     o_near = local(osm, 0.02, 0.05)
     win, all_runs = window(g150)
-    fac, tie = facing_from_coast(o_near)
+    fac, tie, kyst_m = facing_from_coast(o_near)
     flags = []
     if tie:
         flags.append("facing usikker: begge normalene på kystlinja har like mye sjø - kan være snudd 180°")
@@ -236,9 +246,16 @@ def build(sid, name, lat, lon, typ, kilde, region=None, png=True):
             mid = (w[0] + ((w[1] - w[0]) % 360) / 2) % 360
             if kt.angle_diff(mid, fac) > 90:
                 flags.append(f"vindussektor {w} ligger mer enn 90° fra facing - kan være bak stranda (tange/øyr smalere enn kysttoleransen)")
+            elif kt.angle_diff(mid, fac) > 45 and kyst_m is not None and kyst_m > 100:
+                # varsel, ikke regel: nålen står langt fra kysten OG facing peker langt fra vinduet - typisk en nål i
+                # hjørnet av en buet strand (Farstadsanden). Hver for seg slår begge til for gode spots (konvensjonen
+                # er ca. 100 m ut; Russelv/Steinkrøssa har riktig facing langt fra midten av vinduet).
+                flags.append(f"facing {fac}° er {kt.angle_diff(mid, fac):.0f}° fra midten av vinduet {w}, og nærmeste kystpunkt er "
+                             f"{kyst_m} m unna - står nålen i hjørnet av en buet strand? Sjekk facing")
     if fac is None:
-        flags.append("fant ikke kystlinja innen 500 m - facing mangler")
-    offw = [round((fac + 180 - 60) % 360), round((fac + 180 + 60) % 360)] if fac is not None else None
+        flags.append("fant ikke sjøkyst (over 2 ha) innen ca. 2 km - facing mangler")
+    # Theodor 16.10: standard offshore-vind er motsatt av facing ±45° (6 av 8 i spots.json; ±60 var feil)
+    offw = [round((fac + 180 - OFFSHORE_HALF_DEG) % 360), round((fac + 180 + OFFSHORE_HALF_DEG) % 360)] if fac is not None else None
     hav = hav_c = hav_d = None
     if win:
         hav, hav_c, hav_d = havpunkt(gs, lat, lon, win)
@@ -258,7 +275,7 @@ def build(sid, name, lat, lon, typ, kilde, region=None, png=True):
         "spot": {"lat": round(lat, 6), "lon": round(lon, 6)},
         "facing": fac, "swell_window": win,
         "_vindu": f"Spotfabrikken {dt.date.today().isoformat()}: fri linje til åpent hav ({OPEN_KM} km) over GSHHS f med {COAST_FUZZ_M} m kysttoleranse, alle sektorer {all_runs}; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
-        "offshore_wind": offw, "_offshore_vind": "standard, ubekreftet (motsatt av facing ±60°)",
+        "offshore_wind": offw, "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
         "offshore": hav, "_havpunkt": f"Langs midten av vinduet ({hav_c}°), {hav_d} km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py)." if hav else None,
         "barentswatch_point": {"lat": first["lat"], "lon": first["lon"]} if first else None,
         "_barentswatch": (f"FORELØPIG: første snittpunkt langs facing med EMODnet-dybde ≥ {BW_MIN_DEPTH:.0f} m ({first['m']} m ut, {first['dybde_m']} m dyp). "

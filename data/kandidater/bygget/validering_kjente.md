@@ -1,27 +1,31 @@
-# Spotfabrikken mot de 8 kjente (ROADMAP K del C.2, 16.10.2026)
+# Spotfabrikken mot de 8 kjente (ROADMAP K del C.2) - ny facing-regel 16.10.2026
 
-`python tools/bygg_spot.py --kjent …` bygger hver av de 8 fra posisjonen i spots.json (ikke listepinnen) og sammenligner med det som står i spots.json. spots.json er ikke endret.
+`python tools/bygg_spot.py --kjent …` bygger hver av de 8 fra posisjonen i spots.json (ikke listepinnen) og sammenligner med spots.json. spots.json er ikke endret.
 
-Grenser (Theodor): facing ±15°, vindusoverlapp minst 70 % (andel av spots.json-vinduet som fabrikken også har), offshore-sektor og BarentsWatch-punktets avstand rapportert. «Innenfor» = facing og vindu innenfor grensene.
+**Regel (Theodor 16.10):** facing = strandas normal der bølgene brekker, fra OSM-kystlinja ±150 m langs kysten fra nærmeste kystpunkt til nålen (holmer/skjær under 2 ha og innsjøbredder regnes ikke som stranda); vinduet regnes for seg (som før); offshore_wind standard = motsatt av facing ±45°.
 
-| Spot | facing fabrikk / spots.json (Δ) | Vindu fabrikk / spots.json | Overlapp (ekstra grader) | Offshore-vind fabrikk / spots.json (overlapp) | BW-punkt: Δ til spots.json (foreløpig, bare dybde) | Havpunkt Δ | Tidevannssted (Kartverket) | Innenfor |
+Grenser: facing ±15°, vindusoverlapp minst 70 % (andel av spots.json-vinduet fabrikken også har; ekstra grader i parentes). «Innenfor» = begge.
+
+| Spot | facing fabrikk / spots.json (Δ) | Vindu fabrikk / spots.json | Overlapp (ekstra) | Offshore-vind fabrikk / spots.json (overlapp) | BW-punkt Δ (foreløpig, bare dybde) | Havpunkt Δ | Tidevannssted | Innenfor |
 |---|---|---|---|---|---|---|---|---|
-| grotfjord | 288.1 / 295 (7°) | [286, 315] / [286, 310] | 100% (+5) | [48, 168] / [76, 166] (100%) | 60 m | 0.0 km | Andenes | ja |
-| tromvik | 317.2 / 330 (13°) | [314, 349] / [314, 349] | 100% (+0) | [77, 197] / [105, 195] (100%) | 155 m | 0.0 km | Andenes | ja |
-| ersfjordstranda | 286.6 / 315 (28°) | [289, 320] / [294, 320] | 100% (+5) | [47, 167] / [90, 180] (86%) | 121 m | 0.7 km | Andenes | **nei** |
-| russelv | 310.4 / 315 (5°) | [[5, 14], [349, 356]] / [[5, 15], [349, 356]] | 95% (+0) | [70, 190] / [90, 180] (100%) | 452 m | 1.1 km | Hammerfest | ja |
-| lenangsoyra | 306.3 / 19 (73°) | [15, 23] / [15, 23] | 100% (+0) | [66, 186] / [155, 245] (35%) | 208 m | 0.0 km | Hammerfest | **nei** |
-| steinkrossa | 52.9 / 45 (8°) | [315, 16] / [315, 16] | 100% (+0) | [173, 293] / [175, 265] (100%) | 63 m | 0.7 km | Andenes | ja |
-| unstad | 296.1 / 294.8 (1°) | [253, 336] / [253, 335] | 100% (+1) | [56, 176] / [70, 232] (66%) | 450 m | 0.1 km | Andenes | ja |
-| farstadsanden | 326.6 / 310 (17°) | [284, 327] / [284, 326] | 100% (+1) | [87, 207] / [85, 200] (98%) | 367 m | 0.1 km | Kristiansund | **nei** |
+| grotfjord | 296.5 / 295 (2°) | [286, 315] / [286, 310] | 100% (+5) | [72, 162] / [76, 166] (96%) | 150 m | 0.0 km | Andenes | ja |
+| tromvik | 329.3 / 330 (1°) | [314, 349] / [314, 349] | 100% (+0) | [104, 194] / [105, 195] (99%) | 151 m | 0.0 km | Andenes | ja |
+| ersfjordstranda | 294.1 / 315 (21°) | [289, 320] / [294, 320] | 100% (+5) | [69, 159] / [90, 180] (77%) | 96 m | 0.7 km | Andenes | **nei** |
+| russelv | 314.3 / 315 (1°) | [[5, 14], [349, 356]] / [[5, 15], [349, 356]] | 95% (+0) | [89, 179] / [90, 180] (99%) | 351 m | 1.1 km | Hammerfest | ja |
+| lenangsoyra | 345.5 / 19 (34°) | [15, 23] / [15, 23] | 100% (+0) | [120, 210] / [155, 245] (62%) | 76 m | 0.0 km | Hammerfest | **nei** |
+| steinkrossa | 38.3 / 45 (7°) | [315, 16] / [315, 16] | 100% (+0) | [173, 263] / [175, 265] (98%) | 60 m | 0.7 km | Andenes | ja |
+| unstad | 297.9 / 294.8 (3°) | [253, 336] / [253, 335] | 100% (+1) | [73, 163] / [70, 232] (56%) | 451 m | 0.1 km | Andenes | ja |
+| farstadsanden | 249.4 / 310 (61°) | [284, 327] / [284, 326] | 100% (+1) | [24, 114] / [85, 200] (26%) | – m | 0.1 km | Kristiansund | **nei** |
 
-**Resultat: 5 av 8 innenfor. Kravet for å bygge Lofoten og Vesterålen i natt var minst 6 av 8 - ikke oppfylt, så del C er STOPPET for bygging** (det fantes uansett ingen kandidater med sikkerhet A og status klar: koordinatjakten (A2) ble stoppet, og A krever flyfoto).
+**Resultat: 5 av 8 innenfor - kravet på minst 6 av 8 er fortsatt ikke oppfylt.** De samme fem som med forrige regel (strandnormal over 500 m): Grøtfjord, Tromvik, Russelv, Steinkrøssa og Unstad; Ersfjordstranda, Lenangsøyra og Farstadsanden er utenfor begge gangene. Ingen spot bygges uansett før Theodor har godkjent posisjonene for en region (svar 6).
 
-## Hva som stemmer og ikke
-- **Vinduet** er det sterke leddet: 7 av 8 dekker hele spots.json-vinduet (Russelv 95 %, to sektorer). Men fabrikken tar også med grader spots.json har tatt bort med vilje: Grøtfjord +5 (311-315, kartdata-hullet der svell fra 313° var flatt 25.09) og Ersfjordstranda +5 (289-293). Samme metode som check_spot.py (GSHHS f, 150 km, 300 m kysttoleranse) - observasjoner og kjente hull i GSHHS må fortsatt inn for hånd.
-- **facing** er det svake leddet. Fabrikken regner strandas normal fra OSM-kystlinja innen 500 m. Det bommer for Ersfjordstranda (28°), Lenangsøyra (73°) og Farstadsanden (17°). spots.json bruker selv ikke én definisjon: Lenangsøyra sin facing (19) er midten av vinduet [15,23], mens Steinkrøssa sin (45) er strandas retning og ligger utenfor vinduet [315,16]. En regel for facing på nye spots bør Theodor bestemme (strandnormal eller midten av vinduet) - ikke justert mot fasiten her.
-- **offshore_wind** følger facing (motsatt ±60°), så bommen på facing går rett inn i vindsektoren (Lenangsøyra 35 % overlapp). spots.json bruker ±45° og egne observasjoner (Unstad [70,232], Farstadsanden [85,200]).
-- **BarentsWatch-punktet** her er bare «første snittpunkt med EMODnet-dybde ≥ 8 m» - flat Hs må hentes fra BarentsWatch i Actions (`find_bw_point.yml` med `kandidater`). Avvikene (60-452 m) sier derfor lite ennå.
-- **Havpunkt** og **tidevannssted** (Kartverkets referansested: Andenes, Hammerfest, Kristiansund) finnes for alle 8. (Første kjøring fikk ingen tidevannssted - feil parameter i spørringen, funnet av kontrolløren og rettet.)
+## Med den nye regelen
+- **Treffer godt der stranda er rett:** Grøtfjord 1,5° (var 7°), Tromvik 0,7° (var 13°), Russelv 0,7° (var 5°), Steinkrøssa 6,7° (var 8°), Unstad 3,1° (var 1° - litt dårligere).
+- **Lenangsøyra 34°:** ventet - spots.json bruker midten av vinduet [15,23] der.
+- **Ersfjordstranda 21°:** nærmeste kyststrekning vender mot 294°, spots.json har 315°.
+- **Farstadsanden 61°:** nålen står i hjørnet av en buet strand - nærmeste kystpunkt ligger 153 m nordøst, på østsiden av bukta, og den kyststrekningen vender mot sørvest (249°). Regelen gjør det den sier; nålen står ikke foran midten av stranda (KONVENSJON.md: kyst→nål 237°). Fabrikken varsler nå slike tilfeller (facing over 45° fra midten av vinduet OG nærmeste kystpunkt over 100 m unna) - av de 8 slår varselet bare til for Farstadsanden. Ingen snittpunkt langs 249° når 8 m dyp innen 1,5 km, så BarentsWatch-punktet mangler (flagget, aldri 0).
+- **Vinduet:** uendret - 7 av 8 dekker hele spots.json-vinduet; Grøtfjord +5 (311-315, kartdata-hullet) og Ersfjordstranda +5 ekstra grader som spots.json har tatt bort med vilje.
+- **offshore_wind ±45°:** overlapp med spots.json 96-99 % der facing treffer (Unstad 56 % fordi Unstad sin sektor er utvidet for S/SSV-vind etter observasjoner).
+- **Tidevannssted:** samme referansested, forsinkelse og faktor som henteren bruker for alle 8 (sjekket mot henterens eget oppslag 16.10).
 
-Minikart per spot: `data/kandidater/bygget/<id>.png` (vindu, facing, offshore-vind, snittpunkter, foreløpig BarentsWatch-punkt; kyst © OpenStreetMap-bidragsytere).
+Minikart per spot: `data/kandidater/bygget/<id>.png` (kyst © OpenStreetMap-bidragsytere).
