@@ -46,7 +46,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           GITHUB_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/forecast.yml
-          VAKTHUND_TEST_ALDER_T: ${{ github.event_name == 'push' && '30' || (github.ref != 'refs/heads/main' && inputs.test_alder_timer || '') }}
+          VAKTHUND_TEST_ALDER_T: ${{ github.event_name == 'push' && '' || (github.ref != 'refs/heads/main' && inputs.test_alder_timer || '') }}
       - name: Lagre tilstanden
         if: always() && hashFiles('vakthund_state.json') != ''
         uses: actions/cache/save@v4
