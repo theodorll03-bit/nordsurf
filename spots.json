@@ -577,7 +577,7 @@
     {
       "id": "g-frame",
       "name": "G-frame",
-      "enabled": true,
+      "enabled": false,
       "status": "forelopig",
       "region": "Vesterålen",
       "spot": {
@@ -585,6 +585,7 @@
         "lon": 14.427489
       },
       "facing": 330.0,
+      "_holdt_tilbake": "Holdt tilbake (Theodors ja 16.10, chat): retningen ved BarentsWatch-punktet 1 900 m ut (251-284° i prøvevarselet 16.10 11Z) ligger 46-79° fra facing 330 → retningsfaktor 0-0,6. Slås på når retningen ved punktet er avklart.",
       "swell_window": [
         246,
         334
