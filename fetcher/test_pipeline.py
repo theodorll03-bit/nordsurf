@@ -1515,3 +1515,32 @@ assert fetch.ww3_compare([hours[3]], ww3) is None   # bare en total_fallback-tim
 fetch.REPORT.clear(); fetch.ww3_second_opinion([])   # avslått i tester: ingen rad, ingen nett
 assert fetch.REPORT == []
 print("14: WW3 annenmening - bare GFS-timer, ok/uenig/tom regnes riktig, aldri i tallene, av i tester")
+
+# 16.10.2026 (punkt 3b, Grøtfjord 17.10 12Z): enkelttimes svelloppdeling i GFS rettes fra naboene - hele trippelen
+# (høyde, retning sirkulært, periode), bare innen samme modell, aldri over None, aldri når totalhøyden også endrer seg.
+def _h(sw, d, p, tot, model="gfs"):
+    return {"height": tot, "swell_height": sw, "dir": d, "period": p, "peak_period": None, "swell_model": model}
+o = {"2026-10-17T11:00Z": _h(1.94, 293, 12.5, 4.9), "2026-10-17T12:00Z": _h(0.70, 282, 13.0, 4.7),
+     "2026-10-17T13:00Z": _h(2.34, 307, 12.0, 4.6), "_meta": {}}
+assert sources.despike_swell(o) == 1
+r = o["2026-10-17T12:00Z"]
+assert r["swell_height"] == 2.14 and r["dir"] == 300.0 and r["period"] == 12.25 and r["peak_period"] is None
+assert r["swell_despiked"] == {"swell_height": 0.70, "dir": 282, "period": 13.0}
+o2 = {"2026-01-01T00:00Z": _h(2.0, 350, 12, 4.0), "2026-01-01T01:00Z": _h(0.5, 10, 12, 4.1), "2026-01-01T02:00Z": _h(2.0, 10, 12, 4.0)}
+sources.despike_swell(o2); assert o2["2026-01-01T01:00Z"]["dir"] == 0.0, "sirkulært snitt over nord"
+for bad in ({"2026-01-01T01:00Z": _h(0.5, 300, 12, 2.0)},              # totalhøyden faller også - ekte
+            {"2026-01-01T01:00Z": _h(0.5, 300, 12, 4.0, "standard")},  # modellbytte
+            {"2026-01-01T00:00Z": _h(None, None, None, 4.0)},          # manglende data hos nabo
+            {"2026-01-01T02:00Z": _h(1.2, 300, 12, 4.0)},              # naboene uenige
+            {"2026-01-01T00:00Z": _h(2.0, 260, 12, 4.0), "2026-01-01T02:00Z": _h(1.9, 340, 12, 4.0)},  # ulike retninger
+            {"2026-01-01T02:00Z": _h(2.0, 300, 15, 4.0)}):             # ulike perioder
+    o3 = {"2026-01-01T00:00Z": _h(2.0, 300, 12, 4.0), "2026-01-01T01:00Z": _h(0.5, 300, 12, 4.0), "2026-01-01T02:00Z": _h(2.0, 300, 12, 4.0)}
+    o3.update(bad)
+    before = {k: dict(v) for k, v in o3.items()}
+    assert sources.despike_swell(o3) == 0 and o3 == before, bad
+assert sources._secondary({"secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0}) == \
+    {"secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
+assert sources._secondary({"secondary_swell_height": 0.66, "secondary_swell_dir": 281, "secondary_swell_period": 13.05})["secondary_swell_dir"] == 281
+src = open(Path(__file__).parent / "fetch.py", encoding="utf-8").read()
+assert '"swell_despiked": (mar or {}).get("swell_despiked")' in src and '"despiked_hours"' in src, "erstattede timer må merkes i timen og kilderapporten"
+print("16: robust svell ute (enkelttimes svelloppdeling rettes fra naboene, ikke over modellbytte/None/ekte endring), sekundærsvell 0,0/0° = None - OK")

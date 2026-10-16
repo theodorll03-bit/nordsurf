@@ -485,6 +485,11 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         if ratio_seam and sources.parse_iso(ratio_seam) - now < dt.timedelta(hours=48):
             detail += " - ADVARSEL: skjøten er innenfor 48-timersvinduet, sjekk stoppregelen før commit"
         REPORT.append((name, "Svell (GFS/standard-forhold)", "ok", detail))
+    despiked = marine_meta.get("despiked_hours")
+    if despiked:
+        REPORT.append((name, "Svell (robust, enkelttimer)", "ok",
+                       f"{despiked} time(r) der GFS byttet hovedsvellsystem i én time er erstattet av snittet av naboene "
+                       f"(høyde, retning, periode samlet; originalen i timens swell_despiked)"))
     weather_raw = safe(name, "met.no vind", sources.metno_weather, s["lat"], s["lon"])
     # 27.09.2026, ROADMAP oppgave 1: Locationforecast (vind) går fra time- til
     # 6-timerssteg etter ca. 51 timer - interpolert her (se
@@ -797,6 +802,9 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             # rating.energy_period()) - "period" over er fortsatt
             # middelperioden, uendret, brukt i surfehøyde-formelen som før.
             "swell_peak_period": (mar or {}).get("peak_period"),
+            # 16.10.2026 (robust svell ute, sources.despike_swell()): timen er erstattet av snittet av naboene -
+            # originalverdiene fra GFS her, så en erstattet time aldri ser ut som et ekte modelltall (kontrollør).
+            "swell_despiked": (mar or {}).get("swell_despiked"),
             "water_temp": (sp or {}).get("water_temp"),
             **(w or {}),
             "light": light,

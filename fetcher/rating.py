@@ -110,6 +110,37 @@ def exposure_override_cap(d, spot):
     return None
 
 
+# 16.10.2026 (Theodor, Grøtfjord lørdag 17.10, punkt 3a): myk kant på exposure_override-taket. I stedet for å
+# hoppe fra 1 til taket på én grad ved sonens kant, går taket lineært fra 1 ved kanten ned til fullt tak
+# OVERRIDE_TAPER_DEG grader INN i sonen (dypere inne gjelder taket uendret - hullet beholdes). Fysisk: modellens
+# svellretning er et middel over en retningsspredning på typisk ±15-30°, så en time «2° inne i sonen» har mye av
+# energien fra retninger utenfor den - en bratt kant er falsk presisjon. Utenfor sonen (f.eks. inne i
+# svellvinduet) endres ingenting. Open-Meteo gir ingen retningsspredning per time, så bredden er et fast anslag.
+# Den geometriske kurven gjelder fortsatt (min av de to), så kanten mot skygge utenfor vinduet blir ikke mildere
+# enn geometrien. 0 = av (gammel, bratt kant). Krever Theodors ja (exposure_override står på lista).
+# AV (0) 16.10.2026: med 12 bryter den en fast observasjon - Grøtfjord 25.09.2026, 313° (2° inn i 311-330-sonen),
+# helt flatt, får 2 stjerner/1,09 m (test_display_only/test_rating). Observasjonen sier at kanten ved 311 ER bratt
+# der; se data/backtest/hopp_2026-10-16.md. Beholdt som bryter til backtest og en eventuell sone-for-sone-bruk.
+OVERRIDE_TAPER_DEG = 0
+
+
+def exposure_override_cap_soft(d, spot):
+    """Som exposure_override_cap(), men med myk overgang de første OVERRIDE_TAPER_DEG gradene inn i sonen (se over).
+    Brukes bare i exposure() - exposure_override_cap() (streng: dekker sonen retningen?) er uendret for
+    diffraksjonsdempingen."""
+    if d is None:
+        return None
+    caps = []
+    for o in spot.get("exposure_override") or []:
+        a, b = o["from"], o["to"]
+        if not in_sector(d, [a, b]):
+            continue
+        depth = min((d - a) % 360, (b - d) % 360)
+        frac = 1.0 if OVERRIDE_TAPER_DEG <= 0 else min(1.0, (depth + 1) / OVERRIDE_TAPER_DEG)
+        caps.append(o["max"] if frac >= 1.0 else 1.0 - (1.0 - o["max"]) * frac)
+    return min(caps) if caps else None
+
+
 PERIOD_SHORT_MAX = 10  # sekunder ute - under dette er "kort" periodegruppe, se exposure_learn.py
 
 
@@ -141,7 +172,7 @@ def exposure(d, spot, period=None):
         pg = "kort" if period is not None and period < PERIOD_SHORT_MAX else "lang"
         curve = spot.get(f"exposure_smoothed_{pg}") or spot.get("exposure_smoothed")
         value = curve[int(round(d)) % 360] if curve else directness(d, spot)
-    cap = exposure_override_cap(d, spot)
+    cap = exposure_override_cap_soft(d, spot)
     return value if cap is None else min(value, cap)
 
 
