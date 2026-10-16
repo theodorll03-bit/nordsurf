@@ -1,0 +1,20 @@
+{
+ "_info": "Theodor 16.10.2026 (svar 3.3): ligger selve bølgen innenfor et verneområde med surfeforbud, får kandidaten status «forbudt» (bygges ikke); ellers vanlig kandidat med en linje om verneområdet. Vurdert på kart (data/kandidater/vern/<id>.png, tools/vern_kart.py) ut fra listepinnen - ikke sjekket på flyfoto. Vurderingen gjelder listepinnen; gjennomgangssiden (tools/koordinatsjekk/) varsler hvis en godkjent posisjon havner i eller nær et verneområde med forbud, og da må den vurderes på nytt.",
+ "kandidater": {
+  "eggum": {
+   "status": null,
+   "merknad": "Listepinnen ligger ca. 270 m utenfor Eggum naturreservat (surfebrett forbudt hele året, forskrift 2002-12-06-1447 § 3 nr. 3), som begynner sørvest for pinnen og går ned til strandlinja og ut i sjøen. Ikke sjekket på flyfoto: ligger bølgen lenger sørvest enn pinnen, kan den være innenfor.",
+   "kart": "data/kandidater/vern/eggum.png"
+  },
+  "eggum-ost-steinstrand": {
+   "status": null,
+   "merknad": "Listepinnen ligger ca. 690 m utenfor Eggum naturreservat (surfebrett forbudt hele året). Ikke sjekket på flyfoto - forutsetter at pinnen står der bølgen er.",
+   "kart": "data/kandidater/vern/eggum-ost-steinstrand.png"
+  },
+  "the-frog": {
+   "status": null,
+   "merknad": "Listepinnen ligger ca. 580 m utenfor Nykvåg/Nykan naturreservat (surfebrett forbudt hele året, ferdsel på land forbudt 15.4-31.7; forskrift 2002-12-06-1462), som ligger på andre siden av bukta. Ikke sjekket på flyfoto - forutsetter at pinnen står der bølgen er.",
+   "kart": "data/kandidater/vern/the-frog.png"
+  }
+ }
+}

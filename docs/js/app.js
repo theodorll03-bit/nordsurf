@@ -201,6 +201,7 @@ function zeroWord(h){
 }
 function ratingWord(h){
   if(!h) return "–";
+  if(h._forbud) return "Surfing forbudt";   // time i en forbudsperiode (ui.js forbudKopi, Theodor 16.10.2026) - bare visning
   // 0 stjerner uten grunn OG uten surfehøyde: tallet mangler - aldri «Flatt»
   // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
   if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";

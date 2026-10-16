@@ -188,6 +188,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .uke i.miss{background:transparent;color:transparent;border:1px dashed var(--line-strong)}
 .uke i.dark{background:transparent;color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .uke i.over{background:transparent;color:transparent;box-shadow:none;border:0}
+.uke i.forbud{background:var(--sunken);color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .uke b{color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
 .stars .st.f{fill:var(--rc);stroke:var(--rc-ink);stroke-width:1;stroke-dasharray:none;opacity:.32}   /* tapt stjerne: dempet fyll, ikke stiplet (Theodor 15.10); aria sier «tapt på vind eller tidevann» */
@@ -530,3 +531,8 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .offliste{max-height:40vh;overflow:auto;margin-top:8px}
 .tabellboks{max-height:70vh;overflow:auto}
 .tabellboks thead th{position:sticky;top:0;background:var(--raised);z-index:1;box-shadow:0 1px 0 var(--line)}
+
+/* Theodor 16.10.2026: forbudsperiode i stedet for stjerner og ord (spotsiden) */
+.vurdering .forbud .ord{color:var(--ink)}
+.vurdering .forbud .periode{color:var(--muted);font-size:var(--fs-secondary);margin-top:4px}
+.forbudlinje{color:var(--muted);font-size:var(--fs-secondary);margin:6px 0 0}

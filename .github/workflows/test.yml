@@ -37,6 +37,10 @@ jobs:
         run: python fetcher/test_docs_cache.py
       - name: Test de delte datafilene (S2)
         run: python fetcher/test_publish.py
+      - name: Ingen hemmelige spots i git (Theodor 16.10)
+        run: python fetcher/test_kandidater.py
+      - name: Spotfabrikkens godkjenningsregler (Theodor 16.10)
+        run: python fetcher/test_spotfabrikk.py
       - name: Test vakthunden (varsel når henteren står stille)
         run: python fetcher/test_vakthund.py
       - name: Designrunde 1 - bare visning (rating-/hentefiler og forecast.json lik main)
