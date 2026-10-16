@@ -20,4 +20,13 @@ assert have == want, (
     f"commit resultatet sammen med de andre docs/-endringene."
 )
 print(f"docs/sw.js sin cache-versjon stemmer med docs/ sitt innhold ({want})")
+
+# S3 (16.10.2026): alle filene i SHELL må finnes - ellers feiler cache.addAll() i install, og en ny
+# sw.js blir aldri tatt i bruk (listen hadde css/kart.css og js/front.js, som ikke fantes).
+import json, re  # noqa: E402
+sw = SW.read_text(encoding="utf-8")
+shell = json.loads("[" + re.search(r"const SHELL = \[(.*?)\];", sw, re.S).group(1).replace("\n", " ") + "]")
+missing = [f for f in shell if f != "./" and not (SW.parent / f).is_file()]
+assert not missing, f"sw.js sin SHELL har filer som ikke finnes i docs/: {missing}"
+print(f"Alle {len(shell)} filene i sw.js sin SHELL finnes")
 print("Alle tester ok")
