@@ -7,7 +7,7 @@
   --surface:#F2F5F6; --raised:#FFFFFF; --sunken:#E9EEF0; --line:#E0E6E9; --line-strong:#C9D2D7;
   --ink:#0E1A21; --muted:#55656E; --faint:#8A99A1;
   --land:#F2EDE2; --sea:#B7D3DF; --coast:#8F8268;
-  --water:#2F7E95; --water-soft:rgba(47,126,149,.16); --water-top:rgba(47,126,149,.30); --band:rgba(14,26,33,.06); --band-edge:rgba(14,26,33,.28);   /* tidevannskortet (vannfarge, ikke ratingfarger) */
+  --water:#2F7E95; --water-soft:rgba(47,126,149,.16); --water-top:rgba(47,126,149,.30);   /* tidevannskortet (vannfarge, ikke ratingfarger) */
   --selected:#0E1A21; --on-selected:#FFFFFF;
   --accent:#0E1A21; --focus:#0B7483; --warn:#B8441F;
   --night:rgba(14,26,33,.08); --dusk:rgba(14,26,33,.04);
@@ -38,7 +38,7 @@
     --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
     --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
     --land:#2A4352; --sea:#0A1923; --coast:#56798A;
-    --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32); --band:rgba(234,242,244,.06); --band-edge:rgba(234,242,244,.30);
+    --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
     --selected:#EAF2F4; --on-selected:#0A1822;
     --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
     --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);
@@ -57,7 +57,7 @@
   --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
   --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
   --land:#2A4352; --sea:#0A1923; --coast:#56798A;
-  --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32); --band:rgba(234,242,244,.06); --band-edge:rgba(234,242,244,.30);
+  --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
   --selected:#EAF2F4; --on-selected:#0A1822;
   --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
   --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);

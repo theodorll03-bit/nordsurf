@@ -187,20 +187,34 @@ def main():
                     # foretrukket vannstand er selve kurven, tykkere - ikke bånd (Theodor 16.10)
                     assert page.locator("#tideKort .tv-band").count() == 0, f"trappetrinnsbånd igjen {where}"
                     assert page.locator("#tideKort .tv-pref").count() == 1, f"foretrukket del av kurven mangler {where}"
-                    pref_ok = page.evaluate("""() => {
+                    # fasiten fra Python (kontrollør 16.10): tide.state_at - samme funksjon som ratingen - for hvert av
+                    # kurvens 241 punkter (d0 + i/240 av døgnet); punktet skal være tykt hvis og bare hvis tilstanden er
+                    # foretrukket. Punkter innen 0,02 av en grense hoppes over (avrunding JS/Python, tersklene 0,3333/0,6667).
+                    kurve = page.evaluate("""() => {
                       const pp = (d) => (d.match(/-?[\\d.]+ -?[\\d.]+/g) || []).map(s => s.split(' ').map(Number));
-                      const c = pp(document.querySelector('#tideKort .tv-curve').getAttribute('d'));
-                      const p = pp(document.querySelector('#tideKort .tv-pref').getAttribute('d'));
-                      const key = (q) => q[0].toFixed(1) + ',' + q[1].toFixed(1);
-                      const ck = new Set(c.map(key));
-                      const ys = c.map(q => q[1]), yTop = Math.min(...ys), yBot = Math.max(...ys);
-                      const pys = p.map(q => q[1]);
-                      return {n: p.length, subset: p.every(q => ck.has(key(q))),
-                              // lav til middels: aldri helt oppe ved flo, men med fjære-bunnen
-                              naarFlo: Math.min(...pys) - yTop, naarFjaere: yBot - Math.max(...pys)};
+                      return {c: pp(document.querySelector('#tideKort .tv-curve').getAttribute('d')),
+                              p: pp(document.querySelector('#tideKort .tv-pref').getAttribute('d'))};
                     }""")
-                    assert pref_ok["n"] >= 2 and pref_ok["subset"], f"tykk del ligger ikke på kurven {where}: {pref_ok}"
-                    assert pref_ok["naarFlo"] > 3 and pref_ok["naarFjaere"] < 1, f"tykk del følger ikke «lav til middels» {where}: {pref_ok}"
+                    assert len(kurve["c"]) == 241, f"kurven har ikke 241 punkter (testdataene dekker ikke døgnet?) {where}: {len(kurve['c'])}"
+                    tykk = {f"{q[0]:.1f},{q[1]:.1f}" for q in kurve["p"]}
+                    assert tykk <= {f"{q[0]:.1f},{q[1]:.1f}" for q in kurve["c"]}, f"tykk del ligger ikke på kurven {where}"
+                    sys.path.insert(0, str(ROOT / "fetcher"))
+                    import tide as _tide
+                    d0 = dt.datetime.combine(NOW.astimezone(OSLO).date(), dt.time(0), tzinfo=OSLO).astimezone(dt.timezone.utc)
+                    pref = set(details["farstadsanden"]["tide_regel"]["prefer"])
+                    feil, sjekket = [], {True: 0, False: 0}
+                    for i, q in enumerate(kurve["c"]):
+                        t = d0 + dt.timedelta(days=1) * i / 240
+                        st = _tide.state_at(sp["tide_events"], t)
+                        assert st is not None, f"tidevann mangler kl. {t} i testdataene"
+                        if min(abs(st["level"] - 1 / 3), abs(st["level"] - 2 / 3)) <= 0.02:
+                            continue
+                        venter = st["state"] in pref
+                        sjekket[venter] += 1
+                        if (f"{q[0]:.1f},{q[1]:.1f}" in tykk) != venter:
+                            feil.append((t.astimezone(OSLO).strftime("%H:%M"), st["state"], st["level"]))
+                    assert not feil, f"tykk del følger ikke tide.state_at {where}: {feil[:6]}"
+                    assert sjekket[True] > 20 and sjekket[False] > 20, f"for få punkter på hver side av grensen {where}: {sjekket}"
                     fot = page.text_content("#tideKort .tv-fot").strip()
                     assert "Farstadsanden er best på lav til middels vannstand" in fot, f"forklaringen {where}: {fot}"
                     assert page.locator("#tideKort .tv-past").count() == 1, f"delen av dagen som har gått er ikke dempet {where}"
