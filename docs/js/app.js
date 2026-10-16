@@ -708,10 +708,10 @@ function exposureChartSVG(spotId, curve, logs){
   }).join("");
   const ticks = [0,90,180,270].map(d=>{
     const i = d/10;
-    return `<text x="${bx(i)}" y="${H-1}" font-size="15" fill="var(--muted)" text-anchor="middle">${d}°</text>`;
+    return `<text x="${bx(i)}" y="${H-1}" fill="var(--muted)" text-anchor="middle">${d}°</text>`;
   }).join("");
-  const yTicks = [0,0.5,1].map(v=>`<text x="${padL-4}" y="${by(v)+4}" font-size="15" fill="var(--muted)" text-anchor="end">${v}</text>`).join("");
-  return `<svg class="expo-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Eksponering per retning">
+  const yTicks = [0,0.5,1].map(v=>`<text x="${padL-4}" y="${by(v)+4}" fill="var(--muted)" text-anchor="end">${v}</text>`).join("");
+  return `<svg class="expo-chart" viewBox="0 0 ${W} ${H}" data-tekst-px="12" role="img" aria-label="Eksponering per retning">
     <line x1="${padL}" y1="${axisY}" x2="${W-padR}" y2="${axisY}" stroke="var(--line)"/>
     ${bars}
     <polyline points="${geoPts}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 2"/>

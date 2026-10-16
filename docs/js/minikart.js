@@ -54,7 +54,7 @@
       hasWind ? `Vind fra ${compass(h.wind_dir)} ${Math.round(h.wind_dir)} grader.` : "Vindretning mangler.",
       spot.swell_window ? `Svellvindu ${windowText(spot).replace("Vindu ", "")}.` : "",
     ].join(" ");
-    return `<svg class="minikart${o.still ? " still" : ""}" viewBox="-118 -118 236 236" role="img" aria-label="${esc(aria)}">
+    return `<svg class="minikart${o.still ? " still" : ""}" viewBox="-118 -118 236 236" data-tekst-px="12" role="img" aria-label="${esc(aria)}">
       <defs><clipPath id="mkClip-${esc(spot.id)}"><circle r="${R}"/></clipPath></defs>
       <circle class="sjo" r="${R}"/>
       <g clip-path="url(#mkClip-${esc(spot.id)})">${land}${coast}</g>

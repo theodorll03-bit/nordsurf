@@ -132,7 +132,8 @@
     const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${nf0.format(h.wind_speed)}</span>` : "<small>–</small>"}</div>`; }).join("");
     const svell = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.swell_offshore!=null ? `${ARROW(h.dir_offshore)}<span class="b">${nf1.format(h.swell_offshore)}</span><small>${h.period!=null ? nf0.format(h.period) + "s" : "–"}</small>` : "<small>–</small>"}</div>`; }).join("");
     const tideT = d.idxs.includes(selIdx) ? new Date(s.hours[selIdx].t) : new Date(s.hours[d.idxs[0]].t);
-    const tide = (s.tide_events||[]).length ? Spot.tideSvg(s.tide_events, tideT, true) : "";
+    // samme kurve som tidevannskortet, tegnet i ekte piksler av Tidevann.mount() (spot.js) når bredden er kjent
+    const tide = (s.tide_events||[]).length && window.Tidevann ? `<div class="tv-mini" data-t="${tideT.getTime()}"></div>` : "";
     return `<div class="kort graf" id="graf" data-day="${key}" data-n="${n}">
       <div class="graf-topp"><h3>${esc(cap(fmtDato.format(t0)))}</h3><span class="best">${topTxt}</span></div>
       <div class="plot" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${kol}</div>
