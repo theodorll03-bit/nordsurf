@@ -357,6 +357,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .plot .soyle .b .sets{position:absolute;left:0;right:0;bottom:100%;border-radius:3px 3px 0 0;background:var(--rc);opacity:.45}
 .plot .soyle .b.r-0{background:var(--line-strong)}
 .plot .soyle .tall{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 2px);font-family:var(--mono);font-size:0.6875rem;color:var(--ink);white-space:nowrap}
+.plot .soyle .tall.ord{font-family:var(--body);color:var(--muted)}
 .plot .kol.valgt .b{outline:2px solid var(--ink);outline-offset:0}
 .plot .kol.valgt::after{content:"";position:absolute;left:0;right:0;top:0;bottom:0;border:2px solid var(--ink);border-radius:4px;pointer-events:none}
 .plot .kol.tom .soyle{cursor:default}
