@@ -47,7 +47,7 @@ WORLD = 2 * math.pi * R
 EXTENT = 4096
 TILE_PX = 512
 COAST_NEAR_M = 1000     # detaljfliser bare der det er kyst innen 1 km (Web Mercator-meter)
-KJERNE_M = 600          # «kjerne» = landet krympet 600 m innover (oversikten, vises fra z8): når aldri ut i sjøen
+KJERNE_M = 600          # Web Mercator-meter (ved 68-70° N ca. 205-225 ekte m; 1 km over er ca. 340-375 m) - «kjerne» = landet krympet 600 m innover (oversikten, vises fra z8): når aldri ut i sjøen
                         # (z7 er forenklet med ca. 300 m), og dekker alt som ligger mer enn ca. 900 m fra kysten -
                         # nærmere kysten finnes det alltid en detaljflis (COAST_NEAR_M) med det ekte landet
 TO_MERC = Transformer.from_crs(4326, 3857, always_xy=True)
