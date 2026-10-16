@@ -1172,20 +1172,34 @@ def write_report():
             f.write("## Kilderapport\n\n" + text + "\n")
 
 
-def main():
+def run_now():
+    """Kjøringens time. S6: matrisejobbene får forjobbens tid (NORDSURF_NOW), så alle regioner regner mot samme
+    time selv om jobbene starter på ulike tidspunkt."""
+    v = os.environ.get("NORDSURF_NOW")
+    if v:
+        return dt.datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
+    return dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+
+
+def prepare(now):
+    """Felles inndata for en kjøring: loggene, ledgeren, kalibreringen og eksponeringen (fra git)."""
     config = json.loads(SPOTS.read_text(encoding="utf-8"))
-    now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
-    run_id = now.isoformat()
-    logs = safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[])
-    ledger = longrange.load_ledger(LEDGER)
-    bw_calib = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
-    exposure_data = json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {}
-    exposure_learned_data = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
+    return {
+        "config": config, "now": now, "run_id": now.isoformat(),
+        "logs": safe("alle", "Loggene dine (GitHub)", sources.github_logs, default=[]),
+        "ledger": longrange.load_ledger(LEDGER),
+        "bw_calib": json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {},
+        "exposure_data": json.loads(EXPOSURE_BASELINE.read_text(encoding="utf-8")) if EXPOSURE_BASELINE.exists() else {},
+        "exposure_learned_data": json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {},
+        "enabled": [s for s in config["spots"] if s.get("enabled")],
+    }
+
+
+def prefetch_openmeteo(enabled):
     # S1 (ROADMAP oppgave S): Open-Meteo hentes i samlekall FØR spot-løkka
     # (ett kall per modell for alle havpunkt, ett for alle vindpunkt) og
     # mellomlagres - spot-løkka under finner svarene i mellomlageret og gjør
     # ingen Open-Meteo-kall selv med mindre samlekallet feilet for punktet.
-    enabled = [s for s in config["spots"] if s.get("enabled")]
     sources.openmeteo_clear_cache()
     marine_points = [(s["offshore"]["lat"], s["offshore"]["lon"]) for s in enabled]
     marine_points += [(s["offshore_longrange"]["lat"], s["offshore_longrange"]["lon"]) for s in enabled if s.get("offshore_longrange")]
@@ -1198,10 +1212,15 @@ def main():
     except Exception as e:  # noqa: BLE001 - samlekallet er bare en snarvei, løkka henter enkeltvis
         REPORT.append(("alle", "Open-Meteo samlekall", "feil", str(e)[:120]))
         print(f"  Open-Meteo samlekall feilet: {e}")
-    spots = []
-    for s in enabled:
-        spots.append(build_spot(s, now, calibrate.learn(s["id"], logs), bw_calib, run_id,
-                                 exposure_data, exposure_learned_data, ledger))
+
+
+def build_spots(ctx, subset):
+    return [build_spot(s, ctx["now"], calibrate.learn(s["id"], ctx["logs"]), ctx["bw_calib"], ctx["run_id"],
+                       ctx["exposure_data"], ctx["exposure_learned_data"], ctx["ledger"]) for s in subset]
+
+
+def finish(ctx, spots):
+    now = ctx["now"]
     forecast = {"generated": now.isoformat(), "spots": spots,
                 "notify": {k: v for k, v in notify.load_settings().items() if not k.startswith("_")}}
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -1211,14 +1230,14 @@ def main():
     # varsel mot fasit (denne kjøringens nærmeste timer + loggene), lagre.
     longrange.write_archive(now, spots, ARCHIVE_DIR)
     pruned = longrange.prune_archives(now, ARCHIVE_DIR)
-    scored_now, scored_logs = longrange.score_runs(now, spots, logs, ledger, ARCHIVE_DIR)
-    longrange.save_ledger(ledger, LEDGER)
+    scored_now, scored_logs = longrange.score_runs(now, spots, ctx["logs"], ctx["ledger"], ARCHIVE_DIR)
+    longrange.save_ledger(ctx["ledger"], LEDGER)
     REPORT.append(("alle", "Treffsikkerhet (langtid)", "ok",
                    f"{scored_now} nye sammenligninger mot eget varsel, {scored_logs} mot logger, {pruned} arkiv slettet"))
     BW_CALIB.parent.mkdir(parents=True, exist_ok=True)
-    BW_CALIB.write_text(json.dumps(bw_calib, ensure_ascii=False, indent=1), encoding="utf-8")
+    BW_CALIB.write_text(json.dumps(ctx["bw_calib"], ensure_ascii=False, indent=1), encoding="utf-8")
     EXPOSURE_LEARNED.parent.mkdir(parents=True, exist_ok=True)
-    EXPOSURE_LEARNED.write_text(json.dumps(exposure_learned_data, ensure_ascii=False, indent=1), encoding="utf-8")
+    EXPOSURE_LEARNED.write_text(json.dumps(ctx["exposure_learned_data"], ensure_ascii=False, indent=1), encoding="utf-8")
     notify.run(forecast, now)
     ww3_second_opinion(spots)   # annenmening i kilderapporten, aldri i tallene
     # ROADMAP oppgave G: helsesjekk til slutt (alt over er skrevet uansett -
@@ -1228,5 +1247,188 @@ def main():
     write_report()
 
 
+def main():
+    """Sekvensiell kjøring (som før S6, og reserven i forecast.yml): alle spots i én prosess."""
+    ctx = prepare(run_now())
+    prefetch_openmeteo(ctx["enabled"])
+    finish(ctx, build_spots(ctx, ctx["enabled"]))
+
+
+# ---------------------------------------------------------------------------
+# S6 (ROADMAP seksjon S): henter per region som matrise i GitHub Actions.
+#   forjobb:  python fetcher/fetch.py --forjobb DIR      tid + Open-Meteo-samlekallet for ALLE punkt (én takt mot
+#             Open-Meteo), skrevet til DIR (artifact); regionlista til $GITHUB_OUTPUT («regions»)
+#   region:   python fetcher/fetch.py --region NAVN --fra DIR --til DIR2   bygger regionens spots med forjobbens
+#             tid og Open-Meteo-svar (ingen egne Open-Meteo-kall når samlekallet lyktes), skriver DIR2/region-<slug>.json
+#   samle:    python fetcher/fetch.py --samle DIR2 --fra DIR   setter sammen i spots.json-rekkefølge og gjør resten
+#             som før (forecast.json, arkiv, treffsikkerhet, kalibrering, varsler, helsesjekk, kilderapport)
+# Loggene (privat repo) hentes i hver jobb og legges ALDRI i en artifact (offentlige i et offentlig repo).
+# Byte for byte samme forecast.json og læringsdata som main() - test_matrise.py sjekker det.
+# ---------------------------------------------------------------------------
+UTEN_REGION = "Uten region"
+HEMMELIG = "hemmelig"
+
+
+def offentlige(enabled):
+    """Spots som kan gå gjennom matrisens artifacts (offentlige i et offentlig repo) - aldri status «hemmelig»
+    (CLAUDE.md). De hemmelige hentes av samlejobben selv, uten artifact, så henteren kan fortsatt lære på dem."""
+    return [s for s in enabled if s.get("status") != HEMMELIG]
+
+
+def region_of(spot):
+    return spot.get("region") or UTEN_REGION
+
+
+def region_slug(name):
+    import re
+    import unicodedata
+    n = unicodedata.normalize("NFD", name.lower().replace("æ", "ae").replace("ø", "o").replace("å", "a"))
+    return re.sub(r"[^a-z0-9]+", "-", "".join(c for c in n if unicodedata.category(c) != "Mn")).strip("-") or "region"
+
+
+def regions_in_order(config, enabled):
+    order = [r["name"] for r in sorted(config.get("regions", []), key=lambda r: r.get("order", 999))]
+    have = []
+    for s in enabled:
+        r = region_of(s)
+        if r not in have:
+            have.append(r)
+    return [r for r in order if r in have] + [r for r in have if r not in order]
+
+
+def _om_cache_dump():
+    return [[list(k), v] for k, v in sources._OM_CACHE.items()]
+
+
+def _om_cache_load(items):
+    sources.openmeteo_clear_cache()
+    for k, v in items:
+        sources._OM_CACHE[tuple(k)] = v
+
+
+def forjobb(out_dir):
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    now = run_now()
+    config = json.loads(SPOTS.read_text(encoding="utf-8"))
+    enabled = offentlige([s for s in config["spots"] if s.get("enabled")])
+    prefetch_openmeteo(enabled)
+    regions = regions_in_order(config, enabled)
+    (out_dir / "meta.json").write_text(json.dumps({"now": now.isoformat(), "regions": regions, "report": REPORT}, ensure_ascii=False), encoding="utf-8")
+    (out_dir / "openmeteo.json").write_text(json.dumps(_om_cache_dump(), ensure_ascii=False), encoding="utf-8")
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"regions={json.dumps(regions, ensure_ascii=False)}\n")
+    print(f"Forjobb: {now.isoformat()}, {len(regions)} regioner {regions}, {len(sources._OM_CACHE)} Open-Meteo-svar i mellomlageret")
+
+
+def _meta(from_dir):
+    m = json.loads((Path(from_dir) / "meta.json").read_text(encoding="utf-8"))
+    os.environ["NORDSURF_NOW"] = m["now"]
+    return m
+
+
+def region_job(name, from_dir, out_dir):
+    _meta(from_dir)
+    _om_cache_load(json.loads((Path(from_dir) / "openmeteo.json").read_text(encoding="utf-8")))
+    ctx = prepare(run_now())
+    subset = [s for s in offentlige(ctx["enabled"]) if region_of(s) == name]
+    spots = build_spots(ctx, subset)
+    ids = [s["id"] for s in subset]
+    out = {"region": name, "spots": spots,
+           "bw_calib": {i: ctx["bw_calib"][i] for i in ids if i in ctx["bw_calib"]},
+           "exposure_learned": {i: ctx["exposure_learned_data"][i] for i in ids if i in ctx["exposure_learned_data"]},
+           # loggene hentes i hver jobb - linja om dem står én gang (fra samlejobben)
+           "report": [r for r in REPORT if r[1] != "Loggene dine (GitHub)"], "exposure_report": EXPOSURE_REPORT, "convention": CONVENTION_WARNINGS,
+           "low_adjustment": LOW_ADJUSTMENT_WARNINGS, "bw_lee": BW_LEE_WARNINGS}
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    p = Path(out_dir) / f"region-{region_slug(name)}.json"
+    p.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    print(f"Region {name}: {len(spots)} spots → {p}")
+
+
+def samle(regions_dir, from_dir):
+    meta = _meta(from_dir)
+    ctx = prepare(run_now())
+    REPORT.extend(tuple(r) for r in meta.get("report", []))
+    by_id, missing = {}, []
+    for name in meta["regions"]:
+        p = Path(regions_dir) / f"region-{region_slug(name)}.json"
+        if not p.exists():
+            missing.append(name)   # regionjobben feilet: spotene mangler i dette varselet (grunnregelen - aldri 0)
+            continue
+        r = json.loads(p.read_text(encoding="utf-8"))
+        for sp in r["spots"]:
+            by_id[sp["id"]] = sp
+        ctx["bw_calib"].update(r["bw_calib"])
+        ctx["exposure_learned_data"].update(r["exposure_learned"])
+        REPORT.extend(tuple(x) for x in r["report"])
+        EXPOSURE_REPORT.extend(r["exposure_report"])
+        CONVENTION_WARNINGS.extend(r["convention"])
+        LOW_ADJUSTMENT_WARNINGS.extend(r["low_adjustment"])
+        BW_LEE_WARNINGS.extend(r["bw_lee"])
+    # hemmelige spots: hentes her (aldri i en artifact) - eget Open-Meteo-kall for punktene deres
+    hemmelige = [s for s in ctx["enabled"] if s.get("status") == HEMMELIG]
+    if hemmelige:
+        prefetch_openmeteo(hemmelige)
+        for sp in build_spots(ctx, hemmelige):
+            by_id[sp["id"]] = sp
+    # en region som feilet: spotene tas med uten timer (grunnregelen - mangler, aldri 0), så de ikke forsvinner
+    # fra oversikten, kartet og favorittene; appen viser «–»/«mangler» for alle timer (publish.py: naa tom, dager «miss»)
+    for name in missing:
+        REPORT.append(("alle", f"Region {name}", "feil", "regionjobben leverte ikke - spotene står uten timer (mangler) i dette varselet"))
+        for s in ctx["enabled"]:
+            if region_of(s) == name and s["id"] not in by_id:
+                by_id[s["id"]] = mangler_spot(s)
+    # samme rekkefølge og samme nøkkelrekkefølge i kalibreringsfilene som den sekvensielle kjøringen
+    ordered_ids = [s["id"] for s in ctx["enabled"]]
+    bw_old = json.loads(BW_CALIB.read_text(encoding="utf-8")) if BW_CALIB.exists() else {}
+    ex_old = json.loads(EXPOSURE_LEARNED.read_text(encoding="utf-8")) if EXPOSURE_LEARNED.exists() else {}
+    ctx["bw_calib"] = _ordered(bw_old, ctx["bw_calib"], ordered_ids)
+    ctx["exposure_learned_data"] = _ordered(ex_old, ctx["exposure_learned_data"], ordered_ids)
+    finish(ctx, [by_id[i] for i in ordered_ids if i in by_id])
+    if missing:
+        notify.alert("Nordsurf: en region feilet", f"Regionjobb(er) uten resultat: {', '.join(missing)}", "region:" + ",".join(missing), ctx["now"])
+
+
+def mangler_spot(s):
+    """Spoten med meta fra spots.json og ingen timer - for en region der hentingen feilet (aldri 0-verdier)."""
+    out = {k: v for k, v in s.items() if not k.startswith("_")}
+    out.update(hours=[], henting_feilet=True, bw_until=None)
+    return out
+
+
+def _ordered(old, merged, ids):
+    """Nøkkelrekkefølge som når build_spot() fyller dicten i spot-rekkefølge: gamle nøkler der de sto, nye bakerst."""
+    out = {k: merged[k] for k in old if k in merged}
+    for k in ids:
+        if k in merged and k not in out:
+            out[k] = merged[k]
+    for k in merged:
+        if k not in out:
+            out[k] = merged[k]
+    return out
+
+
+def cli(argv):
+    import argparse
+    ap = argparse.ArgumentParser(description="Hent varsel (sekvensielt, eller S6: forjobb/region/samle)")
+    ap.add_argument("--forjobb", metavar="DIR")
+    ap.add_argument("--region", metavar="NAVN")
+    ap.add_argument("--samle", metavar="DIR")
+    ap.add_argument("--fra", metavar="DIR")
+    ap.add_argument("--til", metavar="DIR")
+    a = ap.parse_args(argv)
+    if a.forjobb:
+        forjobb(a.forjobb)
+    elif a.region:
+        region_job(a.region, a.fra, a.til)
+    elif a.samle:
+        samle(a.samle, a.fra)
+    else:
+        main()
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    cli(sys.argv[1:])
