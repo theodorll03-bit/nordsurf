@@ -119,11 +119,13 @@
       const l = h ? (h.light || null) : null; const natt = l==="mørkt" ? " natt" : l==="skumring" ? " skum" : "";
       // tallet mangler (også for en «kjent» time med low_reason men uten høyde): stiplet, aldri en 0-søyle
       const miss = !known || h.surf_height==null;
-      // tallet på valgt søyle følger regel (c) (Spot.visHoyde: blåst ut/stormsjø viser BarentsWatch-høyden) - samme tall som aria og topptekst
-      const vh = h ? Spot.visHoyde(h) : null; const tv = vh ? (vh.b!=null ? vh.b : vh.a) : null; const tall = tv!=null && tv > 0 ? nf1.format(tv) : null;   // aldri «0,0» (PR #12 punkt b)
+      // Theodor 16.10.2026: tallet i søylen er alltid toppen av det søylen TEGNER (settene, ellers surfehøyden) - ikke
+      // regel (c) sin BarentsWatch-høyde, som ga «1,3» i en tom søyle (Grøtfjord 17.10 kl. 14). Er høyden 0: ordet.
+      const topp = h && h.surf_height!=null ? (h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height) : null;
+      const tall = topp!=null && topp > 0 && h.surf_height > 0 ? nf1.format(topp) : (h && h.surf_height===0 ? ratingWord(h) : null);   // aldri «0,0»
       const hs = h && h.surf_height!=null ? h.surf_height : 0, sets = h && h.surf_height_sets!=null ? Math.max(0, h.surf_height_sets - hs) : 0;
       const bar = !h ? "" : miss ? `<span class="b miss" style="height:3px"></span>`
-        : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx && tall ? `<span class="tall">${tall}</span>` : ""}</span>`;
+        : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx && tall ? `<span class="tall${h.surf_height===0 ? " ord" : ""}">${esc(tall)}</span>` : ""}</span>`;
       const rs = !h ? `<span class="rs tom"></span>` : miss ? `<span class="rs miss" title="mangler"></span>` : `<span class="rs r-${Math.min(5,st)}" aria-hidden="true">${st||""}</span>`;
       const aria = h ? `${fmtHour.format(new Date(h.t))}:00, ${!miss ? (st ? STR.starsAria(st, h.faded||0) + ", " : "") + ratingWord(h) + (H.heightText(h) ? ", " + H.heightText(h) + " m" : "") : "tallet mangler"}` : `${String(c.hh).padStart(2,"0")}:00, ${c.hh < firstHH ? "har vært" : "ingen tall (6-timers steg)"}`;
       return `<div class="kol${natt}${c.i===selIdx ? " valgt" : ""}${!h ? " tom" : ""}" data-i="${c.i}" data-hh="${c.hh}">${rs}<button type="button" class="soyle" data-i="${c.i}" aria-label="${esc(aria)}"${!h ? " disabled" : ""}${c.i===selIdx ? ' aria-pressed="true"' : ""}>${bar}</button></div>`; }).join("");
