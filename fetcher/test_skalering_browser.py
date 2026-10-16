@@ -36,6 +36,7 @@ SHOT_DIR = DOCS / "design" / "skalering" / "etter"
 SHOT_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT / "fetcher"))
 import publish  # noqa: E402
+import testserver  # noqa: E402
 import synthetic_spots  # noqa: E402
 
 ELEMENT_TIMEOUT_MS = 15_000
@@ -53,17 +54,9 @@ def _watchdog():
     t = threading.Timer(FILE_TIMEOUT_S, _kill); t.daemon = True; t.start(); return t
 
 
-class Quiet(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, *a):
-        pass
-
-
 def serve():
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), partial(Quiet, directory=str(DOCS)))
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    return srv, port
+    # S3: med HTTP Range (206) som GitHub Pages - PMTiles-kartet trenger det (fetcher/testserver.py)
+    return testserver.serve(DOCS)
 
 
 def main():
@@ -86,7 +79,7 @@ def main():
         with sync_playwright() as p:
             exe = os.environ.get("NORDSURF_CHROMIUM")
             nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
-            browser = p.chromium.launch(args=["--lang=nb-NO"], env=nb_env, **({"executable_path": exe} if exe else {}))
+            browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
                 mobile = vp[0] < 900
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="light", locale="nb-NO", timezone_id="Europe/Oslo",
