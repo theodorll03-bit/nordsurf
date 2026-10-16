@@ -1,17 +1,21 @@
 # Nordsurf: status
 
-## Svar på rapporten 16.10 formiddag (punkt 1-8) - I GANG
+## KLAR FOR CLAUDES GJENNOMGANG (16.10): Lofoten og Vesterålen, 22 bygde spots - PR #22 (utkast)
+
+Gren `region/lofoten-vesteralen`. Samletabell: `data/kandidater/bygget/lofoten-vesteralen.md`; minikart: `data/kandidater/bygget/<id>.png`; gjennomgangssiden (minikart ved siden av posisjonen): `git checkout region/lofoten-vesteralen && python3 tools/koordinatsjekk/server.py` → http://127.0.0.1:8765/. Neste: Claude skriver `privat/kandidater/bygg_godkjent_claude.csv` (id, beslutning godkjent/rett/avvis, kommentar) → godkjenn_spot.py for de godkjente (rettinger fra kommentaren først) → Theodor ja/nei til merge. Flagget: eggum-ost-steinstrand, g-frame, horseid, rorvika (BarentsWatch uten punkt), flakstad-beach-kirkesiden (ingen fri linje til åpent hav); høyder må settes for g-frame, soppelplassen, unstad-left, unstad-right.
+
+## Svar på rapporten 16.10 formiddag (punkt 1-8) - FERDIG; venter: #20, #21 (ja), #22 (Claudes gjennomgang)
 
 | Punkt | Status | Gren / PR |
 |---|---|---|
 | 1a Driftsregel i CLAUDE.md | ferdig (main) | - |
-| 1b Vakthund (ntfy ved varsel > 7 t eller to feilede «Hent varsel» på rad, maks ett per 6 t) | PR åpen, kontrollør kjører - venter på ja | drift/vakthund, #20 |
+| 1b Vakthund (ntfy ved varsel > 7 t eller to feilede «Hent varsel» på rad, maks ett per 6 t) | PR åpen, kontrollør GODKJENT - **venter på ja** | drift/vakthund, #20 |
 | 1c Banner ved gammelt varsel | Svar: **nei** - banneret fantes bare på Hjem, så 15.-16.10 viste Utforsk og spotsiden bare «–». Rettet i #20: «Varselet er N timer gammelt …» på Hjem, Utforsk og spotsiden, og eget banner når varselet har eldre format enn appen. | #20 |
-| 2 Hemmelige ut av git | **ferdig, merget i #16**: kjennes igjen på hash, ligger bare i privat/kandidater/hemmelige.json; fetcher/test_kandidater.py (CI) feiler på status «hemmelig», id/navn og (lokalt) koordinatene. Historikken er ikke skrevet om. | #16 |
+| 2 Hemmelige ut av git (NB 16.10: koordinatene sto også i en kommentar jeg skrev i test_kandidater.py - fjernet, testen fant det) | **ferdig, merget i #16**: kjennes igjen på hash, ligger bare i privat/kandidater/hemmelige.json; fetcher/test_kandidater.py (CI) feiler på status «hemmelig», id/navn og (lokalt) koordinatene. Historikken er ikke skrevet om. | #16 |
 | 3 PR #16 | **merget**: 26 flyfoto-forslag (4 A, 17 B, 5 C) importert; vernesjekk med Naturbase rundt hvert forslag (Eggum 277 m, Eggum øst 427 m, The Frog 626 m utenfor - triage.md); gjennomgangssiden forhåndsvelger forslaget og viser sikkerhet/begrunnelse og fabrikkens minikart | #16 |
-| 4 PR #18 | rettet (godkjent posisjon påkrevd - Theodor eller Claude delegert; flagg krever --overstyr; test_spotfabrikk.py), kontrollør kjører, så merge | spotfabrikken, #18 |
-| 5 S6 | bygget, CI grønn, kontrollør kjører - **venter på ja**. Byte for byte likt med sekvensiell; Open-Meteo må tempobegrenses før ca. 80 spots; hemmelige spots må stenges ute av regionartifactene før første «hemmelig» i spots.json | s6/region-matrise, #21 |
-| 7/8 Lofoten og Vesterålen | venter på #18: import av godkjent_claude.csv (22 godkjent, 4 venter) og nytt rorvika-forslag, bygg_spot for de 22, BarentsWatch-snitt i Actions, samletabell | region/lofoten-vesteralen |
+| 4 PR #18 | **merget**: godkjent posisjon påkrevd (Theodor eller Claude delegert), flagg krever --overstyr, BarentsWatch-valg med kjent dybde, test_spotfabrikk.py. Kontrollør: IKKE GODKJENT → rettet. Forbudssjekken gjorde Utforsk tregere i CI - rettet før merge | #18 |
+| 5 S6 | kontrollør GODKJENT (etter to rettelser: feilet region vises som «mangler», hemmelige spots holdes ute av offentlige artifacts) - **venter på ja**. Byte for byte likt med sekvensiell; Open-Meteo må tempobegrenses før ca. 80 spots | s6/region-matrise, #21 |
+| 7/8 Lofoten og Vesterålen | **klar for Claudes gjennomgang** (øverst) - 22 bygget, BarentsWatch-punkt for 17 | region/lofoten-vesteralen, #22 (utkast) |
 
 ## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - FERDIG; venter på Theodor: merge #17, se #16 og #18
 
