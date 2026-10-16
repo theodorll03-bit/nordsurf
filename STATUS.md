@@ -1,6 +1,58 @@
 # Nordsurf: status
 
-**16.10 ettermiddag: GitHub-kontoen er suspendert** (git og gh svarer 403 «Your account is suspended»). Ingen push, PR eller merge er mulig; «Hent varsel», publisering og vakthund i Actions står trolig stille. Lokale commits som venter på push: denne STATUS-oppdateringen (main) og design/kartverket-2.
+## Venter på GitHub (kontoen suspendert 16.10 ca. kl. 15, anke sendt 15:25)
+
+Alt under er gjort LOKALT. Ingen push, gh, nye remotes eller andre tjenester før kontoen er tilbake (Theodors regler 16.10). Ingen rebase/force - alt kan pushes rett.
+
+**a) Merget lokalt inn i main (git merge --no-ff, i denne rekkefølgen; hele testsuiten lokalt grønn før hver, inkl. Playwright - 17 tester):**
+
+| # | Gren | PR | Merge-commit | Merknad |
+|---|---|---|---|---|
+| 1 | design/stjerner | #24 | ad6ec12 | tapte stjerner stiplet |
+| 2 | fiks/soyletall | #25 | 9b42330 | sw.js-konflikt løst ved å regne hashen på nytt |
+| 3 | fiks/hopp | #27 | 1160355 | B på, A av, sekundærsvell 0,0/0° → None, flat-sperren uendret |
+| 4 | design/tidevann | #26 | 2d9fd93 | **foretrukket vannstand var trappetrinnsbånd** - rettet før merge: selve kurven tegnes tykkere der vannstanden er innenfor preferansen (3550fba), og testen har fasit fra tide.state_at for alle 241 kurvepunkter (6a50462). Kontrollør GODKJENT. Konflikt i sw.js + spotside-skjermbilder |
+| 5 | design/kartverket-2 | erstatter #28 (ny PR må åpnes) | 43c673a | sjekket: ingen PNG med Kartverket z ≥ 12 i noen commit på grenen (bare oversiktsbilder z ≤ 10, detalj med OSM-reserven) |
+| 6 | region/lofoten-vesteralen | #22 | 58fc3e2 | 15 nye publiserte (se under); skjermbildene tatt på nytt med sammenslått app |
+| 7 | drift/forhandsvis | (ingen PR - ny) | 0376f70 | tools/forhandsvis.sh |
+| 8 | drift/fotavtrykk | (ingen PR - ny) | 245bc46 | docs/drift/github-fotavtrykk.md (bare forslag) |
+
+**#22 - avgjørelsene (Theodor 16.10):** unstad-left, unstad-right, soppelplassen og g-frame holdt tilbake (enabled false), eggum-ost parkert → **15 nye publiserte spots** (23 publisert totalt, 27 i spots.json). **Ramberg er IKKE endret i main** - se «Venter på Theodor» under.
+
+**b) Push når kontoen er tilbake (i denne rekkefølgen):**
+1. Feature-grenene først, så PR-hodene er oppdatert: `design/tidevann` (2 nye commits), `region/lofoten-vesteralen` (1 ny), `design/kartverket-2` (ny), `drift/forhandsvis` (ny), `drift/fotavtrykk` (ny). `design/stjerner`, `fiks/soyletall`, `fiks/hopp` er uendret siden siste push.
+2. `main` - da ser GitHub #22, #24, #25, #26 og #27 som merget (hodene ligger i main).
+3. `region/ramberg-315` og `drift/vakthund-live` - IKKE merget, åpne PR når du sier ja.
+4. Sjekk at test.yml går grønt på main (CI har ikke kjørt på noe av dette).
+
+**c) Theodor må gjøre selv på GitHub:**
+- Lukke #28 og slette grenen `design/kartverket` (Geovekst-bilder z ≥ 12 i commit 8083ccb). `refs/pull/28` beholder commiten uansett - full fjerning krever GitHub-support.
+- Åpne PR for `design/kartverket-2` (tekst klar: scratchpad/pr_kv2.md - eller be meg når gh virker).
+- Sjekke at Actions («Hent varsel», publisering, vakthund) og Pages kjører igjen, og at live-siden har ferskt varsel. Den første «Hent varsel» etter pushen henter 23 spots.
+
+**Venter på Theodor:**
+- **Ramberg (gren region/ramberg-315, a089c98):** facing 315 og offshore [90,180] som du sa, men kontrolløren fant at det flytter Ramberg 2 stjerner (stoppregelen; Ramberg har ingen faste observasjoner). Prøvevarselet 16.10 11Z, regnet på nytt med rating.rate (gamle parametere gir nøyaktig samme stjerner som fila):
+
+| Time (UTC) | Før | Nå | bw_dir | Vind | Vindtype nå |
+|---|---|---|---|---|---|
+| 16.10 17 | 0 | 1 | 328 | 277° 11,6 m/s | onshore |
+| 17.10 07 | 2 | 1 | 329 | 347° 4,3 m/s | onshore |
+| 17.10 10 | 0 | 1 | 329 | 314° 8,5 m/s | onshore |
+| 17.10 21-23 | 1 | 2 | 330 | 254-261° 5-6 m/s | side-onshore |
+| 18.10 00 | 0 | 1 | 330 | 256° 6,0 m/s | side-onshore |
+| 18.10 02 | 1 | 2 | 330 | 217° 5,2 m/s | side |
+| **18.10 03** | **0** | **2** | 330 | 223° 5,8 m/s | side |
+| 18.10 04 | 0 | 1 | 330 | 214° 6,7 m/s | side |
+| **18.10 05** | **0** | **2** | 329 | 225° 5,5 m/s | side |
+| 18.10 06-10 | 0 | 1 | 318-329 | 225-244° 7-10 m/s | side / side-onshore |
+
+  Årsak: retningsfaktoren ved punktet 0,71-0,78 → 1,0 (bølgene ved punktet 327-330°, nå 12-15° fra facing), og SV-vind 210-225° blir «side» (før side-onshore), V-vind 255-270° «side-onshore» (før onshore). Kontrolløren: fysisk rimelig, men BarentsWatch-snittet ble lagt langs 287,7, der V-vind er nær onshore. **Si ja, så merger jeg grenen.**
+- **drift/vakthund-live (88f4172):** 404/5xx/tidsavbrudd/DNS-feil/ugyldig JSON på live-siden regnes som feil («Live-siden er nede» / «Varselet finnes ikke på live-siden»), skilt fra «Varselet er gammelt»; samme issue og 6-timersgrense; timeout 120 → 240 s i vakthund.yml, cron uendret. test_vakthund del 7 (mock) grønn. Ikke merget.
+- **Fotavtrykk-forslaget** (docs/drift/github-fotavtrykk.md): 394 commits 03.-16.10 (127 bot, 103 «Nytt varsel» - ca. 8/døgn fra læringsdata-commiten), 16.10: 114 commits og ca. 70 push. Anbefalt: maks 2-3 PR/døgn, push når en oppgave er ferdig, test.yml bare på main+PR med concurrency, find_bw_point/provehent uten commit/bare manuelt, vakthund hver 6. t, læringsdata én commit per døgn (tilstand i artefakt), ta bort 00:17-kjøringen, syncLogs bare ved endring, skjermbilder ut av git. Alt krever ja; ingen workflow er endret.
+
+**Lokal forhåndsvisning:** `bash tools/forhandsvis.sh` (fra repo-roten) → **http://127.0.0.1:8780/** (Ctrl-C stopper). `--bare-server` bruker forrige henting. Henter fra met.no/Open-Meteo/Kartverket (ca. 30 s) til den gitignorerte mappa `forhandsvis/`; **uten BarentsWatch** (nøklene finnes bare i Actions) - BarentsWatch vises som mangler og ratingen bruker reservemodellen, så stjernene kan avvike fra live. Ingen varsler, ingen commit.
+
+**Sikkerhetskopier:** `privat/backup/` - nordsurf-2026-10-16.bundle + de tre nyeste (git bundle --all etter hver lokale merge).
 
 ## Grøtfjord lørdag 17.10 kl. 13-14: enkelttimes-fall (Theodor 16.10) - analyse ferdig, retting i gang
 
