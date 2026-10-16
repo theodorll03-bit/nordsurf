@@ -20,7 +20,6 @@
   const animert = new Set();          // kortet animeres bare første gang det kommer inn i bildet (per spot)
   const forrigeX = {};                // markøren glir fra forrige posisjon ved timebytte
   const reduser = ()=> matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const f2 = (cm)=> (cm/100).toFixed(2).replace(".", ",");
   const f1 = (cm)=> (cm/100).toFixed(1).replace(".", ",");
   const HM = new Intl.DateTimeFormat("nb-NO", {hour:"2-digit", minute:"2-digit", timeZone: TZ});
   const hm = (ms)=> HM.format(new Date(ms));
@@ -76,12 +75,12 @@
     const neste = !nx ? "" : erNa
       ? `<b>${cap(nx.type)} ${hm(nx.ms)}</b> · <span class="num">${f1(nx.cm)} m</span> · ${omTekst(nx.ms - nowMs)}`
       : `Neste: <b>${cap(nx.type)} ${hm(nx.ms)}</b> · <span class="num">${f1(nx.cm)} m</span>`;
-    return `<div class="tv-les"><span class="tv-h num">${f2(lv.cm)}<small>m</small></span>
+    return `<div class="tv-les"><span class="tv-h num">${f1(lv.cm)}<small>m</small></span>
       <span class="tv-trend">${PIL(lv.stiger)}${lv.stiger ? "Stiger" : "Synker"}</span><span class="tv-neste">${neste}</span></div>`;
   }
   function ariaTekst(ev, ms){
     const lv = nivaa(ev, ms);
-    return lv ? `${hm(ms)}, ${f2(lv.cm)} meter, ${lv.stiger ? "stiger" : "synker"}` : `${hm(ms)}, tidevann mangler`;
+    return lv ? `${hm(ms)}, ${f1(lv.cm)} meter, ${lv.stiger ? "stiger" : "synker"}` : `${hm(ms)}, tidevann mangler`;
   }
 
   /* ---------- kortet (HTML-skallet; SVG-en tegnes av mount() når bredden er kjent) ---------- */
@@ -94,7 +93,7 @@
       ${lesHtml(s, ev, ms, nowMs, erNa)}
       <div class="tv-graf" id="tideGraf" role="slider" tabindex="0" aria-label="Tidspunkt i tidevannsgrafen" aria-valuemin="0" aria-valuemax="24"
         aria-valuenow="${((ms - d0) / 36e5).toFixed(2)}" aria-valuetext="${esc(ariaTekst(ev, ms))}"></div>
-      <div class="tv-fot"><span>${pref ? `<span class="tv-sw" aria-hidden="true"></span>` : ""}${esc(prefTekst(s))}</span><span>Kilde: Kartverket · høyde over sjøkartnull · kurve mellom flo og fjære</span></div></div>`;
+      <div class="tv-fot"><span>${pref ? `<span class="tv-sw" aria-hidden="true"></span>` : ""}${esc(prefTekst(s))}</span><span>Kilde: Kartverket · høyde over sjøkartnull · beregnet kurve (cosinus) mellom flo og fjære</span></div></div>`;
   }
 
   /* ---------- tegningen ---------- */

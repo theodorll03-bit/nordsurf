@@ -74,8 +74,8 @@ def tide_cm(events, t):
     return None
 
 
-def f2(cm):
-    return f"{cm / 100:.2f}".replace(".", ",")
+def f1(cm):   # én desimal: vannstanden mellom flo og fjære er beregnet, ikke målt (kontrollør 16.10)
+    return f"{cm / 100:.1f}".replace(".", ",")
 
 
 SVG_TEXT_JS = r"""(sel) => [...document.querySelectorAll(sel)].filter(t => { const r = t.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !t.closest('[hidden]'); })
@@ -170,7 +170,7 @@ def main():
                     sp = SP["farstadsanden"]
                     cm, stiger, nxt = tide_cm(sp["tide_events"], NOW)
                     h_txt = page.text_content("#tideKort .tv-h").replace("\u00a0", " ").strip()
-                    assert re.fullmatch(r"\d+,\d\d\s*m", h_txt) and h_txt.startswith(f2(cm)), f"vannstand {where}: «{h_txt}», ventet {f2(cm)} m"
+                    assert re.fullmatch(r"\d+,\d\s*m", h_txt) and h_txt.startswith(f1(cm)), f"vannstand {where}: «{h_txt}», ventet {f1(cm)} m"
                     trend = page.text_content("#tideKort .tv-trend").strip()
                     assert trend == ("Stiger" if stiger else "Synker"), f"trend {where}: {trend}"
                     neste = page.text_content("#tideKort .tv-neste").replace("\u00a0", " ").strip()
@@ -183,7 +183,7 @@ def main():
                     sl = page.locator("#tideGraf")
                     assert sl.get_attribute("role") == "slider", "grafen er ikke role=slider"
                     vt = sl.get_attribute("aria-valuetext")
-                    assert vt == f"11:00, {f2(cm)} meter, {'stiger' if stiger else 'synker'}", f"aria-valuetext {where}: {vt}"
+                    assert vt == f"11:00, {f1(cm)} meter, {'stiger' if stiger else 'synker'}", f"aria-valuetext {where}: {vt}"
                     assert page.locator("#tideKort .tv-band").count() >= 1, f"bånd for foretrukket vannstand mangler {where}"
                     fot = page.text_content("#tideKort .tv-fot").strip()
                     assert "Farstadsanden er best på lav til middels vannstand" in fot, f"forklaringen {where}: {fot}"
