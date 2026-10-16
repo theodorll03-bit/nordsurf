@@ -354,7 +354,7 @@
     if((m = h.match(/^#spot=([^&]+)(?:&t=([^&]+))?/)) || (m = h.match(/^#\/spot\/([^/?#&]+)/))){
       const id = decodeURIComponent(m[1]);
       if(spotById(id)){
-        S.spotId = id; S.view = "spot"; S.idx = null; S.tIso = null;
+        S.spotId = id; S.view = "spot"; S.idx = null; S.tIso = null; S.tideMin = 0;
         const t = m[2]!=null ? decodeURIComponent(m[2]) : null;
         if(t!=null){ if(/^\d+$/.test(t)) S.idx = +t; else S.tIso = t; }   // tidsstempel (fra oversikten) eller timeindeks (gamle lenker)
         return;
@@ -377,7 +377,7 @@
     // t: tidsstempel («2026-10-17T08:00Z») fra oversikten, eller timeindeks (spotsiden selv)
     const s = spotById(id); if(!s) return;
     if(S.view!=="spot") S.from = S.view==="sok" ? (S.from||"hjem") : S.view;
-    S.spotId = id; S.idx = typeof t==="number" ? t : null; S.tIso = typeof t==="string" ? t : null;
+    S.spotId = id; S.tideMin = 0; S.idx = typeof t==="number" ? t : null; S.tIso = typeof t==="string" ? t : null;
     S.view = "spot";
     const hash = `#spot=${encodeURIComponent(id)}${t!=null ? "&t=" + encodeURIComponent(t) : ""}`;
     if(location.hash !== hash) location.hash = hash; else render();

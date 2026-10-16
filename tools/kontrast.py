@@ -95,6 +95,7 @@ def pairs(toks):
     for bg in ("surface", "raised"):
         out.append((f"fokusring --focus på --{bg} (grafikk)", col("focus"), col(bg), GRAPHIC_MIN))
     out.append(("stiplet ramme --muted på --raised (grafikk)", col("muted"), col("raised"), GRAPHIC_MIN))
+    out.append(("tidevannskurven --water på --raised (grafikk)", col("water"), col("raised"), GRAPHIC_MIN))
     # kystlinjen: nok mot minst én av sidene
     coast = col("coast")
     best = max(ratio(coast, col("land")), ratio(coast, col("sea")))

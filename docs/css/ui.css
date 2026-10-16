@@ -7,6 +7,7 @@
   --surface:#F2F5F6; --raised:#FFFFFF; --sunken:#E9EEF0; --line:#E0E6E9; --line-strong:#C9D2D7;
   --ink:#0E1A21; --muted:#55656E; --faint:#8A99A1;
   --land:#F2EDE2; --sea:#B7D3DF; --coast:#8F8268;
+  --water:#2F7E95; --water-soft:rgba(47,126,149,.16); --water-top:rgba(47,126,149,.30);   /* tidevannskortet (vannfarge, ikke ratingfarger) */
   --selected:#0E1A21; --on-selected:#FFFFFF;
   --accent:#0E1A21; --focus:#0B7483; --warn:#B8441F;
   --night:rgba(14,26,33,.08); --dusk:rgba(14,26,33,.04);
@@ -37,6 +38,7 @@
     --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
     --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
     --land:#2A4352; --sea:#0A1923; --coast:#56798A;
+    --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
     --selected:#EAF2F4; --on-selected:#0A1822;
     --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
     --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);
@@ -55,6 +57,7 @@
   --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
   --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
   --land:#2A4352; --sea:#0A1923; --coast:#56798A;
+  --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
   --selected:#EAF2F4; --on-selected:#0A1822;
   --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
   --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);
@@ -371,12 +374,6 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .grafrad .celler div small{color:var(--muted);font-family:var(--mono);font-size:0.6875rem}
 .grafrad .celler svg{width:0.875rem;height:0.875rem}
 .grafrad .celler .b{font-weight:700}
-.tidekurve{width:100%;height:auto;display:block}
-.tidekurve path{fill:none;stroke:var(--ink);stroke-width:1.5}
-.tidekurve text{font-family:var(--mono);font-size:13px;fill:var(--muted)}   /* 13 enheter i viewBox 300 ≥ 11 px ned til 254 px bredde (graf-raden på mobil er 272 px) */
-.tidekurve circle{fill:var(--ink)}
-.tide svg .b,.tidekurve .b{font-family:var(--body);font-weight:700;fill:var(--ink)}
-.tidekurve text.b{font-family:var(--body);font-weight:700;fill:var(--ink)}
 /* minikart, tidevann, vær */
 .mini{display:flex;flex-wrap:wrap;gap:16px;align-items:center}   /* flex-wrap: ved 200 % tekst faller forklaringen under kartet i stedet for å klemme det */
 .mini > div:first-child{flex:1 1 180px;min-width:0}
@@ -385,13 +382,53 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .mini .forkl{display:flex;flex-direction:column;gap:10px;font-size:var(--fs-caption);color:var(--muted);min-width:110px}
 .mini .forkl b{display:block;color:var(--ink);font-size:var(--fs-secondary)}
 .mini .forkl .ikon{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px}
-.tide{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:start}
-.tide .v{font-family:var(--mono);font-size:1.875rem;font-weight:500;line-height:1.05}
-.tide .v small{font-family:var(--body);font-size:0.875rem;color:var(--muted);margin-left:4px}
-.tide .trend{font-weight:700;margin-top:4px}
-.tide .neste{text-align:right;color:var(--muted);font-size:var(--fs-caption)}
-.tide .neste b{display:block;color:var(--ink);font-size:var(--fs-secondary)}
-.tide svg{grid-column:1/-1}   /* størrelse, skrift og farger: .tidekurve-reglene over */
+/* tidevannskortet (docs/js/tidevann.js): SVG i ekte piksler (viewBox = bredden), tekst i px */
+.tide .k{margin-bottom:2px}
+.tv-les{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:6px 0 2px}
+.tv-h{font-family:var(--mono);font-size:1.875rem;font-weight:500;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tv-h small{font-family:var(--body);font-size:1rem;color:var(--muted);margin-left:3px}
+.tv-trend{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:var(--fs-secondary);padding:4px 10px 4px 8px;border-radius:999px;background:var(--water-soft);color:var(--ink)}
+.tv-trend svg{width:14px;height:14px}
+.tv-neste{color:var(--muted);font-size:var(--fs-secondary)}
+.tv-neste b{color:var(--ink);font-weight:600}
+.tv-mangler{color:var(--muted);margin:6px 0 0}
+.tv-graf{position:relative;margin-top:8px;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none;border-radius:8px}
+.tv-graf:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.tv-mini{margin-top:6px}
+.tv-svg{display:block;overflow:visible}
+.tv-curve{fill:none;stroke:var(--water);stroke-width:2;stroke-linecap:round}
+.tv-past{fill:var(--raised);opacity:.5}   /* demper delen av dagen som har gått (bare i dag) */
+.tv-g0{stop-color:var(--water-top)} .tv-g1{stop-color:var(--water-soft);stop-opacity:.15}
+.tv-pref{fill:none;stroke:var(--water);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;transition:opacity .4s 1s}   /* foretrukket vannstand: tykkere kurve, samme farge */
+.tv-svg.intro .tv-pref{opacity:0} .tv-svg.intro.go .tv-pref{opacity:1}
+.tv-ext circle{fill:var(--raised);stroke:var(--water);stroke-width:2}
+.tv-lbl{font-family:var(--body);font-size:12px;font-weight:600;fill:var(--ink)}
+.tv-lbl .t{font-family:var(--mono);font-weight:500;fill:var(--muted)}
+.tv-ax{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.tv-tick{stroke:var(--line-strong);stroke-width:1}
+.tv-mline{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
+.tv-dot{fill:var(--water);stroke:var(--raised);stroke-width:2}
+.tv-ring{fill:none;stroke:var(--water);stroke-width:2;transform-origin:center;transform-box:fill-box;animation:tvPuls 2.6s ease-out infinite}
+.tv-marker{transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.tv-fot{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:var(--fs-caption)}
+.tv-sw{display:inline-block;width:16px;height:5px;border-radius:3px;background:var(--water);margin-right:6px;vertical-align:2px}
+/* animasjon bare første gang kortet kommer i bildet (IntersectionObserver legger på .go) */
+.tv-svg.intro .tv-curve{stroke-dasharray:var(--len);stroke-dashoffset:var(--len)}
+.tv-svg.intro.go .tv-curve{animation:tvTegn 1.1s cubic-bezier(.3,.7,.2,1) forwards}
+.tv-svg.intro .tv-area{opacity:0;transform:translateY(18px)}
+.tv-svg.intro.go .tv-area{animation:tvStig .9s .15s cubic-bezier(.3,.7,.2,1) forwards}
+.tv-svg.intro .tv-ext{opacity:0}
+.tv-svg.intro.go .tv-ext{animation:tvTon .4s forwards}
+@keyframes tvTegn{to{stroke-dashoffset:0}}
+@keyframes tvStig{to{transform:translateY(0);opacity:1}}
+@keyframes tvTon{to{opacity:1}}
+@keyframes tvPuls{0%{transform:scale(1);opacity:.45}80%,100%{transform:scale(2.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .tv-svg.intro .tv-curve{stroke-dasharray:none;stroke-dashoffset:0;animation:none!important}
+  .tv-svg.intro .tv-pref{opacity:1;transition:none}
+  .tv-svg.intro .tv-area,.tv-svg.intro .tv-ext{opacity:1;transform:none;animation:none!important}
+  .tv-marker{transition:none} .tv-ring{animation:none;opacity:0}
+}
 .vaer{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .vaer .v{font-family:var(--mono);font-size:1.5rem;margin-top:4px}
 .hvorfor{margin-top:18px}
@@ -516,7 +553,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .minikart .buer .bue{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9;animation:mk-rull 4.2s linear infinite}
 .minikart.still .buer .bue{animation:none}
 .minikart .spot{fill:var(--ink);stroke:var(--raised);stroke-width:1.5}
-.minikart .komp text{font-family:var(--body);font-size:17px;font-weight:600;fill:var(--ink)}   /* 17 enheter i viewBox 236 ≈ 11,7 px på 162 px bredde (minst 11 px, HIG 4) */
+.minikart .komp text{font-family:var(--body);font-size:17px;font-weight:600;fill:var(--ink)}   /* font-size overstyres til ekte 12 px av docs/js/svgtekst.js (data-tekst-px) */
 @keyframes mk-rull{from{transform:translateY(0);opacity:.9}to{transform:translateY(44px);opacity:0}}
 @media (prefers-reduced-motion: reduce){.minikart .buer .bue{animation:none}}
 

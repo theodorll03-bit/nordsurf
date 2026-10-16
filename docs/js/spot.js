@@ -91,31 +91,6 @@
     const f = (1 - Math.cos(Math.PI * (ms - t0) / (t1 - t0))) / 2;
     return {cm: prev.cm + (next.cm - prev.cm) * f, rising: next.cm > prev.cm, next};
   }
-  function tideSvg(events, t){
-    // døgnkurve for valgt dag med prikk for valgt time. Naturlig høyde (viewBox 300×128, ikke strukket),
-    // etikettene på to linjer («Fjære 09:27» / «0,7 m») så to fjærer samme dag ikke kolliderer (≥ 148 enheter
-    // mellom dem mot ca. 90 brede). Flo over toppen, fjære under bunnen; aksen 00 06 12 18 24 nederst.
-    const key = dayKey(t); const dayEvents = events.filter(e=> dayKey(new Date(e.time))===key);
-    const [y, m, d] = key.split("-").map(Number);
-    const start = new Date(Date.UTC(y, m-1, d, 0)); const off = tzOffsetMs(start);
-    const t0 = start.getTime() - off, t1 = t0 + 24*36e5;
-    const pts = [];
-    for(let i=0;i<=48;i++){ const tt = new Date(t0 + i*(t1-t0)/48); const lv = tideLevel(events, tt); if(lv) pts.push([i/48, lv.cm]); }
-    if(pts.length < 2) return "";
-    const cms = pts.map(p=>p[1]); const lo = Math.min(...cms), hi = Math.max(...cms) || 1;
-    const W = 300, Hh = 128, pad = 12;   // topp ved y=36 (plass til to etikettlinjer over), bunn ved y=76 (to linjer under + aksen)
-    const px = (f)=> pad + f * (W - 2*pad), py = (cm)=> Hh - 52 - ((cm - lo) / Math.max(1, hi - lo)) * (Hh - 88);
-    const path = pts.map((p, i)=> `${i ? "L" : "M"}${px(p[0]).toFixed(1)},${py(p[1]).toFixed(1)}`).join("");
-    const nowF = Math.max(0, Math.min(1, (t.getTime() - t0) / (t1 - t0))); const lvNow = tideLevel(events, t);
-    const labels = dayEvents.map(e=>{
-      if(e.cm==null) return "";
-      const f = (new Date(e.time).getTime() - t0) / (t1 - t0);
-      const x = Math.max(pad + 46, Math.min(W - pad - 46, px(f))).toFixed(1);
-      const y1 = e.type==="flo" ? py(e.cm) - 22 : py(e.cm) + 13;
-      return `<text x="${x}" y="${y1.toFixed(1)}" text-anchor="middle"><tspan class="b">${esc(cap(e.type))}</tspan> ${fmtHM.format(new Date(e.time))}<tspan x="${x}" dy="18">${nf1.format(e.cm/100)} m</tspan></text>`; }).join("");
-    const axis = [0, 6, 12, 18, 24].map(hh=>`<text x="${px(hh/24).toFixed(1)}" y="${Hh - 3}" text-anchor="middle">${String(hh).padStart(2, "0")}</text>`).join("");
-    return `<svg class="tidekurve" viewBox="0 0 ${W} ${Hh}" aria-hidden="true"><path d="${path}"/>${lvNow ? `<circle cx="${px(nowF).toFixed(1)}" cy="${py(lvNow.cm).toFixed(1)}" r="4"/>` : ""}${labels}${axis}</svg>`;
-  }
   function tzOffsetMs(d){
     // Europe/Oslo sin forskyvning for et tidspunkt (sommertid slutter 25.10) - via Intl, ingen egne tabeller
     const p = new Intl.DateTimeFormat("en-US", {timeZone:TZ, hour12:false, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"}).formatToParts(d);
@@ -166,14 +141,9 @@
         <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="currentColor" opacity=".3"/><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="none" stroke="currentColor" stroke-dasharray="2 2"/></svg></span>Vindu<b>${s.swell_window ? esc(windowText(s).replace("Vindu ", "")) : "–"}</b></div>
       </div></div>`;
   }
-  function tideHtml(s, t, h){
-    const ev = s.tide_events || []; const lv = tideLevel(ev, t);
-    const rising = h && h.tide && h.tide.rising!=null ? h.tide.rising : (lv ? lv.rising : null);
-    const next = nextTide(s, t);
-    return `<div class="kort tide" id="tideKort"><div class="k" style="grid-column:1/-1">Tidevann</div>
-      <div><div class="v">${lv ? `${nf1.format(lv.cm/100)}<small>m</small>` : "–"}</div><div class="trend">${rising==null ? "–" : rising ? "Stigende" : "Synkende"}</div></div>
-      <div class="neste">${next ? `<b>${esc(cap(next.type))} kl. ${fmtHM.format(new Date(next.time))}</b>${next.cm!=null ? `${nf1.format(next.cm/100)} m` : ""}` : "–"}</div>
-      ${ev.length ? tideSvg(ev, t) : ""}</div>`;
+  function tideHtml(s, ms, nowMs, erNa){
+    // tidevannskortet (docs/js/tidevann.js); grafen tegnes i ekte piksler av Tidevann.mount() etter render
+    return window.Tidevann ? Tidevann.html(s, ms, nowMs, erNa) : "";
   }
   function vaerHtml(s, t, h){
     const lys = lightText(s, t);
@@ -191,9 +161,15 @@
     H = helpers;
     const n = H.nowIdx(s); const idx = S.idx!=null ? Math.max(0, Math.min(s.hours.length-1, S.idx)) : n;
     const h = s.hours[idx] || null; const t = h ? new Date(h.t) : new Date();
-    const st = H.stars(h); const atNow = idx===n;
+    // valgt tidspunkt i tidevannskortet: valgt time + kvarter-forskyvning (S.tideMin, satt ved dra/piltaster i
+    // tidevannsgrafen). På «nå» uten forskyvning er det klokka nå (nedtellingen til neste flo/fjære).
+    const nowMs = Date.now(); const tideMin = S.tideMin || 0;
+    const tideNa = idx===n && !tideMin;
+    const tideMs = tideNa ? nowMs : t.getTime() + tideMin * 6e4;
+    const atNow = idx===n && !tideMin;   // flyttet i tidevannsgrafen: ikke «nå» lenger (overskriften viser minuttene)
+    const tid = `${atNow ? "Nå · " : ""}${esc(fmtWd.format(t))} kl. ${tideMin ? fmtHM.format(new Date(tideMs)) : fmtHour.format(t)} · ${esc(lysOrd(h))}`;
+    const st = H.stars(h);
     const pc = H.isDesktop();
-    const tid = `${atNow ? "Nå · " : ""}${esc(fmtWd.format(t))} kl. ${fmtHour.format(t)} · ${esc(lysOrd(h))}`;
     const topp = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>${pc ? "Tilbake" : ""}</button>
         <div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(H.stedText(s))}</div></div>${favBtnHtml(s.id, false)}</div>
       <div class="naa"><span>${tid}</span>${atNow ? "" : `<button type="button" class="tilbakena" id="tilbakeNa">Tilbake til nå</button>`}</div>`;
@@ -207,28 +183,37 @@
     // kortene øverst viser fortsatt nå (Theodor 15.10, punkt 3)
     const grafDag = S.idx==null && window.SpotGraf ? SpotGraf.defaultDay(s, n, H) : null;
     const langtid = `<div class="sek-spot"><h2 class="h2">Langtidsvarsel</h2><p class="sub">16 dager</p></div><div id="langtid">${window.SpotGraf ? SpotGraf.html(s, idx, H, grafDag) : ""}</div>`;
-    const resten = `${minikartHtml(s, h)}${tideHtml(s, t, h)}${vaerHtml(s, t, h)}${hvorforHtml(h)}
+    const resten = `${minikartHtml(s, h)}${tideHtml(s, tideMs, nowMs, tideNa)}${vaerHtml(s, t, h)}${hvorforHtml(h)}
       <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
       <p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p>`;
     root.innerHTML = pc
-      ? `${topp}<div class="spot-venstre">${venstre}${minikartHtml(s, h)}${tideHtml(s, t, h)}${vaerHtml(s, t, h)}</div><div class="spot-hoyre">${langtid}${hvorforHtml(h)}<div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div><p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p></div>`
+      ? `${topp}<div class="spot-venstre">${venstre}${minikartHtml(s, h)}${tideHtml(s, tideMs, nowMs, tideNa)}${vaerHtml(s, t, h)}</div><div class="spot-hoyre">${langtid}${hvorforHtml(h)}<div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div><p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p></div>`
       : `${topp}${venstre}${langtid}${resten}`;
     $("#spotBack").onclick = H.close;
-    const tn = $("#tilbakeNa"); if(tn) tn.onclick = ()=>{ S.idx = null; render(root, s, S, H); };
+    const tn = $("#tilbakeNa"); if(tn) tn.onclick = ()=>{ S.idx = null; S.tideMin = 0; render(root, s, S, H); };
     $("#loggHer").onclick = ()=> openSheet(s.id, t);
     const hv = $("#hvorfor"); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
     wireFavButtons();
     if(window.SpotGraf) SpotGraf.wire(root, s, S, H, (i)=>{
       // timevalg oppdaterer alt over grafen - uten å hoppe i siden eller lukke «Hvorfor»
       const y = window.scrollY, hv = $("#hvorfor", root), open = hv ? hv.open : false;
-      S.idx = i; render(root, s, S, H);
+      S.idx = i; S.tideMin = 0; render(root, s, S, H);
       window.scrollTo(0, y); const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
     });
+    if(window.Tidevann) Tidevann.mount(root, s, tideMs, {nowMs, onSelect: (ms, fokus)=>{
+      // dra/piltaster i tidevannsgrafen: samme tilstand som timegrafen (S.idx) + kvarter-resten (S.tideMin)
+      let i = 0; for(let k = 0; k < s.hours.length; k++){ if(new Date(s.hours[k].t).getTime() <= ms) i = k; else break; }
+      const y = window.scrollY, hv = $("#hvorfor", root), open = hv ? hv.open : false;
+      S.idx = i; S.tideMin = Math.round((ms - new Date(s.hours[i].t).getTime()) / 6e4);
+      render(root, s, S, H);
+      window.scrollTo(0, y); const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
+      if(fokus){ const g = $("#tideGraf", root); if(g) g.focus({preventScroll: true}); }
+    }});
     if(!(s.id in kystCache)){
       kystLoading[s.id] = kystLoading[s.id] || fetch(`data/minikart/${encodeURIComponent(s.id)}.json`, {cache:"force-cache"}).then(r=> r.ok ? r.json() : {}).catch(()=>({}));
       kystLoading[s.id].then(k=>{ kystCache[s.id] = k || {}; const el = $("#miniKort", root); if(el && S.view==="spot" && S.spotId===s.id){ el.outerHTML = minikartHtml(s, h); } });
     }
     if(!pc) root.scrollTop = 0;
   }
-  window.Spot = { render, kroppshoyde, visHoyde, energiOrd, energiGrenser, vinduTekst, sikkerhet, tideLevel, tideSvg, tzOffsetMs };
+  window.Spot = { render, kroppshoyde, visHoyde, energiOrd, energiGrenser, vinduTekst, sikkerhet, tideLevel, tzOffsetMs };
 })();

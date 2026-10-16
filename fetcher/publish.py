@@ -36,7 +36,7 @@ import argparse
 import hashlib
 import json
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -288,6 +288,41 @@ def run_id(forecast):
     return hashlib.sha256(json.dumps(forecast, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
 
 
+def tide_terskler():
+    """Grensene mellom lav/middels/høy vannstand slik tide.state_at() regner dem (nivå 0-1 fra fjære til flo),
+    lest ut av selve funksjonen med halvering på tiden - ikke egne tall. state_at() klassifiserer på det uavrundede
+    nivået (1 - cos(π·andel))/2 mellom fjære og flo, så grensenivået er det nivået i grensetidspunktet.
+    Brukes av tidevannskortet (Theodor 16.10.2026)."""
+    import math
+    import tide as tidemod
+    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    ev = [{"time": t0.isoformat(), "type": "fjære"}, {"time": (t0 + timedelta(hours=6)).isoformat(), "type": "flo"}]
+
+    def state(frac):
+        return tidemod.state_at(ev, t0 + timedelta(seconds=frac * 6 * 3600))["state"]
+
+    def grense(fra):
+        a, b = 0.0, 1.0
+        for _ in range(48):
+            m = (a + b) / 2
+            if state(m) == fra:
+                a = m
+            else:
+                b = m
+        return (1 - math.cos(math.pi * b)) / 2
+    return {"lav_maks": round(grense("lav"), 4), "hoy_min": round(grense("middels"), 4)}
+
+
+def tide_regel(meta_all):
+    """Spotens foretrukne vannstand med nøyaktig samme regel som ratingen (rating._tide_prefer) og tersklene fra
+    tide.state_at - eller None når spoten ikke har noen preferanse (da tåler den alt tidevann)."""
+    import rating
+    prefer = rating._tide_prefer(meta_all)
+    if not prefer:
+        return None
+    return {"prefer": list(prefer), **tide_terskler(), "_kilde": "rating._tide_prefer + tide.state_at (lav < lav_maks, høy > hoy_min)"}
+
+
 def split(forecast, exclude=DETAIL_EXCLUDE, now=None, regions_cfg=None, days=SUMMARY_DAYS):
     """(oversikt, {spot_id: detalj}) fra et helt varsel. Endrer ikke varselet.
     oversikt-2: per spot bare meta (META_FIELDS), nå-timen og dagssammendrag - ingen timer.
@@ -317,6 +352,7 @@ def split(forecast, exclude=DETAIL_EXCLUDE, now=None, regions_cfg=None, days=SUM
             meta["region"] = s["area"]
         overview["spots"].append(dict(meta, **summarise(hours, now, days)))
         details[s["id"]] = dict(meta_all, format="spot-2", generated=forecast.get("generated"), run=run,
+                                tide_regel=tide_regel(meta_all),
                                 hours=[{k: v for k, v in h.items() if k not in exclude} for h in hours])
     overview["regions"] = regions_for(overview["spots"], regions_cfg)
     return overview, details
