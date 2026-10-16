@@ -1,5 +1,24 @@
 # Nordsurf: status
 
+## Theodors svar på morgenrapporten 16.10 (ROADMAP K) - I GANG
+
+| Punkt | Status | Gren / PR |
+|---|---|---|
+| 1. #17 sw.js - CACHE-navnet endres ved neste publisering? | **Rettet:** nei, #17 ga samme navn som live-siden (845c929484b0), fordi hashen utelot sw.js selv. Nå tas sw.js med (CACHE-linja nøytralisert) → 36ed691acc3a; test_docs_cache sjekker at en SHELL-endring gir nytt navn og at SHELL bare har filer som finnes. Kontrollør: GODKJENT. Theodor merger. NB: #15 og #18 må kjøre update_sw_cache.py på nytt etter at #17 er merget (ny hash-formel). | fiks/sw-shell, #17 |
+| 2. #15 rettelser a-d + test_kart_browser i CI | i gang (forgrening i ../nordsurf-b) | s3/maplibre, #15 |
+| 3.1 Regioner + Hordaland | gjort (importer_kandidater.py; Øygarden → Hordaland, 0 uten region) | kandidater/posisjoner, #16 |
+| 3.2 secret-revtangen, regestranda «hemmelig»; vetvika lav prioritet | gjort (kandidater.json) | #16 |
+| 3.3 Forbud-visning | Eggum/The Frog avgjort (under); visningen bygges etter at #15 er merget (samme filer) | #18 |
+| 3.4 facing ±150 m langs kysten, offshore ±45 | gjort, validering 5 av 8 (andre spots enn før), kontrollør kjører | spotfabrikken, #18 |
+| 3.5 posisjoner.json med listepinner, gjennomgangsside, importer_forslag.py | i gang | #16 |
+| 4. Tidevannssted | **Stemmer:** bygg_spot.py gir nøyaktig samme referansested, forsinkelse og faktor som henterens eget oppslag (spotens posisjon, datatype=tab, 16 døgn) for alle 8 - Andenes (Grøtfjord, Tromvik, Ersfjordstranda, Steinkrøssa, Unstad), Hammerfest (Russelv, Lenangsøyra), Kristiansund (Farstadsanden). Andenes er Kartverkets eget referansested for de posisjonene. Ingen feil i bygg_spot.py. | - |
+| 5. NTFY_TOPIC | **Finnes ikke:** ikke som repo-nøkkel, ikke som repo-variabel (`gh variable list`: bare BW_DEBUG), og forecast.yml bruker ikke noe miljø (bare publiser.yml bruker github-pages). Den ekte henterkjøringen 15.10 kl. 15:53Z logget `NTFY_TOPIC:` tom og «Varsler: NTFY_TOPIC er ikke satt, hopper over.» («Varslet: …»-linjene i loggen er fra testene, med mock). **Ingen ntfy-varsler sendes i dag** - verken surfevarsler, driftsvarsler eller «Rått»-varselet - før Theodor legger inn NTFY_TOPIC som repo-nøkkel. | - |
+| 6. Ingen spot bygges | holdt | - |
+
+**Eggum og The Frog (3.3):** kart i data/kandidater/vern/ (tools/vern_kart.py, Naturbase-grensen mot listepinnen). Eggum: reservatet (med sjøstripe) begynner ca. 270 m sørvest for pinnen - bølgen foran pinnen ligger utenfor, men stranda fortsetter mot reservatet. The Frog: reservatet ligger på andre siden av bukta, ca. 580 m - utenfor. Eggum øst: ca. 690 m - utenfor. Alle tre er vanlige kandidater med en linje om reservatet (data/kandidater/vern_vurdering.json → kandidater.json vern_merknad). Vurdert ut fra listepinnen, ikke flyfoto.
+
+**Norgeskart-lenken (3.5):** `https://norgeskart.no/?backgroundLayer=Nibcache_UTM33_EUREF89_v2&lat=<lat>&lon=<lon>&zoom=15&sok=<lat>,<lon>` åpner flyfoto-laget med markør på punktet (parametrene lest fra Norgeskart sin egen kode, testet i nettleser 16.10). Brukes bare som lenke for Theodor - ingen flyfoto hentes automatisk.
+
 ## Morgenrapport 16.10 - nattjobben (ROADMAP K, 116 spots) - FERDIG FOR NATTEN, venter på Theodor
 
 **Merget til main (alle med grønn CI og fysikk-kontrollør):**
