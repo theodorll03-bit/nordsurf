@@ -153,6 +153,7 @@ jobs:
         env:
           UA_CONTACT: ${{ secrets.UA_CONTACT }}
           BW_CLIENT_ID: ${{ secrets.BW_CLIENT_ID }}
+          BW_POINT_URL: ${{ secrets.BW_POINT_URL }}   # hemmelige spots hentes her (kontrollør 16.10)
           BW_CLIENT_SECRET: ${{ secrets.BW_CLIENT_SECRET }}
           LOGS_REPO: ${{ secrets.LOGS_REPO }}
           LOGS_TOKEN: ${{ secrets.LOGS_TOKEN }}
