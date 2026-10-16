@@ -225,6 +225,9 @@ def main():
             feats = page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-hoy']}).length")
             assert feats > 0, (f"detaljflisene som er sett med nett, vises ikke uten nett (med nett: {online_feats} flater; "
                                f"lagret: {keys_before[:12]}; feilet uten nett: {failed[:12]})")
+            # Chrome på Windows: PMTiles ber om cache: "no-store" (og "reload" etter ETag-avvik) - uten nett skal lagrede biter brukes likevel
+            st = page.evaluate("fetch('geo/norge-detalj.pmtiles', {cache: 'no-store', headers: {range: 'bytes=0-16383'}}).then(r => r.status, () => 'feilet')")
+            assert st == 206, f"no-store-forespørsel uten nett ga {st} (Chrome på Windows får aldri kartet uten nett)"
             page.evaluate("window.__kart.jumpTo({center: [10, 63], zoom: 5})")
             page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
             feats_lav = page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-lav']}).length")

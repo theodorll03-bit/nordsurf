@@ -48,13 +48,15 @@ async function rangeFromWhole(req, range) {
 async function rangeCached(req, range) {
   const key = `${req.url.split("?")[0]}?r=${range[0]}-${range[1] === null ? "" : range[1]}`;
   const c = await caches.open(TILES);
-  // PMTiles ber om cache: "reload" når fila er byttet (ny ETag) - da aldri en gammel bit fra lageret (kontrollør 16.10)
-  const hit = (req.cache === "reload" || req.cache === "no-store") ? null : await c.match(key);
-  if (hit) {
-    const h = new Headers(hit.headers);
-    return new Response(await hit.arrayBuffer(), { status: 206, headers: h });
-  }
-  const r = await fetch(req);
+  const hit = await c.match(key);
+  const cached = async () => new Response(await hit.arrayBuffer(), { status: 206, headers: new Headers(hit.headers) });
+  // PMTiles ber om cache: "reload" etter et ETag-avvik (fila er byttet), og om "no-store" i Chrome på Windows - da
+  // prøves nettet først, men uten nett brukes den lagrede biten likevel (ellers virker kartet aldri uten nett der)
+  const fresh = req.cache === "reload" || req.cache === "no-store";
+  if (hit && !fresh) return cached();
+  let r;
+  try { r = await fetch(req); }
+  catch (e) { if (hit) return cached(); throw e; }
   if (r.status === 206) {
     const buf = await r.clone().arrayBuffer(), h = new Headers(r.headers);
     h.delete("Content-Encoding");
