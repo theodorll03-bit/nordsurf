@@ -1,5 +1,25 @@
 # Nordsurf: status
 
+## Grøtfjord lørdag 17.10 kl. 13-14: enkelttimes-fall (Theodor 16.10) - analyse ferdig, retting i gang
+
+**1. Årsak (time for time, live-varselet 16.10 kl. 10Z):** hypotesen (vinduskanten 310° / hullet 311-315°) **stemmer ikke** for disse timene. Kl. 12Z (14 norsk tid) bytter GFS svellsystem for én time: totalhøyden ute er stabil (4,9 → 4,7 → 4,6 m), men primærsvellet faller fra 1,94 m (293°) til **0,7 m fra 282°** og tilbake til 2,34 m (307°) - det svake vestlige systemet (0,66 m fra 281° som sekundærsvell timen før) blir primærsvell, og hovedsvellet forsvinner. Svellandelen blir 20 % («mest vindsjø»), BarentsWatch-høyden 1,33 m justeres til 0,3 m, og retningen 282° ligger under vinduet [286,310] i den dempede sonen 276-285 (directness 0,2) → 0 m og «Blåst ut». Kl. 11Z (13 norsk tid) er det «Stormsjø» (0★, surf 1,0 m). «1,3» i den tomme søylen kl. 14 var BarentsWatch-høyden fra regel (c), ikke surfehøyden. Sidefunn mot grunnregelen: sekundærsvellet lagres som 0,0 m fra 0° når det mangler.
+
+**2. Hvor ofte (tools/hopp_rapport.py, 105 kjøringer 02.-16.10, første 48 t, ca. 39 500 spot-timer):** 57 unike (spot, time) faller ≥ 2 stjerner eller ≥ 60 % i høyde og er tilbake timen etter (134 forekomster over kjøringene):
+
+| Årsak | Unike timer | Forekomster |
+|---|---|---|
+| flat-sperre (Hs ved spoten så vidt under 0,35 m, naboene så vidt over - surfehøyden hopper 0,8 → 0 → 0,8 m) | 18 | 51 |
+| svelloppdeling i GFS (som Grøtfjord lørdag) | 13 | 25 |
+| vind (vindstraff/«Blåst ut» bare i timen) | 12 | 24 |
+| vinduskant | 5 | 9 |
+| kildebytte BarentsWatch/GFS | 0 | 0 |
+| manglende data | 0 | 0 |
+| annet | 9 | 25 |
+
+**3. Retting (i gang, forgrening, gren fiks/hopp - PR uten merge før ja):** (b) robust svell ute - median over 3 timer bare for enkelttimes avvikere der totalhøyden er stabil (samme modell, høyde/retning/periode samlet); (a) myk vinduskant (10-15°) inkl. Grøtfjord-hullet; sekundærsvell 0,0/0° → None. Flat-sperren er en CLAUDE.md-konvensjon - bare forslag. Backtest før/etter og Grøtfjord lørdag før/etter kommer i PR-en.
+
+**4. Visningen:** PR #25 - tallet i søylen er alltid det søylen tegner, ordet ved 0. Merges etter grønn CI og kontrollør.
+
 ## Pågår (16.10 ettermiddag)
 
 | Oppgave | Status | Gren |
@@ -7,6 +27,9 @@
 | Tidevannskortet: SVG-tekst i ekte piksler i alle grafer + nytt kort etter prototypen | i gang (forgrening) - PR, ikke merge før ja | design/tidevann |
 | Utforsk: Kartverkets topograatone som bakgrunn (OSM-reserve), vind og svellkile tilbake | i gang (forgrening) - PR, ikke merge før ja | design/kartverket |
 | #22 Lofoten og Vesterålen | venter på Claudes avgjørelser (under) | region/lofoten-vesteralen |
+| Tapte stjerner stiplet igjen | PR #24 - kontrollør, så merge etter grønn CI | design/stjerner |
+| Søyletallet (Grøtfjord 17.10) | PR #25 - kontrollør, så merge etter grønn CI | fiks/soyletall |
+| Enkelttimes-hopp (robust svell, myk vinduskant) | i gang (forgrening) - PR, ikke merge før ja | fiks/hopp |
 
 ## #22 Lofoten og Vesterålen - 20 spots lagt inn som «forelopig» på grenen, IKKE klar for Theodors ja ennå (16.10 ca. 11Z)
 
