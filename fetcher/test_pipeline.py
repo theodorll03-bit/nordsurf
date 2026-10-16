@@ -1531,7 +1531,9 @@ sources.despike_swell(o2); assert o2["2026-01-01T01:00Z"]["dir"] == 0.0, "sirkul
 for bad in ({"2026-01-01T01:00Z": _h(0.5, 300, 12, 2.0)},              # totalhøyden faller også - ekte
             {"2026-01-01T01:00Z": _h(0.5, 300, 12, 4.0, "standard")},  # modellbytte
             {"2026-01-01T00:00Z": _h(None, None, None, 4.0)},          # manglende data hos nabo
-            {"2026-01-01T02:00Z": _h(1.2, 300, 12, 4.0)}):             # naboene uenige
+            {"2026-01-01T02:00Z": _h(1.2, 300, 12, 4.0)},              # naboene uenige
+            {"2026-01-01T00:00Z": _h(2.0, 260, 12, 4.0), "2026-01-01T02:00Z": _h(1.9, 340, 12, 4.0)},  # ulike retninger
+            {"2026-01-01T02:00Z": _h(2.0, 300, 15, 4.0)}):             # ulike perioder
     o3 = {"2026-01-01T00:00Z": _h(2.0, 300, 12, 4.0), "2026-01-01T01:00Z": _h(0.5, 300, 12, 4.0), "2026-01-01T02:00Z": _h(2.0, 300, 12, 4.0)}
     o3.update(bad)
     before = {k: dict(v) for k, v in o3.items()}
@@ -1539,4 +1541,6 @@ for bad in ({"2026-01-01T01:00Z": _h(0.5, 300, 12, 2.0)},              # totalh�
 assert sources._secondary({"secondary_swell_height": 0.0, "secondary_swell_dir": 0, "secondary_swell_period": 0.0}) == \
     {"secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None}
 assert sources._secondary({"secondary_swell_height": 0.66, "secondary_swell_dir": 281, "secondary_swell_period": 13.05})["secondary_swell_dir"] == 281
+src = open(Path(__file__).parent / "fetch.py", encoding="utf-8").read()
+assert '"swell_despiked": (mar or {}).get("swell_despiked")' in src and '"despiked_hours"' in src, "erstattede timer må merkes i timen og kilderapporten"
 print("16: robust svell ute (enkelttimes svelloppdeling rettes fra naboene, ikke over modellbytte/None/ekte endring), sekundærsvell 0,0/0° = None - OK")

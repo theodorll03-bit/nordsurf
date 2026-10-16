@@ -249,6 +249,8 @@ ROBUST_SWELL = True
 SPIKE_REL = 0.40       # svellhøyden avviker mer enn 40 % fra begge naboene, i samme retning
 SPIKE_TOTAL_REL = 0.15  # mens totalhøyden er innen 15 % av naboenes snitt
 SPIKE_NB_AGREE = 0.25   # og naboene er innen 25 % av hverandre
+SPIKE_NB_DIR = 30       # og naboene er innen 30° av hverandre i retning (kontrollør 16.10: ellers kan snittet av to
+SPIKE_NB_PERIOD = 2.0   # ulike systemer, f.eks. 260° og 340°, gi et svell fra 300° som ingen time hadde) og 2 s i periode
 
 
 def _circ_mean2(a, b):
@@ -276,6 +278,8 @@ def despike_swell(out):
         (sa, da, pa, ta), (sh, dh, ph, th), (sb, db, pb, tb) = vals
         lo, hi = min(sa, sb), max(sa, sb)
         if lo <= 0 or (hi - lo) / hi > SPIKE_NB_AGREE:
+            continue
+        if abs((da - db + 180) % 360 - 180) > SPIKE_NB_DIR or abs(pa - pb) > SPIKE_NB_PERIOD:
             continue
         spike = sh < (1 - SPIKE_REL) * lo or sh > hi / (1 - SPIKE_REL)
         total_ok = abs(th - (ta + tb) / 2) <= SPIKE_TOTAL_REL * ((ta + tb) / 2)
