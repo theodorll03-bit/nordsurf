@@ -29,8 +29,8 @@
 | #22 Lofoten og Vesterålen | venter på Claudes avgjørelser (under) | region/lofoten-vesteralen |
 | Tapte stjerner stiplet igjen | PR #24 - kontrollør GODKJENT, CI grønn - **merge stoppet av tillatelsene, Theodor merger** | design/stjerner |
 | Søyletallet (Grøtfjord 17.10) | PR #25 - kontrollør GODKJENT, CI grønn - **merge stoppet av tillatelsene, Theodor merger** (etter #24 trengs trolig ny sw.js-hash) | fiks/soyletall |
-| Tidevannskort og SVG-tekst | PR #26 - kontrollør kjører | design/tidevann |
-| Enkelttimes-hopp (robust svell, myk vinduskant) | i gang (forgrening) - PR, ikke merge før ja | fiks/hopp |
+| Tidevannskort og SVG-tekst | **PR #26 klar for ja** - kontrollør GODKJENT; merknadene rettet (vannstand med én desimal, «beregnet kurve (cosinus)») | design/tidevann, #26 |
+| Enkelttimes-hopp (robust svell, myk vinduskant) | **PR #27 klar for ja** - kontrollør GODKJENT etter to rettelser (erstattede timer merkes i timen og kilderapporten; naboene må være enige om retning 30° og periode 2 s). B (robust svell) på: svelloppdelings-hopp 13→9 unike, 92 timer rettet over 105 kjøringer, dagens 48 t uendret, i historikken Farstadsanden 16.10 08Z +2/+3 (samme retning som observasjonen 15.10), Unstad +1 i 2 t, Steinkrøssa −1 i 1 t. A (myk kant på exposure_override) bygget men AV - bryter Grøtfjord 25.09. Sekundærsvell 0,0/0° → None. Flat-sperren uendret (myk rampe bryter Unstad 28.09 - forslag i data/backtest/hopp_2026-10-16.md). Grøtfjord lør. kl. 14: surf 0 → 1,1 m, men fortsatt «Blåst ut» (vind) | fiks/hopp, #27 |
 
 ## #22 Lofoten og Vesterålen - 20 spots lagt inn som «forelopig» på grenen, IKKE klar for Theodors ja ennå (16.10 ca. 11Z)
 
