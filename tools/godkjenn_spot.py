@@ -113,7 +113,7 @@ def insert_text(text, spots, entry, new_region):
 
 def main():
     argv = sys.argv[1:]
-    args = [a for i, a in enumerate(argv) if not a.startswith("--") and not (i > 0 and argv[i - 1] in ("--overstyr", "--av"))]
+    args = [a for i, a in enumerate(argv) if not a.startswith("--") and not (i > 0 and argv[i - 1] in ("--overstyr", "--av", "--kilde"))]
     dry = "--tørr" in sys.argv or "--torr" in sys.argv
     if len(args) != 1:
         sys.exit(__doc__)
@@ -139,7 +139,9 @@ def main():
                  + '\nTheodor kan overstyre: python tools/godkjenn_spot.py ' + sid + ' --overstyr "<kommentar>"')
     s = dict(b["spot"])
     s.pop("tidevann", None)   # henteren slår opp tidevann fra posisjonen selv; referansestedet står i bygget-fila
-    s.update(status="forelopig", forelopig_fra=dt.date.today().isoformat(), kilde=KILDE)
+    kilde = next((sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--kilde" and i + 1 < len(sys.argv)), KILDE)
+    s.setdefault("area", (kand.get(sid) or {}).get("kommune") or s.get("region"))   # publish.py/appen viser «område»
+    s.update(status="forelopig", forelopig_fra=dt.date.today().isoformat(), kilde=kilde)
     if flagg:
         s["_overstyrt"] = {"kommentar": overstyr.strip(), "flagg": flagg, "dato": dt.date.today().isoformat(), "av": av}
     rs = restriksjoner(sid)

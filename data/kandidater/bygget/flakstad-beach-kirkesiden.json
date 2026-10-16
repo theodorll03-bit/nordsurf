@@ -1,0 +1,146 @@
+{
+ "spot": {
+  "id": "flakstad-beach-kirkesiden",
+  "name": "Flakstad Beach (kirkesiden)",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Lofoten",
+  "spot": {
+   "lat": 68.106802,
+   "lon": 13.315408
+  },
+  "facing": 50.2,
+  "swell_window": null,
+  "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer []; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   185,
+   275
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": null,
+  "_havpunkt": null,
+  "barentswatch_point": null,
+  "_barentswatch": null,
+  "tidevann": {
+   "name": "Andenes",
+   "code": "ANX",
+   "delay": "-5",
+   "factor": "1.02",
+   "obsname": "Andenes"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 68.106802,
+   "lon": 13.315408,
+   "dybde_m": 0.5
+  },
+  {
+   "m": 100,
+   "lat": 68.107381,
+   "lon": 13.317259,
+   "dybde_m": 0.6
+  },
+  {
+   "m": 200,
+   "lat": 68.10796,
+   "lon": 13.31911,
+   "dybde_m": 0.3
+  },
+  {
+   "m": 300,
+   "lat": 68.108539,
+   "lon": 13.320961,
+   "dybde_m": 3.0
+  },
+  {
+   "m": 400,
+   "lat": 68.109118,
+   "lon": 13.322812,
+   "dybde_m": 3.5
+  },
+  {
+   "m": 500,
+   "lat": 68.109697,
+   "lon": 13.324662,
+   "dybde_m": 5.1
+  },
+  {
+   "m": 600,
+   "lat": 68.110276,
+   "lon": 13.326513,
+   "dybde_m": 5.8
+  },
+  {
+   "m": 700,
+   "lat": 68.110854,
+   "lon": 13.328364,
+   "dybde_m": 6.3
+  },
+  {
+   "m": 800,
+   "lat": 68.111433,
+   "lon": 13.330215,
+   "dybde_m": 5.2
+  },
+  {
+   "m": 900,
+   "lat": 68.112012,
+   "lon": 13.332066,
+   "dybde_m": 5.4
+  },
+  {
+   "m": 1000,
+   "lat": 68.112591,
+   "lon": 13.333917,
+   "dybde_m": 6.4
+  },
+  {
+   "m": 1100,
+   "lat": 68.11317,
+   "lon": 13.335768,
+   "dybde_m": 4.9
+  },
+  {
+   "m": 1200,
+   "lat": 68.113749,
+   "lon": 13.337619,
+   "dybde_m": 4.5
+  },
+  {
+   "m": 1300,
+   "lat": 68.114328,
+   "lon": 13.33947,
+   "dybde_m": 4.1
+  },
+  {
+   "m": 1400,
+   "lat": 68.114907,
+   "lon": 13.341321,
+   "dybde_m": 0.0
+  },
+  {
+   "m": 1500,
+   "lat": 68.115486,
+   "lon": 13.343171,
+   "dybde_m": -1.1
+  }
+ ],
+ "flagg": [
+  "ingen retning med fri linje til åpent hav (150 km)",
+  "ingen snittpunkt med EMODnet-dybde ≥ 8 m innen 1,5 km"
+ ],
+ "bygget": "2026-10-16T09:49+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
+  "lat": 68.106802,
+  "lon": 13.315408
+ }
+}

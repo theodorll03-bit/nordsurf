@@ -260,7 +260,7 @@
     "lon": 16.1165
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
    "metode": "listepinne",
    "dato": "2026-10-16",
    "alternativer": [
@@ -294,16 +294,22 @@
      "flyttet_m": 143,
      "alternativ": "Sandvika ca. 1,2 km sør for sentrum: 69.311529, 16.089850"
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 69.3218,
+    "lon": 16.1165
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen står på land i Andenes sentrum. Satt i vannet foran den lille sandvika på vestsiden, men det er mye skjær foran og usikkert om det er her det surfes."
   },
   "bleik": {
    "spot": {
-    "lat": 69.28,
-    "lon": 15.975
+    "lat": 69.280925,
+    "lon": 15.968012
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -329,16 +335,22 @@
      "sikkerhet": "B",
      "flyttet_m": 295
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 69.28,
+    "lon": 15.975
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Sandstranda Bleik. Listepinnen sto ca. 190 m inne i sanddynene; flyttet rett ut til ca. 100 m utenfor vannkanten midt på stranda, foran sandbunn mellom revene. Hovedtoppen er ukjent."
   },
   "hoyvika": {
    "spot": {
-    "lat": 69.2323,
-    "lon": 15.8572
+    "lat": 69.233414,
+    "lon": 15.863562
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -364,16 +376,22 @@
      "sikkerhet": "B",
      "flyttet_m": 281
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 69.2323,
+    "lon": 15.8572
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Sandstrand som vender mot vest. Listepinnen lå ca. 400 m ute på dypt vann; flyttet inn til ca. 90 m utenfor vannkanten foran den nordre delen av stranda, der bunnen er sand."
   },
   "stave": {
    "spot": {
-    "lat": 69.2049,
-    "lon": 15.8635
+    "lat": 69.205654,
+    "lon": 15.856756
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -393,16 +411,22 @@
      "sikkerhet": "B",
      "flyttet_m": 280
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 69.2049,
+    "lon": 15.8635
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen sto på land ved campingen. Flyttet ut til ca. 100 m utenfor vannkanten midt på Stavestranda (sandbunn med revstriper)."
   },
   "ducks": {
    "spot": {
-    "lat": 69.068,
-    "lon": 15.5223
+    "lat": 69.067999,
+    "lon": 15.522294
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -415,7 +439,13 @@
      "sikkerhet": "B",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 69.068,
+    "lon": 15.5223
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Steinete odde, ikke sandstrand. Listepinnen (eksakt i lista) ligger i vannet langs den nordvestvendte steinkanten og er beholdt."
   },
   "aknes": {
    "spot": {
@@ -423,7 +453,7 @@
     "lon": 15.4423
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
    "metode": "listepinne",
    "dato": "2026-10-16",
    "alternativer": [
@@ -451,16 +481,22 @@
      "flyttet_m": 227,
      "alternativ": "Den større sandstranda nord for moloen: 68.973943, 15.430356"
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.9715,
+    "lon": 15.4423
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen sto på jordet. Satt utenfor den lille sandvika rett vest for pinnen (mye stein rundt). Usikkert hvilken strand som er surfespoten."
   },
   "the-frog": {
    "spot": {
-    "lat": 68.7575,
-    "lon": 14.4709
+    "lat": 68.757033,
+    "lon": 14.469888
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -481,16 +517,22 @@
      "sikkerhet": "B",
      "flyttet_m": 66
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.7575,
+    "lon": 14.4709
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Liten sandstrand i bukta ved Nykvåg, vender mot vest/sørvest. Flyttet fra nordenden til midt på stranda, ca. 80 m ut. NB: Nykan naturreservat ligger ca. 580 m unna."
   },
   "g-frame": {
    "spot": {
     "lat": 68.6389,
-    "lon": 14.4275
+    "lon": 14.427489
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -503,7 +545,13 @@
      "sikkerhet": "B",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.6389,
+    "lon": 14.4275
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Rev i bukta ved Gimstad/Skagen. Listepinnen (eksakt) ligger over grunnområdet ca. 70 m fra land og er beholdt."
   },
   "g-force": {
    "spot": {
@@ -511,7 +559,7 @@
     "lon": 14.4251
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
    "metode": "listepinne",
    "dato": "2026-10-16",
    "alternativer": [
@@ -533,16 +581,22 @@
      "sikkerhet": "C",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.6381,
+    "lon": 14.4251
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen (eksakt) er beholdt, men den ligger foran steinkanten sør for den lille sandstranda. Kan høre til foran stranda ca. 100 m nordøst."
   },
   "kvalnes": {
    "spot": {
-    "lat": 68.3449,
-    "lon": 13.93
+    "lat": 68.344902,
+    "lon": 13.929991
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -574,16 +628,22 @@
      "sikkerhet": "B",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.3449,
+    "lon": 13.93
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Stein- og grusstrand som vender mot nord. Listepinnen (eksakt) ligger ca. 40 m ut midt på stranda og er beholdt."
   },
   "eggum-ost-steinstrand": {
    "spot": {
-    "lat": 68.3135,
-    "lon": 13.668
+    "lat": 68.31067,
+    "lon": 13.668266
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -596,16 +656,22 @@
      "sikkerhet": "B",
      "flyttet_m": 316
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.3135,
+    "lon": 13.668
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Steinstranda øst for Eggum. Listepinnen (anslått) lå ca. 380 m ut; flyttet inn til ca. 70 m utenfor stranda på samme lengdegrad."
   },
   "eggum": {
    "spot": {
-    "lat": 68.3107,
-    "lon": 13.6548
+    "lat": 68.310696,
+    "lon": 13.654805
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -637,16 +703,22 @@
      "sikkerhet": "B",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.3107,
+    "lon": 13.6548
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen (eksakt) ligger like utenfor den vestre kurven av steinstranda ved Eggum og er beholdt. NB: Claude Code fant et naturreservat med surfeforbud ca. 280 m unna; grensen må sjekkes."
   },
   "unstad-right": {
    "spot": {
-    "lat": 68.2734,
-    "lon": 13.5775
+    "lat": 68.273399,
+    "lon": 13.57749
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "A",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -672,16 +744,22 @@
      "sikkerhet": "A",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.2734,
+    "lon": 13.5775
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Høyrebølgen fra den nordre steinodden i Unstad-bukta. Flyfotoet viser skum langs odden; listepinnen (eksakt) ligger ved tuppen og er beholdt."
   },
   "unstad-left": {
    "spot": {
-    "lat": 68.2692,
-    "lon": 13.5696
+    "lat": 68.267948,
+    "lon": 13.575772
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "A",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -694,16 +772,22 @@
      "sikkerhet": "A",
      "flyttet_m": 291
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.2692,
+    "lon": 13.5696
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Venstrebølgen ved den søndre odden. Flyfotoet viser brytende bølger som brekker inn langs revet; pinnen er flyttet fra ca. 250 m ute i bukta til der skummet starter på revet."
   },
   "soppelplassen": {
    "spot": {
-    "lat": 68.2665,
-    "lon": 13.5572
+    "lat": 68.265958,
+    "lon": 13.558251
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -716,16 +800,22 @@
      "sikkerhet": "B",
      "flyttet_m": 74
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.2665,
+    "lon": 13.5572
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Steinkysten sørvest for Unstad-odden. Flyfotoet viser bølger som brekker langs kanten; pinnen er flyttet ca. 60 m inn mot der skummet starter."
   },
   "utakleiv": {
    "spot": {
-    "lat": 68.2109,
-    "lon": 13.5001
+    "lat": 68.21318,
+    "lon": 13.503398
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -752,16 +842,22 @@
      "sikkerhet": "B",
      "flyttet_m": 289
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.2109,
+    "lon": 13.5001
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Hvit sandstrand som vender mot nordvest. Listepinnen lå ved sørenden mot steinene; flyttet til ca. 100 m utenfor midten av stranda. Hovedtoppen er ukjent."
   },
   "haukland": {
    "spot": {
-    "lat": 68.2045,
-    "lon": 13.529
+    "lat": 68.197515,
+    "lon": 13.525391
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -793,16 +889,22 @@
      "sikkerhet": "B",
      "flyttet_m": 793
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.2045,
+    "lon": 13.529
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen sto oppe i fjellet (218 moh). Hauklandstranda er den nordre sandstranda i bukta, der veien svinger; pinnen er satt ca. 100 m utenfor midten av den. Vik-stranda ligger rett sør i samme bukt."
   },
   "rorvika": {
    "spot": {
-    "lat": 68.186,
-    "lon": 14.229
+    "lat": 68.203945,
+    "lon": 14.229408
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -834,16 +936,22 @@
      "sikkerhet": "C",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.186,
+    "lon": 14.229
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen lå ved munningen av Djupfjorden, ca. 2 km for langt sør. Rørvikstranda er sandbukta ved avkjøringen fra E10 mot Henningsvær (bekreftet av visitlofoten.com), vender mot sørvest. Satt ca. 100 m utenfor midten av stranda. Vender mot Vestfjorden, så den får bare dønning ved kraftig sørvest."
   },
   "vikten": {
    "spot": {
-    "lat": 68.1401,
-    "lon": 13.3163
+    "lat": 68.140622,
+    "lon": 13.310596
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -870,16 +978,22 @@
      "sikkerhet": "B",
      "flyttet_m": 244
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.1401,
+    "lon": 13.3163
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Lang, smal sandstrand langs vestkysten ved Vikten, vender mot vest. Listepinnen sto ca. 40 m inne på land; flyttet rett ut til ca. 100 m utenfor vannkanten."
   },
   "flakstad-beach-kirkesiden": {
    "spot": {
-    "lat": 68.109,
-    "lon": 13.315
+    "lat": 68.106802,
+    "lon": 13.315408
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -913,16 +1027,22 @@
      "sikkerhet": "B",
      "flyttet_m": 245
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.109,
+    "lon": 13.315
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Sandstranda på østsiden av halvøya (mot Flakstad kirke). Listepinnen (anslått) lå ute blant skjærene nord i bukta; flyttet til ca. 100 m utenfor midten av stranda."
   },
   "skagsanden": {
    "spot": {
-    "lat": 68.1048,
-    "lon": 13.2868
+    "lat": 68.10708,
+    "lon": 13.290916
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -948,16 +1068,22 @@
      "sikkerhet": "B",
      "flyttet_m": 306
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.1048,
+    "lon": 13.2868
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Skagsanden er den lange sandstranda på vestsiden av halvøya, vender mot nordvest. Listepinnen lå i vannkanten ved sørenden; flyttet til ca. 100 m utenfor midten av stranda."
   },
   "ramberg": {
    "spot": {
-    "lat": 68.0899,
-    "lon": 13.2299
+    "lat": 68.097007,
+    "lon": 13.238991
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -989,16 +1115,22 @@
      "sikkerhet": "B",
      "flyttet_m": 878
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.0899,
+    "lon": 13.2299
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Rambergstranda, den store hvite sandbukta. Listepinnen (anslått) lå inne på land sørvest for stranda; satt ca. 100 m utenfor midten av stranda."
   },
   "kvalvika": {
    "spot": {
-    "lat": 68.0772,
-    "lon": 13.0924
+    "lat": 68.077201,
+    "lon": 13.092411
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "A",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -1011,7 +1143,13 @@
      "sikkerhet": "A",
      "flyttet_m": 0
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.0772,
+    "lon": 13.0924
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Bukta mellom fjellene; flyfotoet viser brytende bølger på den nordre delen av sandstranda der listepinnen (eksakt) ligger. Beholdt."
   },
   "broken-hearts": {
    "spot": {
@@ -1019,7 +1157,7 @@
     "lon": 13.52
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
    "metode": "listepinne",
    "dato": "2026-10-16",
    "alternativer": [
@@ -1055,16 +1193,22 @@
      "sikkerhet": "C",
      "flyttet_m": 274
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.065,
+    "lon": 13.52
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen sto oppe på Ballstadøya (80 moh). Flyttet ned til ca. 80 m utenfor sørkysten av øya rett sør for pinnen, men flyfotoet viser ingen bølger, så selve revet/odden er ikke funnet. Må sjekkes av noen som kjenner stedet."
   },
   "horseid": {
    "spot": {
-    "lat": 68.033,
-    "lon": 13.0
+    "lat": 68.02655,
+    "lon": 12.986765
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "B",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [
     {
@@ -1084,16 +1228,22 @@
      "sikkerhet": "B",
      "flyttet_m": 907
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 68.033,
+    "lon": 13.0
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen sto oppe i fjellet (ca. 400 moh). Horseidstranda er den store sandstranda i bukta sørvest for pinnen; satt ca. 100 m utenfor midten av stranda."
   },
   "bunes": {
    "spot": {
-    "lat": 67.982,
-    "lon": 13.01
+    "lat": 67.981162,
+    "lon": 12.960482
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
+   "sikkerhet": "A",
+   "satt_av": "claude (delegert av Theodor 16.10.2026)",
+   "metode": "godkjent forslag (flyfoto)",
    "dato": "2026-10-16",
    "alternativer": [],
    "forslag": [
@@ -1106,7 +1256,13 @@
      "sikkerhet": "A",
      "flyttet_m": 2074
     }
-   ]
+   ],
+   "startpunkt": {
+    "lat": 67.982,
+    "lon": 13.01
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Listepinnen lå inne i Vindstadfjorden, på feil side av halvøya (derfor «skjermet» i triagen). Bunesstranda er den store sandstranda vest for fjorden, vender mot nordvest; flyfotoet viser brytende bølger. Satt ca. 100 m utenfor midten av stranda."
   },
   "lop": {
    "spot": {

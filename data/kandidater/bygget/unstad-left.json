@@ -1,0 +1,161 @@
+{
+ "spot": {
+  "id": "unstad-left",
+  "name": "Unstad Left",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Lofoten",
+  "spot": {
+   "lat": 68.267948,
+   "lon": 13.575772
+  },
+  "facing": 294.8,
+  "swell_window": [
+   257,
+   344
+  ],
+  "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[257, 344]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   70,
+   232
+  ],
+  "_offshore_vind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (samme dal bak)",
+  "offshore": {
+   "lat": 68.323,
+   "lon": 13.3249
+  },
+  "_havpunkt": "Langs midten av vinduet (300.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 68.273657,
+   "lon": 13.568434
+  },
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-10-16T0950_kandidater.json), regelen fra 15.10: snitt 700m@334.4, 700 m ut, dybde 9,4 m, Hs 4,92 m kl. 2026-10-16T06:00Z. Beholdt ved ny facing 285.0°: point/reef i sørøsthjørnet av Unstad-bukta - strandnormalen 334,4 var feil mål; bølgene ved punktet kom fra 276-289°. Beholdt ved ny facing 294.8°: punktet beholdt (point/reef i Unstad-bukta).",
+  "tidevann": {
+   "name": "Andenes",
+   "code": "ANX",
+   "delay": "-5",
+   "factor": "1.01",
+   "obsname": "Andenes"
+  },
+  "ideal_height": [
+   1.5,
+   3.5
+  ],
+  "max_height": 5.0,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
+  "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
+  "_rettet": {
+   "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
+   "facing": "kontrollør 16.10 andre runde (Claude, delegert av Theodor 16.10.2026), ukalibrert: Unstads egen facing (har observasjoner bak seg) i stedet for retningen ved punktet én dag. NB: retningen ved punktet ligger innen 23° av 294,8 i hele prøvevarselet, og bw_confirms slo til i 56 av 56 timer - retningskontrollen er i praksis av for denne spoten; sørvestlig (<247°) og nordlig (>353°) svell er ikke testet",
+   "barentswatch_point": "beholdt ved ny facing (punktet beholdt (point/reef i Unstad-bukta))",
+   "offshore_wind": "kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: offshore-sektor som Unstad (samme dal bak)"
+  }
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 68.267948,
+   "lon": 13.575772,
+   "dybde_m": 0.3
+  },
+  {
+   "m": 100,
+   "lat": 68.268764,
+   "lon": 13.574724,
+   "dybde_m": 2.1
+  },
+  {
+   "m": 200,
+   "lat": 68.269579,
+   "lon": 13.573675,
+   "dybde_m": 2.2
+  },
+  {
+   "m": 300,
+   "lat": 68.270395,
+   "lon": 13.572627,
+   "dybde_m": 2.0
+  },
+  {
+   "m": 400,
+   "lat": 68.27121,
+   "lon": 13.571579,
+   "dybde_m": 5.6
+  },
+  {
+   "m": 500,
+   "lat": 68.272026,
+   "lon": 13.570531,
+   "dybde_m": 5.5
+  },
+  {
+   "m": 600,
+   "lat": 68.272842,
+   "lon": 13.569482,
+   "dybde_m": 6.6
+  },
+  {
+   "m": 700,
+   "lat": 68.273657,
+   "lon": 13.568434,
+   "dybde_m": 9.4
+  },
+  {
+   "m": 800,
+   "lat": 68.274473,
+   "lon": 13.567386,
+   "dybde_m": 11.5
+  },
+  {
+   "m": 900,
+   "lat": 68.275289,
+   "lon": 13.566337,
+   "dybde_m": 11.2
+  },
+  {
+   "m": 1000,
+   "lat": 68.276104,
+   "lon": 13.565289,
+   "dybde_m": 11.8
+  },
+  {
+   "m": 1100,
+   "lat": 68.27692,
+   "lon": 13.564241,
+   "dybde_m": 9.6
+  },
+  {
+   "m": 1200,
+   "lat": 68.277735,
+   "lon": 13.563192,
+   "dybde_m": 8.8
+  },
+  {
+   "m": 1300,
+   "lat": 68.278551,
+   "lon": 13.562144,
+   "dybde_m": 8.8
+  },
+  {
+   "m": 1400,
+   "lat": 68.279367,
+   "lon": 13.561096,
+   "dybde_m": 7.0
+  },
+  {
+   "m": 1500,
+   "lat": 68.280182,
+   "lon": 13.560048,
+   "dybde_m": 8.0
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-10-16T09:48+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (claude (delegert av Theodor 16.10.2026))",
+  "lat": 68.267948,
+  "lon": 13.575772
+ },
+ "rettet": "2026-10-16"
+}
