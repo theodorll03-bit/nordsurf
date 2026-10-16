@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-9fba071d2334";
+const CACHE = "nordsurf-a086266c3e58";
 const TILES = CACHE + "-fliser";   // detaljflisene (range-biter), eget tak - byttes sammen med CACHE
 const TILES_MAX_ENTRIES = 600;      // ca. 600 range-biter à 1-60 KB: under ca. 15 MB
 // S3 (16.10.2026): listen hadde to filer som ikke finnes (css/kart.css, js/front.js) - da feiler
@@ -70,6 +70,9 @@ async function rangeCached(req, range) {
 
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
+  // andre domener (Kartverkets kartfliser, Theodor 16.10.2026): rett til nett, aldri lagret av service workeren -
+  // fliser fra z12 (Geovekst) kan vises, men ikke lagres. Bare vanlig nettleser-cache.
+  if (url.origin !== location.origin) return;
   // varseldata (S2: data/oversikt.json og data/spots/<id>.json): alltid ferskt når nett finnes, cache som reserve
   if (url.pathname.includes("/data/")) {
     e.respondWith(fetch(e.request).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put(e.request, c)); return r; }).catch(() => caches.match(e.request)));
