@@ -8,13 +8,14 @@
   "Salten",
   "Møre og Romsdal",
   "Stad og Nordfjord",
+  "Hordaland",
   "Karmøy",
   "Jæren",
   "Dalane og Lista",
   "Sørlandet",
   "Østlandet"
  ],
- "antall": 115,
+ "antall": 113,
  "kandidater": [
   {
    "id": "porsangvika",
@@ -712,7 +713,8 @@
     "https://en.wikipedia.org/wiki/Nykv%C3%A5g"
    ],
    "dokumentasjon": "middels",
-   "status": "kandidat"
+   "status": "kandidat",
+   "vern_merknad": "Listepinnen ligger ca. 580 m utenfor Nykvåg/Nykan naturreservat (surfebrett forbudt hele året, ferdsel på land forbudt 15.4-31.7; forskrift 2002-12-06-1462), som ligger på andre siden av bukta. Ikke sjekket på flyfoto - forutsetter at pinnen står der bølgen er."
   },
   {
    "id": "g-frame",
@@ -838,7 +840,8 @@
     "https://www.surfnerd.com/surf-forecast/eggum"
    ],
    "dokumentasjon": "svak",
-   "status": "kandidat"
+   "status": "kandidat",
+   "vern_merknad": "Listepinnen ligger ca. 690 m utenfor Eggum naturreservat (surfebrett forbudt hele året). Ikke sjekket på flyfoto - forutsetter at pinnen står der bølgen er."
   },
   {
    "id": "eggum",
@@ -871,7 +874,8 @@
     "https://www.fjordtours.com/inspiration/articles/surfing-norway"
    ],
    "dokumentasjon": "god",
-   "status": "kandidat"
+   "status": "kandidat",
+   "vern_merknad": "Listepinnen ligger ca. 270 m utenfor Eggum naturreservat (surfebrett forbudt hele året, forskrift 2002-12-06-1447 § 3 nr. 3), som begynner sørvest for pinnen og går ned til strandlinja og ut i sjøen. Ikke sjekket på flyfoto: ligger bølgen lenger sørvest enn pinnen, kan den være innenfor."
   },
   {
    "id": "unstad-right",
@@ -2093,6 +2097,7 @@
    ],
    "dokumentasjon": "god",
    "status": "kandidat",
+   "prioritet": "lav",
    "region_merknad": "Sunnfjord-kysten lagt i Stad og Nordfjord som nærmeste forslag"
   },
   {
@@ -2140,7 +2145,7 @@
    ],
    "fylke": "Vestland",
    "kommune": "Øygarden",
-   "region": null,
+   "region": "Hordaland",
    "pin_liste": {
     "lat": 60.5995,
     "lon": 4.763
@@ -2162,8 +2167,7 @@
     "https://en.wikipedia.org/wiki/Alvheim"
    ],
    "dokumentasjon": "god",
-   "status": "kandidat",
-   "region_merknad": "ingen av regionforslagene dekker Hordaland (ligger mellom Karmøy og Stad og Nordfjord)"
+   "status": "kandidat"
   },
   {
    "id": "akrasanden",
@@ -2476,39 +2480,6 @@
     "https://www.fjordnorway.com/no/attraksjoner/sola"
    ],
    "dokumentasjon": "god",
-   "status": "kandidat"
-  },
-  {
-   "id": "regestranda",
-   "name": "Regestranda",
-   "aliases": [
-    "Rege",
-    "Ræge",
-    "Regestranden"
-   ],
-   "fylke": "Rogaland",
-   "kommune": "Sola",
-   "region": "Jæren",
-   "pin_liste": {
-    "lat": 58.855,
-    "lon": 5.56
-   },
-   "coord_confidence": "estimated",
-   "hint": {
-    "break_type": "beach break",
-    "bottom": "sand",
-    "best_swell_dir": "unknown",
-    "best_wind_dir": "unknown",
-    "skill_level": "unknown",
-    "_kilde": "fra lista, ubekreftet"
-   },
-   "source_count": 3,
-   "sources": [
-    "https://www.fjordnorway.com/en/inspiration/fjord-norways-10-best-kept-secrets",
-    "https://www.visitnorway.no/reisemal/vestlandet/stavangerregionen/topp-opplevelser-paa-jaeren/",
-    "https://sandee.com/norway/rogaland/rege/ølbergstranden"
-   ],
-   "dokumentasjon": "svak",
    "status": "kandidat"
   },
   {
@@ -2892,40 +2863,6 @@
    "dokumentasjon": "god",
    "status": "kandidat",
    "vern_mistanke": true
-  },
-  {
-   "id": "secret-revtangen",
-   "name": "Secret (Revtangen)",
-   "aliases": [
-    "Secret (NO",
-    "surfing)",
-    "Orre nordre point"
-   ],
-   "fylke": "Rogaland",
-   "kommune": "Klepp",
-   "region": "Jæren",
-   "pin_liste": {
-    "lat": 58.7505,
-    "lon": 5.4896
-   },
-   "coord_confidence": "good",
-   "hint": {
-    "break_type": "beach break",
-    "bottom": "sand",
-    "best_swell_dir": "S, SE",
-    "best_wind_dir": "E, SE",
-    "skill_level": "unknown",
-    "_kilde": "fra lista, ubekreftet"
-   },
-   "source_count": 2,
-   "sources": [
-    "https://windy.app/forecast2/spot/551967/Secret+NO+surfing",
-    "https://www.wannasurf.com/spot/Europe/Norway/orre/index.html"
-   ],
-   "dokumentasjon": "svak",
-   "status": "kandidat",
-   "vern_mistanke": true,
-   "venter_pa_theodor": "hemmelig/«secret» i lista - ikke bygg før Theodor har svart"
   },
   {
    "id": "orrestranda",
