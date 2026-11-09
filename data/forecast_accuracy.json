@@ -1,5 +1,5 @@
 {
- "last_scored_until": "2026-11-05T15:00:00+00:00",
+ "last_scored_until": "2026-11-09T14:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
@@ -22,14 +22,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1107,
+    "n": 1108,
+    "hits": 1108,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 912,
+    "n": 914,
+    "hits": 914,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -84,14 +84,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1099,
+    "n": 1108,
+    "hits": 1100,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 909,
+    "n": 914,
+    "hits": 911,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -146,14 +146,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1107,
+    "n": 1108,
+    "hits": 1108,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 912,
+    "n": 914,
+    "hits": 914,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -208,14 +208,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1063,
+    "n": 1108,
+    "hits": 1064,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 911,
+    "n": 914,
+    "hits": 913,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -270,14 +270,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1096,
+    "n": 1108,
+    "hits": 1097,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 912,
+    "n": 914,
+    "hits": 914,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -332,14 +332,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1100,
+    "n": 1108,
+    "hits": 1101,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 911,
+    "n": 914,
+    "hits": 913,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -394,14 +394,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 917,
+    "n": 1108,
+    "hits": 918,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 745,
+    "n": 914,
+    "hits": 746,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -456,14 +456,14 @@
     "hits_logs": 0
    },
    "4": {
-    "n": 1107,
-    "hits": 1103,
+    "n": 1108,
+    "hits": 1104,
     "n_logs": 0,
     "hits_logs": 0
    },
    "5": {
-    "n": 912,
-    "hits": 879,
+    "n": 914,
+    "hits": 881,
     "n_logs": 0,
     "hits_logs": 0
    },
