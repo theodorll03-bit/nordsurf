@@ -1,5 +1,53 @@
 # Nordsurf: status
 
+## T0 - status og opprydding (09.11.2026 kveld) - FERDIG, venter på ditt ja på main-pushen
+
+**Arbeidskopi:** `/Users/theodorlund/nordsurf` (riktig). `Nettside/surf` er en gammel klone fra 15.10 (rørt ikke). Denne rapporten er skrevet på lokal `main` (arbeidskopien `nordsurf-12`), ikke pushet.
+
+**1. Git**
+- `git fetch --all` (uten prune): **origin/main har flyttet seg, 6dc2f28 → 5290890.** To bot-commits («Nytt varsel (læringsdata)» 05.11 kl. 12:17 og 09.11 kl. 11:32): 79 gamle filer i `data/forecast_archive/` slettet, 2 nye lagt til, og `data/bw_calibration.json`, `data/exposure.json`, `data/forecast_accuracy.json` oppdatert. Ingenting annet. Lokal `main` er 51 foran og 2 bak, kan **ikke** spoles fram. Prøvemerge (`git merge-tree`, ingenting endret): **ingen konflikter**. **Ikke pushet - stopp, se spørsmål.**
+- Pushet: `00166ff` på `region/lofoten-vesteralen` (c313ed7..00166ff, ren fast-forward). **NB: nøkkelringens lagrede GitHub-passord er ugyldig** («Invalid username or token»), så vanlig `git push` feiler. Jeg brukte `gh` som credential helper for ett kall (`git -c credential.helper='!gh auth git-credential' push`), samme konto, ingenting lagret eller endret.
+- Pushen utløste, som designet: «Tester» (push og PR) og «Prøvehenting (gren)» (grenen `region/**` med endret spots.json) - 3 kjøringer.
+- Upushede lokale commits: `main` (51), `design/kartverket-2` (5, ingen PR), `design/tidevann` (2), `region/ramberg-315` (a089c98, **push blokkert av tillatelsessystemet - ikke pushet**), `drift/forhandsvis` (2: tools/forhandsvis.sh + STATUS), `drift/fotavtrykk` (3: forslaget docs/drift/github-fotavtrykk.md), `drift/vakthund-live` (88f4172: live-siden nede/404/5xx/tidsavbrudd = feil, 6-timersgrense, timeout 240 s). De tre drift-grenene er IKKE pushet, venter på ditt ok.
+
+**2. GitHub-konto:** `gh auth status`: bare **theodorll03-bit** (aktiv, eneste innlogging). Nøkkelringen (git) har også brukernavnet theodorll03-bit. Ingen annen konto funnet på maskinen i gh eller git. `git config` var tomt (lokalt og globalt); satt **bare i dette repoet** (gjelder alle worktrees): `Theodor Lund <333341134+theodorll03-bit@users.noreply.github.com>`. Eksisterende commits har forfatter-e-post `theodorlund@Theodor-sin-MacBook-Pro.local`; kan ikke endres uten omskriving av historikken.
+
+**3. Åpne PR-er (GitHub 09.11).** De du husker (#15, #16, #17, #18, #20, #21, skalering/oversikt = #12, design/runde-1 = #2) og #24 er **allerede merget** på GitHub (16.10 før suspensjonen).
+| PR | Hva | CI | Utdatert mot main | Anbefaling |
+|---|---|---|---|---|
+| #1 natt/wam800 | STATUS J (WAM800) plan og workflow, +20 455 linjer | grønn (06.10) | 236 commits bak | **lukk** (J er omdøpt, WAM800 lagt ned); behold grenen |
+| #22 region/lofoten-vesteralen | 15 nye spots publisert, 4 holdt tilbake (tittelen sier fortsatt 16 og 3) | Tester kjører nå (etter min push) | 9 bak, mergeable | **vent**: Claudes gjennomgang (T1), så ditt ja; rett tittelen |
+| #25 fiks/soyletall | søyletallet viser det søylen tegner | grønn (16.10) | 7 bak | **blir merget av main-pushen** (hodet ligger i lokal main) |
+| #26 design/tidevann | tidevannskort, SVG-tekst i ekte piksler | grønn (16.10, før de 2 nye commitsene) | 9 bak; 2 lokale commits ikke pushet | **push grenen først**, så main-pushen |
+| #27 fiks/hopp | robust svell ute, myk vinduskant | grønn (16.10) | 7 bak | **blir merget av main-pushen** |
+| #28 design/kartverket | Kartverket-kart (Geovekst z>=12 i commit 8083ccb) | grønn | 8 bak | **lukk** (erstattet av `design/kartverket-2`, ingen PR ennå); du lukker og sletter grenen selv, som avtalt 16.10 |
+Merk: #24 står som merget 16.10 kl. 11:20Z på GitHub, men STATUS (16.10) omtalte den som lokal merge (ad6ec12). Prøvemergen er konfliktfri, så dobbeltmergen er trolig harmløs; ikke undersøkt videre.
+
+**4. Drift - FEIL FUNNET, ikke rettet**
+- **Planlagte kjøringer har stått stille siden 16.10.** Siste `schedule`-kjøring av «Hent varsel»: 16.10 kl. 09:51Z. Siden da bare to manuelle (`workflow_dispatch`), begge grønne: 05.11 kl. 12:15Z og 09.11 kl. 11:30Z. Det samme gjelder «Testlab (ukentlig)» (siste 16.10 kl. 07:46Z) og Vakthund (aldri en planlagt kjøring). Alle workflows står som «active». Trolig årsak: GitHub stanset planlagte kjøringer da kontoen ble suspendert (ikke bekreftet).
+- **Live-siden er ikke fersk:** `forecast.json` generert 09.11 kl. 11:00Z, 9,7 timer gammelt kl. 20:46Z (skal aldri være over 3 timer). Siden svarer (200), vises 8 spots (23 etter main-pushen).
+- **Ikke rettet.** Å slå på planlagte kjøringer igjen er en Actions-innstilling (forbudt uten ja). En liten driftsrettelse (f.eks. en tom endring i forecast.yml via en PR fra origin/main) kan trolig vekke cron, og passer «Driftsrettelser uten ja» (rører ikke rating, spots.json, docs/ eller data/), men jeg har ikke gjort noe, siden det også er en ny push/PR. Å kjøre «Hent varsel» manuelt nå ville gitt et ferskt varsel; ikke kjørt (lite fotavtrykk).
+- Vakthunden (#20) ville ha varslet, men NTFY_TOPIC mangler (se 5), så ingen ntfy sendes.
+
+**5. Nøkler (`gh secret list`, bare navn):** finnes: BW_CLIENT_ID, BW_CLIENT_SECRET, BW_POINT_URL, UA_CONTACT. **Mangler: LOGS_REPO, LOGS_TOKEN, FROST_CLIENT_ID, og NTFY_TOPIC.** Repo-variabler: BW_DEBUG.
+
+**6. Worktrees:** `git worktree prune --dry-run -v`: **ingenting å rydde** (alle 13 mapper finnes). Ikke ryddet.
+
+**Hva som blir live med main-pushen** (spots: 8 → 23 publisert, 27 i spots.json; ingen eksisterende spot endres):
+- Nye spots (15): bleik, bunes, ducks, eggum, haukland, horseid, hoyvika, kvalnes, kvalvika, ramberg, skagsanden, stave, the-frog, utakleiv, vikten. Holdt tilbake (enabled false): g-frame, soppelplassen, unstad-left, unstad-right. Parkert: eggum-ost. **Ramberg publiseres med gamle parametere** (facing 315 venter på grenen under).
+- Appen: tapte stjerner som stiplet omriss (#24), søyletallet viser det søylen tegner (#25), tidevannskort med foretrukket vannstand som tykkere kurve (#26), robust svell ute og myk vinduskant (#27: sekundærsvell 0,0/0° blir manglende, flat-sperren uendret), Utforsk med Kartverket topograatone, OSM-reserve, vind og svellkile (kartverket-2, ingen Geovekst z>=12).
+- Drift/verktøy: `tools/forhandsvis.sh`, `tools/bygg_spot.py`m.fl., `.github/workflows/provehent.yml` (ny), endringer i test.yml og find_bw_point.yml; 48 filer under data/kandidater, 62 under docs/design (skjermbilder), 81 arkivfiler.
+- Merge-konsekvens: den første «Hent varsel» etter pushen henter 23 spots.
+
+**Spørsmål / venter på deg (ja/nei):**
+1. **Main:** origin/main har flyttet seg (bare to bot-commits). Skal jeg flette `origin/main` inn i lokal `main` (én merge-commit, konfliktfri, ingen rebase/force) og så pushe en ren fast-forward etter push-rekkefølgen i STATUS (feature-grener først: design/tidevann, design/kartverket-2; så main)? Og pushe `region/ramberg-315` som gren (trenger at du tillater det: den ble blokkert).
+2. **Drift-grenene** (forhandsvis, fotavtrykk, vakthund-live): push som grener nå, eller vent?
+3. **Cron:** skal jeg lage en liten driftsrettelse-PR for å vekke planlagte kjøringer, og/eller kjøre «Hent varsel» manuelt nå?
+4. **Nøkkelringen:** `git push` fungerer ikke uten `gh` som helper. Skal jeg sette opp `gh auth setup-git` (endrer git-konfigurasjonen) eller fortsette med engangs-helperen?
+5. **#1 og #28** lukkes (anbefalt).
+
+**Til Claude (filstier):** ingenting ennå; T1 sendes etter at pakken ligger klar (`data/kandidater/bygget/<region>.md`).
+
 ## Venter på GitHub (kontoen suspendert 16.10 ca. kl. 15, anke sendt 15:25)
 
 Alt under er gjort LOKALT. Ingen push, gh, nye remotes eller andre tjenester før kontoen er tilbake (Theodors regler 16.10). Ingen rebase/force - alt kan pushes rett.

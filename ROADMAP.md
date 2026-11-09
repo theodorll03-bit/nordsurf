@@ -341,6 +341,164 @@ Bakgrunn (14.10.2026): `data/exposure.json` (del B: eksponering per retning lær
 3. **Kobles inn i ratingen når** (a) testlaben viser at `laert_eksponering` treffer observasjonene minst like godt som grunnlinja - på de uavhengige sakene, og uten at noen fast observasjon ryker - og (b) de viktigste retningene per spot (bøttene i svellvinduet) har nok par: minst 6 par over 2 døgn per bøtte, og minst 3 lærte referansebøtter så normaliseringen er mulig. **Krever Theodors ja** (CLAUDE.md). Det tekniske er én bryter.
 4. Par fra retninger med en nær, bred hindring (`rating.blocked_by_near_obstacle`, Nordneset-saken) holdes utenfor læringen (test 3b i `test_exposure_learn.py`), og antallet utelatte vises i kilderapporten.
 
+## T. Økt 09.11.2026: status, alle spots i Nord-Norge, lokalkunnskap og nytt design - T0 FERDIG (rapport øverst i STATUS.md), T1-T3 venter
+
+Økt etter lang pause (Theodor, 09.11.2026). Fire deler, i denne rekkefølgen, én oppgave av gangen:
+- T0 status og opprydding. T1 alle spots i Nord-Norge. T2 lokalkunnskap fra Lofoten Surfsenter. T3 nytt design (B 4.0 «Papir»).
+- Reglene i CLAUDE.md gjelder fullt ut, også «Krever Theodors ja», fysikk-kontrolløren før hver commit og tidsgrenser på alle kommandoer.
+
+### Faste regler for hele økta (i tillegg til CLAUDE.md)
+
+**Hemmeligheter og GitHub**
+- Aldri skriv ut, logg eller commit hemmeligheter eller tokens. Ikke be meg lime tokens inn i chatten. Jeg legger dem inn selv i GitHub og i appen.
+- Ingen force-push og ingen omskriving av historikk.
+- Ingen endringer i GitHub-innstillinger: repo, Pages, Actions, hemmeligheter, kontoer eller tilganger.
+- Ikke slett data, logger eller kalibreringsfiler.
+
+**Lite fotavtrykk på GitHub**
+Kontoen har nylig vært suspendert og er gjenåpnet. Derfor:
+- Samle commits.
+- Én PR per region.
+- Ingen nye repoer.
+- Ikke kjør workflows unødvendig, for eksempel provehent på hver push.
+- Ingen masseoperasjoner mot GitHub-API-et.
+
+**Data og kilder**
+- Ingen skraping av Surfline, surf-forecast, Windy eller Breakfinder. Ikke skrap Lofoten Surfsenters Instagram heller. Det de har sagt, gir jeg deg her.
+- Spots med status `hemmelig` publiseres aldri, verken i docs/, i oversiktsfila, på kartet eller i PR-tekster. privat/ og hemmelige spots (id, navn, koordinater) skal aldri i git.
+- Open-Meteo er gratisversjonen og bare for ikke-kommersiell bruk (under 10 000 kall per døgn, 5 000 per time og 600 per minutt). Hold deg godt under.
+- Norge i bilder/Geovekst kan vises, men ikke kopieres, committes eller precaches.
+
+**Ingen nye tjenester**
+Ingen nye kontoer, tjenester eller kostnader uten mitt ja.
+
+### T0. Status og opprydding (rapport først, ingen store endringer)
+
+1. **Git:**
+   - Kjør `git fetch --all`, og vis hvilken gren du står på.
+   - På `region/lofoten-vesteralen` ligger én commit som ikke er pushet (00166ff). Push den til samme gren.
+   - Sjekk om andre grener har upushede commits, og list dem.
+2. **GitHub-konto:**
+   - Kjør `gh auth status`, og vis bare kontonavnet, aldri tokenet. Sjekk også `git config user.name/user.email` i repoet.
+   - Repoet eies av **theodorll03-bit**, og den kontoen skal brukes. Jeg har to GitHub-brukere aktive på maskinen nå. Er gh eller git logget inn på en annen konto enn theodorll03-bit: STOPP og si fra. Ikke logg inn eller ut og ikke bytt konto selv.
+3. **Åpne PR-er og grener:**
+   - Lag en tabell over alle åpne PR-er. Jeg husker #15 MapLibre, #16, #17 sw.js, #18 spotfabrikken, #20 vakthund, #21 S6, #22 Lofoten og Vesterålen, skalering/oversikt og design/runde-1, men sjekk selv.
+   - For hver PR: hva den gjør, om CI er grønn, om den er utdatert mot main, og hva du anbefaler (merge / oppdater / lukk), med én linje begrunnelse.
+   - Ikke merge noe som krever mitt ja.
+4. **Drift:**
+   - Har «Hent varsel» og publiseringen kjørt grønt de siste dagene, og viser live-siden et ferskt varsel?
+   - Rett ren drift etter regelen «Driftsrettelser uten ja» i CLAUDE.md.
+5. **Hemmeligheter:**
+   - Kjør `gh secret list` og vis bare navnene. Finnes LOGS_REPO, LOGS_TOKEN og FROST_CLIENT_ID nå? Si hva som mangler.
+6. **Rapport:**
+   - Skriv rapporten øverst i STATUS.md og vis den i terminalen.
+   - Gå videre til T1 hvis ingenting er ødelagt.
+
+### T1. Alle spots i Nord-Norge (Theodor 09.11.2026)
+
+Mål: alle kandidatene i Nord-Norge bygget og klare for gjennomgang. Det gjelder regionene Lofoten (18), Vesterålen (9), Troms (9, inkludert de som allerede er i appen), Finnmark (5) og Salten (4) i data/kandidater/kandidater.json. Hvis noen kandidater i Helgeland/Nordland mangler region, ta dem med og si fra.
+
+Følg det som allerede er bestemt:
+- ROADMAP K (Del C spotfabrikken og utrullingen: én region per PR, mitt ja mellom hver)
+- data/kandidater/KONVENSJON.md
+- vern- og forbudssjekken
+- BarentsWatch-punkt med kjent dybde
+- facing og svellvindu fra kystlinjen
+- regelen om at manglende data aldri er 0
+
+Fordelingen av ansvar (16.10.2026) gjelder fortsatt. **Claude i chatten** går gjennom posisjonene og den bygde geometrien. **Jeg** sier ja eller nei til å merge hver region.
+
+Rekkefølge:
+1. **Lofoten og Vesterålen (#22):**
+   - Gjør ferdig gjennomgangspakken med alt som er nytt siden 16.10. Det gjelder også spotene som holdes tilbake (enabled false: G-frame, unstad-left/-right, soppelplassen, eggum-ost-steinstrand), med hvorfor og hva som skal til.
+   - Sjekk at **Flakstad** (Flakstadsanden ved Ramberg/Flakstad, se docs/data/spots/ramberg.json og kandidatlista) er med som egen spot med eget BarentsWatch-punkt. Den trengs i T2.
+2. **Troms:** resten av kandidatene, egen gren `region/troms`.
+3. **Finnmark:** egen gren `region/finnmark`.
+4. **Salten:** egen gren `region/salten`.
+
+For hver region, før du stopper:
+- **Bygg** med spotfabrikken. Kontrolløren skal gå gjennom før hver commit.
+- **Gjennomgangspakke** i `data/kandidater/bygget/<region>.md`, med tabell per spot:
+  - id og navn
+  - lat/lon og hvor posisjonen kommer fra
+  - facing, svellvindu og offshore_wind
+  - BarentsWatch-punkt med avstand, dybde og retning
+  - eksponering
+  - tidevannssted
+  - vern/forbud
+  - sikkerhet (A/B/C)
+  - hva du er usikker på
+- **Bilder:** minikart-PNG per spot og ett oversiktsbilde for regionen.
+- **Kallbudsjett:** hvor mange Open-Meteo- og BarentsWatch-kall per døgn hele appen bruker med den nye regionen. STATUS sier at Open-Meteo må tempobegrenses før ca. 80 spots, så løs det FØR vi passerer, og vis tallene.
+- **PR som utkast**, ikke merge.
+- **Stopp og skriv til meg:** «Send data/kandidater/bygget/<region>.md og bildene til Claude for gjennomgang.» Bygg gjerne neste region mens jeg venter, men aldri merge.
+
+### T2. Lokalkunnskap fra Lofoten Surfsenter (Theodor 09.11.2026)
+
+Jeg snakket med folkene som driver Lofoten Surfsenter. Det er en navngitt kilde etter mønsteret i CLAUDE.md («Lokalkunnskap»), og vekten bør være høy. Legg punktene inn der med kilde og dato. De sa tre ting:
+
+**a) Vind:** «Surfline tar alltid ned ratingen for vinden på Unstad, men det er som oftest offshore der, og offshore er bra på Unstad.»
+- Kontroller modellen vår: offshore_wind [70, 232] og WIND_PENALTY_CURVES["offshore"] = (10,0), (14,1), (18,2).
+- Lag en tabell for Unstad de siste 30 dagene fra data/forecast_archive. Den skal vise timer med fralandsvind, effektiv vind, straff og hvor ofte vi trakk ned under 10 m/s.
+- Ingen endring hvis modellen gjør det riktig. Finner du en feil, rett den etter reglene og vis før/etter.
+
+**b) Størrelse:** «Unstad er nesten alltid større enn Flakstad.» En annen app viste dem med samme rating, og det er feil.
+- Sammenlign surfehøyde og vurdering for Unstad og Flakstad time for time over arkivet og backtesten.
+- Rapporter:
+  - andelen timer der Unstad er større, lik og mindre
+  - typisk forhold i surfehøyde
+- Er de for like: finn årsaken. Det kan være samme havpunkt eller BarentsWatch-punkt, samme transfer eller eksponering, eller surf_factor.
+- Foreslå en rettelse. Det kan være egne punkter, eksponering eller en lavere størrelsesfaktor for Flakstad som `local_rules` med kilden «Lofoten Surfsenter, 09.11.2026».
+- Dette henger sammen med ROADMAP N (Unstads BarentsWatch-punkt). Unstad ble undervurdert fordi BarentsWatch-punktet viste for lav høyde.
+- Vis før/etter-tabell og STOPP for mitt ja (svellvinduer, punkter og facing krever ja).
+
+**c) Tidevann:** «Lofoten er best på lavvann.»
+- Start med Unstad: `local_rules.tide_prefer` med lav (og eventuelt middels, avhengig av hvordan tide.py deler inn), kilde «Lofoten Surfsenter, 09.11.2026» og en myk straff etter samme mønster som Farstadsanden.
+- Sjekk alle de faste observasjonene for Unstad (26.09 kl. 14:45, 27.09 morgen, 28.09 ca. kl. 13, 05.10). Hvilket tidevann var det da? Var noen gode økter på høyvann, så skal regelen være myk, og du skal si fra.
+- Vis før/etter for de neste 48 timene og 14 dager tilbake, og STOPP for ja hvis noen time flytter seg 2 eller mer.
+- Spør meg om regelen skal gjelde flere Lofoten-spots. Jeg vet ikke ennå om det gjelder alle eller mest Unstad.
+
+### T3. Nytt design: B 4.0 «Papir» (godkjent av meg 09.11.2026)
+
+Start T3 når T1-pakkene for Lofoten/Vesterålen og Troms ligger klare og T2 er rapportert. Bruk egen gren `design/b4`, PR, og ikke merge før jeg har sett skjermbilder.
+
+**Fasit:** `privat/design-b4/SPEC.md`. Les hele. Ved siden av ligger:
+- `privat/design-b4/skjermer/`: seks PNG-er av appen (Hjem og spotside, dag og mørketid) og nettsiden (spotside og forside)
+- `privat/design-b4/kilde/`: HTML-malene skissene er laget fra (et lite malspråk med {{ }} og sc-for/sc-if; les dem som referanse for mål, farger, tekst og logikk, ikke kopier rammeverket)
+- `privat/design-b4/foto/`: bildebehandlingen
+
+Satellittbildene i skissene har ikke-kommersiell lisens og skal ALDRI inn i git eller docs/. Kopier SPEC.md (bare teksten) til `docs/design/b4/SPEC.md` etter samme mønster som de andre designrundene.
+
+Delsteg, med commit, skjermbilder (mobil og PC, dag og mørketid) og kontrollør per steg:
+1. **Fundament:**
+   - Fargetokens for dag og mørketid som CSS-variabler.
+   - Følg systemets lys/mørk.
+   - Martian Mono (variabel bredde og vekt) og Familjen Grotesk selvhostet i docs/fonts.
+   - Skriftskala, avstandsskala og seksjonsstreken.
+   - Fjern lyseblått som tekstfarge overalt.
+2. **Vurderingen på skjermen:**
+   - Tall fra 0 til 5 i lister, kart og ukeoversikter. Korall bare fra 4.
+   - Ord fra strings.js. Spør meg hvis noen ord mangler, ikke finn på.
+   - Mørke timer uten vurdering på skjermen (borgerlig skumring, sola under −6°, regnet med sun.py). Ingen endring i modellen.
+3. **Hjem:**
+   - Topplinje med LYS og «Fra Tromsø ▾», og overskrift laget av dataene.
+   - Kompakt kart (220 pt) i ny stil.
+   - FAVORITTER med kjøretid, setning, OBS-linje fra loggene (under 7 dager gammel) og ukeoversikt med tall i rutene.
+   - Kornfoto på første favoritt med 4 eller mer.
+   - Kjøretid: start med en enkel tabell eller beregning fra Tromsø uten ny tjeneste, og spør før du tar inn en rute-API.
+4. **Spotsiden (Utforsk):** etter SPEC 6B. Behold dagens timestripe-interaksjon og VoiceOver-etiketter. Tilbakeknappen følger stakken (Hjem eller Utforsk).
+5. **Utforsk-lista og kartet:**
+   - MapLibre-stil etter SPEC 6A: blekk-land på papir, sand om natta, grunnvannsbånd og Vinduet-markører med åpning mot svellvinduet.
+   - Klynger som før.
+6. **Nettsiden (1024 px og bredere):** spotside og forside etter SPEC 6C og 6D.
+7. **Bilder:**
+   - Lag et lite verktøy i tools/ som lager Trykk- (dag) og Lodd-varianter (mørketid) med samme korn som `privat/design-b4/foto/behandle.py` og `trykk.py`.
+   - Kilden skal være lovlig: Kartverkets skyfrie Sentinel-2-mosaikk (CC BY 4.0) eller mine egne bilder.
+   - Spør før du henter fra en ny tjeneste.
+   - Bildene skal ha kreditering under.
+
+Kjør `python fetcher/update_sw_cache.py` før hver commit som rører docs/, sammen med alle testene og nettlesertestene.
+
 ## Venter på Theodor
 - **Kjent avvik, «Rått»-porten (PR #11, Theodors ja 15.10.2026):** Unstad 26.09 (test 16.1) ble observert til 4 stjerner, men rekonstruksjonen oppfyller alle vilkårene i five_star_swell_gate/five_star_losses og får 5. Står som åpent spørsmål: neste observerte 5-dag (logg eller «Observert») avgjør om porten er for raus. Ingen skrue uten fysisk grunn. ntfy sender et «Rått»-varsel (notify.five_star_alerts, maks ett per spot per døgn, 7 dager frem) så Theodor eller lokale kan sjekke og logge.
 - **Lært eksponering (del B) inn i ratingen** - se oppgave O: skyggemodus til testlaben og antall par oppfyller kriteriene, og Theodor sier ja.
