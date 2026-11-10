@@ -63,7 +63,7 @@ def main():
                     f"{(s.get('tidevann') or {}).get('name') or '–'}{' (' + str(s['tidevann'].get('delay')) + ' min)' if (s.get('tidevann') or {}).get('delay') not in (None, '0') else ''} | {'; '.join(b.get('flagg') or []) or '–'} |")
     L = [f"# Spotfabrikken: {', '.join(sorted(regioner))} ({len(rows)} spots)", "",
          "Forslag fra tools/bygg_spot.py for posisjonene som er godkjent (Claude, delegert av Theodor 16.10.2026). Ingenting er lagt inn i "
-         "spots.json - det skjer med tools/godkjenn_spot.py etter gjennomgang (privat/kandidater/bygg_godkjent_claude.csv). "
+         "spots.json - det skjer med tools/godkjenn_spot.py etter gjennomgang (fra 10.11.2026: spotansvarligs data/kandidater/bygget/<region>-gjennomgang.csv; 16.10: privat/kandidater/bygg_godkjent_claude.csv). "
          "Tidevann: Kartverkets referansested for posisjonen (samme oppslag som henteren; mange steder bruker Andenes med egen forsinkelse og faktor). Minikart per spot: data/kandidater/bygget/<id>.png. Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: "
          "strandnormal ±150 m langs kysten. Offshore-vind: motsatt av facing ±45° (standard, ubekreftet). BarentsWatch: snittregelen 15.10.", "",
          "| id | Navn | Region | facing | Vindu | Offshore-vind | Havpunkt | BarentsWatch-punkt | Tidevann | Flagg |",
