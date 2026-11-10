@@ -1,10 +1,11 @@
 {
   "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten). 26.09.2026: ideal_height og max_height er SURFEHØYDE (høyden der bølgene brekker, se rating.breaking_height) for alle spots, ikke Hs - Tromsø-spotene beholder samme tall som før ([0.8,2.0]/3.5), bare tolkningen er ny; Unstad er justert opp ([1.5,3.5]/5.5, tåler mer).",
   "regions": [
-    {"name": "Troms", "order": 1},
-    {"name": "Vesterålen", "order": 2},
-    {"name": "Lofoten", "order": 3},
-    {"name": "Møre og Romsdal", "order": 4}
+    {"name": "Finnmark", "order": 1},
+    {"name": "Troms", "order": 2},
+    {"name": "Vesterålen", "order": 3},
+    {"name": "Lofoten", "order": 4},
+    {"name": "Møre og Romsdal", "order": 5}
   ],
   "_regions": "15.10.2026 (Tillegg 2): regionnavn og rekkefølge for Hjem/Utforsk/søk - ingen hardkodede lister i JS. Hver spot har «region» (og valgfritt «aliases» for søk). Kartutsnittet per region regnes av publish.py: rammen rundt spotene i regionen pluss margin.",
   "spots": [
@@ -1267,6 +1268,88 @@
         "barentswatch_point": "400 m ut (spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet)"
       },
       "area": "Senja",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "berlevag-sandfjorden",
+      "name": "Berlevåg Sandfjorden",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Finnmark",
+      "spot": {
+        "lat": 70.798214,
+        "lon": 29.268436
+      },
+      "facing": 58.7,
+      "swell_window": [
+        32,
+        105
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[32, 105]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        194,
+        284
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 70.8446,
+        "lon": 29.6242
+      },
+      "_havpunkt": "Langs midten av vinduet (68.5°), 14 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 70.800563,
+        "lon": 29.280105
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 500m@58.7, 500 m ut, dybde 8,0 m, Hs 1,12 m kl. 2026-11-10T15:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "area": "Berlevåg",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "persfjord",
+      "name": "Persfjord",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Finnmark",
+      "spot": {
+        "lat": 70.42132,
+        "lon": 30.784553
+      },
+      "facing": 358.5,
+      "swell_window": [
+        347,
+        33
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[347, 33]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        134,
+        224
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 70.5905,
+        "lon": 30.873
+      },
+      "_havpunkt": "Langs midten av vinduet (10.0°), 19 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 70.429457,
+        "lon": 30.783921
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 900m@358.5, 900 m ut, dybde 8,8 m, Hs 1,38 m kl. 2026-11-11T21:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "area": "Vardø",
       "forelopig_fra": "2026-11-10"
     }
   ]
