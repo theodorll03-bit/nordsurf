@@ -1,5 +1,20 @@
 # Nordsurf: status
 
+## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
+
+Gren `t2/lofoten-surfsenter` (lokal, ikke pushet): fire verktøy i `tools/` og fire rapporter i `data/backtest/`. Kilden er Lofoten Surfsenter, 09.11.2026 (via Theodor). Den føres inn i CLAUDE.md «Lokalkunnskap» først når en regel faktisk legges inn.
+
+- **2a Vind** (`tools/unstad_vind_rapport.py`, `t2a_unstad_vind_2026-11-10.md`): modellen gjør det riktig. Fralandsvind under 10 m/s koster aldri en stjerne på Unstad. Ingen endring.
+- **2b Unstad mot Flakstad** (`tools/unstad_flakstad_rapport.py`, `t2b_unstad_flakstad_2026-11-10.md`): varselet sier det motsatte av Surfsenteret. Med BarentsWatch for begge (55 timer, kjøring 10.11 06Z): Unstad større i 0 timer, lik i 27, mindre enn Skagsanden i 28. **Forskjellen oppstår i Unstads BarentsWatch-punkt** (250 m ut, 3,9 m dyp): det viser median 0,48 av skyggepunktet 700 m ut og har kortere periode. Om det er brenning eller le for nordlig sjø, kan ikke denne kjøringen avgjøre. Ikke felles havpunkt eller BarentsWatch-punkt; transfer er lik (0,6), men brukes bare uten BarentsWatch. Sjøen kom fra nord og nordnordvest, og da er det fysisk ventet at Skagsanden (vindu til 4°) er størst. Kjøringen motsier derfor ikke Surfsenteret. Grunnlaget er én kjøring uten observasjon.
+  - Før/etter (55 timer): flytte Unstads punkt til 700 m med prior 1,45 gir Unstad større i 33 timer (60 %), men 5 timer flytter seg 2+ stjerner. Uten prior blir de like (50 av 55). Å skalere Flakstad ned med 0,8 hjelper ikke (6 større).
+  - **Anbefaling: ingen endring nå.** Vent til vestsvellen 15.-16.11, kjør rapporten på nytt og få én størrelse fra hver strand samme dag. Dette er ROADMAP N. Ramberg (`region/ramberg-315`) venter på det samme. **Venter på Theodors ja.**
+- **2c Tidevann** (`tools/unstad_tidevann_rapport.py`, `t2c_unstad_tidevann_2026-11-10.md`): to av de fire faste observasjonene var gode økter på høyvann (26.09 kl. 14:45 og 28.09 ca. kl. 13). Bare 27.09 var på lavvann. Regelen må være myk. Hard regel (Farstadsanden-mønsteret, vektet fradrag 0,7) tar 26.09 fra 4 til 3. Myk variant (lav og middels foretrukket, vektet fradrag 0,35) lar 26.09 stå, koster 14 timer én stjerne på 14 dager, og gjør femte stjerne umulig på høyvann. Ingen time flytter seg 2+ i noen variant. 28.09 sto som 0 stjerner i varselet som lå ute: ikke på grunn av vind, men fordi BarentsWatch-punktet viste 0,7-0,8 m og svellandelen var 0,20-0,37 (under flat-grensa). `test_rating.py` og `test_backtest.py` er grønne med alle variantene, så en egen test for 26.09 på høyvann må inn sammen med regelen. **Venter på Theodors ja** (variant, og om regelen skal gjelde flere Lofoten-spots).
+- **`pick()` for svellretningen** (`tools/pick_rekkefolge_rapport.py`, `t2_pick_rekkefolge_2026-11-10.md`): byttet ble gjort 25.09.2026 (0fe002b). `dir_offshore` kommer bare fra svellfeltet. Den gamle rekkefølgen (met.no først) ville endret 10 av 1056 timer de første 48 timene, og 667 av 2640 timer lenger ut uten BarentsWatch (197 med 2+; omtrentlig, fordi `turn` ikke er regnet om). Ingen endring, ingen avgjørelse.
+- **Planlagte kjøringer** kom ikke i gang av seg selv etter pushen 10.11 06:30Z (sjekket 12:35Z: ingen `schedule` siden 16.10, arbeidsflyten står som «active»). Ingen cron-PR er laget.
+- Ved testkjøring: nettlesertestene skriver over PNG-er i `docs/design/` (`git checkout -- docs/design` etterpå), og test_kart_browser har en tidsgrense på 2,0 s som kan ryke når maskinen er opptatt.
+
+**Neste:** T3 (design B 4.0 på `design/b4`). Svar fra Theodor på størrelse og tidevann.
+
 ## T1 og fotavtrykk - kontoret 10.11.2026 (etter T0)
 
 **Gjort**
