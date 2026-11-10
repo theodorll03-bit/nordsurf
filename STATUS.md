@@ -1,6 +1,21 @@
 # Nordsurf: status
 
-## T0 - status og opprydding (09.11.2026 kveld) - FERDIG, venter på ditt ja på main-pushen
+## T0 - svarene dine 10.11.2026 og main-pushen
+
+**Avgjort (Theodor 10.11):**
+1. **Main:** `origin/main` (5290890, to bot-commits) flettet inn i lokal `main` med vanlig merge (a64d971, ingen konflikt, ingen rebase/force). Push-rekkefølge: `design/tidevann`, `design/kartverket-2`, så `main` (ren fast-forward).
+2. **Ramberg er slått av i samme omgang** (`enabled: false`, `_holdt_tilbake` i spots.json, samme mønster som G-frame): **venter på T2b (Unstad mot Flakstad, Lofoten Surfsenter)**. Facing 315 / offshore [90,180] ligger på `region/ramberg-315` (pushes som gren, merges ikke). Publisert etter pushen: **22 spots** (8 gamle + 14 nye), 27 i spots.json, 5 holdt tilbake (g-frame, ramberg, soppelplassen, unstad-left, unstad-right).
+3. **#22 venter ikke på Claude lenger.** Claudes gjennomgang ble gjort 16.10: 15 godkjent eller rettet, flakstad-beach-kirkesiden og rorvika parkert. Hodet til #22 (00166ff) ligger i `main`, så GitHub regner #22 som merget ved main-pushen (sammen med #25, #26 og #27).
+4. **Drift-grenene** (forhandsvis, fotavtrykk, vakthund-live): **venter**, ikke pushet.
+5. **Cron:** ingen cron-PR ennå. «Hent varsel» kjøres manuelt én gang etter main-pushen; så ser vi om de planlagte kjøringene kommer i gang av seg selv innen 6 timer.
+6. **Nøkkelringen:** `gh auth setup-git` satt opp (samme konto, bare lokal git-konfigurasjon). Det gamle passordet i nøkkelringen sletter Theodor selv.
+7. **#1 og #28** lukkes med en kort kommentar (grenene beholdes; `design/kartverket` sletter Theodor selv).
+8. **Feil fra meg, fanget av test_kandidater før push:** T0-committen fra 09.11 (lokal, aldri pushet) hadde id-en til en hemmelig spot i én linje i ROADMAP seksjon T. Linja er skrevet om uten id-en, og de to lokale, upushede commitsene (T0-committen og mergen av origin/main) er laget på nytt uten den (nå 5f2abaf og a64d971), slik at id-en aldri havner i historikken på GitHub. Ingenting som var pushet er rørt, og main-pushen er fortsatt en ren fast-forward. De gamle commitsene (8cd40d5, 2d10adc) ligger bare i den lokale refloggen.
+9. **Fysikk-kontrolløren (10.11): GODKJENT.** Bare Ramberg endret i spots.json (enabled og _holdt_tilbake), mergen rører bare data/ (81 arkivfiler, bw_calibration, exposure, forecast_accuracy), alle faste observasjoner holder. Merknad: `data/bw_calibration.json` har færre par etter 30-dagersvinduet og driftsstansen (Tromvik 23 → 9, Grøtfjord 6, Unstad 70 → 39); transfer for de tynneste spotene kan falle tilbake til standardverdien hvis henteren ikke kommer i gang snart.
+
+Rapporten under (09.11) er uendret bortsett fra #22-raden og Ramberg-linja.
+
+## T0 - status og opprydding (09.11.2026 kveld) - FERDIG, besvart 10.11 (se over)
 
 **Arbeidskopi:** `/Users/theodorlund/nordsurf` (riktig). `Nettside/surf` er en gammel klone fra 15.10 (rørt ikke). Denne rapporten er skrevet på lokal `main` (arbeidskopien `nordsurf-12`), ikke pushet.
 
@@ -16,7 +31,7 @@
 | PR | Hva | CI | Utdatert mot main | Anbefaling |
 |---|---|---|---|---|
 | #1 natt/wam800 | STATUS J (WAM800) plan og workflow, +20 455 linjer | grønn (06.10) | 236 commits bak | **lukk** (J er omdøpt, WAM800 lagt ned); behold grenen |
-| #22 region/lofoten-vesteralen | 15 nye spots publisert, 4 holdt tilbake (tittelen sier fortsatt 16 og 3) | Tester kjører nå (etter min push) | 9 bak, mergeable | **vent**: Claudes gjennomgang (T1), så ditt ja; rett tittelen |
+| #22 region/lofoten-vesteralen | 15 nye spots publisert, 4 holdt tilbake (tittelen sier fortsatt 16 og 3) | Tester kjører nå (etter min push) | 9 bak, mergeable | **blir merget av main-pushen** (rettet 10.11: Claudes gjennomgang ble gjort 16.10, 15 godkjent eller rettet, flakstad-beach-kirkesiden og rorvika parkert; Ramberg slått av 10.11, så 14 nye publiseres) |
 | #25 fiks/soyletall | søyletallet viser det søylen tegner | grønn (16.10) | 7 bak | **blir merget av main-pushen** (hodet ligger i lokal main) |
 | #26 design/tidevann | tidevannskort, SVG-tekst i ekte piksler | grønn (16.10, før de 2 nye commitsene) | 9 bak; 2 lokale commits ikke pushet | **push grenen først**, så main-pushen |
 | #27 fiks/hopp | robust svell ute, myk vinduskant | grønn (16.10) | 7 bak | **blir merget av main-pushen** |
@@ -33,11 +48,11 @@ Merk: #24 står som merget 16.10 kl. 11:20Z på GitHub, men STATUS (16.10) omtal
 
 **6. Worktrees:** `git worktree prune --dry-run -v`: **ingenting å rydde** (alle 13 mapper finnes). Ikke ryddet.
 
-**Hva som blir live med main-pushen** (spots: 8 → 23 publisert, 27 i spots.json; ingen eksisterende spot endres):
-- Nye spots (15): bleik, bunes, ducks, eggum, haukland, horseid, hoyvika, kvalnes, kvalvika, ramberg, skagsanden, stave, the-frog, utakleiv, vikten. Holdt tilbake (enabled false): g-frame, soppelplassen, unstad-left, unstad-right. Parkert: eggum-ost. **Ramberg publiseres med gamle parametere** (facing 315 venter på grenen under).
+**Hva som blir live med main-pushen** (spots: 8 → 22 publisert etter at Ramberg ble slått av 10.11, 27 i spots.json; ingen eksisterende spot endres):
+- Nye spots (15): bleik, bunes, ducks, eggum, haukland, horseid, hoyvika, kvalnes, kvalvika, ramberg, skagsanden, stave, the-frog, utakleiv, vikten. Holdt tilbake (enabled false): g-frame, soppelplassen, unstad-left, unstad-right. Parkert: eggum-ost. **Rettet 10.11: Ramberg publiseres IKKE** (enabled false, venter på T2b), så 14 nye og 22 publisert totalt.
 - Appen: tapte stjerner som stiplet omriss (#24), søyletallet viser det søylen tegner (#25), tidevannskort med foretrukket vannstand som tykkere kurve (#26), robust svell ute og myk vinduskant (#27: sekundærsvell 0,0/0° blir manglende, flat-sperren uendret), Utforsk med Kartverket topograatone, OSM-reserve, vind og svellkile (kartverket-2, ingen Geovekst z>=12).
 - Drift/verktøy: `tools/forhandsvis.sh`, `tools/bygg_spot.py`m.fl., `.github/workflows/provehent.yml` (ny), endringer i test.yml og find_bw_point.yml; 48 filer under data/kandidater, 62 under docs/design (skjermbilder), 81 arkivfiler.
-- Merge-konsekvens: den første «Hent varsel» etter pushen henter 23 spots.
+- Merge-konsekvens: den første «Hent varsel» etter pushen henter 22 spots.
 
 **Spørsmål / venter på deg (ja/nei):**
 1. **Main:** origin/main har flyttet seg (bare to bot-commits). Skal jeg flette `origin/main` inn i lokal `main` (én merge-commit, konfliktfri, ingen rebase/force) og så pushe en ren fast-forward etter push-rekkefølgen i STATUS (feature-grener først: design/tidevann, design/kartverket-2; så main)? Og pushe `region/ramberg-315` som gren (trenger at du tillater det: den ble blokkert).

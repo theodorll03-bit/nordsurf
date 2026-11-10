@@ -834,7 +834,7 @@
     {
       "id": "ramberg",
       "name": "Ramberg",
-      "enabled": true,
+      "enabled": false,
       "status": "forelopig",
       "region": "Lofoten",
       "spot": {
@@ -842,6 +842,7 @@
         "lon": 13.238991
       },
       "facing": 287.7,
+      "_holdt_tilbake": "Holdt tilbake (Theodors ja 10.11.2026): venter på T2b (Unstad mot Flakstad, Lofoten Surfsenter). Facing 315 og offshore [90,180] ligger på grenen region/ramberg-315 og flytter Ramberg fra 0 til 2 stjerner. Slås på når T2b er avgjort.",
       "swell_window": [
         297,
         348
