@@ -225,8 +225,17 @@ def main():
             # ferskt varsel (alt over, klokka 70 min etter generated) → ingen banner
             gammel_ov = json.dumps({**json.loads(OV_BODY), "format": "oversikt-1",
                                     "spots": [{k: v for k, v in s.items() if k not in ("naa", "dager")} for s in json.loads(OV_BODY)["spots"]]})
+            # fotavtrykk 10.11.2026: «Hent varsel» kjører ikke kl. 00:17 UTC - over natthullet (21:17 → 03:17) tåles 9 t, ellers 6
+            D0 = T0.replace(hour=0, minute=0, second=0, microsecond=0)   # varselets døgn (UTC) - klokka holdes innenfor timene i fila
+            def gen_ov(time):
+                return json.dumps({**json.loads(OV_BODY), "generated": (D0 + dt.timedelta(hours=time)).isoformat()})
+            def kl_utc(dag, time, minutt):
+                return D0 + dt.timedelta(days=dag, hours=time, minutes=minutt)
             for navn, klokke, body, tekst in (("ferskt", T0, OV_BODY, None),
                                               ("10 t gammelt", T0 + dt.timedelta(hours=10), OV_BODY, "Varselet er 11 timer gammelt"),
+                                              ("natt: kl. 21 UTC sett kl. 03:40", kl_utc(1, 3, 40), gen_ov(21), None),
+                                              ("natt: kl. 21 UTC sett kl. 06:40", kl_utc(1, 6, 40), gen_ov(21), "Varselet er 9 timer gammelt"),
+                                              ("dag: kl. 12 UTC sett kl. 18:40", kl_utc(0, 18, 40), gen_ov(12), "Varselet er 6 timer gammelt"),
                                               ("gammelt format", T0, gammel_ov, "eldre format enn appen")):
                 ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo")
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(klokke)
@@ -235,7 +244,13 @@ def main():
                     "https://cache.kartverket.no/**"):   # Kartverket blokkert: Utforsk viser OSM-reserven, likt lokalt og i CI
                     page.route(pat, lambda r, req: r.abort())
                 page.route("**/data/oversikt.json", lambda rt, req, body=body: rt.fulfill(status=200, content_type="application/json", body=body))
-                page.route("**/data/spots/*.json", lambda rt, req: rt.fulfill(status=200, content_type="application/json", body=DET_BODY.get(req.url.split("?")[0].rsplit("/", 1)[-1][:-5], "{}")))
+                gen = json.loads(body)["generated"]
+                def det_route(rt, req, gen=gen):
+                    det = DET_BODY.get(req.url.split("?")[0].rsplit("/", 1)[-1][:-5], "{}")
+                    if gen != json.loads(OV_BODY)["generated"]:   # detaljfila må være fra samme kjøring som oversikten (app.js)
+                        det = json.dumps({**json.loads(det), "generated": gen})
+                    rt.fulfill(status=200, content_type="application/json", body=det)
+                page.route("**/data/spots/*.json", det_route)
                 page.route("**/data/minikart/*.json", lambda rt, req: rt.fulfill(status=404, body=""))
                 sid = json.loads(OV_BODY)["spots"][0]["id"]
                 funn = {}

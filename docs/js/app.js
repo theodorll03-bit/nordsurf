@@ -299,10 +299,20 @@ function sampleBanner(){
 }
 // ROADMAP oppgave G (overvåking av henteren): henteren kjører hver tredje
 // time - er varselet eldre enn STALE_HOURS, har en kjøring feilet.
+// Fotavtrykk (Theodor 10.11.2026): om natta går det 6 timer («Hent varsel» kl. 03:17-21:17 UTC, ikke kl. 00:17 -
+// forecast.yml). Ligger det hullet mellom varselet og nå, tåles 3 timer til (samme regel som maks_alder() i
+// fetcher/vakthund.py) - ellers ville banneret stått hver natt fra kl. 03 UTC til det nye varselet kom.
 const STALE_HOURS = 6;
+const STALE_NIGHT_EXTRA = 3;
+function staleLimitHours(gen, now){
+  const hull = new Date(gen); hull.setUTCHours(0, 17, 0, 0);
+  if(hull.getTime() <= gen) hull.setUTCDate(hull.getUTCDate() + 1);
+  return STALE_HOURS + (hull.getTime() <= now ? STALE_NIGHT_EXTRA : 0);
+}
 function isStale(){
   if(DATA.sample || !DATA.generated) return false;
-  return Date.now() - new Date(DATA.generated).getTime() > STALE_HOURS*36e5;
+  const gen = new Date(DATA.generated).getTime(), now = Date.now();
+  return now - gen > staleLimitHours(gen, now)*36e5;
 }
 // Theodor 16.10.2026 (punkt 1c): 15.-16.10 sto henteren stille, og live-siden hadde i tillegg et varsel i eldre
 // format enn appen (uten «naa»/«dager») - Utforsk og spotsiden viste bare «–» uten forklaring. Nå sier banneret fra

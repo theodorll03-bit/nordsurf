@@ -23,6 +23,25 @@ assert v.problemer(None, None, now) and v.problemer({}, None, now), "uleselig/ma
 assert v.problemer(fersk, None, now) == [], "kjøringene ukjent: ingen falsk alarm"
 print("1: ferskt/8 t gammelt/én feil/to feil på rad/uleselig - OK")
 
+# 1b. fotavtrykk 10.11.2026: «Hent varsel» kl. 03:17-21:17 UTC hver 3. time (ingen kl. 00:17), vakthunden kl. 04:47,
+# 10:47, 16:47 og 22:47 UTC. «generated» er rundet ned til hel time. Alarm etter TO uteblitte kjøringer, aldri én -
+# heller ikke over natthullet 21:17 → 03:17.
+def kl(dag, time, minutt=0):
+    return dt.datetime(2026, 11, dag, time, minutt, tzinfo=dt.timezone.utc)
+def gml(gen, na):
+    return v.problemer({"generated": gen.isoformat()}, ok, na)
+assert v.maks_alder(kl(10, 21), kl(11, 4, 47)) == 10 and v.maks_alder(kl(10, 3), kl(10, 10, 47)) == 7
+assert v.maks_alder(kl(10, 21), kl(11, 0, 16)) == 7 and v.maks_alder(kl(10, 21), kl(11, 0, 17)) == 10, "hullet er kl. 00:17 UTC"
+assert v.maks_alder(kl(11, 0), kl(11, 0, 30)) == 10 and v.maks_alder(kl(11, 1), kl(11, 12)) == 7, "manuell kjøring rundt midnatt"
+for gen, na in ((kl(10, 21), kl(10, 22, 47)), (kl(11, 3), kl(11, 4, 47)), (kl(11, 9), kl(11, 10, 47)), (kl(11, 15), kl(11, 16, 47))):
+    assert gml(gen, na) == [], f"alt gikk: ingen alarm ({gen:%H} → {na:%H:%M})"
+for gen, na in ((kl(10, 21), kl(11, 4, 47)), (kl(10, 21), kl(11, 6, 30)), (kl(11, 6), kl(11, 10, 47)), (kl(11, 12), kl(11, 16, 47)), (kl(11, 18), kl(11, 22, 47))):
+    assert gml(gen, na) == [], f"én uteblitt kjøring: ingen alarm ({gen:%H} → {na:%H:%M})"
+for gen, na, timer in ((kl(10, 18), kl(11, 4, 47), "11 timer"), (kl(10, 21), kl(11, 10, 47), "14 timer"), (kl(11, 3), kl(11, 10, 47), "8 timer"),
+                       (kl(11, 9), kl(11, 16, 47), "8 timer"), (kl(11, 15), kl(11, 22, 47), "8 timer")):
+    assert len(gml(gen, na)) == 1 and timer in gml(gen, na)[0], f"to uteblitte kjøringer: alarm ({gen:%H} → {na:%H:%M}): {gml(gen, na)}"
+print("1b: natthullet (ingen «Hent varsel» kl. 00:17 UTC) gir ikke alarm etter én uteblitt kjøring, men etter to - OK")
+
 
 class FalskGitHub:
     def __init__(self, apen=None):
@@ -53,8 +72,11 @@ gh = FalskGitHub()
 assert v.vakt(gh, gammel, to_feil, now)[0] == "ny"
 kind, nr, body = gh.logg[0]
 assert kind == "ny" and "8 timer gammelt" in body and "https://x/runs/2" in body, body
-# 4. åpen issue: innen 6 t ingen ny kommentar; etter 6 t kommentar (aldri en ny issue)
-assert v.vakt(gh, gammel, to_feil, now + dt.timedelta(hours=5))[0] == "dedupe" and len(gh.logg) == 1
+# 4. åpen issue: innen DEDUPE_T (5 t) ingen ny kommentar; ved neste sjekk (6 t etter, om cron er litt tidlig eller
+# sen) kommentar (aldri en ny issue)
+assert v.vakt(gh, gammel, to_feil, now + dt.timedelta(hours=4, minutes=59))[0] == "dedupe" and len(gh.logg) == 1
+assert v.vakt(gh, gammel, to_feil, now + dt.timedelta(hours=5, minutes=50))[0] == "kommentert" and len(gh.logg) == 2
+gh.logg.pop()
 assert v.vakt(gh, gammel, to_feil, now + dt.timedelta(hours=6))[0] == "kommentert" and gh.logg[-1][0] == "kommentar" and gh.logg[-1][1] == nr
 assert sum(1 for x in gh.logg if x[0] == "ny") == 1
 # 5. ferskt igjen: kommentar og lukking
@@ -96,7 +118,7 @@ st = {}
 assert v.ntfy(["x"], now, st, post) is False and not sendt
 os.environ["NTFY_TOPIC"] = "test"
 assert v.ntfy(["x"], now, st, post) is True and len(sendt) == 1
-assert v.ntfy(["x"], now + dt.timedelta(hours=5), st, post) is False and len(sendt) == 1
+assert v.ntfy(["x"], now + dt.timedelta(hours=4, minutes=59), st, post) is False and len(sendt) == 1
 assert v.ntfy(["x"], now + dt.timedelta(hours=6), st, post) is True and len(sendt) == 2
 os.environ.pop("NTFY_TOPIC", None)
 print("6: ntfy bare med NTFY_TOPIC, maks hver 6. time - OK")
