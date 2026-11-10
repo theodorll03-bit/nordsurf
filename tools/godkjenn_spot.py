@@ -36,7 +36,9 @@ VERN_NEAR_M = 200
 KILDE = "liste 15.10 + spotfabrikken"
 # Theodor 16.10.2026 (punkt 8): gjennomgangen av posisjoner og bygde spots er delegert til Claude (chatten);
 # Theodor beholder ja/nei til merge av region-PR-ene
-GODKJENNERE = {"theodor", "claude (delegert av Theodor 16.10.2026)"}
+# 10.11.2026: subagenten spotansvarlig har overtatt gjennomgangen (tools/godkjennere.py)
+sys.path.insert(0, str(ROOT / "tools"))
+from godkjennere import GODKJENNERE  # noqa: E402
 
 
 def grunn(navn):
@@ -75,7 +77,7 @@ def check(sid, b, spots, pos, kand):
         why.append("id-en finnes alt i spots.json")
     p = pos.get(sid, {})
     if not (p.get("satt_av") in GODKJENNERE and p.get("vurdering") == "godkjent"):
-        why.append("posisjonen er ikke godkjent (satt_av «theodor» eller Claude delegert av Theodor, vurdering «godkjent» i data/kandidater/posisjoner.json)")
+        why.append("posisjonen er ikke godkjent (satt_av «theodor», spotansvarlig eller Claude delegert av Theodor, vurdering «godkjent» i data/kandidater/posisjoner.json)")
     elif p.get("spot") != s.get("spot"):
         why.append("posisjonen i bygget-fila er ikke lik den Theodor godkjente - bygg på nytt (python tools/bygg_spot.py <id>)")
     if kand.get(sid, {}).get("status") != "kandidat":
