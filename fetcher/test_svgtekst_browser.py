@@ -119,7 +119,8 @@ def main():
                 page.clock.set_fixed_time(NOW)
                 page.on("pageerror", lambda e, label=label: errors.append(f"{label}: {e}"))
                 page.on("console", lambda m, label=label: errors.append(f"{label} console: {m.text}") if m.type == "error" and "ERR_FAILED" not in m.text and "404" not in m.text else None)
-                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"):
+                for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**",
+                    "https://cache.kartverket.no/**"):   # Kartverket blokkert: Utforsk viser OSM-reserven, likt lokalt og i CI
                     page.route(pat, lambda r, req: r.abort())
 
                 def data_route(rt, req):
