@@ -54,7 +54,10 @@
     localSourceText: {
       "Magnus, lokal surfer (Molde)": "Ifølge Magnus, lokal surfer",
       "Observasjoner 26.09-05.10.2026": "Grense satt ut fra observasjonene 26.09 til 05.10",
+      "Lofoten Surfsenter, 09.11.2026": "Ifølge Lofoten Surfsenter",
     },
+    // overskriften til «Lokale regler» når tidevannsregelen har egen kilde (local_rules.tide_source)
+    localSourcesBoth: (src, tideSrc)=>`${src}; tidevann: ${tideSrc}`,
     localSourceFallback: (src)=> /observasjon|logg|kalibrer|grense/i.test(src) ? `Grense satt ut fra ${src.charAt(0).toLowerCase()}${src.slice(1)}` : `Ifølge ${src}`,
     localEnergyExplain: (kj, full)=>`for lite svellenergi ute (${kj} kJ, full uttelling fra ${full} kJ).`,
     localWindExplain: (spotName, now)=>`${spotName} trenger offshore. Nå ${now}.`,

@@ -625,7 +625,8 @@ PERIOD_SCORE_POINTS = [(6, 0.4), (8, 0.65), (10, 0.85), (12, 0.95), (14, 1.0)]  
 #    lokal) OG offshore eller under FIVE_STAR_CALM_MS effektivt; tidevann uten straff og foretrukket
 #    når spoten har preferanse - ellers holdes den femte stjernen tilbake (bokført som tapt på vind/
 #    tidevann). Krever Theodors ja (stjernegrenser): Unstad 26.09-rekonstruksjonen (test 16.1, 4
-#    observert) oppfyller alle vilkår og får 5. Se STATUS.md 15.10.2026.
+#    observert) oppfylte alle vilkår og fikk 5 fram til 10.11.2026. Med Unstads tidevannsregel
+#    (tide_prefer) får den 4 uten kjent tidevann og på høyvann. Se STATUS.md 15.10.2026 og 10.11.2026.
 FIVE_STAR_HS_MIN = 0.85
 FIVE_STAR_PERIOD_MIN = 13.0   # s, middelperiode ute (hour["period"])
 FIVE_STAR_CALM_MS = 3.0       # = wind_label() sin «nesten blankt»-grense

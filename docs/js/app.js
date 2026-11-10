@@ -147,10 +147,19 @@ function spotOfHour(h){
 //   varsel - se rating.py sin `uncertain` - er minst like stor): «Ikke surfbart nå»
 // Kilden til en lokal regel skrives slik spots.json har den (STR.localSourceText),
 // aldri som en person når den ikke er det (Theodor 09.10.2026, fjerde runde).
-function localSourceText(spot, h){
-  const src = (spot && spot.local_rules && spot.local_rules.source) || (h.local_rules && h.local_rules.source) || null;
+// En delregel kan ha sin egen kilde (10.11.2026: Unstads tidevannsregel,
+// local_rules.tide_source) - da brukes den for den delen, ellers source.
+function localSourceText(spot, h, part){
+  const sr = spot && spot.local_rules;
+  const src = (part && sr && sr[part + "_source"]) || (sr && sr.source) || (h.local_rules && h.local_rules.source) || null;
   if(!src) return "Lokal regel";
   return (STR.localSourceText && STR.localSourceText[src]) || STR.localSourceFallback(src);
+}
+// Kilden(e) i overskriften til «Lokale regler»: har tidevannsregelen sin egen
+// kilde (tide_source), står begge - linjene under er tidevann og vind.
+function localSourceLabel(src, sr){
+  const s = src || "lokalkunnskap";
+  return sr && sr.tide_source ? STR.localSourcesBoth(s, sr.tide_source.split(",")[0].trim()) : s;
 }
 function zeroCause(h){
   const per = h.period;
@@ -185,7 +194,7 @@ function zeroCause(h){
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
   if(pen.length!==1) return notNow;
   const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
-  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${srcText}: ${rest}`};
+  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
   if(/^Vind/.test(line)){
     // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger offshore, nå 5 m/s sidevind
     const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
@@ -472,8 +481,8 @@ function localRulesHtml(h){
   // stjerner trukket) vises ikke i det hele tatt.
   const lr = h.local_rules;
   if(!lr || (!(lr.lines||[]).length && !lr.stars_lost)) return "";
-  const lost = lr.stars_lost;
-  return `<div class="cell wide"><div class="k">${esc(STR.cell.localRules)} (${esc(lr.source||"lokalkunnskap")})</div>
+  const lost = lr.stars_lost, sr = (spotOfHour(h)||{}).local_rules;
+  return `<div class="cell wide"><div class="k">${esc(STR.cell.localRules)} (${esc(localSourceLabel(lr.source, sr))})</div>
       ${(lr.lines||[]).map(l=>`<div class="n">${esc(l)}</div>`).join("")}
       ${lost ? `<div class="n"><b>Trekker ${lost} stjerne${lost===1?"":"r"} fra tidevann/vind-reglene.</b></div>` : ""}
     </div>`;
@@ -925,7 +934,7 @@ function renderLogs(){
       }
     }
     if(!items.length) return "";
-    return `<div class="calib"><div class="t">${esc(s.name)}: lokale regler (${esc(lr.source||"lokalkunnskap")})</div>${items.join("")}</div>`;
+    return `<div class="calib"><div class="t">${esc(s.name)}: lokale regler (${esc(localSourceLabel(lr.source, lr))})</div>${items.join("")}</div>`;
   }).join("");
   // 06.10.2026, Theodors oppgave (andre runde, punkt 2e): foreslå
   // energy_factor() sine grenser PER SPOT ut fra loggene dine, for ALLE

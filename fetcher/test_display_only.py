@@ -89,7 +89,9 @@ EXPECTED = {
     "grotfjord_2409_metno": (0, 0.0), "grotfjord_2409_bw": (0, 0.0), "grotfjord_2409_windy": (0, 0.1), "grotfjord_2509": (0, 0.0),
     # 15.10.2026, 5-stjerners-porten: unstad_2609 (26.09-rekonstruksjonen, Theodor observerte 4) oppfyller alle vilkår og får 5 -
     # KREVER THEODORS JA (merge av fiks/fem-stjerner = ja), se STATUS.md
-    "grotfjord_2609": (0, 0.0), "lenangsoyra_2609": (0, 0.0), "unstad_2609": (5, 2.42), "unstad_2709_06": (3, 1.48),
+    # 10.11.2026 (Theodors ja til Unstads myke tidevannsregel, T2c): en femte stjerne krever nå lav eller middels vannstand.
+    # Rekonstruksjonen har ikke tidevann, og økta var på høyvann, så unstad_2609 er tilbake på 4 - det Theodor observerte.
+    "grotfjord_2609": (0, 0.0), "lenangsoyra_2609": (0, 0.0), "unstad_2609": (4, 2.42), "unstad_2709_06": (3, 1.48),
     "unstad_2709_07": (3, 1.34), "unstad_2709_08": (4, 1.49), "unstad_2809_12": (3, 1.21), "unstad_2809_13": (3, 1.17),
     "unstad_2809_14": (3, 1.15), "unstad_2809_15": (3, 1.11), "farstadsanden_338": (0, 1.28),
 }
