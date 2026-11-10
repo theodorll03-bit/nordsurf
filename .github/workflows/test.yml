@@ -1,8 +1,21 @@
 name: Tester
 
+# Fotavtrykk (Theodor 10.11.2026, docs/drift/github-fotavtrykk.md punkt c): en gren med åpen PR testes én gang
+# per push (pull_request), ikke to (push + pull_request). Grener uten PR testes med «Run workflow».
+# Rene tekstendringer i STATUS.md/ROADMAP.md/CLAUDE.md trenger ikke Playwright. Filer i docs/ skal ALDRI stå
+# i paths-ignore - de endrer sw.js-hashen (fetcher/test_docs_cache.py).
 on:
   push:
+    branches: [main]
+    paths-ignore: ["STATUS.md", "ROADMAP.md", "CLAUDE.md"]
   pull_request:
+    paths-ignore: ["STATUS.md", "ROADMAP.md", "CLAUDE.md"]
+  workflow_dispatch:
+
+# en ny push avbryter testen av den forrige på samme gren/PR
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -16,7 +29,10 @@ jobs:
           # testen sammenlignet mot main sin NYESTE commit - rødt på push-kjøringen
           # hver gang henteren hadde pushet et nytt varsel etter grenens siste synk
           # (PR #4, kjøring 38569044100). Hele repoet er ca. 110 MB (11 s å klone).
+          # Fotavtrykk 10.11.2026: partiell klon (blob:none) - hele commit-historikken for merge-base,
+          # men bare filinnholdet som trengs (git henter resten ved behov, f.eks. git show i testen).
           fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
