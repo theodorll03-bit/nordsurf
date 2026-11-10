@@ -1,0 +1,152 @@
+{
+ "spot": {
+  "id": "berlevag-sandfjorden",
+  "name": "Berlevåg Sandfjorden",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Finnmark",
+  "spot": {
+   "lat": 70.798214,
+   "lon": 29.268436
+  },
+  "facing": 58.7,
+  "swell_window": [
+   32,
+   105
+  ],
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[32, 105]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   194,
+   284
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": {
+   "lat": 70.8446,
+   "lon": 29.6242
+  },
+  "_havpunkt": "Langs midten av vinduet (68.5°), 14 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 70.800563,
+   "lon": 29.280105
+  },
+  "_barentswatch": "FORELØPIG: første snittpunkt langs facing med EMODnet-dybde ≥ 8 m (500 m ut, 8.0 m dyp). Venter på BarentsWatch-snitt i Actions (find_bw_point.yml) for flat Hs - regelen fra 15.10.",
+  "tidevann": {
+   "name": "Vardø",
+   "code": "VAW",
+   "delay": "-39",
+   "factor": "0.88",
+   "obsname": "Vardø"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 70.798214,
+   "lon": 29.268436,
+   "dybde_m": -2.3
+  },
+  {
+   "m": 100,
+   "lat": 70.798684,
+   "lon": 29.27077,
+   "dybde_m": -0.3
+  },
+  {
+   "m": 200,
+   "lat": 70.799154,
+   "lon": 29.273104,
+   "dybde_m": 5.0
+  },
+  {
+   "m": 300,
+   "lat": 70.799624,
+   "lon": 29.275437,
+   "dybde_m": 6.3
+  },
+  {
+   "m": 400,
+   "lat": 70.800093,
+   "lon": 29.277771,
+   "dybde_m": 7.6
+  },
+  {
+   "m": 500,
+   "lat": 70.800563,
+   "lon": 29.280105,
+   "dybde_m": 8.0
+  },
+  {
+   "m": 600,
+   "lat": 70.801033,
+   "lon": 29.282439,
+   "dybde_m": 8.3
+  },
+  {
+   "m": 700,
+   "lat": 70.801503,
+   "lon": 29.284772,
+   "dybde_m": 9.2
+  },
+  {
+   "m": 800,
+   "lat": 70.801973,
+   "lon": 29.287106,
+   "dybde_m": 10.1
+  },
+  {
+   "m": 900,
+   "lat": 70.802443,
+   "lon": 29.28944,
+   "dybde_m": 11.9
+  },
+  {
+   "m": 1000,
+   "lat": 70.802913,
+   "lon": 29.291774,
+   "dybde_m": 13.3
+  },
+  {
+   "m": 1100,
+   "lat": 70.803382,
+   "lon": 29.294108,
+   "dybde_m": 15.2
+  },
+  {
+   "m": 1200,
+   "lat": 70.803852,
+   "lon": 29.296441,
+   "dybde_m": 16.1
+  },
+  {
+   "m": 1300,
+   "lat": 70.804322,
+   "lon": 29.298775,
+   "dybde_m": 18.0
+  },
+  {
+   "m": 1400,
+   "lat": 70.804792,
+   "lon": 29.301109,
+   "dybde_m": 19.2
+  },
+  {
+   "m": 1500,
+   "lat": 70.805262,
+   "lon": 29.303443,
+   "dybde_m": 21.9
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-11-10T11:25+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
+  "lat": 70.798214,
+  "lon": 29.268436
+ }
+}
