@@ -16,7 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 POS = ROOT / "data" / "kandidater" / "posisjoner.json"
 CSV = ROOT / "privat" / "kandidater" / "godkjent_claude.csv"
-CLAUDE = "claude (delegert av Theodor 16.10.2026)"
+sys.path.insert(0, str(ROOT / "tools"))
+from godkjennere import FRA_CSV  # noqa: E402
 
 
 def main():
@@ -29,9 +30,9 @@ def main():
             kid, bes, av = row["id"].strip(), row["beslutning"].strip(), row["satt_av"].strip()
             if kid not in pos:
                 sys.exit(f"linje {i}: {kid} er ikke en kandidat i posisjoner.json")
-            if av != CLAUDE:
+            if av not in FRA_CSV:
                 # kontrollør 16.10: en CSV kan ikke skrive Theodors navn - hans egne godkjenninger gjøres i koordinatsjekk
-                sys.exit(f"linje {i}: satt_av «{av}» - CSV-en kan bare gi «{CLAUDE}»")
+                sys.exit(f"linje {i}: satt_av «{av}» - CSV-en kan bare gi en av {sorted(FRA_CSV)}")
             p = pos[kid]
             if p.get("satt_av") == "theodor":
                 print(f"{kid}: Theodor har alt satt posisjonen - røres ikke")

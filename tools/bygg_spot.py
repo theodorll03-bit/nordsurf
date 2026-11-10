@@ -39,6 +39,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import kystdata  # noqa: E402
 import kandidat_triage as kt  # noqa: E402
+from godkjennere import GODKJENNERE  # noqa: E402
 
 POS = ROOT / "data" / "kandidater" / "posisjoner.json"
 KAND = ROOT / "data" / "kandidater" / "kandidater.json"
@@ -51,7 +52,6 @@ SKJAER_MAX_M2 = 20000   # 2 ha
 FACING_HALF_M = 150   # Theodor 16.10: ±150 m langs kysten fra nærmeste kystpunkt
 BW_STEP_M, BW_MAX_M, BW_MIN_DEPTH = 100, 1500, 8.0
 OFFSHORE_HALF_DEG = 45
-GODKJENNERE = {"theodor", "claude (delegert av Theodor 16.10.2026)"}   # Theodor 16.10 (punkt 8)
 BEACH_IDEAL, BEACH_MAX = [0.8, 2.0], 3.5
 
 
