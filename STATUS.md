@@ -1,5 +1,16 @@
 # Nordsurf: status
 
+## T1 Salten: seines lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/salten`, ikke merget)
+
+`tools/godkjenn_spot.py seines` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/finnmark`. Spots.json har 31 spots, 26 er slått på.
+
+- Salten er ny region mellom Lofoten og Møre og Romsdal: Finnmark 1, Troms 2, Vesterålen 3, Lofoten 4, Salten 5, Møre og Romsdal 6.
+- Seines (point break): facing 295°, satt fra bølgeretningen ved punktet (ubekreftet). Svellvindu i tre sektorer: [254, 258], [263, 285] og [309, 311]. Offshore [70, 160].
+- Høydene er standard, [0,8, 2,0] og maks 3,5, merket ubekreftet (Theodors ja 10.11.2026). Et point break tåler trolig mer, men det finnes ingen observasjon ennå.
+- Kjente svakheter, dokumentert i spoten: facing 295° ligger i gapet mellom sektorene 285° og 309°, så svell rett inn teller som utenfor vinduet når BarentsWatch ikke bekrefter. BarentsWatch-punktet er valgt i snittet langs den gamle facingen (316,5°). Nytt snitt langs 295° tas neste gang snittet kjøres.
+- «Brettseiling forbudt» i Seinesodden naturreservat er lest som seilbrett, ikke surfebrett (Theodors ja 10.11.2026). Spoten har derfor ingen restriksjon.
+- Fysikk-kontrolløren har godkjent. Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. monumentet og storvika er parkert (vindu under ca. 15°), lop venter på lokalkunnskap.
+
 ## T1 Finnmark: berlevag-sandfjorden og persfjord lagt inn som foreløpige 10.11.2026 (Theodors ja, gren `region/finnmark`, ikke merget)
 
 `tools/godkjenn_spot.py` har flyttet de to bygde forslagene inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/troms`. Spots.json har 30 spots, 25 er slått på.

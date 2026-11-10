@@ -24,7 +24,7 @@
     311
    ]
   ],
-  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 258], [263, 285], [287, 287], [309, 311], [314, 315]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 258], [263, 285], [287, 287], [309, 311], [314, 315]]; de tre sektorene som er brede nok er brukt ([254, 258], [263, 285] og [309, 311]). [287, 287] og [314, 315] er utelatt fordi de er smalere enn minstebredden i spotfabrikken. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
   "offshore_wind": [
    70,
    160
@@ -47,15 +47,20 @@
    "factor": "1.00",
    "obsname": "Bodø"
   },
-  "ideal_height": null,
-  "max_height": null,
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
   "kilde": "liste 15.10 + spotfabrikken",
   "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
   "_rettet": {
    "facing": "spotansvarlig 10.11.2026: point break, facing satt fra bølgeretningen ved punktet (292-298° i fire timer med lite svell), ubekreftet",
    "barentswatch_point": "beholdt ved ny facing (Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres)",
-   "offshore_wind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet"
-  }
+   "offshore_wind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+   "ideal_height/max_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
+  },
+  "_ideal_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
  },
  "snitt": [
   {
@@ -155,9 +160,7 @@
    "dybde_m": 208.6
   }
  ],
- "flagg": [
-  "ideal_height/max_height: Theodor må sette (ikke beachbreak)"
- ],
+ "flagg": [],
  "bygget": "2026-11-10T11:25+00:00",
  "bygget_fra": {
   "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
