@@ -1,7 +1,7 @@
 # Nordsurf: regler for Claude Code
 
 ## Hva dette er
-Surfevarsel for Nord-Norge (og Unstad, Farstadsanden). PWA i docs/, henter i fetcher/ som kjører i GitHub Actions hver tredje time. Én bruker (Theodor) foreløpig. All tekst i appen på norsk.
+Surfevarsel for Nord-Norge (og Unstad, Farstadsanden). PWA i docs/, henter i fetcher/ som kjører i GitHub Actions hver tredje time kl. 03:17–21:17 UTC (7 per døgn, ikke kl. 00:17). Én bruker (Theodor) foreløpig. All tekst i appen på norsk.
 
 ## Sannhetshierarki
 1. Observasjoner fra loggene (egne økter og "Observert") slår alt.

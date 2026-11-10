@@ -86,6 +86,5 @@ jobs:
           path: |
             docs/design/spotside/etter/
             docs/design/skalering/etter/
-            docs/design/kart/etter/
             docs/design/tidevann/etter/
           if-no-files-found: ignore

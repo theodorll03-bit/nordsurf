@@ -235,6 +235,11 @@ def main():
                                               ("10 t gammelt", T0 + dt.timedelta(hours=10), OV_BODY, "Varselet er 11 timer gammelt"),
                                               ("natt: kl. 21 UTC sett kl. 03:40", kl_utc(1, 3, 40), gen_ov(21), None),
                                               ("natt: kl. 21 UTC sett kl. 06:40", kl_utc(1, 6, 40), gen_ov(21), "Varselet er 9 timer gammelt"),
+                                              # grensa følger varselets alder, ikke klokka: likt svar før og etter kl. 00:17 UTC
+                                              ("natt: kl. 18 UTC sett kl. 00:10", kl_utc(1, 0, 10), gen_ov(18), None),
+                                              ("natt: kl. 18 UTC sett kl. 00:30", kl_utc(1, 0, 30), gen_ov(18), None),
+                                              ("natt: kl. 18 UTC sett kl. 03:10", kl_utc(1, 3, 10), gen_ov(18), "Varselet er 9 timer gammelt"),
+                                              ("kveld: kl. 15 UTC sett kl. 21:10", kl_utc(0, 21, 10), gen_ov(15), "Varselet er 6 timer gammelt"),
                                               ("dag: kl. 12 UTC sett kl. 18:40", kl_utc(0, 18, 40), gen_ov(12), "Varselet er 6 timer gammelt"),
                                               ("gammelt format", T0, gammel_ov, "eldre format enn appen")):
                 ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo")
