@@ -1,23 +1,23 @@
 {
- "last_scored_until": "2026-11-11T17:00:00+00:00",
+ "last_scored_until": "2026-11-12T00:00:00+00:00",
  "scored_logs": [],
  "spots": {
   "grotfjord": {
    "1": {
-    "n": 1494,
-    "hits": 1494,
+    "n": 1502,
+    "hits": 1502,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1515,
+    "n": 1522,
+    "hits": 1522,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1301,
+    "n": 1304,
+    "hits": 1304,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -40,8 +40,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 519,
+    "n": 524,
+    "hits": 522,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -66,20 +66,20 @@
   },
   "tromvik": {
    "1": {
-    "n": 1494,
-    "hits": 1494,
+    "n": 1502,
+    "hits": 1502,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1514,
+    "n": 1522,
+    "hits": 1521,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1288,
+    "n": 1304,
+    "hits": 1291,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -102,8 +102,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 514,
+    "n": 524,
+    "hits": 517,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -128,20 +128,20 @@
   },
   "ersfjordstranda": {
    "1": {
-    "n": 1494,
-    "hits": 1494,
+    "n": 1502,
+    "hits": 1502,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1515,
+    "n": 1522,
+    "hits": 1522,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1301,
+    "n": 1304,
+    "hits": 1304,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -164,8 +164,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 511,
+    "n": 524,
+    "hits": 514,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -190,20 +190,20 @@
   },
   "russelv": {
    "1": {
-    "n": 1494,
-    "hits": 1494,
+    "n": 1502,
+    "hits": 1502,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1514,
+    "n": 1522,
+    "hits": 1521,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1290,
+    "n": 1304,
+    "hits": 1293,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -226,8 +226,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 521,
+    "n": 524,
+    "hits": 524,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -252,20 +252,20 @@
   },
   "lenangsoyra": {
    "1": {
-    "n": 1494,
-    "hits": 1494,
+    "n": 1502,
+    "hits": 1502,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1511,
+    "n": 1522,
+    "hits": 1518,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1288,
+    "n": 1304,
+    "hits": 1291,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -288,8 +288,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 521,
+    "n": 524,
+    "hits": 524,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -314,20 +314,20 @@
   },
   "steinkrossa": {
    "1": {
-    "n": 1494,
-    "hits": 1481,
+    "n": 1502,
+    "hits": 1489,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1476,
+    "n": 1522,
+    "hits": 1483,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1252,
+    "n": 1304,
+    "hits": 1255,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -350,8 +350,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 514,
+    "n": 524,
+    "hits": 517,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -376,20 +376,20 @@
   },
   "unstad": {
    "1": {
-    "n": 1494,
-    "hits": 1459,
+    "n": 1502,
+    "hits": 1467,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1463,
+    "n": 1522,
+    "hits": 1470,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1123,
+    "n": 1304,
+    "hits": 1126,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -412,8 +412,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 310,
+    "n": 524,
+    "hits": 313,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -438,20 +438,20 @@
   },
   "farstadsanden": {
    "1": {
-    "n": 1494,
-    "hits": 1490,
+    "n": 1502,
+    "hits": 1498,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 1515,
-    "hits": 1509,
+    "n": 1522,
+    "hits": 1516,
     "n_logs": 0,
     "hits_logs": 0
    },
    "3": {
-    "n": 1301,
-    "hits": 1301,
+    "n": 1304,
+    "hits": 1304,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -474,8 +474,8 @@
     "hits_logs": 0
    },
    "7": {
-    "n": 521,
-    "hits": 514,
+    "n": 524,
+    "hits": 517,
     "n_logs": 0,
     "hits_logs": 0
    },
@@ -500,196 +500,196 @@
   },
   "bleik": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "bunes": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "ducks": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "eggum": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "haukland": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "horseid": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "hoyvika": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "kvalnes": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "kvalvika": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "skagsanden": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "stave": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "the-frog": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "utakleiv": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
   },
   "vikten": {
    "1": {
-    "n": 24,
-    "hits": 24,
+    "n": 32,
+    "hits": 32,
     "n_logs": 0,
     "hits_logs": 0
    },
    "2": {
-    "n": 6,
-    "hits": 6,
+    "n": 13,
+    "hits": 13,
     "n_logs": 0,
     "hits_logs": 0
    }
