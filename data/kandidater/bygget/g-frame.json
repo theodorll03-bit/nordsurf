@@ -9,27 +9,27 @@
    "lat": 68.6389,
    "lon": 14.427489
   },
-  "facing": 330.0,
+  "facing": 270.0,
   "swell_window": [
    246,
    334
   ],
   "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[225, 225], [246, 334]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
   "offshore_wind": [
-   105,
-   195
+   45,
+   135
   ],
-  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "_offshore_vind": "standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)",
   "offshore": {
    "lat": 68.6791,
    "lon": 14.1262
   },
   "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": {
-   "lat": 68.653782,
-   "lon": 14.40406
+   "lat": 68.6389,
+   "lon": 14.417624
   },
-  "_barentswatch": "Flyttet til 1900 m ut i snittet langs 330.0° (dybde 9.9 m) - kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne. Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m.",
+  "_barentswatch": "FORELØPIG: nytt snitt langs 270.0° til 1500 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py. Foreløpig punkt: 400 m ut, 8,9 m dyp (EMODnet), første punkt i snittet med minst 8 m.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -46,9 +46,10 @@
   "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
   "_rettet": {
    "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-   "barentswatch_point": "1900 m ut (kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne)"
-  },
-  "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1036_kandidater.json"
+   "barentswatch_point": "nytt snitt langs 270.0° (bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026))",
+   "offshore_wind": "standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)",
+   "facing": "bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026)"
+  }
  },
  "snitt": [
   {
@@ -59,183 +60,93 @@
   },
   {
    "m": 100,
-   "lat": 68.639683,
-   "lon": 14.426256,
-   "dybde_m": 0.7
+   "lat": 68.6389,
+   "lon": 14.425023,
+   "dybde_m": 1.5
   },
   {
    "m": 200,
-   "lat": 68.640466,
-   "lon": 14.425023,
-   "dybde_m": 0.9
+   "lat": 68.6389,
+   "lon": 14.422557,
+   "dybde_m": 1.1
   },
   {
    "m": 300,
-   "lat": 68.64125,
-   "lon": 14.42379,
-   "dybde_m": 1.8
+   "lat": 68.6389,
+   "lon": 14.42009,
+   "dybde_m": 3.0
   },
   {
    "m": 400,
-   "lat": 68.642033,
-   "lon": 14.422557,
-   "dybde_m": 0.7
+   "lat": 68.6389,
+   "lon": 14.417624,
+   "dybde_m": 8.9
   },
   {
    "m": 500,
-   "lat": 68.642816,
-   "lon": 14.421323,
-   "dybde_m": 0.3
+   "lat": 68.6389,
+   "lon": 14.415158,
+   "dybde_m": 9.2
   },
   {
    "m": 600,
-   "lat": 68.643599,
-   "lon": 14.42009,
-   "dybde_m": 0.4
+   "lat": 68.6389,
+   "lon": 14.412692,
+   "dybde_m": 9.3
   },
   {
    "m": 700,
-   "lat": 68.644383,
-   "lon": 14.418857,
-   "dybde_m": -0.0
-  },
-  {
-   "m": 800,
-   "lat": 68.645166,
-   "lon": 14.417624,
-   "dybde_m": 1.6
-  },
-  {
-   "m": 900,
-   "lat": 68.645949,
-   "lon": 14.416391,
-   "dybde_m": 1.7
-  },
-  {
-   "m": 1000,
-   "lat": 68.646732,
-   "lon": 14.415158,
-   "dybde_m": 2.2
-  },
-  {
-   "m": 1100,
-   "lat": 68.647516,
-   "lon": 14.413925,
-   "dybde_m": -0.6
-  },
-  {
-   "m": 1200,
-   "lat": 68.648299,
-   "lon": 14.412692,
-   "dybde_m": 0.2
-  },
-  {
-   "m": 1300,
-   "lat": 68.649082,
-   "lon": 14.411459,
-   "dybde_m": 0.7
-  },
-  {
-   "m": 1400,
-   "lat": 68.649865,
+   "lat": 68.6389,
    "lon": 14.410225,
-   "dybde_m": 6.0
-  },
-  {
-   "m": 1500,
-   "lat": 68.650649,
-   "lon": 14.408992,
-   "dybde_m": 5.8
-  },
-  {
-   "m": 1600,
-   "lat": 68.651432,
-   "lon": 14.407759,
-   "dybde_m": 6.0
-  },
-  {
-   "m": 1700,
-   "lat": 68.652215,
-   "lon": 14.406526,
-   "dybde_m": 2.7
-  },
-  {
-   "m": 1800,
-   "lat": 68.652998,
-   "lon": 14.405293,
-   "dybde_m": 2.2
-  },
-  {
-   "m": 1900,
-   "lat": 68.653782,
-   "lon": 14.40406,
    "dybde_m": 9.9
   },
   {
-   "m": 2000,
-   "lat": 68.654565,
+   "m": 800,
+   "lat": 68.6389,
+   "lon": 14.407759,
+   "dybde_m": 10.0
+  },
+  {
+   "m": 900,
+   "lat": 68.6389,
+   "lon": 14.405293,
+   "dybde_m": 10.5
+  },
+  {
+   "m": 1000,
+   "lat": 68.6389,
    "lon": 14.402827,
-   "dybde_m": 11.2
+   "dybde_m": 12.3
   },
   {
-   "m": 2100,
-   "lat": 68.655348,
-   "lon": 14.401594,
-   "dybde_m": 9.6
-  },
-  {
-   "m": 2200,
-   "lat": 68.656131,
+   "m": 1100,
+   "lat": 68.6389,
    "lon": 14.40036,
-   "dybde_m": 7.1
+   "dybde_m": 13.3
   },
   {
-   "m": 2300,
-   "lat": 68.656914,
-   "lon": 14.399127,
-   "dybde_m": 11.7
-  },
-  {
-   "m": 2400,
-   "lat": 68.657698,
+   "m": 1200,
+   "lat": 68.6389,
    "lon": 14.397894,
-   "dybde_m": 10.6
-  },
-  {
-   "m": 2500,
-   "lat": 68.658481,
-   "lon": 14.396661,
-   "dybde_m": 12.7
-  },
-  {
-   "m": 2600,
-   "lat": 68.659264,
-   "lon": 14.395428,
-   "dybde_m": 13.6
-  },
-  {
-   "m": 2700,
-   "lat": 68.660047,
-   "lon": 14.394195,
    "dybde_m": 13.4
   },
   {
-   "m": 2800,
-   "lat": 68.660831,
+   "m": 1300,
+   "lat": 68.6389,
+   "lon": 14.395428,
+   "dybde_m": 13.4
+  },
+  {
+   "m": 1400,
+   "lat": 68.6389,
    "lon": 14.392962,
-   "dybde_m": 11.6
+   "dybde_m": 13.8
   },
   {
-   "m": 2900,
-   "lat": 68.661614,
-   "lon": 14.391729,
-   "dybde_m": 9.1
-  },
-  {
-   "m": 3000,
-   "lat": 68.662397,
+   "m": 1500,
+   "lat": 68.6389,
    "lon": 14.390496,
-   "dybde_m": 9.8
+   "dybde_m": 18.0
   }
  ],
  "flagg": [],
@@ -245,5 +156,5 @@
   "lat": 68.6389,
   "lon": 14.427489
  },
- "rettet": "2026-10-16"
+ "rettet": "2026-11-12"
 }
