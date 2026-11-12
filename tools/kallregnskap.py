@@ -13,7 +13,8 @@ Vilkår (lest 16.10.2026):
 - BarentsWatch (bølgevarsel): ingen formelle grenser; NLOD, kreditering i appen («data via BarentsWatch»).
 - Kartverket (tidevann): ingen dokumentert grense.
 
-Antakelser: én kjøring hver 3. time (8 per døgn, forecast.yml), alle Open-Meteo-kall i én kjøring kan falle innenfor
+Antakelser: én kjøring hver 3. time (regnet som 8 per døgn; fra 10.11.2026 kjører forecast.yml 7 - ikke kl. 00:17 UTC -
+så tallene er på den sikre siden), alle Open-Meteo-kall i én kjøring kan falle innenfor
 samme minutt og time (verste fall), hvert unike punkt hentes én gang per kjøring (deling bare på identiske punkt,
 som S1/S6). Fremskrivningen til 30/100/300 spots skalerer snittet per spot fra spots.json i dag (hver ny spot får
 egne punkt - forsiktig anslag), og regner én S6-jobb per 10 spots (en region) for logg- og token-kallene.

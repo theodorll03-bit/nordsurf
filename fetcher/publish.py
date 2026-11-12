@@ -87,7 +87,11 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "directness", "bw_confirms")   # Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
-NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time - klokkas time finnes alltid)
+NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time om dagen - klokkas time finnes alltid)
+# Fotavtrykk (Theodor 10.11.2026): «Hent varsel» kjører kl. 03:17-21:17 UTC hver 3. time (forecast.yml: 17 3-21/3),
+# ikke kl. 00:17. Kveldens siste kjøring publiserer derfor nå-timene helt fram til den neste (7 i stedet for 4),
+# ellers ville Hjem og Utforsk vist «–» fra kl. 01 til ca. 03:30 UTC (ui.js naaOf viser aldri en time som er over).
+HENT_TIMER_UTC = tuple(range(3, 22, 3))
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
 META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "swell_window", "enabled", "local_rules", "calibration",
                "forelopig_fra", "restriksjoner",   # ROADMAP K del C.4: «Foreløpig» 14 dager og «Forbud nå» (bare visning)
@@ -196,13 +200,21 @@ def day_summary(hours):
     return out
 
 
+def naa_hours(now):
+    """Antall nå-timer i oversikten: fra «generated» (hel time) til og med timen den neste planlagte kjøringen
+    starter i - 4 om dagen, 7 for kjøringen kl. 21 UTC (natthullet 21:17 → 03:17), aldri færre enn NAA_HOURS."""
+    h = now.astimezone(timezone.utc).hour
+    neste = next((r for r in HENT_TIMER_UTC if r > h), HENT_TIMER_UTC[0] + 24)
+    return max(NAA_HOURS, neste - h + 1)
+
+
 def summarise(hours, now, days=SUMMARY_DAYS):
     """{«naa»: nå-timen, «dager»: [sammendrag per døgn fra i dag]} for ett spot."""
-    naa = []
+    naa, n_naa = [], naa_hours(now)
     for h in hours:
         if _t(h) + timedelta(hours=1) > now:
             naa.append(h)
-        if len(naa) >= NAA_HOURS:
+        if len(naa) >= n_naa:
             break
     if not naa and hours:
         naa = [hours[-1]]
