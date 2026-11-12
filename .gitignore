@@ -11,3 +11,9 @@ docs/data/.publish-tmp/
 privat/
 # Lokal forhåndsvisning (tools/forhandsvis.sh): repokopi, docs-kopi og ferske data - aldri i git
 forhandsvis/
+# Fotavtrykk (Theodor 10.11.2026, docs/drift/github-fotavtrykk.md punkt e 7): skjermbildene nettlesertestene skriver
+# på nytt ved hver kjøring ligger ikke i git - de lastes opp som artifact «design-screenshots» (test.yml).
+# docs/design/kart/etter/ og docs/design/oversikt/etter/ skrives ikke av noen test og står igjen som referansebilder.
+docs/design/spotside/etter/
+docs/design/skalering/etter/
+docs/design/tidevann/etter/

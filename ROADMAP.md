@@ -406,7 +406,7 @@ Følg det som allerede er bestemt:
 - facing og svellvindu fra kystlinjen
 - regelen om at manglende data aldri er 0
 
-Fordelingen av ansvar (16.10.2026) gjelder fortsatt. **Claude i chatten** går gjennom posisjonene og den bygde geometrien. **Jeg** sier ja eller nei til å merge hver region.
+Fordelingen av ansvar (endret 10.11.2026): subagenten **spotansvarlig** går gjennom posisjonene og den bygde geometrien (fram til 10.11 gjorde Claude i chatten dette, fullmakt fra 16.10.2026). **Jeg** sier ja eller nei til å merge hver region.
 
 Rekkefølge:
 1. **Lofoten og Vesterålen (#22):**

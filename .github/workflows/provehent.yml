@@ -3,11 +3,10 @@ name: Prøvehenting (gren)
 # Theodor 16.10.2026 (punkt 9c/d): første ekte varsel for nye spots FØR merge - henter varselet på en gren med
 # kildenes nøkler, lager appens datafiler og laster dem opp som artifact «provevarsel» (7 dager). Committer
 # ALDRI og publiserer ALDRI (ingen Pages, ingen læringsdata) - bare til gjennomgang og skjermbilder.
+# Fotavtrykk (Theodor 10.11.2026, docs/drift/github-fotavtrykk.md punkt e 4): bare «Run workflow» på grenen -
+# én prøvehenting per region, startet med vilje (før: en full henting ved hver push til region/** som rørte spots.json).
 on:
   workflow_dispatch:
-  push:
-    branches: ["region/**"]     # en ny region skal ha et ekte prøvevarsel før merge
-    paths: ["spots.json", ".github/workflows/provehent.yml"]
 
 permissions:
   contents: read
