@@ -327,7 +327,7 @@ def main():
                 for scheme in ("mork", "lys"):
                     media(scheme)
                     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
-                    assert bg == ("rgb(10, 24, 34)" if scheme == "mork" else "rgb(242, 245, 246)"), f"temaet følger ikke systemet ({label}, {scheme}): {bg}"
+                    assert bg == ("rgb(0, 41, 65)" if scheme == "mork" else "rgb(242, 239, 232)"), f"temaet følger ikke systemet ({label}, {scheme}): {bg}"
                     # ---- 6. Hjem ----
                     go("#hjem", "#viewHjem:not([hidden]) #bestKort")
                     gen = oslo(FORECAST["generated"])

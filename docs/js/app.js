@@ -710,7 +710,8 @@ function saveLogs(l){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(l)); ret
 // og blandet med den geometriske kurven fra del C - se fetcher/exposure_learn.py.
 // Fargeskala 0-5 stjerner, uavhengig av rav-fargen (--star) som ellers
 // betyr "stjerner" i appen - her trengs en skala, ikke en enkeltfarge.
-const STAR_SCALE = ["#c0392b","#e0672c","#e0a72c","#c9c22b","#7fbf3f","#2f9e44"];
+// B 4.0: 0 i grått, 1-3 i blekk, korall fra 4 (tokenene i css/ui.css)
+const STAR_SCALE = [0,1,2,3,4,5].map(n=>`var(--r${n}-tall)`);
 function exposureChartSVG(spotId, curve, logs){
   if(!curve) return "";
   const W = 380, H = 130, padL = 26, padR = 8, padT = 6, plotH = 84, axisY = padT + plotH;
@@ -728,7 +729,8 @@ function exposureChartSVG(spotId, curve, logs){
     const w = (W - padL - padR) / 36 - 2;
     return `<rect x="${bx(i)-w/2}" y="${H-14+ (14-h)}" width="${w}" height="${h}" fill="var(--muted)" opacity=".35"/>`;
   }).join("");
-  const dots = (pts, color) => pts.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.6" fill="${color}"/>`).join("");
+  // lang periode: hel strek og fylte prikker; kort periode: åpne prikker (form, ikke farge, skiller dem)
+  const dots = (pts, apen) => pts.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.6" fill="${apen ? "var(--bg)" : "var(--ink)"}" stroke="var(--ink)" stroke-width="1.2"/>`).join("");
   const marks = (logs||[]).filter(l=>l.spot===spotId && l.dirOffshore!=null && l.stars!=null).map(l=>{
     const i = Math.floor((l.dirOffshore % 360) / 10);
     return `<circle cx="${bx(i)}" cy="${axisY+6}" r="3" fill="${STAR_SCALE[Math.max(0,Math.min(5,l.stars))]}"><title>${l.stars} stjerner</title></circle>`;
@@ -742,9 +744,9 @@ function exposureChartSVG(spotId, curve, logs){
     <line x1="${padL}" y1="${axisY}" x2="${W-padR}" y2="${axisY}" stroke="var(--line)"/>
     ${bars}
     <polyline points="${geoPts}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 2"/>
-    ${langPts.length>1 ? `<polyline points="${langPts.join(" ")}" fill="none" stroke="#2f6fed" stroke-width="1.8"/>` : ""}
-    ${dots(langPts, "#2f6fed")}
-    ${dots(kortPts, "#e08b2f")}
+    ${langPts.length>1 ? `<polyline points="${langPts.join(" ")}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>` : ""}
+    ${dots(langPts, false)}
+    ${dots(kortPts, true)}
     ${marks}
     ${ticks}${yTicks}
   </svg>`;
@@ -871,8 +873,8 @@ function renderLogs(){
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
         <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>
-        <span><i style="background:#2f6fed"></i>Lært, lang periode</span>
-        <span><i style="background:#e08b2f"></i>Lært, kort periode</span>
+        <span><i style="background:var(--ink)"></i>Lært, lang periode</span>
+        <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--ink)"></i>Lært, kort periode</span>
       </div>
       ${sugg}</div>`;
   }).join("");

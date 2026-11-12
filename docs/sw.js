@@ -4,7 +4,7 @@
 // hånd. Må stemme med filene, ellers oppdager ikke nettleseren at
 // sw.js-scriptet er likt som før og lar være å hente nytt innhold, sjøl om
 // siden er pushet (se CLAUDE.md sin arbeidsmåte og STATUS.md, 26.09-03.10.2026).
-const CACHE = "nordsurf-695148e59810";
+const CACHE = "nordsurf-9ea21f947886";
 const TILES = CACHE + "-fliser";   // detaljflisene (range-biter), eget tak - byttes sammen med CACHE
 const TILES_MAX_ENTRIES = 600;      // ca. 600 range-biter à 1-60 KB: under ca. 15 MB
 // S3 (16.10.2026): listen hadde to filer som ikke finnes (css/kart.css, js/front.js) - da feiler
@@ -15,7 +15,7 @@ const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg",
   "js/tidevann.js", "js/spot.js", "js/utforsk.js", "js/ui.js", "js/auth.js",
   "vendor/maplibre-gl-5.24.0.js", "vendor/maplibre-gl-5.24.0.css", "vendor/pmtiles-4.5.0.js",
   "geo/coast.json", "geo/norge-oversikt.pmtiles",
-  "fonts/bricolage-grotesque-latin-wght.woff2", "fonts/inter-latin-wght.woff2", "fonts/geist-latin-wght.woff2", "fonts/geist-mono-latin-wght.woff2",
+  "fonts/martian-mono-latin-wdth-wght.woff2", "fonts/familjen-grotesk-latin-wght.woff2",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon-180.png", "icons/icon-maskable-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));

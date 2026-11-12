@@ -1,5 +1,27 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - steg 1 av 7 (fundament), 12.11.2026
+
+Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
+
+**Gjort (steg 1)**
+- Fargene for dag og mørketid ligger som CSS-variabler øverst i `docs/css/ui.css` (SPEC §2) og følger systemets lys/mørk. `docs/css/app.css` har ikke lenger egne tokens eller fonter.
+- Martian Mono og Familjen Grotesk ligger selvhostet i `docs/fonts/` (Google Fonts, OFL, latin-utsnitt, 38 og 19 kB). Bricolage Grotesque, Inter, Geist og Geist Mono er fjernet.
+- Skriftskala (`--t-*`, app og web fra 1024 px), avstandsskala (`--s1`-`--s8`) og seksjonsstreken (2 px, 3 px luft, 0,75 px) på `.seksjon`, `.sek` og `.sek-spot`.
+- Ingen lyseblå tekst. Eksponeringsgrafen i loggen bruker blekk (fylt prikk = lang periode, åpen = kort).
+- `tools/kontrast.py` sjekker B4-parene. Tall, stjerner, ord og fetcher er urørt. Kartfargene er urørt til steg 5.
+- Fysikk-kontrolløren (agent): tokenverdiene stemmer med SPEC, ingen udefinerte tokens, ingen endring i tall eller tekst. Funnene er rettet: 3-feltet var usynlig på valgt dagfane, 0 og 1-2 var like i dagfanens felt, svellkilen for 1-2 forsvant mot sjøen, `--dim` ble målt mot feil flate.
+
+**Midlertidig til steg 2 (tallene 0-5 på skjermen):** vurderingene bruker fortsatt stjerner. 0 er blekest, 1-2 grå, 3 blekk, 4-5 korall.
+
+**Venter på Theodor** (spørsmålene står i `privat/kontor/til-theodor.md`)
+- Tallet i korallruta om dagen er 4,03:1 (SPEC §2). Det er under 4,5:1 for små tall (11-13 px). `kontrast.py` har et navngitt unntak til det er avklart.
+- Tekst og pil i mørk time (`--dim`, `--swell-miss`) blir 2,57:1 om dagen oppå nattskyggen. Ikke i bruk ennå; må avklares før steg 2.
+
+**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/`.
+
+**Neste:** steg 2 (vurderingen på skjerm).
+
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 
 Gren `t2/lofoten-surfsenter` (lokal, ikke pushet): fire verktøy i `tools/` og fire rapporter i `data/backtest/`. Kilden er Lofoten Surfsenter, 09.11.2026 (via Theodor). Den føres inn i CLAUDE.md «Lokalkunnskap» først når en regel faktisk legges inn.
