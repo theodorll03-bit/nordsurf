@@ -30,6 +30,61 @@
 - Fysikk-kontrolløren har godkjent innleggingen. Alle tester og kontrastsjekken er grønne.
 - Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. laukvika-senja og hamn-senja venter på lokalkunnskap.
 
+## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
+
+Gren `t2/lofoten-surfsenter` (lokal, ikke pushet): fire verktøy i `tools/` og fire rapporter i `data/backtest/`. Kilden er Lofoten Surfsenter, 09.11.2026 (via Theodor). Den føres inn i CLAUDE.md «Lokalkunnskap» først når en regel faktisk legges inn.
+
+- **2a Vind** (`tools/unstad_vind_rapport.py`, `t2a_unstad_vind_2026-11-10.md`): modellen gjør det riktig. Fralandsvind under 10 m/s koster aldri en stjerne på Unstad. Ingen endring.
+- **2b Unstad mot Flakstad** (`tools/unstad_flakstad_rapport.py`, `t2b_unstad_flakstad_2026-11-10.md`): varselet sier det motsatte av Surfsenteret. Med BarentsWatch for begge (55 timer, kjøring 10.11 06Z): Unstad større i 0 timer, lik i 27, mindre enn Skagsanden i 28. **Forskjellen oppstår i Unstads BarentsWatch-punkt** (250 m ut, 3,9 m dyp): det viser median 0,48 av skyggepunktet 700 m ut og har kortere periode. Om det er brenning eller le for nordlig sjø, kan ikke denne kjøringen avgjøre. Ikke felles havpunkt eller BarentsWatch-punkt; transfer er lik (0,6), men brukes bare uten BarentsWatch. Sjøen kom fra nord og nordnordvest, og da er det fysisk ventet at Skagsanden (vindu til 4°) er størst. Kjøringen motsier derfor ikke Surfsenteret. Grunnlaget er én kjøring uten observasjon.
+  - Før/etter (55 timer): flytte Unstads punkt til 700 m med prior 1,45 gir Unstad større i 33 timer (60 %), men 5 timer flytter seg 2+ stjerner. Uten prior blir de like (50 av 55). Å skalere Flakstad ned med 0,8 hjelper ikke (6 større).
+  - **Anbefaling: ingen endring nå.** Vent til vestsvellen 15.-16.11, kjør rapporten på nytt og få én størrelse fra hver strand samme dag. Dette er ROADMAP N. Ramberg (`region/ramberg-315`) venter på det samme. **Venter på Theodors ja.**
+- **2c Tidevann** (`tools/unstad_tidevann_rapport.py`, `t2c_unstad_tidevann_2026-11-10.md`): to av de fire faste observasjonene var gode økter på høyvann (26.09 kl. 14:45 og 28.09 ca. kl. 13). Bare 27.09 var på lavvann. Regelen må være myk. Hard regel (Farstadsanden-mønsteret, vektet fradrag 0,7) tar 26.09 fra 4 til 3. Myk variant (lav og middels foretrukket, vektet fradrag 0,35) lar 26.09 stå, koster 14 timer én stjerne på 14 dager, og gjør femte stjerne umulig på høyvann. Ingen time flytter seg 2+ i noen variant. 28.09 sto som 0 stjerner i varselet som lå ute: ikke på grunn av vind, men fordi BarentsWatch-punktet viste 0,7-0,8 m og svellandelen var 0,20-0,37 (under flat-grensa). `test_rating.py` og `test_backtest.py` er grønne med alle variantene, så en egen test for 26.09 på høyvann må inn sammen med regelen. **Venter på Theodors ja** (variant, og om regelen skal gjelde flere Lofoten-spots).
+- **`pick()` for svellretningen** (`tools/pick_rekkefolge_rapport.py`, `t2_pick_rekkefolge_2026-11-10.md`): byttet ble gjort 25.09.2026 (0fe002b). `dir_offshore` kommer bare fra svellfeltet. Den gamle rekkefølgen (met.no først) ville endret 10 av 1056 timer de første 48 timene, og 667 av 2640 timer lenger ut uten BarentsWatch (197 med 2+; omtrentlig, fordi `turn` ikke er regnet om). Ingen endring, ingen avgjørelse.
+- **Planlagte kjøringer** kom ikke i gang av seg selv etter pushen 10.11 06:30Z (sjekket 12:35Z: ingen `schedule` siden 16.10, arbeidsflyten står som «active»). Ingen cron-PR er laget.
+- Ved testkjøring: nettlesertestene skriver over PNG-er i `docs/design/` (`git checkout -- docs/design` etterpå), og test_kart_browser har en tidsgrense på 2,0 s som kan ryke når maskinen er opptatt.
+
+**Neste:** T3 (design B 4.0 på `design/b4`). Svar fra Theodor på størrelse og tidevann.
+
+## T1 og fotavtrykk - kontoret 10.11.2026 (etter T0)
+
+**Gjort**
+- **Lofoten/Vesterålen-pakka** ligger på `region/lofoten-vesteralen` (3f3eac3), utkast-PR #29. Spotansvarlig (agent) gikk gjennom alle 27: **17 godkjent, 3 rett (g-frame, ramberg, soppelplassen), 7 avvis.** Fysikk-kontrolløren i to runder, funnene rettet. Ingenting i spots.json, fetcher/ eller docs/ er endret.
+  - Filer: `data/kandidater/bygget/lofoten-vesteralen.md` (pakka), `lofoten-vesteralen-oversikt.png`, `lofoten-vesteralen-gjennomgang.csv` (spotansvarligs svar), `lofoten-vesteralen.notater.md` (hva som skal til for de upubliserte, Eggum, Flakstad), `tools/region_pakke.py` (generatoren).
+  - Vern måles nå fra spotens posisjon der Naturbase-oppslaget finnes. Bunes ligger inne i Lofotodden nasjonalpark (varsom ferdsel, ikke forbud).
+  - Kallbudsjett: 22 spots live = 622 vektede Open-Meteo-kall per døgn (6 %). Med de 5 som holdes tilbake: 759 (8 %). Hele Nord-Norge blir 39-46 spots, under de ca. 80 der tempoet må begrenses.
+- **Fotavtrykk** (Theodors ja 10.11 til de fem punktene i `docs/drift/github-fotavtrykk.md`): bygget på `drift/fotavtrykk` (caa5d2d, 1f16955, dee5cc3, bc94eba), kontrollert, **ikke pushet**. GitHub avviser pushen fordi gh-innloggingen mangler «workflow»-tilgang (venter på Theodor).
+  - «Hent varsel» 03:17-21:17 UTC (7 per døgn, ikke kl. 00:17), Vakthund hver 6. time, Tester én gang per push og ikke for rene STATUS/ROADMAP/CLAUDE.md-endringer, prøvehenting bare med «Run workflow», 65 skjermbilder ut av git, arbeidsmåte i CLAUDE.md.
+  - Følger av natthullet: `publish.py naa_hours()` (kveldskjøringen dekker natta), `app.js staleLimitHours()` (banneret tåler 9 t for varsler fra kl. 18 og 21 UTC, ellers 6), `vakthund.py maks_alder()` (10 t over natta, ellers 7).
+  - **Ikke gjort: «én læringsdata-commit per døgn».** Krever at læringsdata og notified.json bæres mellom kjøringene som artifact (fare for tapt læring eller dobbeltvarsler). Trenger egen avgjørelse og prøvekjøring.
+  - caa5d2d retter den røde Tester-kjøringen på main 10.11 (test_svgtekst_browser blokkerte ikke Kartverket-flisene).
+- **Kontoret:** agentene og «spotansvarlig» som godkjenner ligger på lokal main (90b81bb, c422d38), ikke pushet.
+- **Troms, Finnmark og Salten:** posisjonsrunden for de 12 kandidatene er ferdig, og regionene ligger som tre utkast-PR-er stablet oppå hverandre: #30 `region/troms` → #31 `region/finnmark` → #32 `region/salten`. Ingenting i spots.json, fetcher/ eller docs/ er endret. Spotansvarlig (agent) avgjorde posisjonene og gikk gjennom regionene, og fysikk-kontrolløren regnet etter punktvalgene (fire tekstfeil rettet før commit).
+  - **Troms (9):** de 6 live er uendret. **bovaer** er bygget forslag, med BarentsWatch-punktet rettet fra 1 500 m til 400 m ut (8,5 m) fordi stranda ligger i le av et skjær 800-900 m ut. Lavere sikkerhet: punktet er retningsavhengig. laukvika-senja og hamn-senja venter på lokalkunnskap.
+  - **Finnmark (5):** **berlevag-sandfjorden** (500 m/8,0 m) og **persfjord** (900 m/8,8 m) er bygde forslag, godkjent av spotansvarlig. Nordkanten av vinduet til berlevag-sandfjorden har lavere sikkerhet. porsangvika, skallelv og skallneset venter på lokalkunnskap.
+  - **Salten (4):** **seines** (point break) er bygget forslag: facing rettet fra 316,3 til 295 etter bølgeretningen ved punktet, offshore [70,160], ubekreftet. Høydene mangler (Theodors avgjørelse), og spoten ligger inne i Seinesodden naturreservat (brettseiling forbudt, surfebrett ikke nevnt). monumentet og storvika er bygget, men parkert (vindu under ca. 15°, `status_overstyring.json`). lop venter på lokalkunnskap.
+  - Filer per region: `data/kandidater/bygget/<region>.md` (pakka), `<region>-oversikt.png`, `<region>.notater.md`, `<region>-gjennomgang.csv`. Felles: `data/bw_point_search/result_2026-11-10T1135_kandidater.json` (ett BarentsWatch-snitt for fire spots, kjøring 42808664092, hentet via hjelpegrenen `snitt/nord-2026-11-10`).
+  - Kallbudsjett: med bovaer blir det 23 spots og 649 vektede kall per døgn (6 %). Tallene for de andre står i pakkene.
+  - Sett i de live Troms-spotene (ingen endring): russelv har vindu 8° + 11° med facing 34° utenfor, lenangsoyra vindu 8° (har observasjon og overstyring), steinkrossa vindu 29° fra facing, ersfjordstranda facing 315 mot OSM-normal 287-295 (hører til vindusspørsmålet i ROADMAP).
+
+**Venter på Theodor** (spørsmålene står i `privat/kontor/til-theodor.md`)
+1. Push av lokal main (kontoragentene, CLAUDE.md, godkjennere).
+2. Reserven for BarentsWatch-punkt: 8 m i stedet for 6 m?
+3. g-frame: facing 330 → ca. 270, offshore [45,135], nytt snitt.
+4. «workflow»-tilgang for gh (`gh auth refresh -h github.com -s workflow`), så fotavtrykk-PR-en kan pushes.
+5. Ja per region til #30 Troms, #31 Finnmark og #32 Salten. Salten trenger også høydene for seines og lesningen av «brettseiling».
+
+**Til T2 (fra spotansvarligs gjennomgang)**
+- **T2b:** I varselet 10.11 kl. 06Z er skagsanden (aliasene «Flakstad Beach» og «Flakstad (Surfnerd/Breakfinder)») større enn Unstad i alle de 32 timene de første to døgnene der minst én har bølger (Unstad 0 i 21 av dem, maks 1,14 mot 1,92 m), og i 57 av 83 timer over hele varselet. Motsatt av det Lofoten Surfsenter sier. Tabellen i T2b viser ramberg (hovedsammenligning) og skagsanden som egen kolonne.
+- **Eggum:** Spør Lofoten Surfsenter hvor bølgen på Eggum brekker. Eggum naturreservat (surfebrett forbudt) ligger sør til sørvest for spoten, nærmest 277 m unna i retning 152°. Ligger breaket inne i reservatet, settes «Forbud nå».
+- **Unstad-bukta (etter N):** nye snitt langs 294,8° for unstad-left og unstad-right, samme punktregel for alle, og forslag om å fjerne Unstads `surf_factor_prior` sammen med N. soppelplassen: offshore 70-209° mangler kilde (spotansvarlig foreslår 70-160°), og høydene [1,5, 3,5] mangler begrunnelse (gjelder også g-frame, unstad-left, unstad-right). Ett samlet spørsmål til Theodor etter N.
+
+**Kjente småfeil, ikke rettet**
+- `spots.json`: teksten `_holdt_tilbake` for soppelplassen sier 250-600 m fra Unstad. Riktig er 996 m. Rettes sammen med neste endring av spoten.
+- `fetcher/test_publish.py` test 10 måler oversikten med 100 spots bare for fixturens time (50 KiB). Kveldskjøringen med 7 nå-timer gir 59 KiB mot grensa 60. Testen bør måle kveldstilfellet før vi passerer 100 spots.
+- `tools/bygg_spot.py`: teksten `_vindu` sier «største brukt» også når flere sektorer er brukt (seines har tre).
+- Minikartet til bovaer merker punktet som valgt av regelen fra 15.10, men det er satt for hånd til 400 m.
+- Docstringene i `tools/godkjenn_spot.py`, `tools/bygg_spot.py` og `fetcher/test_spotfabrikk.py` nevner bare Claude som godkjenner.
+
 ## T0 - svarene dine 10.11.2026 og main-pushen
 
 **Avgjort (Theodor 10.11):**

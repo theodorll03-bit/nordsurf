@@ -1,12 +1,13 @@
-"""Vakthund for varselet (Theodor 16.10.2026, punkt 1b): kjøres hver 3. time fra .github/workflows/vakthund.yml,
-forskjøvet fra «Hent varsel». Varsler hvis
+"""Vakthund for varselet (Theodor 16.10.2026, punkt 1b): kjøres hver 6. time fra .github/workflows/vakthund.yml
+(fotavtrykk 10.11.2026; før hver 3.), 1,5 t etter en «Hent varsel». Varsler hvis
 
-  - varselet på live-siden (docs/data/oversikt.json, «generated») er eldre enn MAKS_ALDER_T timer, eller
+  - varselet på live-siden (docs/data/oversikt.json, «generated») er eldre enn MAKS_ALDER_T timer (pluss
+    NATT_TILLEGG_T over natthullet, se maks_alder()), eller
   - «Hent varsel» (forecast.yml) har feilet to ganger på rad (de to siste fullførte kjøringene).
 
 Varselet er en GitHub-issue «Varselet står stille» (Theodor 16.10: NTFY_TOPIC settes ikke nå) med alderen og lenke
 til siste feilede kjøring. Finnes det alt en åpen issue med den tittelen, kommenteres den i stedet. Høyst ett
-varsel/kommentar per DEDUPE_T timer (målt mot issuens siste aktivitet). Når varselet er ferskt igjen og «Hent
+varsel/kommentar per sjekk (hver 6. time; DEDUPE_T målt mot issuens siste aktivitet). Når varselet er ferskt igjen og «Hent
 varsel» ikke feiler, lukker vakthunden issuen selv med en kommentar. ntfy sendes i tillegg bare hvis NTFY_TOPIC
 finnes (da med en liten tilstandsfil for 6-timersgrensen, som workflowen tar vare på med actions/cache).
 
@@ -25,11 +26,25 @@ from pathlib import Path
 import requests
 
 LIVE = "https://theodorll03-bit.github.io/nordsurf/data/oversikt.json"
-MAKS_ALDER_T = 7
-DEDUPE_T = 6
+MAKS_ALDER_T = 7       # «generated» er rundet ned til hel time: to uteblitte kjøringer på rad (3 t mellom hver) gir 7-8 t
+# Fotavtrykk (Theodor 10.11.2026): «Hent varsel» kjører 03:17-21:17 UTC (forecast.yml: 17 3-21/3) - kjøringen
+# kl. 00:17 UTC finnes ikke lenger, så om natta går det 6 timer. Ligger det hullet mellom «generated» og nå,
+# tåles 3 timer til - ellers ville ÉN uteblitt kjøring kl. 03:17 gitt alarm kl. 04:47 (før: først etter to).
+NATT_HULL_UTC = (0, 17)
+NATT_TILLEGG_T = 3
+DEDUPE_T = 5           # sjekkene går hver 6. time (± forsinkelsen i GitHub sin cron): 5 gir én kommentar per sjekk, aldri annenhver
 FEIL_PA_RAD = 2
 TITTEL = "Varselet står stille"
 UA = {"User-Agent": "nordsurf-vakthund/1.0 (github.com/theodorll03-bit/nordsurf)"}
+
+
+def maks_alder(gen, now):
+    """Timer varselet kan være gammelt før det er et problem: MAKS_ALDER_T, pluss NATT_TILLEGG_T når natthullet
+    (kl. 00:17 UTC, kjøringen som ikke finnes) ligger mellom «generated» og nå."""
+    hull = gen.astimezone(dt.timezone.utc).replace(hour=NATT_HULL_UTC[0], minute=NATT_HULL_UTC[1], second=0, microsecond=0)
+    if hull <= gen:
+        hull += dt.timedelta(days=1)
+    return MAKS_ALDER_T + (NATT_TILLEGG_T if hull <= now else 0)
 
 
 def problemer(oversikt, kjoringer, now):
@@ -44,11 +59,12 @@ def problemer(oversikt, kjoringer, now):
             out.append("varselet på live-siden mangler «generated»")
         else:
             try:
-                alder = (now - dt.datetime.fromisoformat(str(gen).replace("Z", "+00:00"))).total_seconds() / 3600
+                t = dt.datetime.fromisoformat(str(gen).replace("Z", "+00:00"))
+                alder, grense = (now - t).total_seconds() / 3600, maks_alder(t, now)
             except (ValueError, TypeError):
                 out.append(f"varselet på live-siden har ugyldig «generated» ({gen!r})")
             else:
-                if alder > MAKS_ALDER_T:
+                if alder > grense:
                     out.append(f"varselet er {alder:.0f} timer gammelt (generert {gen})")
     if kjoringer:
         siste = kjoringer[:FEIL_PA_RAD]

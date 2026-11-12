@@ -14,7 +14,11 @@ name: Hent varsel
 
 on:
   schedule:
-    - cron: "17 */3 * * *"   # hver tredje time
+    # Fotavtrykk (Theodor 10.11.2026, docs/drift/github-fotavtrykk.md punkt b): hver tredje time 03:17-21:17 UTC
+    # (7 per døgn). Kjøringen kl. 00:17 UTC (01:17/02:17 norsk tid) er tatt bort - om natta går det 6 timer
+    # (21:17 → 03:17). Følger med: fetcher/publish.py naa_hours() (nå-timene dekker hullet), docs/js/app.js
+    # staleLimitHours(), fetcher/vakthund.py maks_alder() og .github/workflows/vakthund.yml.
+    - cron: "17 3-21/3 * * *"
   workflow_dispatch:          # kjør manuelt fra Actions-fanen
     inputs:
       sekvensiell:

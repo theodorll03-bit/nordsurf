@@ -1,7 +1,7 @@
 """Henter varsel for alle spots og skriver docs/data/forecast.json.
 
 Kjør lokalt:  python fetcher/fetch.py
-Kjøres automatisk hver tredje time av GitHub Actions.
+Kjøres automatisk hver tredje time kl. 03:17-21:17 UTC av GitHub Actions (forecast.yml; ikke kl. 00:17 - fotavtrykk 10.11.2026).
 """
 
 import os
