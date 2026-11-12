@@ -4439,6 +4439,47 @@
     }
    ],
    "forslag": []
+  },
+  "breivikeidet": {
+   "spot": {
+    "lat": 69.659992,
+    "lon": 19.664974
+   },
+   "sikkerhet": "B",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-12",
+   "alternativer": [
+    {
+     "kilde": "stedsnavn",
+     "navn": "Sandbukta (Vik i sjø)",
+     "lat": 69.66063,
+     "lon": 19.66304
+    },
+    {
+     "kilde": "stedsnavn",
+     "navn": "Breivikneset (Nes i sjø)",
+     "lat": 69.65817,
+     "lon": 19.6842
+    }
+   ],
+   "forslag": [
+    {
+     "lat": 69.659992,
+     "lon": 19.664974,
+     "satt_av": "spotansvarlig-flyfoto-2026-11-12",
+     "begrunnelse": "Sandbukta: ca. 1,1 km sand-/grusstrand innerst i bukta på vestsida av Ullsfjorden (Breivikelva-deltaet bak). Den rette delen av stranda vender mot NNØ (OSM-kystnormal 13-28°). Satt midt på den delen, ca. 100 m ut fra OSM-kystlinja (ca. 70 m fra vannkanten i flyfotoet). Ingen bølger synlige i flyfotoet; hovedtoppen er ukjent. Pinnen sto ca. 260 m ut i bukta.",
+     "dato": "2026-11-12",
+     "sikkerhet": "B",
+     "flyttet_m": 235
+    }
+   ],
+   "startpunkt": {
+    "lat": 69.661848,
+    "lon": 19.662088
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Sandbukta ved Breivikeidet, ca. 1,1 km sand-/grusstrand innerst i bukta, åpen mot NNØ ut Ullsfjorden. Posisjonen ligger midt på den NNØ-vendte delen, 100 m fra OSM-kystlinja (ca. 70 m fra vannkanten i flyfotoet) og 235 m fra Theodors pinne. Kystnormal 17° (OSM ±150 m; flyfoto 14-18°). Fri linje til åpent hav bare 20-26° (150 km, gapet mellom Vanna og Arnøya); 10-19° treffer land 31-51 km ut og 26-29° Arnøya 55-64 km ut. Sikkerhet B: navn og strand stemmer, men ingen bølger synlige i flyfotoet og ingen observasjon - ubekreftet, kilden ikke navngitt (lav vekt)."
   }
  }
 }
