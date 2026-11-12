@@ -1,5 +1,14 @@
 # Nordsurf: status
 
+## T1 Troms: bovaer lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/troms`, ikke merget)
+
+`tools/godkjenn_spot.py bovaer` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Spots.json har 28 spots, 23 er slått på.
+
+- Bøvær (Senja): facing 289,8°, svellvindu [251, 326], offshore [65, 155], høyder standard for strand (0,8–2,0 m, maks 3,5).
+- BarentsWatch-punktet ligger 400 m ut (8,5 m dyp) i stedet for 1 500 m. Stranda ligger i le av et skjær 800–900 m ut, og standardregelen ville valgt et punkt utenfor skjæret. Det gir lavere sikkerhet enn vanlig og står i spotens `_barentswatch`.
+- Fysikk-kontrolløren har godkjent innleggingen. Alle tester og kontrastsjekken er grønne.
+- Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. laukvika-senja og hamn-senja venter på lokalkunnskap.
+
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 
 Gren `t2/lofoten-surfsenter` (lokal, ikke pushet): fire verktøy i `tools/` og fire rapporter i `data/backtest/`. Kilden er Lofoten Surfsenter, 09.11.2026 (via Theodor). Den føres inn i CLAUDE.md «Lokalkunnskap» først når en regel faktisk legges inn.
