@@ -167,6 +167,13 @@ def main():
 
             # ---- 1. ytelse med 500 spots, 4x CPU-struping ----
             ov500, det500 = bodies(N_SPOTS)
+            # Oppvarming (12.11.2026): første WebGL-kontekst i en ny nettleser koster 1,5-2 s i SwiftShader, og bare en del av det
+            # faller inne i new maplibregl.Map (__kartOppsettMs). Hvor mye, avhenger av siden rundt: uten backdrop-filter på
+            # fanelinja (B 4.0 steg 3) falt 0,9 s av det utenfor målingen, og «lasting uten WebGL-oppsett» så 0,8 s tregere ut
+            # selv om hele lastingen tok like lang tid (2,7-3,0 s før og etter). En umålt lasting først tar kaldstarten ut av
+            # målingen: da er oppsettet 0,07 s og lastingen 0,9-1,2 s både før og etter endringen.
+            ctx, page = new_page((390, 844)); route_data(page, ov500, det500)
+            page.goto(base + "#utforsk"); page.wait_for_function(READY_JS); ctx.close()
             ctx, page = new_page((390, 844))
             route_data(page, ov500, det500)
             cdp = ctx.new_cdp_session(page)

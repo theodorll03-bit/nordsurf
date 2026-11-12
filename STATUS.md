@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## T3 design B 4.0 «Papir» - steg 2 (vurderingen på skjerm), 12.11.2026
+## T3 design B 4.0 «Papir» - steg 3 (Hjem på mobil), 12.11.2026
 
 Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
 
@@ -22,14 +22,29 @@ Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.
 - `tools/stjerner_skjermbilder.py` er slettet (brukte stjernene, ingen bruker den). De fire bildene i `docs/design/stjerner/` står igjen som historikk.
 - Fysikk-kontrolløren (agent): ikke godkjent i første runde. Rettet: forbudstimer viste «0» i timestripa (nå tom rute, med test), og en mørk nå-time endret rekkefølgen i Utforsk (nå sorteres det på modellens tall som før). Også rettet: mørk dag i nett-tabellen er skygge og ikke «–», «mangler» sjekkes før «mørkt» på spotsiden, og testene sjekker høyden i tabellcellene og tomme ruter for seg. Alle 16 tester og kontrastsjekken er grønne etter rettingene.
 
+**Gjort (steg 3, SPEC §6A, bare mobil)**
+- Topplinje med dato, brukbart lys i dag ved startstedet («Lys 07:00–18:00», sola over −6° som i `fetcher/sun.py`) og «Fra Tromsø».
+- Overskrift på to korte setninger, laget av de samme dagstallene (`dayBest`) som rutene i lista. Den gjelder favorittene når brukeren har noen, ellers den valgte regionen.
+- Favorittene som rader: tallet, navnet, «område · kjøretid · ord · −1 vind», én setning, OBS-linje fra siste egne logg (siste 7 dager) og uka med dagnavn under. «Rediger» gir «Fjern» på hver rad og «Legg til spot».
+- Kjøretidene ligger i `docs/js/kjoretid.js`: en tabell uten rutetjeneste, med Theodors anslag fra skissene. De er ikke bekreftet. En spot uten tall viser ingen kjøretid.
+- Flat fanelinje (Hjem, Utforsk, Logger) uten glasseffekt. Søk er fortsatt knappen ved siden av, Innstillinger en lenke nederst.
+- Utsatt: kartet på 220 pt (steg 5), kornfotoet på første favoritt med 4 eller mer (bildesteget), bytte av startsted (krever rutetjeneste og Theodors ja). PC er urørt (steg 6).
+- Ordene i overskriften og radene er nye maler i `STR.hjem` og venter på Theodors ja.
+- Fysikk-kontrolløren (agent): ikke godkjent i første runde, godkjent i andre. Rettet: overskriften sa «Ingen data i lyse timer» når dagens lys var over, en favoritt uten data ble regnet som «ingen surf», en ny foreløpig favoritt ble holdt utenfor, «Ikke surfbart nå i dag» og «de neste 1 dagene», og fokus forsvant etter Rediger/Fjern. Etter runde 2: «Ingen surf resten av dagen.» når lyset er over for én favoritt, og flere oppdiktede tilfeller i testen (24 i alt). Kjent og ikke rettet: uten favoritter kan overskriften nevne en spot bak «Vis alle» når en region har over 8 spots (ingen region har det i dag).
+- `test_spotside_browser` kjenner igjen hver setning i overskriften og sjekker den mot rutene. Favorittene i testen er to med kjøretid og én uten, som også har en dag uten tall.
+- `test_kart_browser`: lastetiden for Utforsk med 500 spots måles nå etter én oppvarmingslast uten tidtaking. Uten glasseffekten på fanelinja falt 0,9 s av grafikkoppstarten i testnettleseren utenfor det testen trekker fra, så målingen røk (2,22 s mot 2,0 s) selv om hele lastingen var like lang før og etter (2,7–3,0 s). Grensen er uendret.
+- Kontrolløren er ikke kjørt på nytt etter de små rettingene som fulgte runde 2 («Ingen surf resten av dagen.» og de ekstra tilfellene i testen).
+- Testene før commit: 16 filer og kontrast grønne i én kjøring. `test_kart_browser` røk to ganger (tidsavbrudd, nettleseren lukket) fordi maskinen gikk i dvale midt i kjøringen, og gikk grønn alene etterpå på de samme filene. `test_spotside_browser` hang én gang på et klikk under samme forhold og gikk grønn på neste kjøring.
+
 **Til Theodor**
+- Valgene for Hjem (ordene, hva overskriften gjelder, andre setning, kjøretidene, lyset i midnattssol, område eller region, vindordene) står som ett spørsmål i `privat/kontor/til-theodor.md`.
 - WCAG regner «stor tekst» fra 14 pt fet (ca. 18,7 px), ikke 14 px. Rutene på Hjem og i listene (19 px fet) er over. Timestripa og klyngeringen på kartet (14 px fet) følger regelen din, men ikke WCAG. `kontrast.py` leser ikke skriftstørrelser, så regelen står bare som kommentar.
 - Hjelpetekstene sier fortsatt «stjerner» flere steder. Ordet som skal brukes i stedet, er et spørsmål i `privat/kontor/til-theodor.md`.
 - Dagkortene i langtidsvarselet har fortsatt tre felt (bygges om i steg 4).
 
-**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/` og `steg-2/`.
+**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/`, `steg-2/` og `steg-3/`.
 
-**Neste:** bildesteget (kornfoto per spot fra Kartverkets skyfrie Sentinel-2-mosaikk, flyttet fram av Theodor 12.11), så steg 3 (Hjem).
+**Neste:** bildesteget (kornfoto per spot fra Kartverkets skyfrie Sentinel-2-mosaikk, flyttet fram av Theodor 12.11; tre prøvebilder er vist, resten venter på Theodors ja), så steg 4 (spotsiden).
 
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 

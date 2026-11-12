@@ -103,6 +103,29 @@
     best: (day, from, to, n) => `Best ${day} ${from}–${to}, ${n} ${n===1?"stjerne":"stjerner"}`,
     estimate: "anslag", longrange: "langtid", confident: (p) => `${p} % sikker`,
 
+    /* Hjem på mobil (design B 4.0, SPEC §6A): topplinja, overskriften av to korte setninger og favorittradene.
+       Setningene settes sammen av vurderingsordet (ratingWord), spotnavnet og dagen - samme dagstall som lista viser.
+       Malene er nye 12.11.2026 og venter på Theodors ja (privat/kontor/til-theodor.md). */
+    hjem: {
+      lys: (a, b) => `Lys ${a}–${b}`,
+      fra: (sted) => `Fra ${sted}`,
+      ordSpot: (ord, spot, dag) => `${ord} på ${spot} ${dag}.`,
+      ord: (ord, dag) => `${ord} ${dag}.`,
+      ingen: (dag) => `Ingen surf ${dag}.`,
+      ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,
+      ingenRest: "Ingen surf resten av dagen.",
+      morkt: (dag) => `Mørkt ${dag}.`,
+      manglerDag: (dag) => `Mangler data ${dag}.`,
+      best: (a, b) => `Best kl. ${a}–${b}.`,
+      obs: "Obs", rediger: "Rediger", ferdig: "Ferdig", fjern: "Fjern", leggTil: "Legg til spot",
+      fjernAria: (spot) => `Fjern ${spot} fra favoritter`,
+      kjoreAria: (tid, sted) => `${tid} fra ${sted}`,
+      innstillinger: "Innstillinger",
+      // ordet i metalinja når dagen ikke har noe tall, og det som er tapt på vind og tidevann
+      forbud: "Surfing forbudt", morktOrd: "Mørkt", over: "Dagens lys er over", mangler: "Mangler data",
+      taptVind: (n) => `−${n} vind`, taptTide: (n) => `−${n} tidevann`, apne: "Åpne spoten",
+    },
+
     /* advarsler i vanlig språk (én linje, forklaring ved trykk) */
     notice: {
       disagree: "Kildene er uenige, usikkert varsel",

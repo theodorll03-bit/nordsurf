@@ -55,7 +55,7 @@
   --fs-caption:0.8125rem; --fs-secondary:0.9375rem; --fs-body:1rem; --fs-title:1.375rem; --fs-display:2rem;
   --radius:0px; --radius-sm:0px;
   --shadow:0 0 0 1px var(--hair);   /* ingen skygger: flytende flater får en tynn strek rundt seg */
-  --nav-h:92px; --top-h:60px;
+  --nav-h:64px; --top-h:60px;
   --max-w:1360px;
   color-scheme: light dark;
   box-sizing:border-box;
@@ -138,14 +138,13 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .view{display:block;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom,0px))}
 .view[hidden]{display:none}
 #viewUtforsk{padding:0}
-.tabbar{position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;z-index:30;pointer-events:none}
-.tabbar > *{pointer-events:auto}
-.glass{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge);box-shadow:var(--shadow)}
-.tabs{flex:1;display:flex;height:64px;border-radius:32px;padding:4px}
-.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:44px;border-radius:28px;text-decoration:none;color:var(--muted);font-size:0.75rem;font-weight:600}
+/* B 4.0: flat fanelinje i full bredde (SPEC §6A punkt 5) - papirflate, tynn strek over, Martian 11, aktiv fane fet */
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:stretch;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));padding:0 8px env(safe-area-inset-bottom,0px);background:var(--surface);border-top:.75px solid var(--ink);z-index:30}
+.tabs{flex:1;display:flex}
+.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:44px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .tabs a svg{width:22px;height:22px}
-.tabs a[aria-current="page"]{color:var(--ink);background:var(--sunken)}
-.sokknapp{flex:none;width:64px;height:64px;border-radius:32px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
+.tabs a[aria-current="page"]{color:var(--ink);font-weight:800}
+.sokknapp{flex:none;width:56px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
 .sokknapp svg{width:24px;height:24px}
 .pagebar{display:flex;align-items:center;gap:8px;margin:0 0 6px}
 .back{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 14px 0 8px;border-radius:22px;cursor:pointer;font-weight:600;font-size:var(--fs-secondary)}
@@ -184,9 +183,27 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* ---------- Hjem ---------- */
 .hjem-topp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:8px 0 0}
 .dato{color:var(--muted);font-size:var(--fs-secondary);margin:6px 0 0}
-.sokfelt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin:18px 0 6px;padding:0 18px;border-radius:26px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);font-size:1.0625rem;cursor:text}
-.sokfelt svg{width:20px;height:20px;flex:none}
-.sokfelt:hover{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+/* B 4.0 Hjem på mobil (SPEC §6A): topplinje 44 pt, overskrift av to setninger, favorittrader uten streker */
+.hjem-linje{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:44px}
+.hjem-linje .etikett{margin:0}
+.hjem-overskrift{margin:var(--s3) 0 0}
+.hjem-overskrift span{display:block}
+.sekknapp{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;margin:-16px 0;cursor:pointer;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sekknapp[aria-pressed="true"]{color:var(--ink);font-weight:700}
+.favliste{display:grid;gap:var(--s4)}
+.favlinje{display:grid;grid-template-columns:2.75rem minmax(0,1fr);column-gap:var(--s3);align-items:start;color:var(--ink);text-decoration:none}
+.favlinje .t-listetall{color:var(--rc-tall)}
+.favtekst{display:block;min-width:0}
+.favtekst > span{display:block}
+.favlinje .t-navn.lang{font-stretch:75%}
+.favlinje .etikett{margin-top:var(--s1)}
+.favlinje .etikett.obs{color:var(--ink)}
+.favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
+.favlinje .uke{display:grid;margin-top:12px}
+.favlinje .uke b{font-family:var(--mono);font-stretch:87.5%;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.favlinje .uke b.idag{font-weight:800}
+.favlinje > .ghost{grid-column:2;justify-self:start;margin-top:12px}
+.favleggtil,.hjem-bunn{margin:var(--s4) 0 0}
 .best{position:relative;overflow:hidden;padding:18px 18px 16px;box-shadow:var(--shadow),0 1px 0 var(--line)}
 .best::before{content:"";position:absolute;left:0;right:0;top:0;height:7px;background:var(--rc,var(--line-strong))}
 .best .rad{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -560,7 +577,6 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .kartkort{position:static;grid-column:1;margin-top:12px}
   .utforsk-liste{display:block;grid-column:2;grid-row:2/4}
   .hjem-topp{margin:0}
-  .sokfelt{display:none}
   .hjem-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:32px;align-items:stretch}
   .hjem-venstre{display:flex;flex-direction:column}
   .neste{flex:1;margin-top:12px;display:flex;flex-direction:column;gap:2px}   /* fyller høyden ved siden av kartet med de tre neste beste (Theodor 15.10, punkt 4) */
