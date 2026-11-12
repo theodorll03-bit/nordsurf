@@ -1,14 +1,15 @@
 name: Vakthund
 
-# Theodor 16.10.2026 (punkt 1b): sjekker hver 3. time, forskjøvet fra «Hent varsel» (17 */3), at varselet på
-# live-siden er yngre enn 7 timer og at «Hent varsel» ikke har feilet to ganger på rad. Ellers åpner den en
+# Theodor 16.10.2026 (punkt 1b): sjekker hver 6. time (fotavtrykk 10.11.2026; før hver 3.), 1,5 t etter en
+# «Hent varsel» (17 3-21/3), at varselet på live-siden er yngre enn 7 timer (10 over natthullet 21:17 → 03:17 UTC,
+# fetcher/vakthund.py maks_alder) og at «Hent varsel» ikke har feilet to ganger på rad. Ellers åpner den en
 # GitHub-issue «Varselet står stille» (eller kommenterer den åpne, høyst hver 6. time), og lukker den selv når
 # varselet er ferskt igjen. ntfy i tillegg bare hvis NTFY_TOPIC finnes (tilstanden for det i actions/cache).
 # Vakthunden committer aldri til main og rører ikke data/.
 # Test: workflow_dispatch med «test_alder_timer» (virker bare utenfor main) later som varselet er så gammelt.
 on:
   schedule:
-    - cron: "47 1-23/3 * * *"   # 01:47, 04:47 … - 1,5 t etter hver «Hent varsel» (17 */3)
+    - cron: "47 4-22/6 * * *"   # 04:47, 10:47, 16:47, 22:47 UTC - 1,5 t etter «Hent varsel» kl. 03:17, 09:17, 15:17, 21:17
   workflow_dispatch:
     inputs:
       test_alder_timer:

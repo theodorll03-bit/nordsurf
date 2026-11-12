@@ -68,8 +68,9 @@
     return rs.includes("Troms") ? "Troms" : (rs[0] || "");
   }
   function setRegion(r){ try{ localStorage.setItem(REGION_KEY, r); }catch(e){} S.region = r; }
-  // nå-timen: klokkas time blant de fire publiserte (henteren kjører hver 3. time), ellers den siste
-  // dekker ingen av de fire klokka (oversikten er over 4 t gammel - henteren har feilet): null → «–», aldri en time
+  // nå-timen: klokkas time blant de publiserte (fire om dagen - henteren kjører hver 3. time; sju etter kveldens siste
+  // kjøring, fram til den neste kl. 03 UTC - publish.py naa_hours), ellers den siste
+  // dekker ingen av dem klokka (oversikten er over 4 t gammel, 7 om natta - henteren har feilet): null → «–», aldri en time
   // som er over vist som «nå» (fysikk-kontrollør 15.10.2026); staleBanner() øverst på Hjem sier fra
   const naaOf = (s)=>{ const list = s.naa || []; const now = Date.now(); const h = list.find(h=> new Date(h.t).getTime() + 36e5 > now); if(h) return h; const last = list[list.length-1]; return last && now - new Date(last.t).getTime() < 36e5 ? last : null; };
   const stars = (h)=> h ? (h.stars||0) : 0;

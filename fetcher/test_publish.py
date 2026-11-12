@@ -48,8 +48,8 @@ def main():
             assert "transfer_used" in o["calibration"] and "exposure_curve" not in o["calibration"], "kalibreringen uten kurven i oversikten"
         assert o.get("local_rules") == s.get("local_rules")
         assert o["region"] and o["spot"]["lat"] and o["name"] == s["name"]
-        # nå-timen = den første timen som ikke er over ved «generated», og de tre neste
-        want = [h for h in s["hours"] if t_of(h) + dt.timedelta(hours=1) > now][:publish.NAA_HOURS]
+        # nå-timen = den første timen som ikke er over ved «generated», og de tre neste (seks etter kveldens siste kjøring)
+        want = [h for h in s["hours"] if t_of(h) + dt.timedelta(hours=1) > now][:publish.naa_hours(now)]
         assert [h["t"] for h in o["naa"]] == [h["t"] for h in want], f"{s['id']}: naa {[h['t'] for h in o['naa']]}"
         for oh, h in zip(o["naa"], want):
             assert set(oh) <= set(publish.NAA_FIELDS) | {"bw_height"}, f"{s['id']}: ekstra felt {set(oh) - set(publish.NAA_FIELDS)}"
@@ -60,7 +60,22 @@ def main():
             assert "daylight" not in oh or oh.get("light") is None
         assert all(("local_rules" in oh) == (h.get("local_rules") is not None) for oh, h in zip(o["naa"], want)), "local_rules følger nå-timen når den finnes (ordet ved 0 stjerner)"
         assert len(o["dager"]) == publish.SUMMARY_DAYS and o["dager"][0]["d"] == now.astimezone(OSLO).date().isoformat()
-    print(f"1: oversikt-2 med {len(overview['spots'])} spots: meta ({len(publish.META_FIELDS)} felt), {publish.NAA_HOURS} nå-timer og {publish.SUMMARY_DAYS} dager per spot, ingen timer - OK")
+    print(f"1: oversikt-2 med {len(overview['spots'])} spots: meta ({len(publish.META_FIELDS)} felt), {publish.naa_hours(now)} nå-timer og {publish.SUMMARY_DAYS} dager per spot, ingen timer - OK")
+
+    # 1b. fotavtrykk 10.11.2026: «Hent varsel» kl. 03:17-21:17 UTC hver 3. time, ikke kl. 00:17 - nå-timene dekker
+    # alltid fram til og med timen den neste planlagte kjøringen starter i (klokkas time finnes også om natta)
+    U = lambda time, dag=10: dt.datetime(2026, 11, dag, time, tzinfo=dt.timezone.utc)
+    assert [publish.naa_hours(U(h)) for h in (3, 6, 9, 12, 15, 18)] == [4] * 6, "om dagen: nå-timen + de tre neste"
+    assert publish.naa_hours(U(21)) == 7, "kveldens siste kjøring: 21, 22, 23, 00, 01, 02 og 03 UTC"
+    assert [publish.naa_hours(U(h)) for h in (22, 23, 0, 1, 2)] == [6, 5, 4, 4, 4], "manuell kjøring om natta: fram til kl. 03, aldri færre enn 4"
+    assert publish.naa_hours(dt.datetime(2026, 11, 10, 22, tzinfo=OSLO)) == 7, "regnes i UTC, ikke i lokal tid (22 norsk vintertid = 21 UTC)"
+    natt = [{"t": (U(21) + dt.timedelta(hours=i)).isoformat(), "stars": 0, "surf_height": 0.5, "light": "mørkt"} for i in range(-2, 30)]
+    naa_natt = publish.summarise(natt, U(21))["naa"]
+    assert [h["t"] for h in naa_natt] == [(U(21) + dt.timedelta(hours=i)).isoformat() for i in range(7)]
+    for klokka in (U(21) + dt.timedelta(minutes=30), U(0, 11), U(3, 11) + dt.timedelta(minutes=59)):
+        assert any(t_of(h) <= klokka < t_of(h) + dt.timedelta(hours=1) for h in naa_natt), f"klokkas time mangler kl. {klokka:%H:%M} UTC"
+    assert len(publish.summarise(natt, U(18))["naa"]) == 4
+    print("1b: nå-timene dekker natthullet (7 timer etter kjøringen kl. 21 UTC, ellers 4) - OK")
 
     # 2. regelen for beste time (samme som appen brukte: flest stjerner, likt -> høyest surf, bare lys, ukjent lys teller ikke)
     H = lambda t, st, surf, light="dag", **k: dict({"t": t, "stars": st, "surf_height": surf, "light": light}, **k)

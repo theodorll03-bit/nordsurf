@@ -44,6 +44,10 @@ HIT_WITHIN_STARS = 1
 NOTIFY_MIN_CONFIDENCE = 70  # varsler bare for timer med minst dette (notify.py)
 ARCHIVE_DAYS = DAYS + 1
 SCORE_SLOT_HOURS = 3      # henteren kjører hver 3. time - fasit-vinduet per kjøring
+# Fotavtrykk (Theodor 10.11.2026): «Hent varsel» kjører ikke lenger kl. 00:17 UTC (forecast.yml: 17 3-21/3). Timene
+# 00, 01 og 02 UTC får derfor ingen fasit og telles ikke i treffsikkerheten (kjøringen kl. 21 dekker 21-23, den kl. 03
+# dekker 03-05). Vinduet er IKKE utvidet: et lengre vindu ville latt kjøringens eget arkiv telle mot seg selv uten at
+# 3-timersgrensa i score_runs() skrives om - det er en endring i målingen og skal til fysikk-kontrolløren først.
 
 # Theodors startverdier: sannsynlighet for treff innenfor én stjerne.
 CONFIDENCE_START = {1: 90, 2: 85, 3: 80, 4: 70, 5: 65, 6: 55, 7: 55,
