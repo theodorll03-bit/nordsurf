@@ -7,9 +7,9 @@
     "lon": 25.8403
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "stedsnavn",
@@ -24,17 +24,33 @@
      "lon": 25.84519
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 70.871411,
+     "lon": 25.833244,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Én buet sandstrand innerst i vika som vender ØNØ, slik hintet om dønning fra øst tilsier. Flyfotoet er tatt på fjære sjø med 150-200 m bred sandflate. Listepinnen sto ca. 330 m utenfor lavvannslinja; flyttet inn til ca. 60 m utenfor den synlige vannkanten midt på stranda. Hovedtoppen er ukjent, og avstanden til stranda varierer mye med tidevannet.",
+     "dato": "2026-11-10",
+     "sikkerhet": "A",
+     "flyttet_m": 257
+    }
+   ],
+   "startpunkt": {
+    "lat": 70.8714,
+    "lon": 25.8403
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Posisjonen er god: én buet sandstrand mot ØNØ, 60 m utenfor vannkanten ved fjære (230 m fra OSM-kysten). Men vinduet mot åpent hav er bare 5° i GSHHS (61-65°) og 10° med OSM ved 150 km, fordi vika ligger inne i munningen av Porsangerfjorden og østlig dønning (hintet) stenges av land på andre siden; ved listepinnen 330 m lenger ut er det 15°. Bygges ikke før noen kan si om dønningen faktisk når inn (trolig wrap, som vi ikke har modell for)."
   },
   "berlevag-sandfjorden": {
    "spot": {
-    "lat": 70.7979,
-    "lon": 29.2671
+    "lat": 70.798214,
+    "lon": 29.268436
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
+   "sikkerhet": "A",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "stedsnavn",
@@ -49,17 +65,33 @@
      "lon": 29.23025
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 70.798214,
+     "lon": 29.268436,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Ca. 1 km sandstrand som vender NØ, med elveos i nordvestenden. Listepinnen sto i vannkanten midt på stranda; flyttet ca. 60 m rett ut til sandbankene der det bryter hvitt. Hovedtoppen er ukjent. Posisjonen ligger fortsatt inne i Sandfjorden landskapsvernområde (121 m fra grensa).",
+     "dato": "2026-11-10",
+     "sikkerhet": "A",
+     "flyttet_m": 60
+    }
+   ],
+   "startpunkt": {
+    "lat": 70.7979,
+    "lon": 29.2671
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Sandstrand på ca. 1 km mot NØ (kystnormal 59°) med fritt hav 32-105° (GSHHS, 150 km), som passer hintet om dønning fra NØ. Posisjonen ligger 166 m fra kystlinja, ved sandbankene der det bryter. Den ligger 121 m inne i Sandfjorden landskapsvernområde, men forskriften (1983-11-04-1637) forbyr bare motorisert ferdsel øst for veien og sier ingenting om surfing, så det blir ingen «Forbud nå»."
   },
   "persfjord": {
    "spot": {
-    "lat": 70.4209,
-    "lon": 30.7834
+    "lat": 70.42132,
+    "lon": 30.784553
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
+   "sikkerhet": "A",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -75,7 +107,23 @@
      "lon": 30.79107
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 70.42132,
+     "lon": 30.784553,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Buet sandstrand innerst i fjorden som vender N, med elveos i østenden og et skjær ca. 150-200 m vest for pinnen. Listepinnen sto ca. 45 m fra vannkanten; flyttet til ca. 100 m ut midt på stranda øst for skjæret. Hovedtoppen er ukjent. Fortsatt utenfor Persfjorden-Syltefjorden landskapsvernområde (375 m).",
+     "dato": "2026-11-10",
+     "sikkerhet": "A",
+     "flyttet_m": 63
+    }
+   ],
+   "startpunkt": {
+    "lat": 70.4209,
+    "lon": 30.7834
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Buet sandstrand innerst i fjorden mot N (kystnormal 358°), 91 m fra kystlinja, med fritt hav 347-33° (GSHHS) og 345-35° (OSM), som passer hintet om dønning fra N. Skjæret 150-200 m vest må holdes utenfor BarentsWatch-søket. Posisjonen ligger 375 m utenfor Persfjorden-Syltefjorden landskapsvernområde, som bare krever varsom ferdsel."
   },
   "skallelv": {
    "spot": {
@@ -83,9 +131,9 @@
     "lon": 30.361
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -113,7 +161,24 @@
      "lon": 30.24524
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 70.183332,
+     "lon": 30.339498,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen sto ved en steinodde mellom strendene. Hintet sier strand og elveos med dønning fra SSØ, så posisjonen er satt på sandbanken ca. 110 m utenfor munningen av Skallelva, der en sandtange møter et steinete nes. Sandstranda fortsetter sørover fra osen. Stor flytting, og det er usikkert hvilken av strendene det surfes på. Trenger lokalkunnskap.",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 975,
+     "alternativ": "Lang østvendt sandstrand nord for odden (omtrentlig, ikke sett på nært hold): 70.1936, 30.3605"
+    }
+   ],
+   "startpunkt": {
+    "lat": 70.1882,
+    "lon": 30.361
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Flyttet 975 m fra listepinnen til elveosen, men flyfotorunden er selv usikker på hvilken strand det surfes på, og osen (kystnormal ca. 198°) og alternativet nord for odden (ca. 106°) ville gitt helt ulike spots. Vinduet mot Barentshavet er ca. 41° med OSM, men bare 11° i GSHHS fordi GSHHS legger osen på land, så fabrikken vil regne feil her. Trenger lokalkunnskap om stranda før bygging."
   },
   "skallneset": {
    "spot": {
@@ -121,9 +186,9 @@
     "lon": 30.349
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "stedsnavn",
@@ -132,7 +197,23 @@
      "lon": 30.34904
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 70.140401,
+     "lon": 30.363523,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen sto på land midt på neset, 234 m fra sjøen. Neset har flate bergheller; på den nordøstvendte sida like nord for østspissen går små hvite bølgelinjer langs steinstranda. Satt ca. 50 m utenfor denne sida ved spissen. Dokumentasjonen er svak, og akkurat hvilket rev det gjelder er usikkert.",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 554
+    }
+   ],
+   "startpunkt": {
+    "lat": 70.1397,
+    "lon": 30.349
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Rev med svak dokumentasjon (wannasurf og geonames). Listepinnen sto 234 m inne på land, og flyfotoet fant ikke selve revet, bare små bølgelinjer langs steinstranda. Hintet om dønning fra N kan ikke stemme fordi neset ligger på nordsida av Varangerfjorden, og GSHHS legger posisjonen på land (fabrikken får ikke noe vindu; OSM gir 60-107°); venter på noen som vet hvor revet er."
   },
   "laukvika-senja": {
    "spot": {

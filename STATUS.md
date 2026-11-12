@@ -1,5 +1,15 @@
 # Nordsurf: status
 
+## T1 Finnmark: berlevag-sandfjorden og persfjord lagt inn som foreløpige 10.11.2026 (Theodors ja, gren `region/finnmark`, ikke merget)
+
+`tools/godkjenn_spot.py` har flyttet de to bygde forslagene inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/troms`. Spots.json har 30 spots, 25 er slått på.
+
+- Finnmark er ny region og står først i `regions` (nord til sør): Finnmark 1, Troms 2, Vesterålen 3, Lofoten 4, Møre og Romsdal 5. `order` er bare en sorteringsnøkkel (`publish.regions_for`), og appen bruker navnene.
+- Sandfjorden (Berlevåg): facing 58,7°, svellvindu [32, 105], offshore [194, 284].
+- Persfjord: facing 358,5°, svellvindu [347, 33], offshore [134, 224].
+- Begge har standardhøyder for strand (0,8–2,0 m, maks 3,5). Spotansvarlig og fysikk-kontrolløren har godkjent.
+- Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. porsangvika, skallelv og skallneset venter på lokalkunnskap.
+
 ## T1 Troms: bovaer lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/troms`, ikke merget)
 
 `tools/godkjenn_spot.py bovaer` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Spots.json har 28 spots, 23 er slått på.
