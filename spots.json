@@ -1410,6 +1410,52 @@
       "_ideal_height": "standard, ubekreftet (Theodors ja 10.11.2026)",
       "area": "Bodø",
       "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "breivikeidet",
+      "name": "Breivikeidet",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Troms",
+      "spot": {
+        "lat": 69.659992,
+        "lon": 19.664974
+      },
+      "facing": 17.3,
+      "swell_window": [
+        20,
+        25
+      ],
+      "_vindu": "Spotfabrikken 2026-11-12: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[20, 25]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet. Spotansvarlig 12.11.2026 (OSM, uten kysttoleranse, fra posisjonen): fritt 150 km 20-25°; 10-17° treffer land 31-39 km ut, 18-19° 50-51 km ut, 26-29° Arnøya 55-64 km ut, 30° og over under 15 km, 9° og under under 8 km. Theodors 15-30° (12.11) er fri linje ut Ullsfjorden, ikke til åpent hav. Samme type gap som russelv/lenangsoyra (15°-regelen gjelder ikke).",
+      "offshore_wind": [
+        152,
+        242
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 70.3284,
+        "lon": 20.4562
+      },
+      "_havpunkt": "Langs midten av vinduet (22.5°), 80 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py). NB (spotansvarlig 12.11.2026): søket stoppet ved 80 km-grensa i bygg_spot.havpunkt - ved 10 km i retning 220-250° ligger det land (GSHHS), så kravet om 10 km åpent hav rundt er ikke helt oppfylt. Punktet ligger 1,0 km fra Lenangsøyras havpunkt (70.3349, 20.4737), i samme landmaskerte GFS Wave-celle (70,25/20,50) - se lenangsoyra sin offshore_longrange i spots.json.",
+      "barentswatch_point": {
+        "lat": 69.660855,
+        "lon": 19.665743
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1827_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 100m@17.3, 100 m ut, dybde 8,8 m. Lavere sikkerhet (spotansvarlig 12.11.2026): 15.10-regelen fant ikke noe punkt: velgeren prøver bare timer med svell ute fra innenfor vinduet (12 av 19), og i alle de 12 var retningen ved 100 m 69-88° (46-66° fra svellet ute). BarentsWatch viste kort krapp sjø fra øst i 17 av 19 timer (100 m: 0,12-0,28 m, Tp 2,0-2,9 s) mens svellet ute var 0,8-1,4 m fra 11-27°. I de to roligste timene (12.11 kl. 18Z og 13.11 kl. 00Z) sto det igjen 0,09 m fra 9° med Tp 7,5 s ved 100 m - ca. 7 % av svellet ute (1,2-1,26 m fra 12-18°, like utenfor vinduet). Hs øker fra 0,19 m (100 m) til 0,30 m (800 m) og flater ut der; økningen er le bak Breivikneset for østlig krappsjø, ikke brytesone (8,8 m er dypt vann for 3 s bølger). 100 m er derfor beholdt som punktet som best ligner stranda.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "Theodor 12.11.2026 (hørt, kilden ikke navngitt) + spotfabrikken",
+      "_ubekreftet": "Theodor 12.11.2026: har hørt at det er bra, men ikke surfet her selv. Kilden er ikke navngitt, så vekten er lav. Posisjon og facing er fra kystlinje og flyfoto (ingen bølger synlige der), ikke fra en observasjon. Fjordspot: bølgene kommer trolig enten som svell fra NNØ gjennom gapet mellom Vanna og Arnøya (lang periode, mye energi tapt på 80 km inn fjorden) eller som vindsjø inn Ullsfjorden. Første observasjon blir fasiten.",
+      "_vern": "Sandbukta naturreservat (VV00002296, forskrift 2004-06-04-857): stranda og sjøarealet innerst i bukta, med posisjonen, ligger inne i reservatet. Forskriften har ikke ferdsels- eller surfeforbud - bare motorferdsel på land er forbudt, og dyre- og fuglelivet er fredet mot unødig forstyrrelse. Ingen «Forbud nå».",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-12T1827_kandidater.json",
+      "_rettet": {
+        "barentswatch_point": "første punkt med dybde ≥ 8 m og BarentsWatch-data (100 m ut), regelen fant ingen punkt; lavere sikkerhet (spotansvarlig 12.11.2026)"
+      },
+      "area": "Tromsø",
+      "forelopig_fra": "2026-11-12"
     }
   ]
 }

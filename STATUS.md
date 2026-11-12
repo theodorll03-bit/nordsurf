@@ -1,5 +1,29 @@
 # Nordsurf: status
 
+## T1 Troms: breivikeidet lagt inn som foreløpig og ubekreftet 12.11.2026 (Theodors ja, gren `region/breivikeidet`, ikke merget)
+
+Ny spot fra Theodor 12.11 (ikke i lista 15.10): Sandbukta ved Breivikeidet, Tromsø kommune, innerst i Ullsfjorden. `tools/godkjenn_spot.py breivikeidet` har lagt den inn i spots.json med status `forelopig`, `enabled` og 0 restriksjoner. Den er merket ubekreftet i `_ubekreftet`: Theodor har bare hørt at den er bra, kilden er ikke navngitt, og vekten er lav. Pakka står i `data/kandidater/bygget/troms.md` og notatene i `troms.notater.md`.
+
+- **Posisjon og geometri:** posisjonen er 69.659992, 19.664974, 235 m fra Theodors pinne, sikkerhet B. Facing 17,3°, vindu [20, 25], offshore [152, 242], høyder standard for strand.
+  - Vinduet er 6°. Det er samme type fjordgap som russelv og lenangsoyra, så 15°-regelen gjelder ikke.
+  - 10–19° og 26–29° treffer Reinøya, Vanna og Arnøya 31–64 km ut.
+- **Havpunkt:** fabrikkens 70.3284, 20.4562, uten `offshore_longrange`. Det ligger i samme landmaskerte GFS-celle som lenangsoyra og gir «–» fra ca. dag 8, ikke 0. Spørsmål til Theodor.
+- **Vern:** Sandbukta naturreservat dekker stranda og sjøen innerst i bukta. Det er ikke ferdsels- eller surfeforbud, bare forbud mot motorferdsel på land. Lagt inn for hånd i `vern.json` og `vern_forskrifter.json`.
+- **BarentsWatch** (snitt 12.11 kl. 18:27Z, kjøring 43280036362): det finnes data helt inn i bukta.
+  - Det var krappsjø fra øst (Tp 2–3 s) i 17 av 19 timer. Svell fra NNØ nådde bare inn med 0,09 m (7,5 s) i to timer, mot 1,2 m ute.
+  - Regelen fra 15.10 fant ikke noe punkt. Punktet er satt til 100 m ut (8,8 m) med `--forste-med-data 8`, lavere sikkerhet.
+- **Fysikk-kontrolløren:** SPØR THEODOR.
+  - 100 m-punktet er riktig valg.
+  - Krappsjø fra øst gir 0 stjerner fordi periodefaktoren er 0,3.
+  - Uten `offshore_longrange` blir det «–», ikke 0.
+  - En tekstfeil om velgerens timer er rettet.
+  - Nytt funn: reservesonen (dag 4 til ca. 8) regner 0,40–0,51 av svellet ute, mens BarentsWatch viste høyst ca. 15 %. Uten vind gir 1,4 m fra 21° (12 s) 2 stjerner i reserven og 0 med BarentsWatch, så det blir et hopp ved dag 4.
+  - Taket eller transfer krever Theodors ja.
+  - Første runde (12.11): `exposure_override` for vestlig svell trengs ikke, fordi geometrien gir 0,0 for 200–330°.
+- **Spørsmål til Theodor** (`troms.notater.md`): (1) havpunkt og `offshore_longrange` fra lenangsoyra, (2) vinduet på 6° mot hans 15–30°, (3) vindsjø i fjorden, (4) tak eller transfer for reservesonen.
+- **Kjent risiko:** `tools/importer_kandidater.py` og `tools/kandidat_vern.py skriv` bygger kandidater.json og vern.json på nytt og mister da oppføringene som er lagt inn for hånd.
+- **Gjenstår:** én prøvehenting når grenen pushes. Theodor ser tallene og svarer på spørsmålene før merge.
+
 ## T1 Salten: seines lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/salten`, ikke merget)
 
 `tools/godkjenn_spot.py seines` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/finnmark`. Spots.json har 31 spots, 26 er slått på.
