@@ -1,5 +1,13 @@
 # Nordsurf: status
 
+## T1 Lofoten/Vesterålen: g-frame rettet 12.11.2026 (Theodors ja), fortsatt holdt tilbake
+
+- **facing 270°** som bølgeretning ved revet (ikke strandnormal, lavere sikkerhet), **offshore_wind [45, 135]**, og **BarentsWatch-punktet 500 m ut langs 270°** (9,2 m dyp). Snittet er kjørt i Actions 12.11 (`data/bw_point_search/result_2026-11-12T1716_kandidater.json`), og punktet er valgt av regelen fra 15.10 (`tools/velg_bw_punkt.py`).
+- **Svakhet:** punktet er valgt på én time (12.11 12Z, Hs 0,36 m). Bare den timen av 18 hadde svell ute fra vinduet. Ellers kom svellet fra nord, og retningen ved punktet var 299-326°, altså 29-56° fra facing.
+- **`enabled: false` står.** Ingen tall i appen endres. Gjenstår: se punktet og retningen i neste vestsvell, og så Theodors ja til å slå på.
+- **Fysikk-kontrollør: godkjent.** Tallene stemmer med resultatfila, og regelen er riktig brukt. Hs- og dybdedelen av regelen velger 500 m i alle 18 timene (400 m ligger i le bak grunnfeltet). Retningskriteriet hviler på én time. Merknad til senere: i den timen sto bølgene 37° fra facing ved punktet (307° mot 270°). Holder det i vestsvell, vil retningsfaktoren straffe treff fra nordvest, og det må vurderes før spoten slås på.
+- Pakka (`data/kandidater/bygget/lofoten-vesteralen.md`) er laget på nytt.
+
 ## T0 - svarene dine 10.11.2026 og main-pushen
 
 **Avgjort (Theodor 10.11):**

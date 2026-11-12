@@ -584,28 +584,28 @@
         "lat": 68.6389,
         "lon": 14.427489
       },
-      "facing": 330.0,
-      "_holdt_tilbake": "Holdt tilbake (Theodors ja 16.10, chat): retningen ved BarentsWatch-punktet 1 900 m ut (251-284° i prøvevarselet 16.10 11Z) ligger 46-79° fra facing 330 → retningsfaktor 0-0,6. Slås på når retningen ved punktet er avklart.",
+      "facing": 270.0,
+      "_holdt_tilbake": "Holdt tilbake (Theodors ja 16.10, chat). 12.11.2026: facing er satt til 270 som bølgeretning ved revet (lavere sikkerhet), og BarentsWatch-punktet er flyttet til 500 m ut langs 270 (snittet 12.11). Punktet er valgt på én time (12.11 12Z, Hs 0,36 m), den eneste av 18 der svellet ute kom fra vinduet. Svellet ute kom ellers fra nord (343-17°), og retningen ved punktet var 299-326°, altså 29-56° fra facing. Slås på først med Theodors ja, etter at punktet og retningen er sett i vestsvell.",
       "swell_window": [
         246,
         334
       ],
       "_vindu": "Spotfabrikken 2026-10-16: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[225, 225], [246, 334]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
       "offshore_wind": [
-        105,
-        195
+        45,
+        135
       ],
-      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "_offshore_vind": "standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)",
       "offshore": {
         "lat": 68.6791,
         "lon": 14.1262
       },
       "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
       "barentswatch_point": {
-        "lat": 68.653782,
-        "lon": 14.40406
+        "lat": 68.6389,
+        "lon": 14.415158
       },
-      "_barentswatch": "Flyttet til 1900 m ut i snittet langs 330.0° (dybde 9.9 m) - kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne. Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m.",
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1716_kandidater.json), regelen fra 15.10: snitt 500m@270.0, 500 m ut, dybde 9,2 m, Hs 0,36 m kl. 2026-11-12T12:00Z. Bare 1 av 18 timer hadde svell ute fra vinduet (12Z). Hs-hoppet fra 400 m til 500 m og det flate fra 500 m til 600 m ses i alle 18 timene. Lavere sikkerhet, ses igjen i vestsvell.",
       "ideal_height": [
         1.0,
         2.5
@@ -615,9 +615,11 @@
       "_ideal_height": "forslag fra Claude 16.10, ukalibrert",
       "_rettet": {
         "ideal_height/max_height": "forslag fra Claude 16.10, ukalibrert",
-        "barentswatch_point": "1900 m ut (kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne)"
+        "barentswatch_point": "nytt snitt langs 270.0° (bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026))",
+        "offshore_wind": "standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)",
+        "facing": "bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026)"
       },
-      "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T1036_kandidater.json",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-12T1716_kandidater.json",
       "area": "Bø",
       "forelopig_fra": "2026-10-16"
     },

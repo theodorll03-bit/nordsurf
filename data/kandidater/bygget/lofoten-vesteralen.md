@@ -1,6 +1,6 @@
 # Gjennomgangspakke: Lofoten, Vesterålen (27 spots)
 
-Laget 2026-11-10 av tools/region_pakke.py fra spots.json (gjelder der spoten ligger inne) og fabrikkens forslag (data/kandidater/bygget/<id>.json). 15 publisert, 5 holdt tilbake, 3 parkert, 4 venter på lokalkunnskap.
+Laget 2026-11-12 av tools/region_pakke.py fra spots.json (gjelder der spoten ligger inne) og fabrikkens forslag (data/kandidater/bygget/<id>.json). 15 publisert, 5 holdt tilbake, 3 parkert, 4 venter på lokalkunnskap.
 
 Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: strandnormal ±150 m langs kysten. Offshore-vind: motsatt av facing ±45° når ikke annet står. BarentsWatch-punkt: snittregelen 15.10 (første punkt utover med minst 8 m dyp og flat Hs). Tidevann: Kartverkets referansested for posisjonen. Vern: Naturbase innen 2 km, målt fra spotens posisjon der oppslaget finnes (ellers fra listepinnen, og da står det), forskriften lest på Lovdata. Sikkerhet: A = navn, strandtype, synlig bølge/formasjon og retning stemmer; B = to av fire; C = resten (bygges ikke).
 
@@ -11,6 +11,7 @@ Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: strandnormal
 - **#22 er merget til main (10.11.2026).** Claudes gjennomgang 16.10 ga 14 godkjent og 6 rettet (20 nye spots), og flakstad-beach-kirkesiden og rorvika parkert. eggum-ost-steinstrand ble parkert samme dag, så 19 nye ligger i spots.json. 14 av dem er publisert, og 5 holdes tilbake. Med Unstad, som lå der fra før, er 15 spots i regionene live.
 - **Pakka er laget på nytt fra spots.json.** Den forrige utgaven av tabellen (16.10) viste verdiene fra før rettelsene (unstad-left 285°, soppelplassen 300°). Gjeldende verdier står i tabellene under.
 - **Rettet etter gjennomgangen 16.10:** unstad-left, unstad-right og soppelplassen har Unstads facing 294,8° (kontrollørens andre runde). horseid har facing 305°. g-frame har BarentsWatch-punktet flyttet fra 1 400 m til 1 900 m ut, fordi 1 400 m lå i et grunnfelt.
+- **g-frame 12.11.2026 (Theodors ja):** facing er satt til 270° som bølgeretning ved revet (ikke strandnormal, lavere sikkerhet), offshore til 45-135°, og BarentsWatch-punktet er flyttet til 500 m ut langs 270° (9,2 m dyp, snittet 12.11). Punktet er valgt på én time med Hs 0,36 m, så det bør ses igjen i neste vestsvell. Spoten er fortsatt holdt tilbake.
 - **Holdt tilbake siden 16.10:** g-frame, unstad-left, unstad-right og soppelplassen (`enabled: false`).
 - **Holdt tilbake 10.11:** ramberg, til T2b er avgjort (Theodors ja 10.11).
 - **Parkert:** eggum-ost-steinstrand (eget snitt 16.10 fant ikke noe punkt), rorvika og flakstad-beach-kirkesiden.
@@ -21,7 +22,7 @@ Vindu: fri linje 150 km over GSHHS f (300 m kysttoleranse). Facing: strandnormal
 Hele svaret ligger i `lofoten-vesteralen-gjennomgang.csv` (én linje per spot): **17 godkjent, 3 rett, 7 avvis.** Kommentarene for eggum, eggum-ost-steinstrand og g-frame er presisert etter kontrollørens gjennomgang (retningen til reservatet, snitt i stedet for spenn, og bølgeretningen i snittet). Beslutningene er uendret.
 
 - **Godkjent (17):** de 14 nye publiserte, Unstad, unstad-left og unstad-right. Facing ligger innenfor spennet OSM-kysten gir (±150 til ±500 m rundt spoten) for 13 av de 14 nye. Spennet er bredt for skagsanden (313-348°), haukland (210-235°) og kvalnes (337-348°). Unntaket er horseid, der 305° er satt med vilje (fabrikken gir 192-231°, langs stranda), så et nytt fabrikkbygg må ikke skrive over den.
-- **Rett (3):** g-frame, ramberg og soppelplassen. Ingen av dem er live, og ingenting er endret i spots.json. Se tabellen under.
+- **Rett (3):** g-frame, ramberg og soppelplassen. Ingen av dem er live. g-frame er rettet i spots.json 12.11 (fortsatt `enabled: false`), de to andre er uendret. Se tabellen under.
 - **Avvis (7):** aknes, andenes, broken-hearts og g-force venter på lokalkunnskap. eggum-ost-steinstrand, rorvika og flakstad-beach-kirkesiden blir stående parkert.
 
 Svar på spørsmålene til gjennomgangen:
@@ -35,7 +36,7 @@ Svar på spørsmålene til gjennomgangen:
 
 | Spot | Hva som mangler | Hvem |
 |---|---|---|
-| g-frame | Bølgene kom fra vest i snittet 16.10 (100 m til 3 km): medianen er 254-284° i alle snittpunktene utenom grunnfeltet ved 1 700-1 800 m, og 87 % av timene ligger innenfor 246-288°. Facing 330° følger kysten nordover. Spotansvarlig anbefaler facing ca. 270°, offshore 45-135° og nytt snitt langs 270°. BarentsWatch-punktet 1 900 m ut (9,9 m) ligger utenfor fabrikkens 1,5 km og har lavere sikkerhet. Teksten `_barentswatch` i spots.json nevner både det gjeldende punktet og det gamle (1 400 m, 6,0 m). Den ryddes sammen med facing. | Theodor (spørsmål i til-theodor.md) |
+| g-frame | Rettet 12.11 (Theodors ja): facing 270° som bølgeretning ved revet, offshore 45-135°, BarentsWatch-punkt 500 m ut langs 270° (9,2 m). Bakgrunn: bølgene kom fra vest i snittet 16.10 (medianen 254-284°), og revet har ingen entydig strandnormal. I snittet 12.11 kom svellet ute fra nord (bare én av 18 timer fra vinduet), og retningen ved punktet var 299-326°, altså 29-56° fra facing. 400 m-punktet (8,9 m) ga 0,20 m når 500 m ga 0,36 m kl. 12Z, og lå lavere enn 500 m i alle 18 timene (i 8 av dem med retning fra land), så regelen valgte 500 m. Gjenstår: se punktet og retningen i neste vestsvell, og så Theodors ja til å slå på. | Theodor |
 | unstad-left, unstad-right, soppelplassen | Ga 3,4-4,2 m når Unstad ga 1,6-1,8 m samme time i prøvevarselet 16.10 kl. 11Z (unstad-left ligger 250 m fra Unstad, unstad-right 485 m og soppelplassen 996 m). Unstads BarentsWatch-punkt (250 m ut) ligger trolig i brytesonen (ROADMAP N). Snittene deres ble tatt langs fabrikkens første facing (334° / 239° / 344°), ikke langs 294,8°. Når N er avgjort i T2: nye snitt langs 294,8° for unstad-left og unstad-right, og så ett samlet spørsmål til Theodor. | Theodor, etter T2 |
 | soppelplassen (i tillegg) | Offshore-vinden er utvidet til 70-209° uten observasjon eller navngitt kilde. Spotansvarlig anbefaler 70-160°. Høydene [1,5, 3,5] mangler begrunnelse. Det samme gjelder høydene for g-frame, unstad-left og unstad-right («forslag fra Claude 16.10, ukalibrert»). Tas i det samlede spørsmålet etter N. | Theodor, etter T2 |
 | ramberg | Venter på T2b (Unstad mot Flakstad). Posisjonen og punktet (900 m ut, 9,6 m) er godkjent av spotansvarlig. Facing 287,7° er strandnormalen, men ligger 9° utenfor eget vindu (297-348°), og bølgene ved punktet kom fra 327-330°. Facing 315° og offshore 90-180° ligger på grenen region/ramberg-315 og flytter spoten fra 0 til 2 stjerner. | Theodor, etter T2b |
@@ -70,7 +71,7 @@ Eggum er publisert uten forbud. Eggum naturreservat (surfebrett forbudt hele år
 | eggum-ost-steinstrand | Eggum øst (steinstrand) | Lofoten | parkert | B | 11.5° | 283–31° | 146–236° | ikke funnet (se «Usikkert») |
 | flakstad-beach-kirkesiden | Flakstad Beach (kirkesiden) | Lofoten | parkert | B | 50.2° | – | 185–275° | ikke funnet (se «Usikkert») |
 | g-force | G-force | Vesterålen | venter på lokalkunnskap | C (forslag, ikke godkjent) | – | – | – | – |
-| g-frame | G-frame | Vesterålen | holdt tilbake | B | 330.0° | 246–334° | 105–195° | 68.653782, 14.40406 (1907 m ut i retning 330°, 9.9 m dyp) |
+| g-frame | G-frame | Vesterålen | holdt tilbake | B | 270.0° | 246–334° | 45–135° | 68.6389, 14.415158 (499 m ut i retning 270°, 9.2 m dyp) |
 | haukland | Haukland | Lofoten | publisert | B | 225.0° | 252–276° | 0–90° | 68.194957, 13.51855 (401 m ut i retning 225°, 8.0 m dyp) |
 | horseid | Horseid | Lofoten | publisert | B | 305.0° | 308–4° | 80–170° | 68.028625, 12.978899 (400 m ut i retning 305°, 9.5 m dyp) |
 | hoyvika | Høyvika | Vesterålen | publisert | B | 261.5° | 233–296° | 36–126° | 69.232612, 15.848527 (599 m ut i retning 261°, 8.8 m dyp) |
@@ -98,7 +99,7 @@ Eggum er publisert uten forbud. Eggum naturreservat (surfebrett forbudt hele år
 | eggum-ost-steinstrand | parkert | Parkeres. Eggums BarentsWatch-punkt ligger 1 458 m unna med bølger fra 268-314° (57-103° fra facing 11,5°, retningsfaktor ca. 0). Eget snitt langs facing (16.10, result_2026-10-16T1118_kandidater.json) fant ikke noe punkt: grunn hylle 6-7 m dyp og skjær 1,2-1,4 km ut, aldri 8 m innen 1,5 km. Tas opp igjen med et lengre snitt eller et punkt utenfor skjærene (Theodor velger). |
 | flakstad-beach-kirkesiden | parkert | Parkeres. Ligger i le bak halvøya og får bare dønning som brekker rundt odden (wrap). Fabrikken finner ingen fri linje til havet, så ratingen ville alltid vist «Treffer ikke». Tas opp igjen når vi har en modell for wrap. |
 | g-force | venter på lokalkunnskap | Listepinnen (eksakt) er beholdt, men den ligger foran steinkanten sør for den lille sandstranda. Kan høre til foran stranda ca. 100 m nordøst. |
-| g-frame | holdt tilbake | Holdt tilbake (Theodors ja 16.10, chat): retningen ved BarentsWatch-punktet 1 900 m ut (251-284° i prøvevarselet 16.10 11Z) ligger 46-79° fra facing 330 → retningsfaktor 0-0,6. Slås på når retningen ved punktet er avklart. |
+| g-frame | holdt tilbake | Holdt tilbake (Theodors ja 16.10, chat). 12.11.2026: facing er satt til 270 som bølgeretning ved revet (lavere sikkerhet), og BarentsWatch-punktet er flyttet til 500 m ut langs 270 (snittet 12.11). Punktet er valgt på én time (12.11 12Z, Hs 0,36 m), den eneste av 18 der svellet ute kom fra vinduet. Svellet ute kom ellers fra nord (343-17°), og retningen ved punktet var 299-326°, altså 29-56° fra facing. Slås på først med Theodors ja, etter at punktet og retningen er sett i vestsvell. |
 | ramberg | holdt tilbake | Holdt tilbake (Theodors ja 10.11.2026): venter på T2b (Unstad mot Flakstad, Lofoten Surfsenter). Facing 315 og offshore [90,180] ligger på grenen region/ramberg-315 og flytter Ramberg fra 0 til 2 stjerner. Slås på når T2b er avgjort. |
 | rorvika | parkert | Parkeres. Vinduet er bare ca. 6 grader (222-234) mot Vestfjorden, så den vil nesten alltid vise «Treffer ikke», og BarentsWatch fant intet punkt. Vurderes igjen når vi har vindbølgemodell for innaskjærs spots. |
 | soppelplassen | holdt tilbake | Holdt tilbake (kontrollør 16.10, Claude delegert): i prøvevarselet 16.10 11Z gir spoten 3,4-4,2 m mens Unstad 250-600 m unna gir 1,6-1,8 m samme time (Unstads BarentsWatch-punkt ligger trolig i brytesonen - ROADMAP N). Slås på når Theodor har avgjort Unstads punkt/prior, eller med Theodors ja til å publisere med merknad. |
@@ -275,17 +276,17 @@ Open-Meteo: vekt 1,14 per punkt (16 dager), to bølgemodeller per havpunkt og et
 | | |
 |---|---|
 | Posisjon | 68.6389, 14.427489 - godkjent forslag (flyfoto), claude (delegert av Theodor 16.10.2026), 2026-10-16. 0 m fra listepinnen. Rev i bukta ved Gimstad/Skagen. Listepinnen (eksakt) ligger over grunnområdet ca. 70 m fra land og er beholdt. |
-| Facing | 330.0° |
+| Facing | 270.0° |
 | Svellvindu | 246–334° |
-| Offshore-vind | 105–195° |
+| Offshore-vind | 45–135° |
 | Havpunkt | 68.6791, 14.1262 (13 km ut i retning 290°) |
-| BarentsWatch-punkt | 68.653782, 14.40406 (1907 m ut i retning 330°, 9.9 m dyp)<br>Flyttet til 1900 m ut i snittet langs 330.0° (dybde 9.9 m) - kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne. Snitt langs facing (data/bw_point_search/result_2026-10-16T1036_kandidater.json), første punkt med dybde ≥ 6 m og BarentsWatch-data (retting fra gjennomgangen): snitt 1400m@330.0, 1400 m ut, dybde 6,0 m. |
-| Eksponering | vindu 88° bredt, facing 40° fra midten; ingen geometrisk grunnlinje ennå - henteren bruker vindu og skyggekurve som reserve |
+| BarentsWatch-punkt | 68.6389, 14.415158 (499 m ut i retning 270°, 9.2 m dyp)<br>Snitt langs facing (data/bw_point_search/result_2026-11-12T1716_kandidater.json), regelen fra 15.10: snitt 500m@270.0, 500 m ut, dybde 9,2 m, Hs 0,36 m kl. 2026-11-12T12:00Z. Bare 1 av 18 timer hadde svell ute fra vinduet (12Z). Hs-hoppet fra 400 m til 500 m og det flate fra 500 m til 600 m ses i alle 18 timene. Lavere sikkerhet, ses igjen i vestsvell. |
+| Eksponering | vindu 88° bredt, facing 20° fra midten; ingen geometrisk grunnlinje ennå - henteren bruker vindu og skyggekurve som reserve |
 | Tidevannssted | Andenes (-5 min), faktor 1.00 |
 | Høyder | ideal [1.0, 2.5], maks 3.5 |
 | Vern/forbud | ingen verneområder innen 2 km av spoten |
 | Sikkerhet | B |
-| Usikkert | Holdt tilbake (Theodors ja 16.10, chat): retningen ved BarentsWatch-punktet 1 900 m ut (251-284° i prøvevarselet 16.10 11Z) ligger 46-79° fra facing 330 → retningsfaktor 0-0,6. Slås på når retningen ved punktet er avklart.<br>BarentsWatch-punktet ligger 1907 m ut, utenfor fabrikkens 1,5 km: lavere sikkerhet<br>offshore-vind: standard, ubekreftet (motsatt av facing ±45°)<br>ideal_height [1.0, 2.5] / max_height 3.5: forslag fra Claude 16.10, ukalibrert<br>barentswatch_point rettet: 1900 m ut (kontrollørens funn i #22 (Claude, delegert av Theodor 16.10.2026), ukalibrert: 1 400 m lå i et grunnfelt (1 700-1 800 m er 2-3 m dypt), 1 900 m er første punkt utenfor siste grunne) |
+| Usikkert | Holdt tilbake (Theodors ja 16.10, chat). 12.11.2026: facing er satt til 270 som bølgeretning ved revet (lavere sikkerhet), og BarentsWatch-punktet er flyttet til 500 m ut langs 270 (snittet 12.11). Punktet er valgt på én time (12.11 12Z, Hs 0,36 m), den eneste av 18 der svellet ute kom fra vinduet. Svellet ute kom ellers fra nord (343-17°), og retningen ved punktet var 299-326°, altså 29-56° fra facing. Slås på først med Theodors ja, etter at punktet og retningen er sett i vestsvell.<br>offshore-vind: standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)<br>ideal_height [1.0, 2.5] / max_height 3.5: forslag fra Claude 16.10, ukalibrert<br>barentswatch_point rettet: nytt snitt langs 270.0° (bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026))<br>offshore_wind rettet: standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)<br>facing rettet: bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026) |
 
 ![g-frame](g-frame.png)
 

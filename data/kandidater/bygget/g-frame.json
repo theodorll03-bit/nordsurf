@@ -27,9 +27,9 @@
   "_havpunkt": "Langs midten av vinduet (290.0°), 13 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
   "barentswatch_point": {
    "lat": 68.6389,
-   "lon": 14.417624
+   "lon": 14.415158
   },
-  "_barentswatch": "FORELØPIG: nytt snitt langs 270.0° til 1500 m - venter på BarentsWatch-snitt i Actions (find_bw_point.yml, kandidater) og velg_bw_punkt.py. Foreløpig punkt: 400 m ut, 8,9 m dyp (EMODnet), første punkt i snittet med minst 8 m.",
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1716_kandidater.json), regelen fra 15.10: snitt 500m@270.0, 500 m ut, dybde 9,2 m, Hs 0,36 m kl. 2026-11-12T12:00Z. Bare 1 av 18 timer hadde svell ute fra vinduet (12Z). Hs-hoppet fra 400 m til 500 m og det flate fra 500 m til 600 m ses i alle 18 timene. Lavere sikkerhet, ses igjen i vestsvell.",
   "tidevann": {
    "name": "Andenes",
    "code": "ANX",
@@ -49,7 +49,8 @@
    "barentswatch_point": "nytt snitt langs 270.0° (bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026))",
    "offshore_wind": "standard: motsatt facing ±45°, ubekreftet (Theodors ja 12.11.2026)",
    "facing": "bølgeretning ved revet, ikke strandnormal (rev uten entydig strandnormal) - lavere sikkerhet (Theodors ja 12.11.2026)"
-  }
+  },
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-11-12T1716_kandidater.json"
  },
  "snitt": [
   {
