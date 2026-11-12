@@ -1,0 +1,171 @@
+{
+ "spot": {
+  "id": "seines",
+  "name": "Seines",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Salten",
+  "spot": {
+   "lat": 67.209323,
+   "lon": 14.350718
+  },
+  "facing": 295.0,
+  "swell_window": [
+   [
+    254,
+    258
+   ],
+   [
+    263,
+    285
+   ],
+   [
+    309,
+    311
+   ]
+  ],
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 258], [263, 285], [287, 287], [309, 311], [314, 315]]; de tre sektorene som er brede nok er brukt ([254, 258], [263, 285] og [309, 311]). [287, 287] og [314, 315] er utelatt fordi de er smalere enn minstebredden i spotfabrikken. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   70,
+   160
+  ],
+  "_offshore_vind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+  "offshore": {
+   "lat": 67.2257,
+   "lon": 13.7492
+  },
+  "_havpunkt": "Langs midten av vinduet (274.0°), 26 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 67.212592,
+   "lon": 14.342707
+  },
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 500m@316.3, 500 m ut, dybde 8,5 m, Hs 0,47 m kl. 2026-11-10T12:00Z. Beholdt ved ny facing 295.0°: Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres.",
+  "tidevann": {
+   "name": "Bodø",
+   "code": "BOO",
+   "delay": "0",
+   "factor": "1.00",
+   "obsname": "Bodø"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+  "_rettet": {
+   "facing": "spotansvarlig 10.11.2026: point break, facing satt fra bølgeretningen ved punktet (292-298° i fire timer med lite svell), ubekreftet",
+   "barentswatch_point": "beholdt ved ny facing (Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres)",
+   "offshore_wind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+   "ideal_height/max_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
+  },
+  "_ideal_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 67.209323,
+   "lon": 14.350718,
+   "dybde_m": 0.1
+  },
+  {
+   "m": 100,
+   "lat": 67.209977,
+   "lon": 14.349116,
+   "dybde_m": 0.1
+  },
+  {
+   "m": 200,
+   "lat": 67.210631,
+   "lon": 14.347514,
+   "dybde_m": -0.1
+  },
+  {
+   "m": 300,
+   "lat": 67.211285,
+   "lon": 14.345911,
+   "dybde_m": 0.0
+  },
+  {
+   "m": 400,
+   "lat": 67.211938,
+   "lon": 14.344309,
+   "dybde_m": 3.4
+  },
+  {
+   "m": 500,
+   "lat": 67.212592,
+   "lon": 14.342707,
+   "dybde_m": 8.5
+  },
+  {
+   "m": 600,
+   "lat": 67.213246,
+   "lon": 14.341105,
+   "dybde_m": 8.5
+  },
+  {
+   "m": 700,
+   "lat": 67.2139,
+   "lon": 14.339503,
+   "dybde_m": 52.7
+  },
+  {
+   "m": 800,
+   "lat": 67.214554,
+   "lon": 14.337901,
+   "dybde_m": 43.5
+  },
+  {
+   "m": 900,
+   "lat": 67.215208,
+   "lon": 14.336298,
+   "dybde_m": 80.0
+  },
+  {
+   "m": 1000,
+   "lat": 67.215862,
+   "lon": 14.334696,
+   "dybde_m": 124.6
+  },
+  {
+   "m": 1100,
+   "lat": 67.216515,
+   "lon": 14.333094,
+   "dybde_m": 131.4
+  },
+  {
+   "m": 1200,
+   "lat": 67.217169,
+   "lon": 14.331492,
+   "dybde_m": 178.0
+  },
+  {
+   "m": 1300,
+   "lat": 67.217823,
+   "lon": 14.32989,
+   "dybde_m": 195.7
+  },
+  {
+   "m": 1400,
+   "lat": 67.218477,
+   "lon": 14.328288,
+   "dybde_m": 198.9
+  },
+  {
+   "m": 1500,
+   "lat": 67.219131,
+   "lon": 14.326685,
+   "dybde_m": 208.6
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-11-10T11:25+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
+  "lat": 67.209323,
+  "lon": 14.350718
+ },
+ "rettet": "2026-11-10"
+}
