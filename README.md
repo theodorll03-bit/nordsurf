@@ -12,7 +12,7 @@ Hele stjerner = hvor bra det blir. Stiplede stjerner = det vinden tar fra deg.
   - `test_rating.py` – sjekker ratingen mot det du faktisk har sett (Grøtfjord 24.09 osv.)
   - `fetch.py` – kjører alt og skriver `docs/data/forecast.json`
 - `docs/` – selve appen. GitHub Pages serverer denne mappa
-- `.github/workflows/forecast.yml` – henter nytt varsel hver tredje time, gratis
+- `.github/workflows/forecast.yml` – henter nytt varsel hver tredje time (03:17–21:17 UTC), gratis
 
 Loggene lagres på telefonen og synkes til et privat GitHub-repo (steg 5).
 
