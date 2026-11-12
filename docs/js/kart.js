@@ -378,8 +378,8 @@
     const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 17, y: g.y - 17, w: 34, h: 34} : {x: g.x - 7, y: g.y - 7, w: 14, h: 14});
     dots.push(...overlays());
     const hit = (r)=> placed.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y) || dots.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
-    // valgt først (beholder lappen), så flest stjerner
-    const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.st||0)));
+    // valgt først (beholder lappen), så høyest tall
+    const order = groups.map((g, i)=>({g, i})).sort((a, b)=> (b.g.members.some(m=>m.p.id===selected) ? 1 : 0) - (a.g.members.some(m=>m.p.id===selected) ? 1 : 0) || Math.max(...b.g.members.map(m=>m.v.srt!=null ? m.v.srt : m.v.st||0)) - Math.max(...a.g.members.map(m=>m.v.srt!=null ? m.v.srt : m.v.st||0)));   // srt: modellens tall i en mørk time (utforsk.js)
     for(const {g} of order){
       if(g.members.length > 1){
         // ved likhet foretrekkes et medlem som ikke er forbudt (aria-teksten «beste …»); fargen er uansett beste st
@@ -389,7 +389,8 @@
         continue;
       }
       const m = g.members[0], sel = m.p.id===selected;
-      const txt = `${m.p.name} ${m.v.miss ? "–" : (m.v.word || "")}`.trim();
+      const tall = m.v.rute ? "" : String(Math.min(5, m.v.st||0));   // tallet 0-5 foran ordet; tom når ruta ville vært tom (mangler, mørkt, forbud)
+      const txt = `${m.p.name} ${tall} ${m.v.miss ? "–" : (m.v.word || "")}`.replace(/\s+/g, " ").trim();
       const w = 22 + txt.length * 7.4;
       const cands = [["right", m.x + GAP, m.y - PH/2], ["left", m.x - GAP - w, m.y - PH/2], ["over", m.x - w/2, m.y - GAP - PH - 2], ["under", m.x - w/2, m.y + GAP + 2]];
       let pos = null;
@@ -402,7 +403,7 @@
       if(!pos && sel) pos = {side: "right", r: {x: Math.max(area.x + 4, Math.min(area.x + area.w - 4 - w, m.x + GAP)), y: m.y - PH/2, w, h: PH}};
       if(pos) placed.push(pos.r);
       html.push(`<button type="button" class="mk r-${Math.min(5, m.v.st||0)}${m.v.miss ? " miss" : ""}${sel ? " sel" : ""}${pos ? "" : " bare"}" style="transform:translate3d(${(m.x-22).toFixed(1)}px,${(m.y-22).toFixed(1)}px,0)" data-id="${esc(m.p.id)}" aria-label="${esc(m.v.aria || m.p.name)}" aria-pressed="${sel}">
-        <span class="mk-dot"></span>${pos ? `<span class="mk-pill" style="left:${(pos.r.x - (m.x-22)).toFixed(1)}px;top:${(pos.r.y - (m.y-22)).toFixed(1)}px"><span class="nm">${esc(m.p.name)}</span><span class="ord">${esc(m.v.miss ? "–" : (m.v.word || ""))}</span></span>` : ""}</button>`);
+        <span class="mk-dot"></span>${pos ? `<span class="mk-pill" style="left:${(pos.r.x - (m.x-22)).toFixed(1)}px;top:${(pos.r.y - (m.y-22)).toFixed(1)}px"><span class="nm">${esc(m.p.name)}</span>${tall ? `<span class="mk-tall">${tall}</span>` : ""}<span class="ord">${esc(m.v.miss ? "–" : (m.v.word || ""))}</span></span>` : ""}</button>`);
     }
     markersEl.innerHTML = html.join("");
     markersEl.querySelectorAll(".mk").forEach(b=> b.onclick = ()=> onPick(b.dataset.id));

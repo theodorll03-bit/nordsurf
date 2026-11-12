@@ -7,7 +7,7 @@
    spot åpnes (app.js ensureSpot). Regioner (navn, rekkefølge, utsnitt) kommer fra
    oversikt.regions (spots.json) - ingen lister i JS.
 
-   Ren visning: ord og stjerner fra ratingWord()/varselets felt; «–» når tallet mangler. */
+   Ren visning: ord og tall fra ratingWord()/varselets felt; «–» når tallet mangler. */
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
   const $$ = (s, r)=> [...(r||document).querySelectorAll(s)];
@@ -43,10 +43,14 @@
     return r ? {tittel: "Surfing forbudt nå", periode: periodeTekst(r), r} : null;
   }
   const forbudLinje = (s)=>{ const rs = forbudRestr(s); return rs.length ? rs.map(r=> `${r.type==="surfeforbud" ? "Surfing" : "Ferdsel"} forbudt ${periodeTekst(r)}`).join(" · ") : null; };
-  // nå-visningen i lister og kort: i forbudsperioden ingen stjerner, ordet «Surfing forbudt nå», ingen høyde
+  // nå-visningen i lister og kort: i forbudsperioden ingen vurdering, ordet «Surfing forbudt nå», ingen høyde.
+  // `rute` sier hvorfor ruta er tom: «forbud», «miss» (tallet mangler) eller «mork» (mørk time: sola under −6°,
+  // ingen vurdering på skjermen - SPEC §5; høyden står, ordet er «Mørkt»). Ellers null, og ruta viser tallet.
   function naaVisning(s, h){
-    if(forbudNa(s)) return {st: 0, oh: {ord: "Surfing forbudt nå", hoyde: null, forbud: true}};
-    return {st: stars(h), oh: ordOgHoyde(h)};
+    if(forbudNa(s)) return {st: 0, rute: "forbud", oh: {ord: "Surfing forbudt nå", hoyde: null, forbud: true}};
+    if(!known(h)) return {st: 0, rute: "miss", oh: ordOgHoyde(h)};
+    if(mork(h)) return {st: 0, rute: "mork", oh: {ord: "Mørkt", hoyde: ordOgHoyde(h).hoyde}};
+    return {st: stars(h), rute: null, oh: ordOgHoyde(h)};
   }
   // spotsiden: timene i forbudsperioden merkes (_forbud) i en kopi - grafen, dagfanene og kortene viser da ingen
   // stjerner, ordet «Surfing forbudt» og ingen høyde. Selve varselet (og ratingen) er urørt.
@@ -77,6 +81,7 @@
   const known = (h)=> !!h && !(!h.stars && !h.low_reason && h.surf_height==null);
   const lightOf = (h)=> h ? (h.light || (h.daylight===false ? "mørkt" : h.daylight===true ? "dag" : null)) : null;
   const usable = (h)=>{ const l = lightOf(h); return l==="dag" || l==="skumring"; };
+  const mork = (h)=> lightOf(h)==="mørkt";   // mørk time: vises uten vurdering (SPEC §5); modellen regner som før
   // spotsiden (hele timelista): klokkas time
   const nowIdx = (s)=> s.hours && s.hours.length ? Math.max(0, Math.min(s.hours.length-1, currentHour(s))) : 0;
   const fmtDato = new Intl.DateTimeFormat("nb-NO", {weekday:"long", day:"numeric", month:"long", timeZone:TZ});
@@ -126,12 +131,12 @@
     return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, start:d.start || d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
   }
   function ukeHtml(s, days, withLetters){
-    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null && b.st>=1 ? b.st : ""; const title = b.cls==="forbud" ? `${d.lang}: surfing forbudt` : b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
+    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null ? b.st : ""; const title = b.cls==="forbud" ? `${d.lang}: surfing forbudt` : b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${STR.starsAria(b.st, 0)}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
     const letters = withLetters ? days.map((d, k)=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("") : "";
     return `<span class="uke" aria-hidden="true">${letters}${cells}</span>`;
   }
   function ukeAria(s, days){
-    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="forbud" ? `${cap(d.lang)}: surfing forbudt` : b.cls==="over" ? `${cap(d.lang)}: dagens lys er over` : b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${b.st} ${b.st===1?"stjerne":"stjerner"}`; }).join(", ");
+    return days.map(d=>{ const b = dayBest(s, d.key); return b.cls==="forbud" ? `${cap(d.lang)}: surfing forbudt` : b.cls==="over" ? `${cap(d.lang)}: dagens lys er over` : b.cls==="miss" ? `${cap(d.lang)} mangler data` : b.cls==="dark" ? `${cap(d.lang)} mørkt` : `${cap(d.lang)} ${STR.starsAria(b.st, 0)}`; }).join(", ");
   }
   function bestNow(s){ const h = naaOf(s); const f = forbudNa(s); return {st: f ? 0 : stars(h), hh: f || !h ? 0 : (h.surf_height||0)}; }
   const byRatingNow = (a, b)=>{ const x = bestNow(a), y = bestNow(b); return y.st - x.st || y.hh - x.hh || a.name.localeCompare(b.name, "nb"); };
@@ -181,13 +186,13 @@
     const hoyde = heightText(h);
     return `<a class="kort best tap r-${min5(st)}" id="bestKort" href="#spot=${esc(s.id)}&t=${esc(h.t)}" aria-label="${esc(`Beste økt: ${s.name}, ${spanText(best.d)}, ${STR.starsAria(st, 0)}, ${ratingWord(h)}${hoyde ? ", " + hoyde + " m" : ""}. Åpne spoten`)}">
       <div class="rad"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(stedText(s))}</div></div><span class="tid">${esc(spanText(best.d))}</span></div>
-      <div class="vurd"><div>${starsSVG(st, 0)}<div class="ord">${esc(ratingWord(h))}</div></div>${hoyde ? `<div class="hoyde">${esc(hoyde)}<small>m</small></div>` : ""}</div>
+      <div class="vurd"><div>${tallHtml(st, 0)}<div class="ord">${esc(ratingWord(h))}</div></div>${hoyde ? `<div class="hoyde">${esc(hoyde)}<small>m</small></div>` : ""}</div>
       ${fakta ? `<div class="fakta">${numHtml(fakta)}</div>` : ""}</a>`;
   }
   function nesteHtml(sc, best){
     const rows = nextBest(sc.spots, best && best.s, 3);
-    if(!rows.length) return `<div class="kort neste"><h3>Neste beste</h3><p class="muted">Ingen andre økter med stjerner i ${esc(sc.txt)} de neste tre dagene.</p></div>`;
-    return `<div class="kort neste"><h3>Neste beste</h3>${rows.map(r=>{ const h = r.d.h; return `<a class="nrad r-${min5(r.st)}" href="#spot=${esc(r.s.id)}&t=${esc(h.t)}" aria-label="${esc(`${r.s.name}, ${spanText(r.d)}, ${STR.starsAria(r.st, 0)}, ${ratingWord(h)}`)}"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(r.s.name)}</b><small>${esc(spanText(r.d))}</small></span><span class="na">${esc(ratingWord(h))}</span></a>`; }).join("")}</div>`;
+    if(!rows.length) return `<div class="kort neste"><h3>Neste beste</h3><p class="muted">Ingen andre surfbare økter i ${esc(sc.txt)} de neste tre dagene.</p></div>`;
+    return `<div class="kort neste"><h3>Neste beste</h3>${rows.map(r=>{ const h = r.d.h; return `<a class="nrad r-${min5(r.st)}" href="#spot=${esc(r.s.id)}&t=${esc(h.t)}" aria-label="${esc(`${r.s.name}, ${spanText(r.d)}, ${STR.starsAria(r.st, 0)}, ${ratingWord(h)}`)}">${ruteHtml(r.st)}<span class="nm"><b>${esc(r.s.name)}</b><small>${esc(spanText(r.d))}</small></span><span class="na">${esc(ratingWord(h))}</span></a>`; }).join("")}</div>`;
   }
 
   /* ---------- Hjem ---------- */
@@ -195,10 +200,10 @@
     const favs = DATA.spots.filter(s=>isFavSpot(s.id));
     if(!favs.length) return "";
     return `<section class="sek"><h2 class="h2">Favoritter</h2></section><div class="favrad">${favs.map(s=>{
-      const h = naaOf(s), {st, oh} = naaVisning(s, h), vind = windText(h);
+      const h = naaOf(s), {st, rute, oh} = naaVisning(s, h), vind = windText(h);
       return `<a class="kort tap favkort r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}${vind ? ", " + vind : ""}. ${ukeAria(s, days)}. Åpne spoten`)}">
         <div class="navn">${esc(s.name)}</div><div class="omr">${esc(s.area||"")} · nå</div>
-        <div class="vurd"><div>${st ? starsSVG(st, 0) : ""}<div class="ord">${esc(oh.ord)}</div></div>${oh.hoyde ? `<div class="hoyde">${esc(oh.hoyde)}<small>m</small></div>` : ""}</div>
+        <div class="vurd"><div>${rute ? "" : tallHtml(st, 0)}<div class="ord">${esc(oh.ord)}</div></div>${oh.hoyde ? `<div class="hoyde">${esc(oh.hoyde)}<small>m</small></div>` : ""}</div>
         ${vind ? `<div class="vind">${numHtml(vind)}</div>` : ""}
         <div class="uke">${ukeHtml(s, days, false)}</div></a>`; }).join("")}</div>`;
   }
@@ -246,14 +251,14 @@
             if(b.cls==="over") return `<td class="c"><span class="celle over" title="${esc(d.lang)}: dagens lys er over"></span></td>`;
             if(b.cls==="forbud") return `<td class="c"><span class="celle null" title="${esc(d.lang)}: surfing forbudt">Forbudt</span></td>`;
             if(b.cls==="miss") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mangler data">–</span></td>`;
-            if(b.cls==="dark") return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mørkt">–</span></td>`;
+            if(b.cls==="dark") return `<td class="c"><span class="celle dark" title="${esc(d.lang)}: mørkt"></span></td>`;   // skygge som i ukerutene (SPEC §5), ikke «mangler»
             // grunnregelen (PR #12 punkt b): tallet mangler → «–»; ekte 0 (flatt, treffer ikke …) → ordet i grå rute, aldri «0,0»
             const v = b.hi!=null && b.hi > 0 ? {a: b.hi} : (window.Spot ? Spot.visHoyde(b.h) : (b.h && b.h.surf_height!=null ? {a: b.h.surf_height} : null));
             // som Surf-kortet på spotsiden: «–» bare når surf_height mangler; kjent høyde uten pålitelig tall (regel (c): flatt, treffer ikke) → ordet
             if(!v && (!b.h || b.h.surf_height==null)) return `<td class="c"><span class="celle miss" title="${esc(d.lang)}: mangler høyde">–</span></td>`;
             if(!v || (!(v.a > 0) && !(b.st >= 1))){ const ord = ratingWord(b.h); return `<td class="c"><span class="celle null" title="${esc(`${d.lang}: ${ord}`)}">${esc(ord)}</span></td>`; }
             const hh = nf1.format(v.a);
-            return `<td class="c"><span class="celle r-${min5(b.st)}" title="${esc(`${d.lang}: ${b.st} ${b.st===1?"stjerne":"stjerner"}, ${hh} m`)}">${esc(hh)}${b.st>=1 ? `<small>★${b.st}</small>` : ""}</span></td>`; }).join("");
+            return `<td class="c"><span class="celle medtall" title="${esc(`${d.lang}: ${STR.starsAria(b.st, 0)}, ${hh} m`)}">${ruteHtml(b.st)}<small>${esc(hh)} m</small></span></td>`; }).join("");
           return `<tr class="s r-${min5(st)}" data-spot="${esc(s.id)}" tabindex="0" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}"><td class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small></td><td class="na r-${min5(st)}"><span class="ord">${esc(oh.ord)}</span>${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</td>${cells}</tr>`;
         }).join("");
     }).join("");
@@ -271,10 +276,10 @@
       <a class="sokfelt" href="#sok" role="button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Søk etter spot eller område</a>
       <div class="${pc ? "hjem-grid" : ""}">
         <div class="${pc ? "hjem-venstre" : ""}"><section class="sek"><h2 class="h2">Beste økt</h2><p class="sub">De neste tre dagene, i dagslys · ${esc(sc.txt)}</p></section>${bestHtml(sc)}${pc ? nesteHtml(sc, best) : ""}</div>
-        ${pc ? `<div><section class="sek"><h2 class="h2">Utforsk</h2><p class="sub">${DATA.spots.length} spots i ${regions().length} regioner, farget etter vurdering nå</p></section><a class="kort tap utforskkort" href="#utforsk" aria-label="Utforsk kartet">${window.Utforsk && Utforsk.thumb ? Utforsk.thumb() : ""}<span class="primary knapp" aria-hidden="true">Åpne kartet</span></a></div>` : ""}
+        ${pc ? `<div><section class="sek"><h2 class="h2">Utforsk</h2><p class="sub">${DATA.spots.length} spots i ${regions().length} regioner, med vurderingen nå</p></section><a class="kort tap utforskkort" href="#utforsk" aria-label="Utforsk kartet">${window.Utforsk && Utforsk.thumb ? Utforsk.thumb() : ""}<span class="primary knapp" aria-hidden="true">Åpne kartet</span></a></div>` : ""}
       </div>
       ${favHtml(days)}
-      ${pc ? `<section class="sek"><h2 class="h2">Alle spots</h2><p class="sub">Høyeste surf i dagslys per dag, med beste antall stjerner</p></section>${tabellHtml(days)}` : regionHtml(days)}
+      ${pc ? `<section class="sek"><h2 class="h2">Alle spots</h2><p class="sub">Beste tall i dagslys per dag, med høyeste surf</p></section>${tabellHtml(days)}` : regionHtml(days)}
       <p class="kilder">Varsel fra BarentsWatch, MET Norge, Open-Meteo og Kartverket.</p>`;
     $$(".visalle", root).forEach(b=> b.onclick = ()=>{ S.visAlle[b.dataset.region] = true; renderHome(); });
     $$("[data-region]", root).forEach(b=>{ if(b.classList.contains("chip")) b.onclick = ()=>{ setRegion(b.dataset.region); renderHome(); }; });
@@ -294,8 +299,8 @@
     return DATA.spots.filter(hit).sort((a, b)=> pre(a) - pre(b) || byRatingNow(a, b));
   }
   function sradHtml(s){
-    const h = naaOf(s), {st, oh} = naaVisning(s, h);
-    return `<a class="srad r-${min5(st)}" href="#spot=${esc(s.id)}" role="option"><span class="prikk" aria-hidden="true"></span><span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
+    const h = naaOf(s), {st, rute, oh} = naaVisning(s, h);
+    return `<a class="srad r-${min5(st)}" href="#spot=${esc(s.id)}" role="option">${ruteHtml(st, rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
   }
   function resultsHtml(q){
     const r = search(q);
@@ -420,7 +425,7 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, known, stars, dkOf, heightText, isDesktop});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop});
   }
   function render(){
     if(!DATA) return;
@@ -457,6 +462,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") render(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

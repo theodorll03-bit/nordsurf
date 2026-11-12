@@ -16,18 +16,18 @@ Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
   time, bevisst dempet).
 - IKKE krav: --outline-fyllet (--r0..--r2 og tomme ruter) mot flaten. Ruta er pynt; tallet i ruta bærer
   meningen (SPEC §8: farge er aldri eneste bærer), og tallet sjekkes over.
-- Unntak (bare dagtema): tallet i korallruta (--on-signal på --signal) er 4,03:1. SPEC §2 setter on-signal som
-  «tall i korallrute», men sier også at 4,03:1 bare holder for stor tekst, og tallene i rutene er små. Kravet
-  er satt til 4,0 for dette ene paret til Theodor har svart, og det skrives ut som «unntak» så det ikke glemmes.
-- Kjente avvik (ÅPNE, feiler ikke): --dim og --swell-miss oppå --night om dagen er 2,57:1. Tokenene er ikke
-  i bruk ennå; fargen må avklares med Theodor før steget som tar dem i bruk. Da flyttes paret til vanlige krav."""
+- Tallet i korallruta (--on-signal på --signal) er 4,03:1 om dagen. Theodor 12.11.2026: fargen beholdes, og
+  tallet oppå korall er alltid minst 14 px fet, så det regnes som stor tekst (krav 3:1). Gjelder --rN-on på
+  --rN der --rN er korall, i begge temaer. Størrelsen står i ui.css (.rute, .uke i, .plot .rs, .klynge .ring)
+  og sjekkes ikke her (skriftstørrelser leses ikke). WCAG regner stor tekst fra 14 pt fet (ca. 18,7 px): .rute og
+  .uke i (19 px) er over, .plot .rs og .klynge .ring (14 px fet) følger bare Theodors regel.
+- --dim og --swell-miss oppå --night (tekst og pil i mørk time): krav 3:1. Dagfargen er #5E5A51 (Theodor 12.11)."""
 import re
 import sys
 from pathlib import Path
 
 CSS = Path(__file__).resolve().parent.parent / "docs" / "css" / "ui.css"
 TEXT_MIN, GRAPHIC_MIN = 4.5, 3.0
-SIGNAL_RUTE_MIN = 4.0   # tallet i korallruta, se unntaket i docstringen
 
 
 def block(css, head):
@@ -101,9 +101,9 @@ def pairs(toks, tema="lys"):
         if n >= 3:
             out.append((f"fyll --r{n} på --raised (grafikk)", col(f"r{n}"), col("raised"), GRAPHIC_MIN))
         if n >= 1:
-            unntak = tema == "lys" and toks[f"r{n}"].strip() == "var(--signal)"
-            out.append((f"tallet --r{n}-on på --r{n}" + (" (unntak om dagen: 4,03:1, venter på Theodors svar)" if unntak else ""),
-                        col(f"r{n}-on"), col(f"r{n}"), SIGNAL_RUTE_MIN if unntak else TEXT_MIN))
+            korall = toks[f"r{n}"].strip() == "var(--signal)"
+            out.append((f"tallet --r{n}-on på --r{n}" + (" (minst 14 px fet = stor tekst, Theodor 12.11)" if korall else ""),
+                        col(f"r{n}-on"), col(f"r{n}"), GRAPHIC_MIN if korall else TEXT_MIN))
     out.append(("tekst --on-selected på --selected", col("on-selected"), col("selected"), TEXT_MIN))
     out.append(("stedsnavn --on-kartland på --kartland", col("on-kartland"), col("kartland"), TEXT_MIN))
     for bg in ("land", "sea"):
@@ -113,6 +113,8 @@ def pairs(toks, tema="lys"):
     out.append(("korall --signal på --surface (stor tekst og grafikk)", col("signal"), surface, GRAPHIC_MIN))
     out.append(("land --kartland mot --surface (grafikk)", col("kartland"), surface, GRAPHIC_MIN))
     out.append(("mørk time --dim på --surface (dempet tekst og pil)", col("dim"), surface, GRAPHIC_MIN))
+    for fg in ("dim", "swell-miss"):
+        out.append((f"mørk time --{fg} oppå --night (tekst og pil)", col(fg), col("night"), GRAPHIC_MIN))
     out.append(("tekst --muted oppå --night", col("muted"), col("night"), TEXT_MIN))
     out.append(("stiplet ramme --muted på --raised (grafikk)", col("muted"), col("raised"), GRAPHIC_MIN))
     out.append(("tidevannskurven --water på --raised (grafikk)", col("water"), col("raised"), GRAPHIC_MIN))
@@ -121,13 +123,6 @@ def pairs(toks, tema="lys"):
     best = max(ratio(coast, col("land")), ratio(coast, col("sea")))
     out.append(("kystlinje --coast mot --land eller --sea (beste side, grafikk)", None, None, GRAPHIC_MIN, best))
     return out
-
-
-def apne_avvik(toks):
-    """Par som SPEC-fargene ikke klarer, og som ikke er i bruk ennå. Skrives ut, feiler ikke (se docstringen)."""
-    surface = rgb(toks["surface"], toks)
-    col = lambda name: rgb(toks[name], toks, surface)
-    return [(f"--{fg} oppå --night (tekst og pil i mørk time)", ratio(col(fg), col("night")), GRAPHIC_MIN) for fg in ("dim", "swell-miss")]
 
 
 def check(verbose=True):
@@ -148,9 +143,6 @@ def check(verbose=True):
                 print(f"{name:5} {r:5.2f}:1 {'ok  ' if ok else 'FEIL'} {p[0]} (krav {p[3]:.1f})")
             if not ok:
                 failures.append(f"{name}: {p[0]} = {r:.2f}:1, krav {p[3]:.1f}:1")
-        if verbose:
-            for what, r, need in apne_avvik(toks):
-                print(f"{name:5} {r:5.2f}:1 {'ok  ' if r >= need else 'ÅPEN'} {what} (krav {need:.1f}, ikke i bruk ennå)")
     if diff:
         failures.append(f"mørk under prefers-color-scheme og [data-theme=dark] er ikke like: {sorted(diff)}")
     return failures

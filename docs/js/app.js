@@ -2,7 +2,7 @@
    Ren visning: ALLE tall kommer fra varselet (docs/data/oversikt.json og spots/<id>.json, S2) slik fetcher/rating.py
    skrev dem - appen regner aldri stjerner eller høyder selv. Tekster i js/strings.js,
    forklaringer i js/explain.js, grafen i js/chart.js. Vanlig <script>, ikke modul -
-   js/map.js bruker flere av funksjonene her (starsSVG, heightMForDisplay, openSheet ...). */
+   js/map.js bruker flere av funksjonene her (tallHtml, heightMForDisplay, openSheet ...). */
 /* ---------- Oppsett ---------- */
 const TZ = "Europe/Oslo";
 const LOG_KEY = "nordsurf.logs.v1";
@@ -106,11 +106,11 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
 
-/* ---------- Rating: ord eller stjerner (punkt 2) ---------- */
-// Samme ord overalt (liste, detaljside, dagbrikker, kartets høydeplate):
-// 0 stjerner viser ORDET i dempet ratingfarge, 1 og mer viser stjernene i
-// ratingfargen. Farge er aldri eneste informasjon - ordet/stjernene står
-// alltid der. Tallene kommer fra forecast.json (rating.py) - aldri regnet her.
+/* ---------- Rating: tallet 0-5 og ordet (punkt 2; tall i stedet for stjerneikoner fra design B 4.0) ---------- */
+// Samme ord overalt (liste, detaljside, dagbrikker, kartets høydeplate).
+// Farge er aldri eneste informasjon - tallet og ordet står alltid der.
+// Tallene kommer fra forecast.json (rating.py, feltet `stars`) - aldri regnet her.
+// STAR_PATH brukes bare av favorittknappen.
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
 function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; return `r-${n}`; }
 // Ordet ved 0 stjerner med årsak «flat» (low_reason flat, eller 0 stjerner
@@ -214,26 +214,19 @@ function ratingWordExplain(h){
   if(h && !h.stars && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).explain;
   const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null;
 }
-function starsSVG(solid, faded, big){
-  let out = "";
-  for(let i=0;i<5;i++){
-    const cls = i<solid ? "st" : i<solid+faded ? "st f" : "st e";
-    // pathLength 100: stiplingen på tapte stjerner (.st.f) fordeles likt rundt hele stjerna i alle størrelser (Theodor 16.10)
-    out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" pathLength="100" d="${STAR_PATH}"/></svg>`;
-  }
-  return `<span class="stars${big?" big":""} r-${Math.min(5,solid||0)}" role="img" aria-label="${STR.starsAria(solid, faded)}">${out}</span>`;
+// Vurderingen vises som tallet 0-5 (design B 4.0, SPEC §5): det samme tallet som stjernene var, bare vist som tall.
+// tallHtml: tallet alene, stort (korall fra 4, ellers blekk, 0 dempet). `lost` = poeng tapt på vind eller tidevann
+// (leses opp; på skjermen skriver spotsiden grunnen ut som tekst, «−1 tidevann»).
+function tallHtml(n, lost, big){
+  const v = Math.min(5, n||0);
+  return `<span class="rtall${big?" big":""} r-${v}" role="img" aria-label="${esc(STR.starsAria(v, lost||0))}"><b>${v}</b></span>`;
 }
-function ratingHtml(h, big){
-  // 0 stjerner: ordet alene (stort, dempet), ingen stjerner, aldri punktum.
-  // 1-5 stjerner: stjernene i ratingfargen. Har timen 1 stjerne OG en
-  // low_reason ("Blåst ut", "Treffer ikke" ...), står ordet under stjernen
-  // - Theodors regel 05.10.2026 ("samme fire ord for 0 og 1 stjerne
-  // overalt") gjelder fortsatt (fysikk-kontrollør 09.10.2026).
-  if(!h) return `<span class="word r-0${big?" big":""}">–</span>`;
-  if(!h.stars) return `<span class="word r-0${big?" big":""}">${esc(ratingWord(h))}</span>`;
-  const stars = starsSVG(h.stars, h.faded, big);
-  if(h.low_reason) return `<span class="lr${big?" big":""}">${stars}<span class="word lrw ${ratingClass(h)}" aria-hidden="true">${esc(ratingWord(h))}</span></span>`;
-  return stars;
+// ruteHtml: tallet i en 24 px rute (korall fylt fra 4, ellers omriss). `cls` i stedet for tall: «miss» (data mangler,
+// skravur), «mork» (mørk time, ingen vurdering) eller «forbud» - da er ruta tom og ordet ved siden av sier hvorfor.
+function ruteHtml(n, cls){
+  if(cls) return `<span class="rute ${cls}" aria-hidden="true"></span>`;
+  const v = Math.min(5, n||0);
+  return `<span class="rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
 }
 function windArrowHtml(h){
   if(!h || h.wind_dir==null) return "";
@@ -355,12 +348,6 @@ function noticeFor(h){
   if(h.uncertain) return {key:"notice", text: STR.notice.uncertain, warn:true};
   if(h.zone==="langtid") return {key:"notice", text: STR.notice.farAhead, warn:true};
   return null;
-}
-function tipHtml(h){
-  const t = new Date(h.t);
-  const range = heightRangeText(h);
-  const line = [range, h.period!=null?`${nf0.format(h.period)} s`:null, kjText(h), windShort(h)].filter(Boolean).join(" · ");
-  return `<b>${esc(cap(relDay(t)))} kl. ${fmtHour.format(t)}</b> · ${esc(h.stars ? `${h.stars} ${h.stars===1?"stjerne":"stjerner"}` : ratingWord(h))}<br>${esc(line)}`;
 }
 function tapCell(key, k, v, n){
   return `<button type="button" class="cell tap" data-explain="${key}"><div class="k">${esc(k)}</div><div class="v">${v}</div>${n?`<div class="n">${n}</div>`:""}</button>`;
@@ -982,7 +969,7 @@ function renderLogs(){
     const extra = [l.size,l.wind].filter(Boolean).join(", ");
     const fc = l.forecastStars!=null ? `Varsel: ${l.forecastStars}` : "Uten varsel";
     const obs = l.type==="observed" ? `Observert${l.source?` (${esc(l.source)})`:""}. ` : "";
-    return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${starsSVG(l.stars,0)}</span>
+    return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${ruteHtml(l.stars)}</span>
       <button class="del" data-id="${l.id}" aria-label="Slett økt ${fmtDate.format(d)}">Slett</button>
       <span class="m">${obs}${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
   }).join("");

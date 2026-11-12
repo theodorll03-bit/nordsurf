@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## T3 design B 4.0 «Papir» - steg 1 av 7 (fundament), 12.11.2026
+## T3 design B 4.0 «Papir» - steg 2 (vurderingen på skjerm), 12.11.2026
 
 Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
 
@@ -12,15 +12,24 @@ Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.
 - `tools/kontrast.py` sjekker B4-parene. Tall, stjerner, ord og fetcher er urørt. Kartfargene er urørt til steg 5.
 - Fysikk-kontrolløren (agent): tokenverdiene stemmer med SPEC, ingen udefinerte tokens, ingen endring i tall eller tekst. Funnene er rettet: 3-feltet var usynlig på valgt dagfane, 0 og 1-2 var like i dagfanens felt, svellkilen for 1-2 forsvant mot sjøen, `--dim` ble målt mot feil flate.
 
-**Midlertidig til steg 2 (tallene 0-5 på skjermen):** vurderingene bruker fortsatt stjerner. 0 er blekest, 1-2 grå, 3 blekk, 4-5 korall.
+**Gjort (steg 2, SPEC §5)**
+- Vurderingen vises som tallet 0-5 og ordet, ikke som stjerner. Tallene er modellens (`stars`), uendret: bare visningen er ny. 0-2 er omriss, 3 er blekk, 4-5 er korall.
+- Hjem (ukeruter og nett-tabell), spotsiden (stort tall, timestripe, dagfaner), Utforsk (lapper, kort, «Beste først») og søk bruker samme rute.
+- Tapte poeng skrives med grunnen: «−2 vind», «−1 tidevann» (fra `faded_wind` og `faded_tide`).
+- Mørke timer viser ikke tall: ordet «Mørkt» og «Bare lyse timer får tall», skygget kolonne og tom rute. Høyde, vind og tidevann står som før. Modellen regner som før, og rekkefølgen i listene følger fortsatt modellens tall også om natta.
+- Mangler, mørkt, forbud og «dagens lys er over» har alltid tom rute, aldri 0.
+- Theodors avgjørelser 12.11: korallfargen beholdes, og tallet oppå korall er minst 14 px fet. `--dim` og `--swell-miss` er #5E5A51 om dagen (4,74:1 oppå nattskyggen).
+- `tools/stjerner_skjermbilder.py` er slettet (brukte stjernene, ingen bruker den). De fire bildene i `docs/design/stjerner/` står igjen som historikk.
+- Fysikk-kontrolløren (agent): ikke godkjent i første runde. Rettet: forbudstimer viste «0» i timestripa (nå tom rute, med test), og en mørk nå-time endret rekkefølgen i Utforsk (nå sorteres det på modellens tall som før). Også rettet: mørk dag i nett-tabellen er skygge og ikke «–», «mangler» sjekkes før «mørkt» på spotsiden, og testene sjekker høyden i tabellcellene og tomme ruter for seg. Alle 16 tester og kontrastsjekken er grønne etter rettingene.
 
-**Venter på Theodor** (spørsmålene står i `privat/kontor/til-theodor.md`)
-- Tallet i korallruta om dagen er 4,03:1 (SPEC §2). Det er under 4,5:1 for små tall (11-13 px). `kontrast.py` har et navngitt unntak til det er avklart.
-- Tekst og pil i mørk time (`--dim`, `--swell-miss`) blir 2,57:1 om dagen oppå nattskyggen. Ikke i bruk ennå; må avklares før steg 2.
+**Til Theodor**
+- WCAG regner «stor tekst» fra 14 pt fet (ca. 18,7 px), ikke 14 px. Rutene på Hjem og i listene (19 px fet) er over. Timestripa og klyngeringen på kartet (14 px fet) følger regelen din, men ikke WCAG. `kontrast.py` leser ikke skriftstørrelser, så regelen står bare som kommentar.
+- Hjelpetekstene sier fortsatt «stjerner» flere steder. Ordet som skal brukes i stedet, er et spørsmål i `privat/kontor/til-theodor.md`.
+- Dagkortene i langtidsvarselet har fortsatt tre felt (bygges om i steg 4).
 
-**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/`.
+**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/` og `steg-2/`.
 
-**Neste:** steg 2 (vurderingen på skjerm).
+**Neste:** bildesteget (kornfoto per spot fra Kartverkets skyfrie Sentinel-2-mosaikk, flyttet fram av Theodor 12.11), så steg 3 (Hjem).
 
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 

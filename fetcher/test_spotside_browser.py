@@ -272,7 +272,9 @@ def main():
     SP = {s["id"]: s for s in FORECAST["spots"]}   # spotfeltene (svellvindu, local_rules) ligger i varselets spot, ikke i detaljfila
     errors = []
     first_miss_idx = next(i for i, h in enumerate(details[MISS_ID]["hours"]) if oslo_day(h["t"]) == MISS_DAY.isoformat())
-    treffer = next((sid, i) for sid, d in details.items() for i, h in enumerate(d["hours"]) if h.get("low_reason") == "treffer_ikke" and i > now_idx(d["hours"]))
+    # en LYS time: en mørk time viser «Mørkt» i stedet for ordet (B4 SPEC §5)
+    treffer = next((sid, i) for sid, d in details.items() for i, h in enumerate(d["hours"]) if h.get("low_reason") == "treffer_ikke" and i > now_idx(d["hours"]) and light_of(h) in ("dag", "skumring"))
+    treffer_mork = next(((sid, i) for sid, d in details.items() for i, h in enumerate(d["hours"]) if h.get("low_reason") == "treffer_ikke" and i > now_idx(d["hours"]) and light_of(h) == "mørkt"), None)
     try:
         with sync_playwright() as p:
             exe = os.environ.get("NORDSURF_CHROMIUM")
@@ -304,7 +306,11 @@ def main():
 
                 def go(hash_, sel):
                     page.evaluate(f"location.hash = '{hash_}'")
-                    page.wait_for_selector(sel)
+                    try:
+                        page.wait_for_selector(sel)
+                    except Exception:
+                        if errors: print("JavaScript-feil før tidsavbruddet:\n" + "\n".join(errors[:10]))   # ellers skjuler tidsavbruddet årsaken
+                        raise
                     page.wait_for_timeout(250)
 
                 def shot(name, scheme):
@@ -379,6 +385,7 @@ def main():
                         return mk, cl
                     def val_now(sid):
                         h = naa_of(OV[sid]); st = h.get("stars") or 0
+                        if known(h) and light_of(h) == "mørkt": return "r-0", None   # mørk time: ingen vurdering på skjermen (B4 SPEC §5)
                         return (f"r-{min(5, st)}" if known(h) else "miss"), (st if known(h) else None)
                     mk, cl = check_colors(val_now, "nå")
                     assert page.text_content("#utforskChips [aria-pressed='true']").strip() == "Troms", "standardutsnittet skal være valgt region (Troms)"
@@ -426,7 +433,13 @@ def main():
                     hs = details["unstad"]["hours"]; idx = now_idx(hs); h = hs[idx]
                     naa = page.text_content("#viewSpot .naa").strip()
                     assert naa.startswith("Nå · ") and f"kl. {oslo(h['t']):%H}" in naa, naa
-                    assert ord_dom() == page.evaluate("(h) => ratingWord(h)", h), ord_dom()
+                    # B4 SPEC §5: en mørk time får ingen vurdering på skjermen - ordet er «Mørkt», uten tall, med «Bare lyse timer får tall»
+                    if light_of(h) == "mørkt":
+                        assert ord_dom() == "Mørkt" and not page.query_selector("#viewSpot .vurdering .rtall"), ord_dom()
+                        assert "bare lyse timer får tall" in page.text_content("#viewSpot .vurdering").lower()
+                    else:
+                        assert ord_dom() == page.evaluate("(h) => ratingWord(h)", h), ord_dom()
+                        assert page.text_content("#viewSpot .vurdering .rtall").strip() == str(min(5, h.get("stars") or 0))
                     kort4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
                     surf = kort4[0]
                     if h["surf_height"] is not None and h["surf_height"] > 0 and not h.get("low_reason"):
@@ -468,7 +481,12 @@ def main():
                     # ---- 11. «Treffer ikke» ----
                     go(f"#spot={treffer[0]}&t={treffer[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
                     assert ord_dom() == "Treffer ikke", ord_dom()
+                    assert page.text_content("#viewSpot .vurdering .rtall").strip() == "0", "«Treffer ikke» i en lys time skal vise tallet 0"
                     shot("treffer-ikke", scheme); audit("treffer-ikke")
+                    if treffer_mork:   # samme i en mørk time: «Mørkt» uten tall øverst, grunnen står fortsatt i surfekortet
+                        go(f"#spot={treffer_mork[0]}&t={treffer_mork[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
+                        assert ord_dom() == "Mørkt" and not page.query_selector("#viewSpot .vurdering .rtall"), ord_dom()
+                        assert "Treffer ikke" in page.text_content("#viewSpot .kort4"), "grunnen skal stå i kortene også i en mørk time"
                     # Theodor 16.10 (Grøtfjord 17.10 kl. 14): tallet i valgt søyle er det søylen tegner - ved surfehøyde 0
                     # ordet, aldri BarentsWatch-høyden («1,3» i en tom søyle)
                     bo = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("surf_height") == 0

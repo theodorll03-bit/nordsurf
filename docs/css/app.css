@@ -44,13 +44,6 @@ header.top{padding:16px 0 8px}
 .banner.sample{border:1px dashed var(--muted);color:var(--muted);background:none}
 .banner.stale{border-left:4px solid var(--warn)}
 
-/* ---------- Rating: ord eller stjerner ---------- */
-.stars{display:inline-flex;gap:3px;vertical-align:middle}
-.stars svg{width:20px;height:20px;display:block}
-.stars.big svg{width:30px;height:30px}
-.stars .st{fill:var(--rc);stroke:var(--rc-ink);stroke-width:1}
-.stars .st.f{fill:none;stroke:var(--rc-ink);stroke-width:1.6;stroke-dasharray:2.4 2;opacity:.85}
-.stars .st.e{fill:none;stroke:var(--line-strong);stroke-width:1.2}
 .word{font-family:var(--display);font-weight:800;letter-spacing:-.01em;color:var(--rc-ink)}
 .word.big{font-size:var(--fs-display);line-height:1.05}
 .rating{display:inline-flex;align-items:center;gap:10px;min-height:28px}
@@ -123,7 +116,7 @@ header.top{padding:16px 0 8px}
 .ghost{all:unset;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:22px;box-shadow:inset 0 0 0 1.5px var(--line-strong);font-size:var(--fs-secondary);font-weight:600;cursor:pointer;box-sizing:border-box}
 .ghost:hover{background:var(--sunken)}
 .now{all:unset;display:block;margin:18px 0 0;cursor:pointer;min-height:44px}
-.now:hover .word,.now:hover .stars{opacity:.85}
+.now:hover .word{opacity:.85}
 .verdict{margin-top:4px;font-size:var(--fs-secondary);color:var(--muted)}
 .keyline{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:var(--fs-body)}
 .keyline .kv{display:inline-flex;align-items:center;gap:6px}
@@ -153,10 +146,6 @@ header.top{padding:16px 0 8px}
 .chart .band.dark{fill:var(--ink);fill-opacity:.05}
 .chart .flat-lbl{font-size:var(--fs-secondary);fill:var(--muted);font-weight:600}
 .chart .bar{fill:var(--rc)}
-.lr{display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px}
-.lr .lrw{font-size:var(--fs-secondary);line-height:1.2}
-.lr.big{align-items:flex-start}
-.lr.big .lrw{font-size:var(--fs-body)}
 .chart .bar.flat{fill:var(--line-strong)}
 .chart .bar.reserve{opacity:.7}
 .chart .bar.langtid{opacity:.5}

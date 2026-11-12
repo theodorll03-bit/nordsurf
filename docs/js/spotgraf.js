@@ -39,7 +39,7 @@
     return (ds.find(d=> d.key > today) || ds[0]).key;
   }
   function bestOfDay(s, d){
-    // beste time i dagslys: flest stjerner, ved likt høyest surf_height; ellers kl. 12 (nærmeste), ellers første
+    // beste time i dagslys: høyest tall, ved likt høyest surf_height; ellers kl. 12 (nærmeste), ellers første
     let best = null;
     for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h)) continue; const c = {i, st: H.stars(h), hh: h.surf_height||0}; if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c; }
     if(best) return best.i;
@@ -60,7 +60,7 @@
     return {txt: a===b ? `${a} m` : `${a}–${b} m`, word};
   }
   function slotBest(s, d, from, to){
-    // beste stjerner i dagslys i timeintervallet [from, to); 6-timers dager: nærmeste time innen 4 timer
+    // beste tall i dagslys i timeintervallet [from, to); 6-timers dager: nærmeste time innen 4 timer
     const inSlot = d.idxs.filter(i=>{ const hh = osloHour(new Date(s.hours[i].t)); return hh >= from && hh < to; });
     let cand = inSlot;
     if(!cand.length && d.step===6){
@@ -86,10 +86,10 @@
     const selKey = dayOverride || dayOf(s, selIdx); const today = dayKey(new Date()); const tomorrow = dayKey(new Date(Date.now()+864e5));
     return `<div class="dagfaner" role="tablist" aria-label="Dager">${days(s).map((d, k)=>{
       const t = new Date(s.hours[d.idxs[0]].t); const span = spanOfDay(s, d);
-      const felt = [[6,10],[10,14],[14,19]].map(([a,b])=>{ const r = slotBest(s, d, a, b); return `<i class="${r.cls}" title="${a}–${b}: ${r.st!=null ? r.st + " stjerner" : r.cls==="dark" ? "mørkt" : "mangler"}"></i>`; }).join("");
+      const felt = [[6,10],[10,14],[14,19]].map(([a,b])=>{ const r = slotBest(s, d, a, b); return `<i class="${r.cls}" title="${a}–${b}: ${r.st!=null ? STR.starsAria(r.st, 0) : r.cls==="dark" ? "mørkt" : "mangler"}"></i>`; }).join("");
       const noon = nearestTo(s, d, 12); const hn = noon >= 0 ? s.hours[noon] : null;
       const usikker = d.idxs.every(i=> s.hours[i].zone==="langtid");
-      const wordCls = (()=>{ const i = bestOfDay(s, d); return `r-${Math.min(5, H.stars(s.hours[i]))}`; })();
+      const wordCls = (()=>{ const bh = s.hours[bestOfDay(s, d)]; return `r-${H.usable(bh) ? Math.min(5, H.stars(bh)) : 0}`; })();   // en mørk time farger aldri ordet
       const navn = d.key===today ? "I dag" : d.key===tomorrow ? "I morgen" : cap(fmtWd.format(t).replace(/\.$/, ""));
       const aria = `${cap(fmtDato.format(t))}: ${span.txt || span.word || "–"}${usikker ? ", usikker (langtidsmodell)" : ""}`;
       return `<button type="button" class="dagfane${usikker ? " usikker" : ""}" role="tab" data-day="${d.key}" aria-pressed="${d.key===selKey}" aria-selected="${d.key===selKey}" aria-label="${esc(aria)}">
@@ -117,6 +117,8 @@
     const kol = cols.map(c=>{
       const h = c.i >= 0 ? s.hours[c.i] : null; const st = H.stars(h); const known = H.known(h);
       const l = h ? (h.light || null) : null; const natt = l==="mørkt" ? " natt" : l==="skumring" ? " skum" : "";
+      // mørk time (sola under −6°): ingen vurdering på skjermen (SPEC §5) - kolonnen skygges, søylen er grå og ruta tom
+      const mork = H.mork ? H.mork(h) : l==="mørkt";
       // tallet mangler (også for en «kjent» time med low_reason men uten høyde): stiplet, aldri en 0-søyle
       const miss = !known || h.surf_height==null;
       // Theodor 16.10.2026: tallet i søylen er alltid toppen av det søylen TEGNER (settene, ellers surfehøyden) - ikke
@@ -125,19 +127,24 @@
       const tall = topp!=null && topp > 0 && h.surf_height > 0 ? nf1.format(topp) : (h && h.surf_height===0 ? ratingWord(h) : null);   // aldri «0,0»
       const hs = h && h.surf_height!=null ? h.surf_height : 0, sets = h && h.surf_height_sets!=null ? Math.max(0, h.surf_height_sets - hs) : 0;
       const bar = !h ? "" : miss ? `<span class="b miss" style="height:3px"></span>`
-        : `<span class="b r-${Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx && tall ? `<span class="tall${h.surf_height===0 ? " ord" : ""}">${esc(tall)}</span>` : ""}</span>`;
-      const rs = !h ? `<span class="rs tom"></span>` : miss ? `<span class="rs miss" title="mangler"></span>` : `<span class="rs r-${Math.min(5,st)}" aria-hidden="true">${st||""}</span>`;
-      const aria = h ? `${fmtHour.format(new Date(h.t))}:00, ${!miss ? (st ? STR.starsAria(st, h.faded||0) + ", " : "") + ratingWord(h) + (H.heightText(h) ? ", " + H.heightText(h) + " m" : "") : "tallet mangler"}` : `${String(c.hh).padStart(2,"0")}:00, ${c.hh < firstHH ? "har vært" : "ingen tall (6-timers steg)"}`;
+        : `<span class="b ${mork ? "mork" : "r-" + Math.min(5,st)}" style="height:${Math.max(hs>0?3:2, hs/scaleMax*H_PX).toFixed(1)}px">${sets>0 ? `<span class="sets" style="height:${(sets/scaleMax*H_PX).toFixed(1)}px"></span>` : ""}${c.i===selIdx && tall ? `<span class="tall${h.surf_height===0 ? " ord" : ""}">${esc(tall)}</span>` : ""}</span>`;
+      const rs = !h ? `<span class="rs tom"></span>` : miss ? `<span class="rs miss" title="mangler"></span>` : mork ? `<span class="rs mork"></span>`
+        : h._forbud ? `<span class="rs forbud"></span>`   // forbudsperiode: ingen vurdering, tom rute (aldri «0»)
+        : `<span class="rs r-${Math.min(5,st)}${h.faded ? " tapt" : ""}" aria-hidden="true">${st}</span>`;   // tapte poeng: stiplet korall-omriss
+      const aria = h ? `${fmtHour.format(new Date(h.t))}:00, ${!miss ? (mork ? "mørkt" : h._forbud ? ratingWord(h) : STR.starsAria(st, h.faded||0) + ", " + ratingWord(h)) + (H.heightText(h) ? ", " + H.heightText(h) + " m" : "") : "tallet mangler"}` : `${String(c.hh).padStart(2,"0")}:00, ${c.hh < firstHH ? "har vært" : "ingen tall (6-timers steg)"}`;
       return `<div class="kol${natt}${c.i===selIdx ? " valgt" : ""}${!h ? " tom" : ""}" data-i="${c.i}" data-hh="${c.hh}">${rs}<button type="button" class="soyle" data-i="${c.i}" aria-label="${esc(aria)}"${!h ? " disabled" : ""}${c.i===selIdx ? ' aria-pressed="true"' : ""}>${bar}</button></div>`; }).join("");
     const axis = cols.map(c=>`<span>${d.step===1 ? (c.hh % 3===0 ? String(c.hh).padStart(2,"0") : "") : String(c.hh).padStart(2,"0")}</span>`).join("");
     const every3 = cols.filter((c, k)=> d.step===6 || c.hh % 3===0);
-    const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${nf0.format(h.wind_speed)}</span>` : "<small>–</small>"}</div>`; }).join("");
-    const svell = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.swell_offshore!=null ? `${ARROW(h.dir_offshore)}<span class="b">${nf1.format(h.swell_offshore)}</span><small>${h.period!=null ? nf0.format(h.period) + "s" : "–"}</small>` : "<small>–</small>"}</div>`; }).join("");
+    const morkCls = (h)=> h && h.light==="mørkt" ? ' class="mork"' : "";   // piler og tall i mørke timer blir grå
+    const harMork = cols.some(c=> c.i >= 0 && s.hours[c.i].light==="mørkt");
+    const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div${morkCls(h)} style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${nf0.format(h.wind_speed)}</span>` : "<small>–</small>"}</div>`; }).join("");
+    const svell = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div${morkCls(h)} style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.swell_offshore!=null ? `${ARROW(h.dir_offshore)}<span class="b">${nf1.format(h.swell_offshore)}</span><small>${h.period!=null ? nf0.format(h.period) + "s" : "–"}</small>` : "<small>–</small>"}</div>`; }).join("");
     const tideT = d.idxs.includes(selIdx) ? new Date(s.hours[selIdx].t) : new Date(s.hours[d.idxs[0]].t);
     // samme kurve som tidevannskortet, tegnet i ekte piksler av Tidevann.mount() (spot.js) når bredden er kjent
     const tide = (s.tide_events||[]).length && window.Tidevann ? `<div class="tv-mini" data-t="${tideT.getTime()}"></div>` : "";
     return `<div class="kort graf" id="graf" data-day="${key}" data-n="${n}">
       <div class="graf-topp"><h3>${esc(cap(fmtDato.format(t0)))}</h3><span class="best">${topTxt}</span></div>
+      ${harMork ? `<p class="etikett lyse">${esc(STR.lightOnly)}</p>` : ""}
       <div class="plot" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${kol}</div>
       <div class="akse" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${axis}</div>
       <div class="grafrad"><div class="k">Vind <small>m/s</small></div><div class="celler" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${vind}</div></div>
