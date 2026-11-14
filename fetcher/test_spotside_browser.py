@@ -298,6 +298,19 @@ def main():
                 page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem #bestKort')")
                 cdp = ctx.new_cdp_session(page)
 
+                # Kilden til lokale regler (10.11.2026, Unstads tidevannsregel): hver delregel skrives med sin egen
+                # kilde, og hver kilde i spots.json har sin egen tekst i STR.localSourceText (ikke reserveteksten).
+                for sp_ in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]:
+                    lr_ = sp_.get("local_rules")
+                    if not lr_:
+                        continue
+                    energi_, tide_, kjente_ = page.evaluate("(lr) => [localSourceText({local_rules: lr}, {}), localSourceText({local_rules: lr}, {}, 'tide'), Object.keys(STR.localSourceText)]", lr_)
+                    assert lr_["source"] in kjente_ and lr_.get("tide_source", lr_["source"]) in kjente_, (sp_["id"], lr_, kjente_)
+                    assert (energi_ == tide_) == ("tide_source" not in lr_), (sp_["id"], energi_, tide_)
+                    if sp_["id"] == "unstad":
+                        assert energi_ == "Grense satt ut fra observasjonene 26.09 til 05.10" and tide_ == "Ifølge Lofoten Surfsenter", (energi_, tide_)
+                        assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 26.09-05.10.2026; tidevann: Lofoten Surfsenter"
+
                 def media(scheme, contrast="no-preference"):
                     cdp.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if scheme == "mork" else "light"}, {"name": "prefers-contrast", "value": contrast}]})
                     page.wait_for_timeout(150)

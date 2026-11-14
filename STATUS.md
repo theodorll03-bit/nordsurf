@@ -1,5 +1,22 @@
 # Nordsurf: status
 
+## T2c Unstad: myk tidevannsregel lagt inn 10.11.2026 (Theodors ja, gren `t2/lofoten-surfsenter`, ikke merget)
+
+Kilde: Lofoten Surfsenter, 09.11.2026 («Lofoten er best på lavvann»), ført opp i CLAUDE.md «Lokalkunnskap». Unstads `local_rules` har fått `tide_prefer: ["lav", "middels"]` og `tide_penalty_high: 0.5`. Med vekten 0,7 er fradraget 0,35 stjerne på høyvann, før avrunding. Regelen gjelder bare Unstad (Theodors nei til flere Lofoten-spots).
+
+| Utsnitt (variant V3 i `data/backtest/t2c_unstad_tidevann_2026-11-10.md`) | Timer som mister 1 stjerne | Av dem lyse | Flytter seg 2 eller mer | Lyse timer med 3+ før → etter | Lyse timer med 4+ før → etter |
+|---|---|---|---|---|---|
+| Neste 48 timer (kjøring 10.11 kl. 06Z) | 0 | 0 | 0 | 0 → 0 | 0 → 0 |
+| 14 dager tilbake (30.09–14.10) | 14 | 10 | 0 | 44 → 42 | 16 → 16 |
+| Alle publiserte timer 24.09–14.10 | 19 | 11 | 0 | 68 → 66 | 23 → 23 |
+
+- Ingen time går opp. Regelen kan bare trekke ned.
+- En femte stjerne krever nå lav eller middels vannstand på Unstad (`five_star_losses`). Er tidevannet ukjent, holdes den også tilbake (`five_star_swell_gate`: tidevannet må være kjent når spoten har preferanse). Den faste observasjonen 26.09 kl. 14:45 (rekonstruert uten tidevann) går derfor fra 5 til 4 i testene. Observasjonen var 4 stjerner, og kravet er minst 3.
+- De faste observasjonene holder. Ny test 8 i `fetcher/test_backtest.py`: høyvann koster høyst én stjerne, lav og middels koster ingenting, og ingen fast Unstad-observasjon kommer under kravet sitt på høyvann. Det er 28.09 (krav 3) som skiller en myk regel fra en hard: med fradrag 1,0 faller den under.
+- Kilden står for seg: `local_rules.source` gjelder energigrensen (observasjonene), nytt felt `tide_source` gjelder tidevannsregelen. Appen skriver «Ifølge Lofoten Surfsenter» på tidevannslinja og «Grense satt ut fra observasjonene 26.09 til 05.10» på energilinja. Cellen «Lokale regler» viser begge kildene.
+- Følge i appen: tidevannskortet på Unstad viser nå båndet for foretrukket vannstand og teksten «Unstad er best på lav til middels vannstand» (samme som Farstadsanden; `tide_regel` i `publish.py` leser `tide_prefer`).
+- Rapportverktøyet `tools/unstad_tidevann_rapport.py` regner «i dag» fra spots.json. Kjøres det på nytt nå, er V3 allerede med i utgangspunktet.
+
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 
 Gren `t2/lofoten-surfsenter` (lokal, ikke pushet): fire verktøy i `tools/` og fire rapporter i `data/backtest/`. Kilden er Lofoten Surfsenter, 09.11.2026 (via Theodor). Den føres inn i CLAUDE.md «Lokalkunnskap» først når en regel faktisk legges inn.
