@@ -1,79 +1,6 @@
-/* Nordsurf: stilark for hele appen (designrunde 1, 09.10.2026).
-   Tokens først: farger (lys og mørk), ratingskala 0-5, typeskala, avstand
-   (8 px-rytme, 4 px for det minste), én hjørneradius. Farge er aldri eneste
-   bærer av informasjon - ord eller stjerner står alltid ved siden av. */
-
-/* ---------- Fonter (Google Fonts, selvhostet - OFL) ---------- */
-@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;src:url(../fonts/bricolage-grotesque-latin-wght.woff2) format("woff2-variations")}
-@font-face{font-family:"Inter";font-style:normal;font-weight:100 900;font-display:swap;src:url(../fonts/inter-latin-wght.woff2) format("woff2-variations")}
-
-/* ---------- Tokens ---------- */
-:root{
-  /* flater og tekst: varm råhvit, ikke kald hvit */
-  --surface:#F6F1E8; --raised:#FFFDF8; --sunken:#EEE7DA; --ink:#1E1B16; --muted:#5B554B; --line:#E2DACB; --line-strong:#CBC2B1;
-  --selected:#1E1B16; --on-selected:#FFFDF8;
-  --night:#D9D1C3; --dusk:#E9E2D4;
-  /* ratingskala: 0 grå, 1 rød-oransje, 2 gul, 3 grønn, 4 turkis, 5 blå/lilla.
-     --rN er fyll (søyler, striper, stjerner), --rN-ink er tekstsikker (4,5:1). */
-  --r0:#8A8378; --r0-ink:#625B50;
-  --r1:#E25A2C; --r1-ink:#B33F15;
-  --r2:#E7B21F; --r2-ink:#7A5600;
-  --r3:#2E9C5A; --r3-ink:#1E7A42;
-  --r4:#1EA5A5; --r4-ink:#0F7272;
-  --r5:#5B5BD6; --r5-ink:#4343B5;
-  --accent:#1E1B16;
-  --focus:#4343B5;
-  --warn:#B33F15;
-  /* kart: vindu grønt, svell lilla, vind blått (som før, kontrastsjekket) */
-  --window:#1E7A42; --window-fill:rgba(46,156,90,.16); --swell:#6D3FCE; --swell-miss:#8A8378; --wind:#1C5FD6;
-  --star:var(--r2);
-  /* typografi */
-  --display:"Bricolage Grotesque", "Familjen Grotesk", system-ui, sans-serif;
-  --body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --fs-caption:13px; --fs-secondary:15px; --fs-body:17px; --fs-title:22px; --fs-display:32px;
-  --radius:14px; --radius-sm:10px;
-  --shadow:0 6px 24px rgba(30,27,22,.12);
-  --nav-h:64px;
-  color-scheme: light dark;
-  box-sizing:border-box;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --surface:#16130F; --raised:#201C16; --sunken:#0F0D0A; --ink:#F2ECE1; --muted:#ADA396; --line:#332E26; --line-strong:#4A4338;
-    --selected:#F2ECE1; --on-selected:#16130F;
-    --night:#0B0A08; --dusk:#241F18;
-    --r0:#7A7368; --r0-ink:#A39B8E;
-    --r1:#F07A50; --r1-ink:#F07A50;
-    --r2:#F2C24F; --r2-ink:#F2C24F;
-    --r3:#5FCB8C; --r3-ink:#5FCB8C;
-    --r4:#4FC9C9; --r4-ink:#4FC9C9;
-    --r5:#9090F2; --r5-ink:#9090F2;
-    --accent:#F2ECE1; --focus:#9090F2; --warn:#F07A50;
-    --window:#5FCB8C; --window-fill:rgba(95,203,140,.22); --swell:#B79CFF; --swell-miss:#7A7368; --wind:#6FA8FF;
-    --shadow:0 8px 28px rgba(0,0,0,.45);
-  }
-}
-:root[data-theme="dark"]{
-  --surface:#16130F; --raised:#201C16; --sunken:#0F0D0A; --ink:#F2ECE1; --muted:#ADA396; --line:#332E26; --line-strong:#4A4338;
-  --selected:#F2ECE1; --on-selected:#16130F;
-  --night:#0B0A08; --dusk:#241F18;
-  --r0:#7A7368; --r0-ink:#A39B8E;
-  --r1:#F07A50; --r1-ink:#F07A50;
-  --r2:#F2C24F; --r2-ink:#F2C24F;
-  --r3:#5FCB8C; --r3-ink:#5FCB8C;
-  --r4:#4FC9C9; --r4-ink:#4FC9C9;
-  --r5:#9090F2; --r5-ink:#9090F2;
-  --accent:#F2ECE1; --focus:#9090F2; --warn:#F07A50;
-  --window:#5FCB8C; --window-fill:rgba(95,203,140,.22); --swell:#B79CFF; --swell-miss:#7A7368; --wind:#6FA8FF;
-  --shadow:0 8px 28px rgba(0,0,0,.45);
-}
-/* ratingfarge per element: <el class="r-3"> gir --rc/--rc-ink */
-.r-0{--rc:var(--r0);--rc-ink:var(--r0-ink)}
-.r-1{--rc:var(--r1);--rc-ink:var(--r1-ink)}
-.r-2{--rc:var(--r2);--rc-ink:var(--r2-ink)}
-.r-3{--rc:var(--r3);--rc-ink:var(--r3-ink)}
-.r-4{--rc:var(--r4);--rc-ink:var(--r4-ink)}
-.r-5{--rc:var(--r5);--rc-ink:var(--r5-ink)}
+/* Nordsurf: biblioteket (ark, logger, innstillinger, tabeller). Fargene, fontene og skalaene er CSS-variabler
+   som settes ett sted: docs/css/ui.css (design B 4.0 «Papir», docs/design/b4/SPEC.md). Denne fila lastes før ui.css
+   og bruker bare variablene. Farge er aldri eneste bærer av informasjon - ord eller tall står alltid ved siden av. */
 
 /* ---------- Grunn ---------- */
 *,*::before,*::after{box-sizing:inherit}
@@ -117,13 +44,6 @@ header.top{padding:16px 0 8px}
 .banner.sample{border:1px dashed var(--muted);color:var(--muted);background:none}
 .banner.stale{border-left:4px solid var(--warn)}
 
-/* ---------- Rating: ord eller stjerner ---------- */
-.stars{display:inline-flex;gap:3px;vertical-align:middle}
-.stars svg{width:20px;height:20px;display:block}
-.stars.big svg{width:30px;height:30px}
-.stars .st{fill:var(--rc);stroke:var(--rc-ink);stroke-width:1}
-.stars .st.f{fill:none;stroke:var(--rc-ink);stroke-width:1.6;stroke-dasharray:2.4 2;opacity:.85}
-.stars .st.e{fill:none;stroke:var(--line-strong);stroke-width:1.2}
 .word{font-family:var(--display);font-weight:800;letter-spacing:-.01em;color:var(--rc-ink)}
 .word.big{font-size:var(--fs-display);line-height:1.05}
 .rating{display:inline-flex;align-items:center;gap:10px;min-height:28px}
@@ -196,7 +116,7 @@ header.top{padding:16px 0 8px}
 .ghost{all:unset;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:22px;box-shadow:inset 0 0 0 1.5px var(--line-strong);font-size:var(--fs-secondary);font-weight:600;cursor:pointer;box-sizing:border-box}
 .ghost:hover{background:var(--sunken)}
 .now{all:unset;display:block;margin:18px 0 0;cursor:pointer;min-height:44px}
-.now:hover .word,.now:hover .stars{opacity:.85}
+.now:hover .word{opacity:.85}
 .verdict{margin-top:4px;font-size:var(--fs-secondary);color:var(--muted)}
 .keyline{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:var(--fs-body)}
 .keyline .kv{display:inline-flex;align-items:center;gap:6px}
@@ -226,10 +146,6 @@ header.top{padding:16px 0 8px}
 .chart .band.dark{fill:var(--ink);fill-opacity:.05}
 .chart .flat-lbl{font-size:var(--fs-secondary);fill:var(--muted);font-weight:600}
 .chart .bar{fill:var(--rc)}
-.lr{display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px}
-.lr .lrw{font-size:var(--fs-secondary);line-height:1.2}
-.lr.big{align-items:flex-start}
-.lr.big .lrw{font-size:var(--fs-body)}
 .chart .bar.flat{fill:var(--line-strong)}
 .chart .bar.reserve{opacity:.7}
 .chart .bar.langtid{opacity:.5}

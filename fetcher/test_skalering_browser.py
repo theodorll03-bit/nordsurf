@@ -137,9 +137,18 @@ def main():
                             order: [...row.querySelectorAll('.chip')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")
                 assert chip and (mobile and chip["txt"] == "Troms" or not mobile) and chip["inside"], f"valgt regionbrikke ikke synlig ({label}): {chip}"
                 assert chip["order"] == [r["name"] for r in overview["regions"]] and chip["order"][0] == "Finnmark", chip["order"]
-                # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag»-kolonne
-                txt = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i, #viewHjem .celle, #viewHjem .rad .na, #viewHjem td.na')].map(e => e.textContent.trim())")
+                # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag»-kolonne.
+                # B4 steg 2: ukerutene viser tallet 0-5, så «0» er en ekte vurdering der (aldri en høyde)
+                txt = page.evaluate("[...document.querySelectorAll('#viewHjem .celle, #viewHjem .rad .na, #viewHjem td.na')].map(e => e.textContent.trim())")
                 assert not any(t in ("0,0", "0") or t.startswith("0,0") for t in txt), [t for t in txt if t.startswith("0")][:5]
+                # i .celle.medtall står rutetallet foran høyden («31,2 m»), så høyden sjekkes for seg
+                hoyder = page.evaluate("[...document.querySelectorAll('#viewHjem .celle small')].map(e => e.textContent.trim())")
+                assert not any(t.startswith("0,0") or t in ("0", "0 m") for t in hoyder), [t for t in hoyder if t.startswith("0")][:5]
+                uke = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i, #viewHjem table.spots .rute')].map(e => e.textContent.trim())")
+                assert uke and all(t in ("", "0", "1", "2", "3", "4", "5") for t in uke), [t for t in uke if len(t) > 1][:5]
+                # mangler, mørkt, forbud og «dagens lys er over» har aldri et tall i ruta
+                tomme = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i.miss, #viewHjem .uke i.dark, #viewHjem .uke i.forbud, #viewHjem .uke i.over, #viewHjem .celle.miss .rute, #viewHjem .celle.dark, #viewHjem .celle.over')].map(e => e.textContent.trim())")
+                assert not any(tomme), [t for t in tomme if t][:5]
                 heads = page.evaluate("[...document.querySelectorAll('#viewHjem table.spots thead th.dag, #viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
                 assert heads and not any(h.startswith("I dag") for h in heads) and not page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over"), heads[:8]
                 print(f"PR #12 a-c ({label}): valgt brikke «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
@@ -213,13 +222,16 @@ def main():
                 troms_id = next(s["id"] for s in overview["spots"] if s["region"] == "Troms")
                 go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .vurdering .ord")
                 assert loaded["det"] == [troms_id], loaded["det"]
-                # Theodor 16.10: spotsiden i forbudsperioden - «Surfing forbudt nå» og perioden, ingen stjerner
+                # Theodor 16.10: spotsiden i forbudsperioden - «Surfing forbudt nå» og perioden, ingen vurdering
                 go("#spot=test079", "#viewSpot:not([hidden]) .vurdering .forbud")
                 vt = page.text_content("#viewSpot .vurdering").strip()
-                assert "Surfing forbudt nå" in vt and "1. okt–31. mars, fuglefredning" in vt and not page.query_selector("#viewSpot .vurdering .stars"), vt
+                assert "Surfing forbudt nå" in vt and "1. okt–31. mars, fuglefredning" in vt and not page.query_selector("#viewSpot .vurdering .rtall"), vt
                 lt = page.text_content("#viewSpot #langtid") or ""
-                assert "Surfing forbudt" in lt and not page.query_selector("#viewSpot #langtid .stars"), lt[:200]
-                print(f"Forbud på spotsiden ({label}): «{vt[:60]}», langtidsvarselet uten stjerner - OK")
+                assert "Surfing forbudt" in lt and not page.query_selector("#viewSpot #langtid .rtall, #viewSpot #langtid .rute"), lt[:200]
+                # timestripa: forbudstimene har tom rute - aldri «0» (stars:0 i forbudKopi er ikke en vurdering fra modellen)
+                rs = page.evaluate("[...document.querySelectorAll('#viewSpot #langtid .rs')].map(e => [e.className, e.textContent.trim()])")
+                assert rs and any("forbud" in c for c, _ in rs) and not any(x for c, x in rs if "forbud" in c or "mork" in c or "miss" in c), rs[:12]
+                print(f"Forbud på spotsiden ({label}): «{vt[:60]}», langtidsvarselet uten tall - OK")
                 ctx.close()
             # Theodor 16.10.2026 (punkt 1c): gammelt varsel eller gammelt format → banner på Hjem, Utforsk og spotsiden;
             # ferskt varsel (alt over, klokka 70 min etter generated) → ingen banner

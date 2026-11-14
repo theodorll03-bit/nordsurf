@@ -18,7 +18,7 @@
   const fmtHM = new Intl.DateTimeFormat("nb-NO", {hour:"2-digit", minute:"2-digit", timeZone:TZ, hour12:false});
   // minikart: én fil per spot (data/minikart/<id>.json, Tillegg 2) - hentes når spoten åpnes
   const kystCache = {}, kystLoading = {};
-  let H = null;   // hjelpere fra ui.js (nowIdx, usable, known, stars, dkOf, heightText, regionOf, close, isDesktop)
+  let H = null;   // hjelpere fra ui.js (nowIdx, usable, mork, known, stars, dkOf, heightText, regionOf, close, isDesktop)
 
   /* ---------- tekster som tolker tall ---------- */
   function visHoyde(h){
@@ -170,11 +170,18 @@
     const topp = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>${pc ? "Tilbake" : ""}</button>
         <div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(H.stedText(s))}</div></div>${favBtnHtml(s.id, false)}</div>
       <div class="naa"><span>${tid}</span>${atNow ? "" : `<button type="button" class="tilbakena" id="tilbakeNa">Tilbake til nå</button>`}</div>`;
-    // Theodor 16.10.2026: i forbudsperioden «Surfing forbudt nå» og perioden i stedet for stjerner og ord (bare visning)
+    // Theodor 16.10.2026: i forbudsperioden «Surfing forbudt nå» og perioden i stedet for tall og ord (bare visning)
     const fb = H.forbudInfo ? H.forbudInfo(s, t.getTime()) : null;
+    // tapte poeng skrives ut med grunnen (SPEC §5): «−1 tidevann», «−2 vind» (tallene fra rating.py, faded_wind/faded_tide)
+    const taptTxt = h ? [h.faded_wind ? `−${h.faded_wind} vind` : null, h.faded_tide ? `−${h.faded_tide} tidevann` : null].filter(Boolean) : [];
+    if(h && h.faded && !taptTxt.length) taptTxt.push(`−${h.faded}`);   // eldre varsel uten delingen
+    const tapt = taptTxt.length ? `<div class="etikett tapt">${esc(taptTxt.join(" · "))}</div>` : "";
     const vurdering = fb
       ? `<div class="vurdering"><div class="forbud"><div class="ord">${esc(fb.tittel)}</div><div class="periode">${esc(fb.periode)}${fb.r.verneomrade ? " · " + esc(fb.r.verneomrade) : ""}</div></div></div>`
-      : `<div class="vurdering"><div class="r-${Math.min(5,st)}">${st ? starsSVG(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;   // linja om forbudet står i overskriften (stedText)
+      : H.known(h) && H.mork(h)
+      // mørk time: ingen vurdering på skjermen (SPEC §5) - bare ordet «Mørkt» og hvorfor; kortene under viser tallene som før
+      ? `<div class="vurdering"><div class="r-0"><div class="ord r-0">Mørkt</div><div class="etikett lyse">${esc(STR.lightOnly)}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`
+      : `<div class="vurdering"><div class="r-${Math.min(5,st)}">${H.known(h) ? tallHtml(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div>${tapt}</div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;   // linja om forbudet står i overskriften (stedText)
     const venstre = `${vurdering}${kortHtml(s, h)}`;
     // åpnet på «nå» (S.idx null): grafen viser i dag bare hvis det er minst 2 lyse timer igjen, ellers i morgen -
     // kortene øverst viser fortsatt nå (Theodor 15.10, punkt 3)

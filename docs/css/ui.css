@@ -1,101 +1,133 @@
-/* Nordsurf: søk først, Utforsk og spotside (Theodor 14.10.2026, skissen i docs/design/spotside/skisse/).
-   Lys og mørk følger systemet (prefers-color-scheme) - ingen temaknapp (HIG-gjennomgangen 14.10.2026).
-   Fargene er CSS-variabler på :root; app.css (biblioteket: ark, logger, innstillinger) bruker de samme navnene.
-   Én farge, én betydning: ratingpaletten brukes BARE til vurdering. Svell, vind, tidevann, vindu og energi
-   tegnes i «blekk» (--ink/--muted). Svak grå (--faint) brukes bare til gradstreker, aldri til tekst. */
+/* Nordsurf: design B 4.0 «Papir» (Theodor 09.11.2026, fasit i docs/design/b4/SPEC.md).
+   Dag er papir (#F2EFE8) med marineblått blekk, mørk er «mørketid»: samme design med marineblå bakgrunn.
+   Temaet følger systemet (prefers-color-scheme) - ingen temaknapp i appen.
+   Fargene er CSS-variabler på :root. Korall (--signal) betyr god surf og bare det, og er aldri tekst under
+   24 px i dagtema. Lyseblått (--data) er vann og data, aldri tekstfarge. Sekundærtekst er varm grå (--muted).
+   --outline brukes bare til ruter og streker, aldri til tekst. */
 :root{
-  --surface:#F2F5F6; --raised:#FFFFFF; --sunken:#E9EEF0; --line:#E0E6E9; --line-strong:#C9D2D7;
-  --ink:#0E1A21; --muted:#55656E; --faint:#8A99A1;
-  --land:#F2EDE2; --sea:#B7D3DF; --coast:#8F8268;
-  --water:#2F7E95; --water-soft:rgba(47,126,149,.16); --water-top:rgba(47,126,149,.30);   /* tidevannskortet (vannfarge, ikke ratingfarger) */
-  --selected:#0E1A21; --on-selected:#FFFFFF;
-  --accent:#0E1A21; --focus:#0B7483; --warn:#B8441F;
-  --night:rgba(14,26,33,.08); --dusk:rgba(14,26,33,.04);
-  /* ratingfyll (ruter, søyler, prikker, stjerner) og rating som tekst (ordet) */
-  --r0:#7D8C95; --r0-ink:#55656E; --r0-on:#0E1A21;   /* HIG sa #8E9CA4, men det gir 2,8:1 mot hvitt - mørknet til 3,5:1 (grafikk ≥3:1, HIG 15) */
-  --r1:#E0623A; --r1-ink:#B8441F; --r1-on:#0E1A21;
-  --r2:#BF8A00; --r2-ink:#8F6600; --r2-on:#0E1A21;
-  --r3:#22A36B; --r3-ink:#167A4F; --r3-on:#0E1A21;
-  --r4:#109BAD; --r4-ink:#0B7483; --r4-on:#0E1A21;
-  --r5:#7360E3; --r5-ink:#5A47C9; --r5-on:#FFFFFF;
-  --star:var(--r2);
-  --glass:rgba(255,255,255,.80); --glass-edge:rgba(14,26,33,.08);
-  --mk-kant:rgba(14,26,33,.6);   /* ytre kant rundt prikker/klynger: Kartverket-kartet er lyst/grått, fargen alene gir < 3:1 mot terrenget */
-  --window:var(--ink); --window-fill:rgba(14,26,33,.075); --swell:var(--ink); --swell-miss:var(--muted); --wind:var(--ink);
-  --display:"Geist", system-ui, -apple-system, sans-serif;
-  --body:"Geist", "Helvetica Neue", Helvetica, system-ui, -apple-system, sans-serif;
-  --mono:"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* B 4.0-tokenene (SPEC §2) */
+  --bg:#F2EFE8; --ink:#002941; --muted:#5E5A51; --hair:#D8D2C6; --outline:#B9B2A4;
+  --signal:#C05151; --on-signal:#F2EFE8;
+  --data:#B6DFED; --tide-band:rgba(182,223,237,.55);
+  --kartland:#002941; --on-kartland:#F2EFE8;
+  --night:rgba(0,41,65,.12); --dusk:rgba(0,41,65,.05);
+  --unreached:rgba(0,41,65,.07); --hatch:rgba(0,41,65,.35);
+  --dim:#5E5A51; --swell-miss:#5E5A51;   /* tekst og pil i mørk time, svellpil utenfor vinduet (4,74:1 oppå --night, Theodor 12.11) */
+  /* Navnene komponentene bruker fra før. De peker på B 4.0-tokenene til skjermene bygges om (T3 steg 3-6).
+     Ingen kort: --raised er lik --bg. --sunken er «ikke nådd»-toningen lagt på --bg (ugjennomsiktig). */
+  --surface:var(--bg); --raised:var(--bg); --sunken:#E1E1DC;
+  --line:var(--hair); --line-strong:var(--outline); --faint:var(--outline);
+  --land:#F2EDE2; --sea:#B7D3DF; --coast:#8F8268;   /* kartet er uendret til T3 steg 5 (kartland, grunnvannsbånd) */
+  --water:var(--ink); --water-soft:var(--tide-band); --water-top:var(--tide-band);   /* tidevann: kurven i blekk, båndet i --data */
+  --selected:var(--ink); --on-selected:var(--bg);
+  --accent:var(--ink); --focus:var(--ink); --warn:var(--ink);
+  /* vurdering (SPEC §5): 0-3 er blekk, korall fra 4. --rN er fyll (ruter, søyler, prikker), --rN-ink er ordet
+     (liten tekst, derfor aldri korall), --rN-on er tallet oppå fyllet, --rN-tall er tallet alene (stor tekst).
+     Tall oppå korall er alltid minst 14 px fet (Theodor 12.11). */
+  --r0:var(--hair); --r0-ink:var(--muted); --r0-on:var(--ink); --r0-tall:var(--muted);
+  --r1:var(--outline); --r1-ink:var(--ink); --r1-on:var(--ink); --r1-tall:var(--ink);
+  --r2:var(--outline); --r2-ink:var(--ink); --r2-on:var(--ink); --r2-tall:var(--ink);
+  --r3:var(--ink); --r3-ink:var(--ink); --r3-on:var(--bg); --r3-tall:var(--ink);
+  --r4:var(--signal); --r4-ink:var(--ink); --r4-on:var(--on-signal); --r4-tall:var(--signal);
+  --r5:var(--signal); --r5-ink:var(--ink); --r5-on:var(--on-signal); --r5-tall:var(--signal);
+  --star:var(--ink);
+  --glass:rgba(242,239,232,.92); --glass-edge:var(--hair);
+  --mk-kant:rgba(0,41,65,.6);   /* ytre kant rundt prikker/klynger på kartet */
+  --window:var(--ink); --window-fill:var(--unreached); --swell:var(--ink); --wind:var(--ink);
+  /* skrift (SPEC §3): Martian Mono til tall, klokkeslett, navn, etiketter og faner; Familjen Grotesk til setninger */
+  --display:"Familjen Grotesk", system-ui, -apple-system, sans-serif;
+  --body:"Familjen Grotesk", "Helvetica Neue", Helvetica, system-ui, -apple-system, sans-serif;
+  --mono:"Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --wordmark:"Fraunces", "Iowan Old Style", Georgia, serif;
+  /* skriftskala, app (størrelse/linjehøyde i px i SPEC, her rem). Web-verdiene settes fra 1024 px lenger ned. */
+  --t-hero:3.75rem; --lh-hero:.9;            /* spotnavn 60/54 */
+  --t-tall:4.75rem; --lh-tall:.842;          /* dagens tall 76/64 */
+  --t-vindu:2.75rem; --lh-vindu:.909;        /* beste vindu 44/40 */
+  --t-svell:3.5rem; --lh-svell:.929;         /* svellhøyde 56/52 */
+  --t-overskrift:1.875rem; --lh-overskrift:1.133;   /* 30/34 */
+  --t-brod:1.0625rem; --lh-brod:1.41;        /* 16-18/22-26 */
+  --t-navn:1.25rem; --lh-navn:1.1;           /* liste, navn 20/22 */
+  --t-listetall:2.75rem; --lh-listetall:.909;   /* liste, tall 44/40 */
+  --t-etikett:0.6875rem; --lh-etikett:1.273; /* 11/14, minste tekst */
+  /* avstandsskala (SPEC §4) */
+  --s1:4px; --s2:8px; --s3:16px; --s4:24px; --s5:40px; --s6:64px; --s7:96px; --s8:144px;
+  /* eldre størrelser, brukes av komponentene til skjermene bygges om */
   --fs-caption:0.8125rem; --fs-secondary:0.9375rem; --fs-body:1rem; --fs-title:1.375rem; --fs-display:2rem;
-  --radius:18px; --radius-sm:12px;
-  --shadow:0 10px 30px -14px rgba(14,26,33,.28);
-  --nav-h:92px; --top-h:60px;
+  --radius:0px; --radius-sm:0px;
+  --shadow:0 0 0 1px var(--hair);   /* ingen skygger: flytende flater får en tynn strek rundt seg */
+  --nav-h:64px; --top-h:60px;
   --max-w:1360px;
   color-scheme: light dark;
   box-sizing:border-box;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
-    --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
+    --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
+    --signal:#FD6E6E; --on-signal:#002941;
+    --tide-band:rgba(182,223,237,.16);
+    --kartland:#E3D3B0; --on-kartland:#002941;
+    --night:rgba(0,0,0,.38); --dusk:rgba(0,0,0,.18);
+    --unreached:rgba(242,239,232,.10); --hatch:rgba(242,239,232,.35);
+    --dim:#7E8A8F; --swell-miss:#8C9AA0;
+    --sunken:#183D52;
     --land:#2A4352; --sea:#0A1923; --coast:#56798A;
-    --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
-    --selected:#EAF2F4; --on-selected:#0A1822;
-    --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
-    --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);
-    --r0:#6B7F8B; --r0-ink:#93A7B1; --r0-on:#0A1822;
-    --r1:#EC6A43; --r1-ink:#EC6A43; --r1-on:#0A1822;
-    --r2:#EFBA45; --r2-ink:#EFBA45; --r2-on:#0A1822;
-    --r3:#47C88E; --r3-ink:#47C88E; --r3-on:#0A1822;
-    --r4:#2DC3D3; --r4-ink:#2DC3D3; --r4-on:#0A1822;
-    --r5:#9A88FF; --r5-ink:#9A88FF; --r5-on:#0A1822;
-    --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10); --mk-kant:rgba(234,242,244,.7);
-    --window-fill:rgba(234,242,244,.075);
-    --shadow:0 16px 40px -18px rgba(0,0,0,.7);
+    --glass:rgba(0,41,65,.92); --mk-kant:rgba(242,239,232,.7);
   }
 }
 :root[data-theme="dark"]{
-  --surface:#0A1822; --raised:#12232D; --sunken:#0D1D27; --line:rgba(234,242,244,.09); --line-strong:rgba(234,242,244,.18);
-  --ink:#EAF2F4; --muted:#93A7B1; --faint:#5E727C;
+  --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
+  --signal:#FD6E6E; --on-signal:#002941;
+  --tide-band:rgba(182,223,237,.16);
+  --kartland:#E3D3B0; --on-kartland:#002941;
+  --night:rgba(0,0,0,.38); --dusk:rgba(0,0,0,.18);
+  --unreached:rgba(242,239,232,.10); --hatch:rgba(242,239,232,.35);
+  --dim:#7E8A8F; --swell-miss:#8C9AA0;
+  --sunken:#183D52;
   --land:#2A4352; --sea:#0A1923; --coast:#56798A;
-  --water:#6CC3DA; --water-soft:rgba(108,195,218,.14); --water-top:rgba(108,195,218,.32);
-  --selected:#EAF2F4; --on-selected:#0A1822;
-  --accent:#EAF2F4; --focus:#5ED5E5; --warn:#EC6A43;
-  --night:rgba(0,0,0,.34); --dusk:rgba(0,0,0,.16);
-  --r0:#6B7F8B; --r0-ink:#93A7B1; --r0-on:#0A1822;
-  --r1:#EC6A43; --r1-ink:#EC6A43; --r1-on:#0A1822;
-  --r2:#EFBA45; --r2-ink:#EFBA45; --r2-on:#0A1822;
-  --r3:#47C88E; --r3-ink:#47C88E; --r3-on:#0A1822;
-  --r4:#2DC3D3; --r4-ink:#2DC3D3; --r4-on:#0A1822;
-  --r5:#9A88FF; --r5-ink:#9A88FF; --r5-on:#0A1822;
-  --glass:rgba(18,35,45,.82); --glass-edge:rgba(234,242,244,.10); --mk-kant:rgba(234,242,244,.7);
-  --window-fill:rgba(234,242,244,.075);
-  --shadow:0 16px 40px -18px rgba(0,0,0,.7);
+  --glass:rgba(0,41,65,.92); --mk-kant:rgba(242,239,232,.7);
 }
-.r-0{--rc:var(--r0);--rc-ink:var(--r0-ink);--rc-on:var(--r0-on)}
-.r-1{--rc:var(--r1);--rc-ink:var(--r1-ink);--rc-on:var(--r1-on)}
-.r-2{--rc:var(--r2);--rc-ink:var(--r2-ink);--rc-on:var(--r2-on)}
-.r-3{--rc:var(--r3);--rc-ink:var(--r3-ink);--rc-on:var(--r3-on)}
-.r-4{--rc:var(--r4);--rc-ink:var(--r4-ink);--rc-on:var(--r4-on)}
-.r-5{--rc:var(--r5);--rc-ink:var(--r5-ink);--rc-on:var(--r5-on)}
+.r-0{--rc:var(--r0);--rc-ink:var(--r0-ink);--rc-on:var(--r0-on);--rc-tall:var(--r0-tall)}
+.r-1{--rc:var(--r1);--rc-ink:var(--r1-ink);--rc-on:var(--r1-on);--rc-tall:var(--r1-tall)}
+.r-2{--rc:var(--r2);--rc-ink:var(--r2-ink);--rc-on:var(--r2-on);--rc-tall:var(--r2-tall)}
+.r-3{--rc:var(--r3);--rc-ink:var(--r3-ink);--rc-on:var(--r3-on);--rc-tall:var(--r3-tall)}
+.r-4{--rc:var(--r4);--rc-ink:var(--r4-ink);--rc-on:var(--r4-on);--rc-tall:var(--r4-tall)}
+.r-5{--rc:var(--r5);--rc-ink:var(--r5-ink);--rc-on:var(--r5-on);--rc-tall:var(--r5-tall)}
 
-@font-face{font-family:"Geist";font-style:normal;font-weight:100 900;font-display:swap;src:url(../fonts/geist-latin-wght.woff2) format("woff2-variations")}
-@font-face{font-family:"Geist Mono";font-style:normal;font-weight:100 900;font-display:swap;src:url(../fonts/geist-mono-latin-wght.woff2) format("woff2-variations")}
+/* Fonter (Google Fonts, selvhostet, OFL). Martian Mono er variabel i bredde (75-112,5 %) og vekt (100-800). */
+@font-face{font-family:"Martian Mono";font-style:normal;font-weight:100 800;font-stretch:75% 112.5%;font-display:swap;src:url(../fonts/martian-mono-latin-wdth-wght.woff2) format("woff2-variations")}
+@font-face{font-family:"Familjen Grotesk";font-style:normal;font-weight:400 700;font-display:swap;src:url(../fonts/familjen-grotesk-latin-wght.woff2) format("woff2-variations")}
 
 /* ---------- Grunn: rem og systemets tekststørrelse (HIG 4) ---------- */
 html{font:-apple-system-body;font-family:var(--body);font-size:100%;height:auto;overflow:auto;background:var(--surface)}
 body{margin:0;min-height:100dvh;overflow:auto;background:var(--surface);color:var(--ink);font-family:var(--body);font-size:var(--fs-body);line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
 *,*::before,*::after{box-sizing:inherit}
 button,input,a{font:inherit;color:inherit}
-.num,.mono{font-family:var(--mono)}
+.num,.mono{font-family:var(--mono);font-stretch:87.5%}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skip{position:absolute;left:-200vw;top:8px;padding:8px 12px;background:var(--raised);border-radius:8px;z-index:100}
 .skip:focus{left:16px;outline:2px solid var(--focus)}
 .pc-only{display:none !important}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
-.h1{font-size:2rem;font-weight:800;line-height:1.1}
-.h2{font-size:var(--fs-title);font-weight:700;line-height:1.2}   /* seksjonstitler: vanlige, fete (HIG 10) */
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02em}
+.h1{font-size:1.875rem;font-weight:600;line-height:1.133}   /* 30/34; web-størrelsen (60/64) kommer med skjermene i steg 6 */
+.h2{font-size:var(--fs-title);font-weight:600;line-height:1.2}
+/* ---------- B 4.0: skriftroller (SPEC §3) og seksjonsstart (SPEC §4) ---------- */
+.t-hero,.t-tall,.t-vindu,.t-svell,.t-navn,.t-listetall{font-family:var(--mono);font-weight:800;font-stretch:87.5%;font-variant-numeric:tabular-nums;letter-spacing:0}
+.t-hero{font-size:var(--t-hero);line-height:var(--lh-hero);text-transform:uppercase}
+.t-hero.lang{font-stretch:75%}   /* navn over 12-13 tegn */
+.t-tall{font-size:var(--t-tall);line-height:var(--lh-tall)}
+.t-vindu{font-size:var(--t-vindu);line-height:var(--lh-vindu);color:var(--signal)}
+.t-svell{font-size:var(--t-svell);line-height:var(--lh-svell)}
+.t-navn{font-size:var(--t-navn);line-height:var(--lh-navn);text-transform:uppercase}
+.t-listetall{font-size:var(--t-listetall);line-height:var(--lh-listetall)}
+.t-overskrift{font-family:var(--display);font-size:var(--t-overskrift);line-height:var(--lh-overskrift);font-weight:600;letter-spacing:-.02em}
+.t-brod{font-family:var(--body);font-size:var(--t-brod);line-height:var(--lh-brod);font-weight:400}
+.etikett{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+/* Seksjonsstart: 2 px blekk, 3 px luft, 0,75 px blekk, 9 px luft, så tittelen til venstre og en kommentar i --muted til høyre */
+.seksjon,.sek,.sek-spot{position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 var(--s3);margin:var(--s5) 0 var(--s3);padding-top:12.75px;border-top:2px solid var(--ink)}
+.seksjon::before,.sek::before,.sek-spot::before{content:"";position:absolute;left:0;right:0;top:3px;height:.75px;background:var(--ink)}
+.seksjon,.sek > .h2,.sek-spot > .h2,.seksjon > h2{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
+.seksjon > .kommentar,.sek > .sub,.sek-spot > .sub{margin:0;font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .sub{color:var(--muted);font-size:var(--fs-secondary);margin:4px 0 0}
 .muted{color:var(--muted)}
 .wm{display:inline-block;color:var(--ink);text-decoration:none;line-height:0}
@@ -106,14 +138,13 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .view{display:block;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom,0px))}
 .view[hidden]{display:none}
 #viewUtforsk{padding:0}
-.tabbar{position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;z-index:30;pointer-events:none}
-.tabbar > *{pointer-events:auto}
-.glass{background:var(--glass);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--glass-edge);box-shadow:var(--shadow)}
-.tabs{flex:1;display:flex;height:64px;border-radius:32px;padding:4px}
-.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:44px;border-radius:28px;text-decoration:none;color:var(--muted);font-size:0.75rem;font-weight:600}
+/* B 4.0: flat fanelinje i full bredde (SPEC §6A punkt 5) - papirflate, tynn strek over, Martian 11, aktiv fane fet */
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:stretch;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));padding:0 8px env(safe-area-inset-bottom,0px);background:var(--surface);border-top:.75px solid var(--ink);z-index:30}
+.tabs{flex:1;display:flex}
+.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:44px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .tabs a svg{width:22px;height:22px}
-.tabs a[aria-current="page"]{color:var(--ink);background:var(--sunken)}
-.sokknapp{flex:none;width:64px;height:64px;border-radius:32px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
+.tabs a[aria-current="page"]{color:var(--ink);font-weight:800}
+.sokknapp{flex:none;width:56px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
 .sokknapp svg{width:24px;height:24px}
 .pagebar{display:flex;align-items:center;gap:8px;margin:0 0 6px}
 .back{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 14px 0 8px;border-radius:22px;cursor:pointer;font-weight:600;font-size:var(--fs-secondary)}
@@ -152,11 +183,27 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 /* ---------- Hjem ---------- */
 .hjem-topp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:8px 0 0}
 .dato{color:var(--muted);font-size:var(--fs-secondary);margin:6px 0 0}
-.sokfelt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin:18px 0 6px;padding:0 18px;border-radius:26px;background:var(--raised);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);font-size:1.0625rem;cursor:text}
-.sokfelt svg{width:20px;height:20px;flex:none}
-.sokfelt:hover{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
-.sek{margin:26px 0 10px}
-.sek .sub{margin-top:2px}
+/* B 4.0 Hjem på mobil (SPEC §6A): topplinje 44 pt, overskrift av to setninger, favorittrader uten streker */
+.hjem-linje{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:44px}
+.hjem-linje .etikett{margin:0}
+.hjem-overskrift{margin:var(--s3) 0 0}
+.hjem-overskrift span{display:block}
+.sekknapp{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;margin:-16px 0;cursor:pointer;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sekknapp[aria-pressed="true"]{color:var(--ink);font-weight:700}
+.favliste{display:grid;gap:var(--s4)}
+.favlinje{display:grid;grid-template-columns:2.75rem minmax(0,1fr);column-gap:var(--s3);align-items:start;color:var(--ink);text-decoration:none}
+.favlinje .t-listetall{color:var(--rc-tall)}
+.favtekst{display:block;min-width:0}
+.favtekst > span{display:block}
+.favlinje .t-navn.lang{font-stretch:75%}
+.favlinje .etikett{margin-top:var(--s1)}
+.favlinje .etikett.obs{color:var(--ink)}
+.favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
+.favlinje .uke{display:grid;margin-top:12px}
+.favlinje .uke b{font-family:var(--mono);font-stretch:87.5%;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.favlinje .uke b.idag{font-weight:800}
+.favlinje > .ghost{grid-column:2;justify-self:start;margin-top:12px}
+.favleggtil,.hjem-bunn{margin:var(--s4) 0 0}
 .best{position:relative;overflow:hidden;padding:18px 18px 16px;box-shadow:var(--shadow),0 1px 0 var(--line)}
 .best::before{content:"";position:absolute;left:0;right:0;top:0;height:7px;background:var(--rc,var(--line-strong))}
 .best .rad{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -169,10 +216,19 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .best .hoyde small{font-family:var(--body);font-size:1rem;color:var(--muted);margin-left:4px;font-weight:500}
 .best .fakta{color:var(--muted);margin-top:12px;font-size:var(--fs-secondary)}
 .best.ingen .navn{font-size:1.375rem}
-.stjerner{display:inline-flex;gap:3px}
-.stjerner svg{width:1.125rem;height:1.125rem}
-.stjerner .st{fill:var(--rc,var(--star))}
-.stjerner .e{fill:var(--line-strong)}
+/* vurderingen som tall (SPEC §5). .rtall: tallet alene, stort - korall fra 4, ellers blekk, 0 dempet.
+   .rute: tallet i en 24 px rute - korall fylt fra 4, ellers 1 px omriss med tallet i blekk. Tomme ruter:
+   .miss = data mangler (skravur), .mork = mørk time (skygge, ingen vurdering), .forbud = surfing forbudt. */
+.rtall{display:inline-block;font-family:var(--mono);font-stretch:87.5%;font-weight:800;font-size:1.75rem;line-height:1;color:var(--rc-tall)}
+.rtall b{font-weight:inherit}
+.rtall.big{font-size:3rem}
+.rute{flex:none;display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1;color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
+.rute.r-4,.rute.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.rute.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
+.rute.mork{background:var(--night);box-shadow:none}
+.rute.forbud{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--hair)}
+.etikett.lyse{margin:0 0 var(--s2)}
+.etikett.tapt{margin-top:6px;color:var(--ink)}
 .favrad{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px 8px;scroll-snap-type:x proximity}
 .favrad::-webkit-scrollbar{display:none}
 .favkort{flex:none;width:min(300px,78vw);scroll-snap-align:start;text-align:left}
@@ -183,19 +239,20 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .favkort .hoyde{font-family:var(--mono);font-size:1.375rem}
 .favkort .hoyde small{font-family:var(--body);font-size:0.875rem;color:var(--muted);margin-left:3px}
 .favkort .vind{color:var(--muted);font-size:var(--fs-secondary);margin-top:8px}
-.favkort .uke{margin-top:12px;--uw:1.5rem;gap:4px}
-/* ukeruter: tallet 1-5 i ruten (HIG 5), 0 = tom rute med kant, mangler = stiplet */
-.uke{--uw:1.375rem;display:grid;grid-template-columns:repeat(7,var(--uw));gap:3px}
-.uke i,.uke b{display:grid;place-items:center;width:var(--uw);height:var(--uw);border-radius:6px;font-style:normal;font-family:var(--mono);font-size:0.75rem;font-weight:600}
-.uke i{background:var(--rc);color:var(--rc-on)}
-.uke i.r-0{background:transparent;color:transparent;box-shadow:inset 0 0 0 1px var(--line-strong)}
-.uke i.miss{background:transparent;color:transparent;border:1px dashed var(--line-strong)}
-.uke i.dark{background:transparent;color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
-.uke i.over{background:transparent;color:transparent;box-shadow:none;border:0}
-.uke i.forbud{background:var(--sunken);color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
-.uke b{color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;height:1rem}
+.favkort .uke{margin-top:12px;gap:4px}
+/* ukeruter (SPEC §5): 7 ruter på 24 px med tallet 0-5. Korall fylt fra 4, ellers 1 px omriss og tallet i blekk (0 dempet).
+   12 px ekstra luft etter dag 3 (den fjerde kolonnen er 12 px bredere). Mangler = skravur, mørkt hele dagen = skygge. */
+.uke{--uw:1.5rem;display:grid;grid-template-columns:repeat(3,var(--uw)) calc(var(--uw) + 12px) repeat(3,var(--uw));gap:2px}
+.uke > :nth-child(7n+4){margin-left:12px}
+.uke i,.uke b{display:grid;place-items:center;width:var(--uw);height:var(--uw);font-style:normal;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1}
+.uke i{color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
+.uke i.r-4,.uke i.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.uke i.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);color:transparent;box-shadow:inset 0 0 0 1px var(--hair)}
+.uke i.dark{background:var(--night);color:transparent;box-shadow:none}
+.uke i.over{background:transparent;color:transparent;box-shadow:none}
+.uke i.forbud{background:var(--sunken);color:transparent;box-shadow:inset 0 0 0 1px var(--hair)}
+.uke b{color:var(--muted);font-family:var(--body);font-stretch:normal;font-size:0.6875rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
-.stars .st.f{fill:none;stroke:var(--rc-ink);stroke-width:1.5;stroke-dasharray:5 3.33;stroke-linecap:round;stroke-linejoin:round;opacity:1}   /* tapt stjerne (vind/tidevann): stiplet omriss i ratingfargen (Theodor 16.10, tilbake fra 15.10). pathLength 100 → 12 like streker; 1,5 i viewBox-enheter = 1,5 px ved 24 px og skaleres med størrelsen (1 px ved 16, 2 px ved 32). aria: «tapt på vind eller tidevann» */
 .gruppe{margin-top:22px}
 .gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 14px 8px}   /* samme sidepadding som .rad, så ukedagene står rett over rutene (Theodor 15.10) */
 .gruppe-topp h3{font-size:1.0625rem;font-weight:700}
@@ -203,7 +260,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .rader{display:flex;flex-direction:column;gap:6px}
 .rad{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;width:100%;min-height:60px;padding:10px 14px;border-radius:14px;background:var(--raised);box-shadow:0 1px 0 var(--line);cursor:pointer;text-align:left}   /* flex-wrap: ved 200 % tekst faller ukerutene ned på egen linje i stedet for å dekke navnet */
 .rad:hover{box-shadow:0 0 0 2px var(--line-strong)}
-.rad .nm{flex:1 1 110px;min-width:0}   /* 110 + 12 + 172 (ukerutene) ≤ 315 innhold på 390 px, så alt står på én linje; ved 200 % faller rutene ned */
+.rad .nm{flex:1 1 100px;min-width:0}   /* 100 + 12 + 192 (ukerutene: 7 × 24 + 6 × 2 + 12) ≤ 315 innhold på 390 px, så alt står på én linje; ved 200 % faller rutene ned */
 .rad .uke{flex:0 0 auto;margin-left:auto}
 .rad .nm b{display:block;font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -211,9 +268,8 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .rad .nm .na .num{color:var(--ink);font-weight:500;margin-left:6px}
 .visalle{margin:8px auto 0;display:flex}
 /* søkeresultat-rad */
-.srad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border-radius:12px;cursor:pointer}
+.srad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border-radius:12px;cursor:pointer}
 .srad:hover{background:var(--sunken)}
-.srad .prikk{width:12px;height:12px;border-radius:50%;background:var(--rc,var(--line-strong))}
 .srad .nm b{display:block;font-size:1.0625rem;font-weight:700}
 .srad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption)}
 .srad .na{text-align:right;color:var(--rc-ink);font-weight:600;font-size:var(--fs-secondary)}
@@ -261,7 +317,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .kartkort .fakta b{display:block;color:var(--ink);font-size:var(--fs-secondary);font-weight:600}
 .kartkort .primary{width:100%;margin-top:12px}
 .kartkort .lukk{position:absolute;right:8px;top:8px}
-/* kartet og merkene (kart.js): hele merket er én 44 px høy knapp (prikk + lapp), lappen 28 px, «Navn Ord» */
+/* kartet og merkene (kart.js): hele merket er én 44 px høy knapp (prikk + lapp), lappen 28 px, «Navn 3 Ord» */
 .markers{position:absolute;inset:0;pointer-events:none}
 /* S3: MapLibre-kartet ligger under merkene; kildemerket (.kartkilde) over dagbrikkene */
 .kart .ml-kart.maplibregl-map,.kart .ml-kart{position:absolute;inset:0;background:var(--sea)}   /* MapLibre-CSS (lastes senere) setter position:relative */
@@ -273,7 +329,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .vindlag{position:absolute;left:50%;top:50%;width:2000px;height:2000px;margin:-1000px 0 0 -1000px;pointer-events:none;opacity:0;transition:transform 1.4s cubic-bezier(.2,.8,.2,1),opacity .8s ease;will-change:transform;color:var(--wind)}
 .vindlag svg{display:block}
 .vindlag line{stroke:currentColor;stroke-linecap:round;animation-name:ns-blow;animation-timing-function:linear;animation-iteration-count:infinite}
-.kilelag{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.kilelag{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;--r1:var(--ink);--r2:var(--ink)}   /* B4 steg 1: kilen for 1-2 i blekk til kartet legges om (steg 5) */
 .kile .kile-fyll{fill:var(--kc);stroke:var(--kc);fill-opacity:.16;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
 .kile .kile-c{fill:var(--ink)}
 .kile .arc{fill:none;stroke:var(--kc);stroke-width:2.2;stroke-linecap:round;vector-effect:non-scaling-stroke;animation:ns-swell 3s linear infinite}
@@ -296,6 +352,7 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .mk.miss .mk-dot{background:var(--raised);border:1.5px dashed var(--muted);box-sizing:border-box}
 .mk-pill{position:absolute;left:var(--lx,52px);top:var(--ly,8px);display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--line-strong),0 2px 8px rgba(0,0,0,.12);white-space:nowrap;font-size:0.9375rem;font-weight:700;line-height:1}
 .mk-pill .ord{color:var(--rc-ink);font-weight:600}
+.mk-pill .mk-tall{font-family:var(--mono);font-stretch:75%;font-weight:800;color:var(--rc-ink)}   /* tallet i blekk: korall er aldri liten tekst, prikken bærer fargen */
 .mk.bare .mk-pill{display:none}
 .mk.sel{z-index:3}
 .utforsk-liste{display:none}
@@ -311,6 +368,8 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .vurdering{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:10px 0 18px}
 .vurdering .ord{font-size:2.5rem;font-weight:800;line-height:1.05;color:var(--rc-ink);letter-spacing:-.02em}
 .vurdering .ord.r-0{color:var(--muted)}
+.vurdering .rtall{display:block;margin-bottom:6px}
+.vurdering .etikett.lyse{margin:6px 0 0}
 .vurdering .sikker{text-align:right;color:var(--muted);font-size:var(--fs-secondary);max-width:46%}
 .kort4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .kort4 .kort{display:flex;flex-direction:column;gap:6px;min-height:150px;container-type:inline-size}
@@ -333,8 +392,6 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .energi-bar .tick{position:absolute;top:-4px;width:2px;height:14px;background:var(--muted)}
 .energi-txt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;color:var(--muted);font-size:var(--fs-caption)}
 .energi-txt span:last-child{text-align:right;margin-left:auto}
-.sek-spot{margin:26px 0 10px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 12px}
-.sek-spot .sub{margin:0}
 /* dagfaner */
 .dagfaner{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;scroll-snap-type:x proximity}
 .dagfaner::-webkit-scrollbar{display:none}
@@ -348,15 +405,16 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .dagfane .o{color:var(--rc-ink);font-weight:700;font-size:var(--fs-caption);min-height:1.2em}
 .dagfane .felt{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
 .dagfane .felt i{height:7px;border-radius:4px;background:var(--rc)}
-.dagfane .felt i.r-0{background:var(--line-strong)}
+.dagfane .felt i.r-0{background:transparent;box-shadow:inset 0 0 0 1px var(--outline)}   /* SPEC §5: 0 er tomt omriss */
 .dagfane .felt i.miss{background:transparent;border:1px dashed var(--line-strong);height:5px}
 .dagfane .piler{display:flex;gap:10px;color:var(--muted);font-size:0.875rem}
 .dagfane .piler svg{width:0.875rem;height:0.875rem}
 .dagfane.usikker{opacity:.72}
 .dagfane .us{font-size:0.6875rem;color:var(--muted)}
 .dagfane[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
-.dagfane[aria-pressed="true"] .d small,.dagfane[aria-pressed="true"] .h small,.dagfane[aria-pressed="true"] .o,.dagfane[aria-pressed="true"] .piler,.dagfane[aria-pressed="true"] .us{color:var(--on-selected);opacity:.85}
-.dagfane[aria-pressed="true"] .felt i.r-0{background:rgba(127,127,127,.5)}
+.dagfane[aria-pressed="true"] .d small,.dagfane[aria-pressed="true"] .h small,.dagfane[aria-pressed="true"] .h.ord,.dagfane[aria-pressed="true"] .o,.dagfane[aria-pressed="true"] .piler,.dagfane[aria-pressed="true"] .us{color:var(--on-selected);opacity:.85}
+.dagfane[aria-pressed="true"] .felt i.r-0{background:transparent;box-shadow:inset 0 0 0 1px rgba(127,127,127,.7)}
+.dagfane[aria-pressed="true"] .felt i.r-3{background:var(--on-selected)}   /* --r3 er blekk, som den valgte fanen */
 /* dagsgraf */
 .graf{padding:14px 12px 10px}
 .graf-topp{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
@@ -367,13 +425,19 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .plot .kol{position:relative;display:flex;flex-direction:column;min-width:0}
 .plot .kol.natt::before{content:"";position:absolute;inset:0;background:var(--night);border-radius:4px;pointer-events:none}
 .plot .kol.skum::before{content:"";position:absolute;inset:0;background:var(--dusk);border-radius:4px;pointer-events:none}
-.plot .rs{height:1.125rem;display:grid;place-items:center;border-radius:4px;font-family:var(--mono);font-size:0.6875rem;font-weight:700;background:var(--rc);color:var(--rc-on);margin-bottom:4px}
-.plot .rs.r-0{background:transparent;color:transparent;box-shadow:inset 0 0 0 1px var(--line)}
-.plot .rs.miss{background:transparent;color:transparent;border:1px dashed var(--line-strong)}
+/* ruta over søylen: tallet 0-5. Korall 4-5, blekk 3, omrissfargen fylt 1-2, tomt omriss 0 (SPEC §5). Mørk time: tom
+   (kolonnen er skygget). Tapte poeng: stiplet korall-omriss rundt ruta. Mangler: skravur. */
+.plot .rs{height:1.25rem;display:grid;place-items:center;font-family:var(--mono);font-stretch:75%;font-size:0.875rem;font-weight:800;line-height:1;background:var(--rc);color:var(--rc-on);margin-bottom:4px}
+.plot .rs.r-0{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1px var(--outline)}
+.plot .rs.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px)}
+.plot .rs.mork{background:transparent}
+.plot .rs.forbud{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--hair)}
+.plot .rs.tapt{outline:1px dashed var(--signal);outline-offset:0;box-shadow:inset 0 0 0 1px var(--bg)}
 .plot .soyle{all:unset;position:relative;flex:1;display:flex;align-items:flex-end;min-height:120px;cursor:pointer}
 .plot .soyle .b{position:relative;width:100%;border-radius:3px 3px 0 0;background:var(--rc);transition:height .25s ease}
 .plot .soyle .b .sets{position:absolute;left:0;right:0;bottom:100%;border-radius:3px 3px 0 0;background:var(--rc);opacity:.45}
 .plot .soyle .b.r-0{background:var(--line-strong)}
+.plot .soyle .b.mork,.plot .soyle .b.mork .sets{background:var(--outline)}   /* mørk time: grå søyle, ingen vurdering */
 .plot .soyle .tall{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 2px);font-family:var(--mono);font-size:0.6875rem;color:var(--ink);white-space:nowrap}
 .plot .soyle .tall.ord{font-family:var(--body);color:var(--muted)}
 .plot .kol.valgt .b{outline:2px solid var(--ink);outline-offset:0}
@@ -385,8 +449,9 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
 .grafrad .k{font-size:0.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .grafrad .k small{text-transform:none;letter-spacing:0;font-weight:500;font-size:inherit}   /* small ville gitt 9 px - minst 11 px (HIG 4) */
 .grafrad .celler{display:grid;gap:2px;margin-top:6px}
-.grafrad .celler div{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--mono);font-size:0.6875rem;color:var(--ink);min-width:0}
+.grafrad .celler div{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--mono);font-size:0.6875rem;color:var(--ink);min-width:0;font-stretch:75%}   /* B4: Martian Mono smal, ellers møtes tallene ved 200 % tekst */
 .grafrad .celler div small{color:var(--muted);font-family:var(--mono);font-size:0.6875rem}
+.grafrad .celler div.mork,.grafrad .celler div.mork small{color:var(--dim)}   /* piler og tall i mørke timer er grå */
 .grafrad .celler svg{width:0.875rem;height:0.875rem}
 .grafrad .celler .b{font-weight:700}
 /* minikart, tidevann, vær */
@@ -464,12 +529,26 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   *,*::before,*::after{transition:none !important;animation:none !important;scroll-behavior:auto !important}
 }
 @media (prefers-contrast: more){
-  :root{--muted:#3E4D55;--glass:#FFFFFF;--line:#B8C4CA}
-  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--muted:#B7C6CE;--glass:#12232D;--line:rgba(234,242,244,.22)}}
+  :root{--muted:#3F3C36;--glass:var(--bg);--hair:var(--outline)}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--muted:#D6D2C9;--glass:var(--bg);--hair:var(--outline)}}
   .glass,.utforsk-top .chip,.dagchips .chip{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--raised)}
 }
 @media (prefers-reduced-transparency: reduce){
   .glass,.utforsk-top .chip,.dagchips .chip{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--raised)}
+}
+/* B 4.0: skriftskalaen på web (SPEC §3, fra 1024 px) */
+@media (min-width: 1024px){
+  :root{
+    --t-hero:9rem; --lh-hero:.861;             /* 144/124 */
+    --t-tall:8rem; --lh-tall:.8125;            /* 128/104 */
+    --t-vindu:4rem; --lh-vindu:.875;           /* 64/56 */
+    --t-svell:6rem; --lh-svell:.917;           /* 96/88 */
+    --t-overskrift:3.75rem; --lh-overskrift:1.067;   /* 60/64 */
+    --t-brod:1.125rem; --lh-brod:1.5;          /* 18/27 */
+    --t-navn:1.625rem; --lh-navn:1.1;          /* 26 */
+    --t-listetall:2.75rem; --lh-listetall:.864;   /* 44/38 */
+    --t-etikett:0.75rem; --lh-etikett:1.333;   /* 12/16 */
+  }
 }
 /* gamle regler i app.css som ikke gjelder dette oppsettet */
 @media (min-width: 900px){
@@ -498,14 +577,12 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   .kartkort{position:static;grid-column:1;margin-top:12px}
   .utforsk-liste{display:block;grid-column:2;grid-row:2/4}
   .hjem-topp{margin:0}
-  .sokfelt{display:none}
   .hjem-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:32px;align-items:stretch}
   .hjem-venstre{display:flex;flex-direction:column}
   .neste{flex:1;margin-top:12px;display:flex;flex-direction:column;gap:2px}   /* fyller høyden ved siden av kartet med de tre neste beste (Theodor 15.10, punkt 4) */
   .neste h3{font-size:var(--fs-secondary);font-weight:700;color:var(--muted);margin:0 0 6px}
-  .nrad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:48px;padding:6px 10px;border-radius:12px;cursor:pointer}
+  .nrad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;align-items:center;gap:12px;min-height:48px;padding:6px 10px;border-radius:12px;cursor:pointer}
   .nrad:hover{background:var(--sunken)}
-  .nrad .prikk{width:12px;height:12px;border-radius:50%;background:var(--rc)}
   .nrad .nm b{display:block;font-weight:700}
   .nrad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption)}
   .nrad .na{color:var(--rc-ink);font-weight:600;font-size:var(--fs-secondary)}
@@ -531,9 +608,11 @@ h1,h2,h3{margin:0;font-family:var(--display);letter-spacing:-.01em}
   table.spots td.c{text-align:center;padding:6px 4px}
   .celle{display:inline-grid;place-items:center;min-width:50px;height:38px;padding:0 6px;border-radius:9px;background:var(--rc);color:var(--rc-on);font-family:var(--mono);font-size:0.8125rem;line-height:1.05}
   .celle small{font-size:0.6875rem}
+  .celle.medtall{display:inline-flex;flex-direction:column;align-items:center;gap:3px;height:auto;padding:2px 0;background:transparent;color:var(--ink)}   /* ruta med tallet, og høyden under i blekk */
   .celle.r-0{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-strong)}
   .celle.miss{background:transparent;color:var(--muted);border:1px dashed var(--line-strong)}
   .celle.null{background:var(--sunken);color:var(--muted);font-family:var(--body);font-size:0.6875rem;font-weight:600;white-space:nowrap}
+  .celle.dark{background:var(--night);box-shadow:none}
   .celle.over{background:transparent;box-shadow:none}
   .utforskkort{position:relative;overflow:hidden;min-height:260px;padding:0;background:var(--sea)}
   .utforskkort .knapp{position:absolute;left:14px;bottom:14px}
