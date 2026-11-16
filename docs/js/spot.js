@@ -3,6 +3,7 @@
    Rekkefølge: vurdering, fire kort (surf, svell, vind, energi), langtidsvarsel
    med dagfaner og timegraf, minikart, tidevann, vær, «Hvorfor denne
    vurderingen?», «Logg en økt her», kilder.
+   På mobil (design B 4.0, SPEC §6B) tegner renderMobil() siden: kornfoto, dom, time, timestripe og skive.
 
    Ren visning: ingen tall regnes - alt kommer fra spots/<id>.json. Tekstene
    som tolker tall (kroppshøyde, energiord, sikkerhetsord, innenfor/utenfor
@@ -153,9 +154,222 @@
       <div class="body">${ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : ""}${h.breakdown.map((line, i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("")}</div></details>`;
   }
 
+  /* ---------- mobil (design B 4.0, SPEC §6B) ---------- */
+  // Rekkefølge: kornfoto med tilbake- og favorittknapp, navn, metalinje, dagens dom, faktalinje, valgt time
+  // (svell stort, så surf, vind og tidevann), time for time, retningsskiva, «Hvorfor», logg og kilder.
+  // Ren visning som resten av fila. PC-oppsettet i render() er urørt til steg 6.
+  const midtPaa = (key)=> new Date(key + "T11:00:00Z");
+  // Krediteringen under bildet, med lisensnavnet som lenke (CC BY 4.0 krever lenke til lisensen der det er praktisk mulig)
+  function kreditHtml(){
+    const B = window.SPOTBILDER, i = B.lisens && B.lisens_url ? B.kredit.indexOf(B.lisens) : -1;
+    if(i < 0) return esc(B.kredit);
+    return `${esc(B.kredit.slice(0, i))}<a href="${esc(B.lisens_url)}" target="_blank" rel="noopener license">${esc(B.lisens)}</a>${esc(B.kredit.slice(i + B.lisens.length))}`;
+  }
+  const lengsteOrd = (navn)=> Math.max(...String(navn).split(/[\s-]+/).map(o=> o.length), 1);
+  const ukedagKort = (at)=> fmtWdShort.format(at).replace(/\.$/, "");
+  const stegAv = (s, idxs)=> idxs.length >= 2 && (Date.parse(s.hours[idxs[1]].t) - Date.parse(s.hours[idxs[0]].t)) >= 2 * 36e5 ? 6 : 1;
+  function valgMobil(s, S){
+    // dagen og timen siden viser. Åpnet på «nå» (S.idx null): i dag og timen nå så lenge den er lys, ellers
+    // dagens beste time - og i morgen når det er under to lyse timer igjen (SpotGraf.defaultDay, Theodor 15.10).
+    const n = H.nowIdx(s), idag = dayKey(new Date());
+    const std = SpotGraf.defaultDay(s, n, H);   // setter også hjelperne SpotGraf.days() og bestOfDay() bruker
+    const dager = SpotGraf.days(s);
+    let idx = S.idx!=null && s.hours.length ? Math.max(0, Math.min(s.hours.length - 1, S.idx)) : null;
+    const key = idx!=null ? H.dkOf(s.hours[idx].t) : (std || idag);
+    let d = dager.find(x=> x.key===key);
+    if(!d){   // dagen står ikke i rekka: i dag etter at lyset er over
+      const idxs = []; s.hours.forEach((h, i)=>{ if(H.dkOf(h.t)===key) idxs.push(i); });
+      d = {key, idxs, step: stegAv(s, idxs)};
+    }
+    if(idx==null && d.idxs.length) idx = key===idag && d.idxs.includes(n) && H.usable(s.hours[n]) ? n : SpotGraf.bestOfDay(s, d);
+    return {n, dager: dager.some(x=> x.key===d.key) ? dager : [d, ...dager], d, idx};
+  }
+  function dagsdom(s, d){
+    // Dagens tall. Så lenge dagen står i dagssammendragene er det samme tall som Hjem og ukeoversikten viser
+    // (H.dayBest). Lenger ut leses det av dagens timer med samme regel som publish.best_hour() og day_summary():
+    // beste lyse time, «miss» når tall eller lys mangler, «dark» når hele dagen er mørk.
+    if((s.dager || []).some(x=> x.d===d.key)) return H.dayBest(s, d.key);
+    const tom = (cls)=> ({cls, st: null, h: null, t: null});
+    if(H.forbudInfo && H.forbudInfo(s, Date.parse(d.key + "T12:00:00Z"))) return tom("forbud");
+    let best = null, miss = false, lys = false, ukjent = false;
+    for(const i of d.idxs){
+      const h = s.hours[i];
+      if(H.mork(h)) continue;
+      if(!H.usable(h)){ ukjent = true; if(!H.known(h) || H.stars(h) >= 1) miss = true; continue; }
+      lys = true;
+      if(!H.known(h)){ miss = true; continue; }
+      const c = {i, st: H.stars(h), hh: h.surf_height || 0};
+      if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c;
+    }
+    if(!(best && best.st >= 1)){
+      if(miss || (!lys && ukjent)) return tom("miss");
+      if(!lys) return tom("dark");
+    }
+    if(!best) return tom("miss");
+    // vinduet: timene på rad rundt den beste med samme tall
+    const k = d.idxs.indexOf(best.i); let a = k, z = k;
+    const lik = (j)=>{ const h = s.hours[d.idxs[j]]; return H.usable(h) && H.known(h) && H.stars(h)===best.st; };
+    while(a > 0 && lik(a - 1)) a--;
+    while(z < d.idxs.length - 1 && lik(z + 1)) z++;
+    const h = s.hours[best.i];
+    return {cls: `r-${Math.min(5, best.st)}`, st: best.st, h, t: h.t, start: s.hours[d.idxs[a]].t, slutt: s.hours[d.idxs[z]].t};
+  }
+  function besteSett(s, d, b){
+    // timene i dagens beste vindu (streken over kolonnene i timestripa); ingen når dagen ikke har surf
+    if(b.st==null || b.st < 1 || !b.start) return new Set();
+    const a = Date.parse(b.start), z = Date.parse(b.slutt || b.start);
+    return new Set(d.idxs.filter(i=>{ const ms = Date.parse(s.hours[i].t); return ms >= a && ms <= z; }));
+  }
+  const domOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h);
+  function domHtml(s, d, b){
+    const n = b.st!=null ? Math.min(5, b.st) : null;
+    // beste vindu som klokkeslett; dager med seks timer mellom varslene har bare tidspunktet
+    const vindu = n!=null && n >= 1 ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
+    const setn = H.favSetning(s, b, true);
+    return `<div class="dom r-${n!=null ? n : 0}">
+        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(STR.starsAria(n, (b.h && b.h.faded) || 0))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
+      </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
+  }
+  function faktaHtml(s, h, t){
+    // bare det vi har data for (SPEC §6B punkt 5)
+    const f = [], ld = (s.light_days || {})[dayKey(t)];
+    if(ld) f.push(ld.start ? `${STR.spot.lys} ${fmtTime.format(new Date(ld.start))}–${fmtTime.format(new Date(ld.end))}` : STR.lightNone);
+    if(h && h.air_temp!=null) f.push(`${STR.spot.luft} ${nf0.format(h.air_temp)}°`);
+    if(h && h.water_temp!=null) f.push(`${STR.spot.vann} ${nf0.format(h.water_temp)}°`);
+    if(DATA.generated){ const g = new Date(DATA.generated); f.push(`${STR.spot.oppdatert} ${dayKey(g)===dayKey(new Date()) ? "" : relDay(g) + " "}${fmtTime.format(g)}`); }
+    return f.length ? `<p class="fakta-linje">${f.map(x=> `<span>${esc(x)}</span>`).join("")}</p>` : "";
+  }
+  const PIL = (cls, deg, inni)=> `<svg class="ik ${cls}" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"${deg!=null ? ` style="transform:rotate(${Math.round(deg)}deg)"` : ""}>${inni}</svg>`;
+  const IK_SVELL = `<path d="M12 2 V13" fill="none" stroke="currentColor" stroke-width="3"/><polygon points="12,21 7.5,13 16.5,13" fill="currentColor"/>`;
+  const IK_VIND = `<path d="M12 3 V19 M7.5 14.5 L12 20 L16.5 14.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
+  const IK_TIDE = `<path d="M2 18 C8 18 10 6 22 6" fill="none" stroke="currentColor" stroke-width="2"/><circle class="pk" cx="9.75" cy="12" r="3.5" stroke="currentColor" stroke-width="2"/>`;
+  const IK_SURF = `<path d="M2 18 C7 18 8 7 14 7 C18.5 7 18.5 12.5 15 13.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
+  function timeDomHtml(s, h, t){
+    // timens tall og ord til høyre i seksjonsstarten, med tapte poeng skrevet ut (SPEC §5: «−1 tidevann»).
+    // Tallet står i ruta fra ukeoversikten: korall er aldri liten tekst, ruta bærer fargen fra 4.
+    if((h && h._forbud) || (H.forbudInfo && H.forbudInfo(s, t.getTime()))) return `<p class="sub">${esc(STR.hjem.forbud)}</p>`;
+    if(!h || !H.known(h)) return `<p class="sub">${esc(STR.hjem.mangler)}</p>`;
+    if(H.mork(h)) return `<p class="sub">${esc(STR.lightOnly)}</p>`;
+    const st = Math.min(5, H.stars(h));
+    const tapt = [h.faded_wind ? STR.hjem.taptVind(h.faded_wind) : null, h.faded_tide ? STR.hjem.taptTide(h.faded_tide) : null].filter(Boolean);
+    if(h.faded && !tapt.length) tapt.push(`−${h.faded}`);   // eldre varsel uten delingen
+    return `<p class="sub tdom r-${st}">${tapt.length ? `<span class="tapt"><i aria-hidden="true"></i>${esc(tapt.join(" · "))}</span>` : ""}<span class="rute r-${st}" role="img" aria-label="${esc(STR.starsAria(st, 0))}">${st}</span><span class="to">${esc(ratingWord(h))}</span></p>`;
+  }
+  function timeHtml(s, h, t, ev){
+    const hh = fmtHour.format(t);
+    const maal = (ikon, k, v, enhet, sub)=> `<div class="maal"><span class="etikett">${ikon}${esc(k)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span></div>`;
+    const dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
+    const inne = dir!=null && s.swell_window ? inSwellWindow(dir, s) : false;
+    const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
+      : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
+    const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(STR.spot.svell)}</div>
+        ${h && h.swell_offshore!=null ? `<div class="t-svell">${nf1.format(h.swell_offshore)}<small>m</small></div>` : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`}
+        ${sub ? `<div class="svell-sub">${esc(sub)}</div>` : ""}</div>`;
+    const rader = [];
+    // surf: høyden som vises og settene (regel (c), visHoyde); ordet når tallet er kjent, men ikke pålitelig
+    const hoyde = H.heightText(h), vh = visHoyde(h);
+    if(hoyde) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, esc(hoyde), "m", esc(kroppshoyde(h) || "")));
+    else if(h && h.surf_height!=null && (!vh || vh.a <= 0)) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, `<span class="ordv">${esc(ratingWord(h))}</span>`, "", ""));
+    if(h && h.wind_speed!=null){
+      const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
+      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, nf0.format(h.wind_speed), "m/s",
+        esc([[windLabel(h), fra].filter(Boolean).join(" "), h.gust!=null ? STR.gust(nf0.format(h.gust)) : null].filter(Boolean).join(" · "))));
+    }
+    const lv = window.Tidevann ? Tidevann.nivaa(ev, t.getTime()) : null;
+    if(lv){
+      // nivået over sjøkartnull og hvor det er på vei: mot neste flo/fjære, eller «snur» nær ekstremen
+      const naer = [lv.a, lv.b].find(e=> Math.abs(e.ms - t.getTime()) <= 40 * 6e4);
+      const vei = naer ? `${esc(STR.spot.snur)} ${fmtTime.format(new Date(naer.ms))}`
+        : `<span aria-hidden="true">${lv.stiger ? "↑" : "↓"}</span><span class="sr">${esc(lv.stiger ? STR.spot.stiger : STR.spot.synker)}, </span> ${esc(lv.stiger ? STR.spot.hoy : STR.spot.lav)} ${fmtTime.format(new Date(lv.b.ms))}`;
+      rader.push(maal(PIL("", null, IK_TIDE), STR.spot.tidevann, nf1.format(lv.cm / 100), "m", vei));
+    }
+    return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.kl(hh))}</h2>${timeDomHtml(s, h, t)}</div>${svell}${rader.length ? `<div class="maalene">${rader.join("")}</div>` : ""}`;
+  }
+  function dagvelgerHtml(s, dager, d){
+    // én knapp per dag i varselet: ukedag, dagens tall i en rute (som ukeoversikten) og datoen
+    return `<div class="dagvelger" role="group" aria-label="${esc(STR.spot.velgDag)}">${dager.map(x=>{
+      const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null;
+      const cls = n!=null ? `r-${n}` : b.cls==="dark" ? "mork" : b.cls;
+      const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) : domOrd(b).toLowerCase()}`;
+      return `<button type="button" class="dagknapp" data-day="${x.key}" aria-pressed="${x.key===d.key}" aria-label="${esc(aria)}"><span class="ud">${esc(ukedagKort(at))}</span><span class="rute ${cls}">${n!=null ? n : ""}</span><span class="dt">${at.getUTCDate()}</span></button>`;
+    }).join("")}</div>`;
+  }
+  function renderMobil(root, s, S){
+    const {dager, d, idx: idx0} = valgMobil(s, S); let idx = idx0;
+    S.tideMin = 0;   // kvarter-forskyvningen hører til tidevannskortet på PC
+    const b = dagsdom(s, d), best = besteSett(s, d, b);
+    const ev = window.Tidevann ? Tidevann.hendelser(s) : [];
+    const timen = ()=>{ const h = idx!=null ? s.hours[idx] || null : null; return {h, t: h ? new Date(h.t) : new Date()}; };
+    const over = ()=>{ const {h, t} = timen(); return faktaHtml(s, h, t) + timeHtml(s, h, t, ev); };
+    const under = ()=>{
+      const {h, t} = timen(), hh = fmtHour.format(t), sikk = h ? sikkerhet(h) : "–";
+      return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh) : ""}${hvorforHtml(h)}
+        <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
+        <p class="kilder">${sikk!=="–" ? esc(sikk) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket.</p>`;
+    };
+    const foto = !!(window.Skive && Skive.harBilde(s.id)), id = encodeURIComponent(s.id);
+    const fra = STR.spot.fra[S.from] || null, K = window.KJORETID, kj = H.kjoreText(s.id);
+    const at = midtPaa(d.key), omr = s.area || H.regionOf(s);
+    const meta = [omr, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, `${ukedagKort(at)} ${d.key.slice(8, 10)}.${d.key.slice(5, 7)}`].filter(Boolean).join(" · ");
+    const merker = H.merker(s);
+    const morkeKol = Timestripe.kolonner(s, d, idx, H).some(c=> c.i >= 0 && H.mork(s.hours[c.i]));
+    const tilbakeNa = ()=> S.idx!=null ? `<button type="button" class="tilbakena" id="tilbakeNa">${esc(STR.spot.tilbakeNa)}</button>` : "";
+    root.innerHTML = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="sp-hode${foto ? "" : " uten"}">
+        ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async">` : ""}
+        <div class="sp-knapper"><button type="button" class="sp-tilbake" id="spotBack" aria-label="${esc(fra ? STR.spot.tilbakeTil(fra) : STR.spot.tilbake)}"><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>${esc(fra || STR.spot.tilbake)}</span></button><span class="sp-fav">${favBtnHtml(s.id, false)}</span></div>
+        <div class="sp-navn"><h1 class="t-hero${lengsteOrd(s.name) > 8 ? " lang" : ""}" style="--n:${lengsteOrd(s.name)}">${esc(s.name)}</h1></div>
+      </div>
+      <div class="sp-inn">
+        <p class="etikett sp-meta">${esc(meta)}</p>${merker.length ? `<p class="etikett sp-merker">${esc(merker.join(" · "))}</p>` : ""}
+        ${foto ? `<p class="kredit">${kreditHtml()}</p>` : ""}
+        ${domHtml(s, d, b)}
+        <div id="spOver">${over()}</div>
+        <div class="sek-spot"><h2 class="h2">${esc(STR.spot.timeForTime)}</h2>${morkeKol ? `<p class="sub">${esc(STR.lightOnly)}</p>` : ""}</div>
+        ${dagvelgerHtml(s, dager, d)}
+        <div id="spStripe">${Timestripe.html(s, d, idx, best, H)}</div>
+        <div class="sp-tilbakena" id="spTilbakeNa">${tilbakeNa()}</div>
+        <div id="spUnder">${under()}</div>
+      </div>`;
+    const heleSiden = (etter)=>{
+      // nytt valg som bytter dag: tegn alt på nytt uten å hoppe i siden eller i dagrekka
+      const y = window.scrollY, dv = $(".dagvelger", root), x = dv ? dv.scrollLeft : 0;
+      renderMobil(root, s, S);
+      const dv2 = $(".dagvelger", root); if(dv2) dv2.scrollLeft = x;
+      window.scrollTo(0, y); if(etter) etter();
+    };
+    const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
+    const kobleUnder = ()=>{
+      $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
+      const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
+    };
+    $("#spotBack", root).onclick = H.close;
+    wireFavButtons(); kobleUnder(); kobleTilbakeNa();
+    $$(".dagknapp", root).forEach(kn=> kn.onclick = ()=>{
+      const nd = dager.find(x=> x.key===kn.dataset.day); if(!nd || nd.key===d.key || !nd.idxs.length) return;
+      const n = H.nowIdx(s);
+      // i dag med lys nå: tilbake til «nå»; ellers dagens beste lyse time
+      S.idx = nd.key===dayKey(new Date()) && nd.idxs.includes(n) && H.usable(s.hours[n]) ? null : SpotGraf.bestOfDay(s, nd);
+      heleSiden(()=>{ const k2 = $(`.dagknapp[data-day="${nd.key}"]`, root); if(k2) k2.focus({preventScroll: true}); });
+    });
+    const valgt = $('.dagknapp[aria-pressed="true"]', root), dv = $(".dagvelger", root);
+    if(valgt && dv) dv.scrollLeft = Math.max(0, valgt.offsetLeft - dv.offsetLeft - 16);
+    Timestripe.mount(root, s, d, idx, best, H, (i)=>{
+      // timevalg i samme dag: bytt bare det som hører til timen, og hold stripa i ro under fingeren
+      const stripe = $("#spStripe", root), y0 = stripe.getBoundingClientRect().top;
+      const hv = $("#hvorfor", root), open = hv ? hv.open : false;
+      idx = i; S.idx = i;
+      $("#spOver", root).innerHTML = over(); $("#spUnder", root).innerHTML = under(); $("#spTilbakeNa", root).innerHTML = tilbakeNa();
+      kobleUnder(); kobleTilbakeNa();
+      const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
+      const dy = stripe.getBoundingClientRect().top - y0; if(dy) window.scrollBy(0, dy);
+    });
+  }
+
   /* ---------- render ---------- */
   function render(root, s, S, helpers){
     H = helpers;
+    if(!H.isDesktop() && window.Timestripe && window.SpotGraf) return renderMobil(root, s, S);
     const n = H.nowIdx(s); const idx = S.idx!=null ? Math.max(0, Math.min(s.hours.length-1, S.idx)) : n;
     const h = s.hours[idx] || null; const t = h ? new Date(h.t) : new Date();
     // valgt tidspunkt i tidevannskortet: valgt time + kvarter-forskyvning (S.tideMin, satt ved dra/piltaster i

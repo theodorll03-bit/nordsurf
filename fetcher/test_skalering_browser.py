@@ -21,6 +21,7 @@ import gzip
 import http.server
 import json
 import os
+import re
 import socket
 import sys
 import threading
@@ -220,8 +221,25 @@ def main():
                 # 4. åpne en spot laster nøyaktig én detaljfil
                 first = overview["spots"][0]["id"] if any(s["region"] == "Troms" for s in overview["spots"]) else overview["spots"][0]["id"]
                 troms_id = next(s["id"] for s in overview["spots"] if s["region"] == "Troms")
-                go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .vurdering .ord")
+                go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .dom" if mobile else "#viewSpot:not([hidden]) .vurdering .ord")
                 assert loaded["det"] == [troms_id], loaded["det"]
+                if mobile:
+                    # spotsiden i design B 4.0 (steg 4): «Surfing forbudt» og perioden i dommen, ingen tall noe sted
+                    go("#spot=test079", "#viewSpot:not([hidden]) .dom")
+                    page.wait_for_selector("#tstripe .segs")
+                    fb = page.evaluate("""(() => { const q = (s) => [...document.querySelectorAll('#viewSpot ' + s)];
+                        return {ord: q('.dom-ord b').map(e => e.textContent.trim()), setn: q('.dom-setn').map(e => e.textContent.trim()).join(' '), tall: q('.dom .t-tall, .dom .t-vindu, .tdom').length,
+                                time: q('#spOver .sek-spot .sub').map(e => e.textContent.trim()), segs: q('#tstripe .tk').filter(k => +k.dataset.i >= 0).map(k => [k.querySelector('.segs').className, k.querySelector('.segs').children.length]),
+                                knapp: q('.dagknapp[aria-pressed="true"] .rute').map(e => [e.className, e.textContent.trim()]), surf: q('#spOver .maal').map(m => m.textContent.replace(/\\s+/g, ' ').trim()).filter(t => /^Surf/i.test(t)),
+                                aria: document.querySelector('#tstripeVelg').getAttribute('aria-valuetext')}; })()""")
+                    assert fb["ord"] == ["Surfing forbudt"] and "1. okt–31. mars" in fb["setn"] and "fuglefredning" in fb["setn"] and fb["tall"] == 0, fb
+                    assert fb["time"] == ["Surfing forbudt"] and "surfing forbudt" in fb["aria"], fb
+                    # timestripa: forbudstimene har ingen segmenter - aldri «0» (stars:0 i forbudKopi er ikke en vurdering fra modellen)
+                    assert fb["segs"] and all(n == 0 and ("forbud" in c.split() or c == "segs") for c, n in fb["segs"]) and any("forbud" in c.split() for c, _ in fb["segs"]), fb["segs"]
+                    assert fb["knapp"] and all("forbud" in c.split() and x == "" for c, x in fb["knapp"]) and not any(re.search(r"\d", t) for t in fb["surf"]), (fb["knapp"], fb["surf"])   # surf-raden: ordet, aldri en høyde
+                    print(f"Forbud på spotsiden ({label}): «{fb['ord'][0]}», «{fb['setn'][:60]}», stripa uten tall - OK")
+                    ctx.close()
+                    continue
                 # Theodor 16.10: spotsiden i forbudsperioden - «Surfing forbudt nå» og perioden, ingen vurdering
                 go("#spot=test079", "#viewSpot:not([hidden]) .vurdering .forbud")
                 vt = page.text_content("#viewSpot .vurdering").strip()
@@ -272,7 +290,7 @@ def main():
                 sid = json.loads(OV_BODY)["spots"][0]["id"]
                 funn = {}
                 for side, hsh, sel in (("Hjem", "#hjem", "#viewHjem:not([hidden])"), ("Utforsk", "#utforsk", "#viewUtforsk:not([hidden])"),
-                                       ("spotsiden", f"#spot={sid}", "#viewSpot:not([hidden]) .spot-topp")):
+                                       ("spotsiden", f"#spot={sid}", "#viewSpot:not([hidden]) .sp-hode")):
                     page.goto(f"http://127.0.0.1:{port}/index.html{hsh}"); page.wait_for_selector(sel); page.wait_for_timeout(600)
                     funn[side] = page.evaluate(f"[...document.querySelectorAll('{sel.split(' ')[0]} .banner.stale')].map(b => b.textContent).join(' | ')")
                 for side, t in funn.items():

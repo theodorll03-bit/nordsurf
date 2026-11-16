@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## T3 design B 4.0 «Papir» - steg 3 (Hjem på mobil), 12.11.2026
+## T3 design B 4.0 «Papir» - steg 4 (spotsiden på mobil), 16.11.2026
 
 Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
 
@@ -36,15 +36,42 @@ Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.
 - Kontrolløren er ikke kjørt på nytt etter de små rettingene som fulgte runde 2 («Ingen surf resten av dagen.» og de ekstra tilfellene i testen).
 - Testene før commit: 16 filer og kontrast grønne i én kjøring. `test_kart_browser` røk to ganger (tidsavbrudd, nettleseren lukket) fordi maskinen gikk i dvale midt i kjøringen, og gikk grønn alene etterpå på de samme filene. `test_spotside_browser` hang én gang på et klikk under samme forhold og gikk grønn på neste kjøring.
 
+**Gjort (bildesteget, flyttet fram av Theodor 12.11, ja til alle spots 16.11)**
+- `tools/spotbilder.py` henter et utsnitt rundt hver spot fra Kartverkets skyfrie Sentinel-2-mosaikk (wms.geonorge.no, CC BY 4.0) og lager Trykk (lyst tema) og Lodd (mørkt tema) med samme korn som skissene. EOxCloudless og Norge i bilder brukes ikke.
+- 22 spots har bilder i `docs/img/spots/`: toppbilde og skivebilde i to temaer, 88 filer. Det er de 22 påslåtte, offentlige spotene. Verktøyet nekter hemmelige spots, også ved navn.
+- `kilder.json` har kilde, år, lisens og kreditering per spot. `docs/js/spotbilder.js` skrives av verktøyet og sier hvilke spots som har bilde.
+- Full kreditering står under toppbildet på spotsiden, med «CC BY 4.0» som lenke til lisensen. Kortformen står under skiva.
+- `fetcher/test_spotbilder.py` sjekker rampene, kornet, utsnittet, krediteringen og at hemmelige nektes.
+
+**Gjort (steg 4, SPEC §6B, bare mobil)**
+- Spotsiden under 1024 px er bygget om: kornfoto med navneplate, dommen (tall, ord, dag, beste vindu og én setning), faktalinje, måleradene for valgt time, dagvelger, timestripe med tidevannskurve, retningsskive og kilder. Koden ligger i `docs/js/spot.js` (`spot_mobil()`), `docs/js/timestripe.js` og `docs/js/skive.js`. PC-siden er urørt (steg 6).
+- Timestripa kan dras, styres med piltaster og trykkes på. Mørke timer, manglende timer og forbudstimer får aldri tall. Korall brukes bare fra 4 poeng.
+- Skiva viser svellvinduene, fralandssektoren og piler for svell og vind i valgt time. «I vinduet», «I kanten av vinduet» og «Utenfor vinduet» kommer fra de samme reglene som resten av appen.
+- Ordene: «stjerner» heter «poeng», og vinden heter fralands, pålands og sidevind i all tekst appen selv lager (`docs/js/strings.js`, `explain.js`, `app.js`). Theodors svar 16.11.
+- **Ikke endret: teksten henteren lager.** Regnestykket under «Hvorfor denne vurderingen?» og varseltittelen sier fortsatt «stjerner», «offshore» og «onshore». En designgren kan ikke røre `fetcher/rating.py` (`test_display_only`). Endringen ble laget, tatt ut igjen og ligger som patch i `privat/`. Den må bli en egen PR fra main, med Theodors ja.
+- Tilbakeknappen følger stakken også når siden åpnes med lenke eller med fram og tilbake i nettleseren.
+- Avvik fra skissen og nye ord i `STR.spot` er lagt fram for Theodor (se under).
+- Fysikk-kontrolløren (agent): godkjent med merknader. Appen regner ikke ut poeng, surfehøyde eller vindu selv, og manglende data blir aldri 0. Ingen hemmelige spots i bildefilene, filnavnene eller diffen. Rettet etter funnene:
+  - Timestripa tegnet vindpil mot nord når retningen manglet. Nå tegnes bare tallet.
+  - Krediteringen manglet lenke til lisensen. Lagt inn.
+- Kjent og ikke rettet (kontrolløren sa «kan vente»):
+  - `dagsdom()` i `spot.js` velger beste time og vindu selv for dag 9–16, som ikke står i `dager`. Regelen er den samme som i `publish.best_hour()`, men ingen test sammenligner de to.
+  - «snur hh:mm» kan vise en flo eller fjære som var for opptil 40 minutter siden.
+  - Det står ikke «over sjøkartnull» ved vannstanden på mobil.
+  - Går man via Søk, kan tilbakeknappen peke på feil fane. Det er feil mål, ikke løkke, og fantes før.
+  - Verktøyet lager bilde for en avslått spot i spots.json hvis den nevnes ved navn. Hemmelige nektes alltid.
+- `test_spotside_browser`, `test_skalering_browser` og `test_svgtekst_browser` har fått en mobildel som sjekker tallene mot varselet, dra, piltaster og trykk, forbud, manglende data, 6-timers dager, 200 % tekst og høy kontrast.
+- Testene før commit: 17 filer og kontrast grønne i én kjøring, etter rettingene fra kontrolløren.
+
 **Til Theodor**
 - Valgene for Hjem (ordene, hva overskriften gjelder, andre setning, kjøretidene, lyset i midnattssol, område eller region, vindordene) står som ett spørsmål i `privat/kontor/til-theodor.md`.
 - WCAG regner «stor tekst» fra 14 pt fet (ca. 18,7 px), ikke 14 px. Rutene på Hjem og i listene (19 px fet) er over. Timestripa og klyngeringen på kartet (14 px fet) følger regelen din, men ikke WCAG. `kontrast.py` leser ikke skriftstørrelser, så regelen står bare som kommentar.
-- Hjelpetekstene sier fortsatt «stjerner» flere steder. Ordet som skal brukes i stedet, er et spørsmål i `privat/kontor/til-theodor.md`.
-- Dagkortene i langtidsvarselet har fortsatt tre felt (bygges om i steg 4).
+- Spotsiden: ordene (pålands og skrått pålands, og egen PR for teksten fra henteren), avvikene fra skissen og de nye ordene står som spørsmål i `privat/kontor/til-theodor.md`.
+- Kjøretidene på Hjem og spotsiden er fortsatt anslagene fra skissene. Theodor fyller inn tallene selv (svar 16.11).
 
-**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/`, `steg-2/` og `steg-3/`.
+**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/` til `steg-4/`.
 
-**Neste:** bildesteget (kornfoto per spot fra Kartverkets skyfrie Sentinel-2-mosaikk, flyttet fram av Theodor 12.11; tre prøvebilder er vist, resten venter på Theodors ja), så steg 4 (spotsiden).
+**Neste:** steg 5 (Utforsk-lista og kartstilen). Da fjernes også «Beste økt» fra Hjem på mobil (Theodors svar 16.11). Før steg 5 merges main inn i grenen, og bildeverktøyet kjøres for nye spots.
 
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 

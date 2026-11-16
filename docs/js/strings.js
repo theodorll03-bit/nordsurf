@@ -36,7 +36,7 @@
     wordNotNow: "Ikke surfbart nå",
     wordUncertain: "Usikkert",
     wordExplain: {
-      "Smått": "Litt bølger, men for lite til en stjerne.",
+      "Smått": "Litt bølger, men for lite til ett poeng.",
       // Grøtete har to tekster etter perioden (Theodor 09.10.2026, fjerde runde), se mushyShort/mushyLong
       "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake.",
       "Usikkert": "Kildene er uenige om svellet når inn til spoten.",
@@ -47,7 +47,7 @@
     mushyShort: "Bølgene er der, men kort periode og lite energi gjør dem svake.",
     mushyLong: "Bølgene er der, men for lite energi i svellet til å gi kraft.",
     notNowCap: "Bølgene er der, men varselet er usikkert (f.eks. ingen BarentsWatch-retning, svell utenfor vinduet, stor dreining eller svellet anslått fra totalhøyden), så ratingen er kappet – se regnestykket under.",
-    notNowLow: "Bølgene er der, men svellet gir for lite til en stjerne – se regnestykket under.",
+    notNowLow: "Bølgene er der, men svellet gir for lite til ett poeng – se regnestykket under.",
     // Kilden til en lokal regel, slik den står i spots.json (local_rules.source),
     // omskrevet til forklaringstekst. En kilde som ikke er en person skal aldri
     // skrives som en person (Theodor 09.10.2026).
@@ -57,7 +57,7 @@
     },
     localSourceFallback: (src)=> /observasjon|logg|kalibrer|grense/i.test(src) ? `Grense satt ut fra ${src.charAt(0).toLowerCase()}${src.slice(1)}` : `Ifølge ${src}`,
     localEnergyExplain: (kj, full)=>`for lite svellenergi ute (${kj} kJ, full uttelling fra ${full} kJ).`,
-    localWindExplain: (spotName, now)=>`${spotName} trenger offshore. Nå ${now}.`,
+    localWindExplain: (spotName, now)=>`${spotName} trenger fralandsvind. Nå ${now}.`,
     starsAria: (n, faded) => `${n} av 5` + (faded ? `, ${faded} tapt på vind eller tidevann` : ""),
     whyRating: "Hvorfor denne ratingen? Trykk for forklaring",
     lostTo: (wind, tide) => {
@@ -72,9 +72,13 @@
     height: (a, b) => b!=null && b!==a ? `${a} til ${b} m` : `${a} m`,
     heightSets: "surfehøyde og sett",
     noHeight: "–",
-    wind: {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"},
+    // fralands, pålands og sidevind (SPEC §8, Theodor 16.11.2026). Skrå pålandsvind (45–80° fra stranda) sies som «pålands».
+    wind: {offshore:"fralands", side:"sidevind", sideonshore:"pålands", onshore:"pålands"},
+    // loggene lagrer fortsatt «Offshore»/«Onshore» (gamle økter skal leses likt); bare ordet på skjermen er byttet
+    logWind: {"Offshore":"Fralands", "Onshore":"Pålands"},
+    reportWind: {offshore:"Fralands", onshore:"Pålands", side:"Sidevind", stille:"Stille"},
     windCalm: "blankt", windNearCalm: "nesten blankt",
-    windShort: {"nesten blankt":"lett", "side-onshore":"side-on", "sidevind":"side"},  // kortene i lista - "lett" (1,5-3 m/s) er ikke "blankt" (fysikk-kontrollør 09.10.2026)
+    windShort: {"nesten blankt":"lett", "sidevind":"side"},  // kortene i lista - "lett" (1,5-3 m/s) er ikke "blankt" (fysikk-kontrollør 09.10.2026)
     windAria: (speed, dir, type) => `vind ${speed} meter per sekund fra ${dir}, ${type}`,
 
     /* dagbrikker */
@@ -100,14 +104,14 @@
     reports: "Rapporter fra andre",
     bestNone: "Ingen brukbare vinduer de neste tre dagene",
     bestNoLight: "Ingen data i lyse timer",
-    best: (day, from, to, n) => `Best ${day} ${from}–${to}, ${n} ${n===1?"stjerne":"stjerner"}`,
+    best: (day, from, to, n) => `Best ${day} ${from}–${to}, ${n} poeng`,
     estimate: "anslag", longrange: "langtid", confident: (p) => `${p} % sikker`,
 
     /* Hjem på mobil (design B 4.0, SPEC §6A): topplinja, overskriften av to korte setninger og favorittradene.
        Setningene settes sammen av vurderingsordet (ratingWord), spotnavnet og dagen - samme dagstall som lista viser.
-       Malene er nye 12.11.2026 og venter på Theodors ja (privat/kontor/til-theodor.md). */
+       Malene er godkjent av Theodor 16.11.2026. */
     hjem: {
-      lys: (a, b) => `Lys ${a}–${b}`,
+      lys: (a, b) => `Lys ${a}–${b}`, lysHele: "Lys hele døgnet",   // midnattssol (Theodor 16.11.2026)
       fra: (sted) => `Fra ${sted}`,
       ordSpot: (ord, spot, dag) => `${ord} på ${spot} ${dag}.`,
       ord: (ord, dag) => `${ord} ${dag}.`,
@@ -124,6 +128,31 @@
       // ordet i metalinja når dagen ikke har noe tall, og det som er tapt på vind og tidevann
       forbud: "Surfing forbudt", morktOrd: "Mørkt", over: "Dagens lys er over", mangler: "Mangler data",
       taptVind: (n) => `−${n} vind`, taptTide: (n) => `−${n} tidevann`, apne: "Åpne spoten",
+    },
+
+    /* Spotsiden på mobil (design B 4.0, SPEC §6B). Etikettene settes i versaler av CSS. De siste linjene er
+       VoiceOver-tekstene til timestripa (aria-valuetext), tidevannskurven og skiva (SPEC: «ta dem med»). */
+    spot: {
+      tilbake: "Tilbake", tilbakeTil: (sted) => `Tilbake til ${sted}`, fra: {hjem: "Hjem", utforsk: "Utforsk", logger: "Logger"},
+      bildeAlt: (spot) => `Satellittbilde av ${spot} ovenfra, nord opp`,
+      best: "Best", lys: "Lys", luft: "Luft", vann: "Vann", oppdatert: "Oppdatert",
+      kl: (hh) => `Kl. ${hh}`, svell: "Svell", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
+      mangler: "mangler data", hoy: "høy", lav: "lav", snur: "snur",
+      svellSub: (s, retning, grader) => `${s} s · fra ${retning} ${grader}°`,
+      timeForTime: "Time for time", naa: "Nå", velgTime: "Velg time", velgDag: "Velg dag", tilbakeNa: "Tilbake til nå",
+      retning: (hh) => `Retning kl. ${hh}`, svellFra: "Svell fra", vindFra: "Vind fra", vindu: "Vindu",
+      timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
+      timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
+      timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
+      timeSvell: (m) => `Svell ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      stiger: "stigende", synker: "synkende",
+      timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
+      tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
+      tideLav: (kl, m) => `lavvann ${kl}, ${m} meter`, tideHoy: (kl, m) => `høyvann ${kl}, ${m} meter`,
+      skiveAria: (spot, hh, svell, vind) => `${spot} kl. ${hh}: ${svell}.${vind ? " " + vind + "." : ""}`,
+      skiveSvell: (grader, inne, vindu) => `svell fra ${grader} grader, ${inne ? "innenfor" : "utenfor"} svellvinduet ${vindu}`,
+      skiveSvellMangler: "svell mangler data", skiveVind: (retning, ord) => `Vind fra ${retning}${ord ? ", " + ord : ""}`,
+      vinduTil: (a, b) => `${a} til ${b}`,
     },
 
     /* advarsler i vanlig språk (én linje, forklaring ved trykk) */
@@ -159,7 +188,7 @@
     lightNone: "Mørkt hele dagen", lightSub: (sun) => sun ? "Fra skumring til skumring" : "Mørketid, bare skumring", lightUsable: "Brukbart lys",
     temps: (water, air) => `${water} i vannet, ${air} i lufta`,
     notThisFar: "ikke tilgjengelig så langt frem",
-    confidenceSub: (measured, day, zone) => `${measured?"Målt treff innenfor én stjerne":"Anslag"}, ${day} ${day===1?"dag":"dager"} frem · ${zone}`,
+    confidenceSub: (measured, day, zone) => `${measured?"Målt treff innenfor ett poeng":"Anslag"}, ${day} ${day===1?"dag":"dager"} frem · ${zone}`,
     zone: {langtid:"langtid (GFS)", reserve:"reservemodell", barentswatch:"BarentsWatch"},
     gust: (g) => `kast ${g}`,
     windSmoothed: "vind jevnet ut", windGfs: "GFS-vind (langtid)",
@@ -173,7 +202,7 @@
       wind:"Vind (valgfritt)", save:"Lagre økt", photoHint:"Velg et bilde, så fylles tidspunktet inn fra bildet.", photoBtn:"Hent tidspunkt fra bilde"},
     toast: {logged:"Økt logget", logFail:"Kunne ikke lagre. Sjekk at nettleseren tillater lagring.", loginForFav:"Logg inn for å lagre favoritter", login:"Logg inn",
       favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet - sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
-    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 stjerner.`, thanks:"Takk! Lagret som økt."},
+    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
     breakdownTitle: "Hvorfor denne ratingen?",
     explainClose: "Lukk",
     thisHour: "Denne timen", howComputed: "Slik regnes det ut",

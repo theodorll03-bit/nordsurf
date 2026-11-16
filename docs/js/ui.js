@@ -214,19 +214,20 @@
     return Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha)) / rad;
   }
   function lysIDag(lat, lon, now){
-    // {start, end} i ms (første og siste 10-minutter med brukbart lys), begge null når det er mørkt hele dagen
+    // {start, end} i ms (første og siste 10-minutter med brukbart lys), begge null når det er mørkt hele dagen;
+    // hele = lyst hele døgnet (midnattssol)
     const key = dayKey(new Date(now==null ? Date.now() : now)), utc = Date.parse(key + "T00:00:00Z");
     const t0 = [1, 2].map(o=> utc - o * 36e5).find(t=> dayKey(new Date(t))===key && +fmtHour.format(new Date(t))===0);   // lokal midnatt
     if(t0==null) return null;
-    let start = null, end = null;
-    for(let m = 0; m < 1440; m += 10){ const t = t0 + m * 6e4; if(solhoyde(lat, lon, t) > -6){ if(start==null) start = t; end = t; } }
-    return {start, end};
+    let start = null, end = null, lyse = 0;
+    for(let m = 0; m < 1440; m += 10){ const t = t0 + m * 6e4; if(solhoyde(lat, lon, t) > -6){ if(start==null) start = t; end = t; lyse++; } }
+    return {start, end, hele: lyse===144};
   }
   function topplinjeHtml(){
     const K = window.KJORETID, now = new Date(), key = dayKey(now);
     const dato = `${cap(fmtDayShort.format(now).replace(/\.$/, ""))} ${key.slice(8, 10)}.${key.slice(5, 7)}`;
     const l = K ? lysIDag(K.fra.lat, K.fra.lon) : null;
-    const lys = !l ? null : l.start==null ? STR.lightNone : STR.hjem.lys(fmtTime.format(new Date(l.start)), fmtTime.format(new Date(l.end)));
+    const lys = !l ? null : l.start==null ? STR.lightNone : l.hele ? STR.hjem.lysHele : STR.hjem.lys(fmtTime.format(new Date(l.start)), fmtTime.format(new Date(l.end)));
     return `<div class="hjem-linje"><p class="etikett">${esc([dato, lys].filter(Boolean).join(" · "))}</p>${K ? `<p class="etikett">${esc(STR.hjem.fra(K.fra.navn))}</p>` : ""}</div>`;
   }
   const dagOrd = (d)=> relDay(new Date(d.key + "T11:00:00Z"));   // «i dag», «i morgen» eller ukedagen
@@ -260,13 +261,15 @@
       s1 = noen(r0, "over") ? H.ingenRest : o && o!=="–" ? H.ord(o, dag0) : H.ingen(dag0);
     }
     const rest = days.slice(1).map(d=> ({d, rs: rader(d)}));
-    let neste = null;
-    for(const {d, rs} of rest){ const t = topp(rs); if(t && t.b.st >= 1 && (!neste || t.b.st > neste.t.b.st)) neste = {t, d}; }
+    // dagen med høyest tall resten av uka, men bare fra 2 poeng (Theodor 16.11.2026): en dag med 1 («Blåst ut på X
+    // lørdag») er ikke verdt en setning. Den er likevel surf, så «Ingen surf de neste …» sies ikke da.
+    let neste = null, surfSenere = false;
+    for(const {d, rs} of rest){ const t = topp(rs); if(!t || t.b.st < 1) continue; surfSenere = true; if(t.b.st >= 2 && (!neste || t.b.st > neste.t.b.st)) neste = {t, d}; }
     const apent = !!t0 && st0 >= 1 && new Date(t0.b.slutt).getTime() + 36e5 > Date.now();   // dagens vindu er ikke over
     let s2 = null;
     if(apent && (!neste || neste.t.b.st <= st0)) s2 = H.best(...vinduKl(t0.b.start, t0.b.slutt));
     else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d));
-    else if(st0 < 1 && rest.length && rest.every(x=> !noen(x.rs, "miss"))) s2 = rest.length===1 ? H.ingen(dagOrd(rest[0].d)) : H.ingenNeste(rest.length);
+    else if(st0 < 1 && !surfSenere && rest.length && rest.every(x=> !noen(x.rs, "miss"))) s2 = rest.length===1 ? H.ingen(dagOrd(rest[0].d)) : H.ingenNeste(rest.length);
     return [s1, s2].filter((l, i, a)=> l && a.indexOf(l)===i);
   }
   function overskriftHtml(spots, days, egne){
@@ -279,8 +282,9 @@
     const t = Math.floor(m / 60), r = m % 60;
     return t ? `${t} t${r ? ` ${r} min` : ""}` : `${r} min`;
   }
-  function favSetning(s, b){
-    // én setning om dagens beste time: tallene for en surfbar time, forklaringen bak ordet for en 0-time
+  function favSetning(s, b, utenVindu){
+    // én setning om dagens beste time: tallene for en surfbar time, forklaringen bak ordet for en 0-time.
+    // utenVindu: spotsiden viser vinduet stort ved siden av, så «Best kl. …» sies ikke en gang til
     const h = b.h;
     if(b.cls==="forbud") return forbudLinje(s);
     if(b.cls==="dark") return STR.lightOnly + ".";
@@ -292,6 +296,7 @@
     }
     const hoyde = heightText(h);
     const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
+    if(utenVindu) return deler.length ? cap(deler.join(", ")) + "." : null;
     return `${deler.length ? cap(deler.join(", ")) + ". " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
   }
   function favObs(s){
@@ -300,7 +305,7 @@
     const l = loadLogs().filter(l=> l.spot===s.id && l.t && Date.parse(l.t) <= now && now - Date.parse(l.t) < 7 * 864e5).sort((a, b)=> Date.parse(b.t) - Date.parse(a.t))[0];
     if(!l) return null;
     const t = new Date(l.t);
-    return [`${STR.hjem.obs} ${fmtDayShort.format(t).replace(/\.$/, "")} ${fmtTime.format(t)}`, l.stars!=null ? STR.starsAria(l.stars, 0) : null, l.size, l.wind].filter(Boolean).join(" · ");
+    return [`${STR.hjem.obs} ${fmtDayShort.format(t).replace(/\.$/, "")} ${fmtTime.format(t)}`, l.stars!=null ? STR.starsAria(l.stars, 0) : null, l.size, STR.logWind[l.wind] || l.wind].filter(Boolean).join(" · ");
   }
   function favLinjeHtml(s, days, rediger){
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
@@ -511,6 +516,7 @@
     if((m = h.match(/^#spot=([^&]+)(?:&t=([^&]+))?/)) || (m = h.match(/^#\/spot\/([^/?#&]+)/))){
       const id = decodeURIComponent(m[1]);
       if(spotById(id)){
+        if(S.view!=="spot") S.from = S.view==="sok" ? (S.from||"hjem") : S.view;   // lenke eller fram/tilbake i nettleseren: tilbakeknappen følger stakken da også
         S.spotId = id; S.view = "spot"; S.idx = null; S.tIso = null; S.tideMin = 0;
         const t = m[2]!=null ? decodeURIComponent(m[2]) : null;
         if(t!=null){ if(/^\d+$/.test(t)) S.idx = +t; else S.tIso = t; }   // tidsstempel (fra oversikten) eller timeindeks (gamle lenker)
@@ -576,7 +582,7 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker});
   }
   function render(){
     if(!DATA) return;
@@ -613,6 +619,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") render(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, bestSession, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();
