@@ -18,6 +18,18 @@
    "begrunnelse": "Parkeres. Eggums BarentsWatch-punkt ligger 1 458 m unna med bølger fra 268-314° (57-103° fra facing 11,5°, retningsfaktor ca. 0). Eget snitt langs facing (16.10, result_2026-10-16T1118_kandidater.json) fant ikke noe punkt: grunn hylle 6-7 m dyp og skjær 1,2-1,4 km ut, aldri 8 m innen 1,5 km. Tas opp igjen med et lengre snitt eller et punkt utenfor skjærene (Theodor velger).",
    "satt_av": "claude (delegert av Theodor 16.10.2026)",
    "dato": "2026-10-16"
+  },
+  "monumentet": {
+   "status": "parkert",
+   "begrunnelse": "Parkeres. Fri linje til åpent hav er bare ca. 13° (317-329 i både GSHHS og OSM ved 150 km), og midten av vinduet ligger 46-55° fra kystnormalen (facing 18,4; OSM 9-18), så spoten ville nesten alltid vist «Treffer ikke». Tas opp igjen med lokalkunnskap om hvor bølgen brekker, eller når vi har modell for wrap.",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "dato": "2026-11-10"
+  },
+  "storvika": {
+   "status": "parkert",
+   "begrunnelse": "Parkeres. Stranda ligger innerst i ei lang, smal bukt med fri linje til havet bare gjennom 268-281 (14° i GSHHS, 11° med OSM), og facing 261,6 ligger utenfor dette vinduet, så spoten ville nesten alltid vist «Treffer ikke». Tas opp igjen med lokalkunnskap eller vindbølgemodell for innaskjærs spots.",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "dato": "2026-11-10"
   }
  }
 }

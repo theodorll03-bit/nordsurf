@@ -1,0 +1,153 @@
+{
+ "spot": {
+  "id": "persfjord",
+  "name": "Persfjord",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Finnmark",
+  "spot": {
+   "lat": 70.42132,
+   "lon": 30.784553
+  },
+  "facing": 358.5,
+  "swell_window": [
+   347,
+   33
+  ],
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[347, 33]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   134,
+   224
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": {
+   "lat": 70.5905,
+   "lon": 30.873
+  },
+  "_havpunkt": "Langs midten av vinduet (10.0°), 19 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 70.429457,
+   "lon": 30.783921
+  },
+  "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 900m@358.5, 900 m ut, dybde 8,8 m, Hs 1,38 m kl. 2026-11-11T21:00Z.",
+  "tidevann": {
+   "name": "Vardø",
+   "code": "VAW",
+   "delay": "-5",
+   "factor": "0.99",
+   "obsname": "Vardø"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 70.42132,
+   "lon": 30.784553,
+   "dybde_m": -4.3
+  },
+  {
+   "m": 100,
+   "lat": 70.422224,
+   "lon": 30.784483,
+   "dybde_m": -1.4
+  },
+  {
+   "m": 200,
+   "lat": 70.423128,
+   "lon": 30.784413,
+   "dybde_m": 0.9
+  },
+  {
+   "m": 300,
+   "lat": 70.424032,
+   "lon": 30.784342,
+   "dybde_m": 2.1
+  },
+  {
+   "m": 400,
+   "lat": 70.424936,
+   "lon": 30.784272,
+   "dybde_m": 2.1
+  },
+  {
+   "m": 500,
+   "lat": 70.42584,
+   "lon": 30.784202,
+   "dybde_m": 2.8
+  },
+  {
+   "m": 600,
+   "lat": 70.426745,
+   "lon": 30.784132,
+   "dybde_m": 3.2
+  },
+  {
+   "m": 700,
+   "lat": 70.427649,
+   "lon": 30.784062,
+   "dybde_m": 3.5
+  },
+  {
+   "m": 800,
+   "lat": 70.428553,
+   "lon": 30.783992,
+   "dybde_m": 6.3
+  },
+  {
+   "m": 900,
+   "lat": 70.429457,
+   "lon": 30.783921,
+   "dybde_m": 8.8
+  },
+  {
+   "m": 1000,
+   "lat": 70.430361,
+   "lon": 30.783851,
+   "dybde_m": 10.8
+  },
+  {
+   "m": 1100,
+   "lat": 70.431265,
+   "lon": 30.783781,
+   "dybde_m": 12.5
+  },
+  {
+   "m": 1200,
+   "lat": 70.432169,
+   "lon": 30.783711,
+   "dybde_m": 12.5
+  },
+  {
+   "m": 1300,
+   "lat": 70.433073,
+   "lon": 30.783641,
+   "dybde_m": 14.0
+  },
+  {
+   "m": 1400,
+   "lat": 70.433977,
+   "lon": 30.783571,
+   "dybde_m": 14.9
+  },
+  {
+   "m": 1500,
+   "lat": 70.434881,
+   "lon": 30.7835,
+   "dybde_m": 15.5
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-11-10T11:25+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
+  "lat": 70.42132,
+  "lon": 30.784553
+ }
+}

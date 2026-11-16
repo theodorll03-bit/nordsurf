@@ -1,10 +1,12 @@
 {
   "_info": "Retninger er 'fra' i grader (0 = nord). svell_window er delen av det tegnede vinduet som har fri, rett linje til åpent hav. Kan være én sektor [a, b] eller flere [[a, b], [c, d]]. Sjekk nye spots med fetcher/check_spot.py. barentswatch_point (ca 250 m ut fra stranda) er punktet ratingen og kalibreringen faktisk bruker. barentswatch_point_near (ca 150 m ut, det opprinnelige punktet) hentes også og lagres som bw_height_near - bare til sammenligning i Logger-fanen, ikke i ratingen. Gir 250 m-punktet ikke data, faller henteren tilbake til 150 m-punktet for det spotet (se kilderapporten). 26.09.2026: ideal_height og max_height er SURFEHØYDE (høyden der bølgene brekker, se rating.breaking_height) for alle spots, ikke Hs - Tromsø-spotene beholder samme tall som før ([0.8,2.0]/3.5), bare tolkningen er ny; Unstad er justert opp ([1.5,3.5]/5.5, tåler mer).",
   "regions": [
-    {"name": "Troms", "order": 1},
-    {"name": "Vesterålen", "order": 2},
-    {"name": "Lofoten", "order": 3},
-    {"name": "Møre og Romsdal", "order": 4}
+    {"name": "Finnmark", "order": 1},
+    {"name": "Troms", "order": 2},
+    {"name": "Vesterålen", "order": 3},
+    {"name": "Lofoten", "order": 4},
+    {"name": "Salten", "order": 5},
+    {"name": "Møre og Romsdal", "order": 6}
   ],
   "_regions": "15.10.2026 (Tillegg 2): regionnavn og rekkefølge for Hjem/Utforsk/søk - ingen hardkodede lister i JS. Hver spot har «region» (og valgfritt «aliases» for søk). Kartutsnittet per region regnes av publish.py: rammen rundt spotene i regionen pluss margin.",
   "spots": [
@@ -361,10 +363,13 @@
       "_barentswatch": "barentswatch_point flyttet til 250 m ut (26.09.2026), samme retning som stranda vender (294,8 grader). barentswatch_point_near er det opprinnelige punktet 150 m ut, navngitt 'Unnstadvika' på barentswatch.no. Bekreft i kilderapporten at 250 m-punktet faktisk gir data.",
       "local_rules": {
         "source": "Observasjoner 26.09-05.10.2026",
+        "tide_source": "Lofoten Surfsenter, 09.11.2026",
         "min_energy_kj": {"full": 400, "zero": 200},
+        "tide_prefer": ["lav", "middels"],
+        "tide_penalty_high": 0.5,
         "weight": 0.7
       },
-      "_local_rules": "06.10.2026, Theodors rettelse (andre runde, se STATUS.md): energifaktoren (universell, se rating.energy_factor()) leser EKTE svellenergi - Unstad sine fem observasjoner (26.09, 27.09 morgen, 28.09, 05.10 - rekonstruert fra BarentsWatch/GFS Wave i git-historikken og logger/Instagram) spenner 449-5347 kJ svellenergi, langt under standardgrensene (full 2000/zero 500) som er satt for spots uten egne tall. Grensene her er satt LAVT NOK (full 400, rett under laveste observerte gode time, 449 kJ 05.10) til at ALLE fem observasjonene får full energifaktor - ikke en navngitt lokal kilde som Magnus, men samme prinsipp (CLAUDE.md sin 'Lokalkunnskap'): kilden er observasjonene selv, dokumentert og sporbare, ikke anonym. weight 0,7, samme nivå som Farstadsanden - fem uavhengig bekreftede hendelser er et rimelig grunnlag, men fortsatt ikke en fysisk lov. Ingen tide_prefer/offshore_strict satt - bare energi-delregelen er aktiv for Unstad."
+      "_local_rules": "06.10.2026, Theodors rettelse (andre runde, se STATUS.md): energifaktoren (universell, se rating.energy_factor()) leser EKTE svellenergi - Unstad sine fem observasjoner (26.09, 27.09 morgen, 28.09, 05.10 - rekonstruert fra BarentsWatch/GFS Wave i git-historikken og logger/Instagram) spenner 449-5347 kJ svellenergi, langt under standardgrensene (full 2000/zero 500) som er satt for spots uten egne tall. Grensene her er satt LAVT NOK (full 400, rett under laveste observerte gode time, 449 kJ 05.10) til at ALLE fem observasjonene får full energifaktor - ikke en navngitt lokal kilde som Magnus, men samme prinsipp (CLAUDE.md sin 'Lokalkunnskap'): kilden er observasjonene selv, dokumentert og sporbare, ikke anonym. weight 0,7, samme nivå som Farstadsanden - fem uavhengig bekreftede hendelser er et rimelig grunnlag, men fortsatt ikke en fysisk lov. Ingen tide_prefer/offshore_strict ble satt 06.10 - bare energi-delregelen var aktiv for Unstad fram til 10.11.2026 (se under). 10.11.2026 (Theodors ja, T2c): myk tidevannsregel lagt til, kilde Lofoten Surfsenter, 09.11.2026 («Lofoten er best på lavvann»). tide_prefer lav og middels, tide_penalty_high 0,5 - med weight 0,7 blir fradraget 0,35 stjerne på høyvann, før avrunding. Mykere enn Farstadsanden (1) fordi to av de fire faste observasjonene var gode økter på høyvann (26.09 kl. 14:45 og 28.09 ca. kl. 13). Følger av regelen: en femte stjerne krever lav eller middels vannstand (five_star_losses). Er tidevannet ukjent, holdes den femte stjernen også tilbake (five_star_swell_gate: tidevannet må være kjent når spoten har preferanse). source gjelder energigrensen, tide_source tidevannsregelen - appen skriver hver kilde på sin egen linje. Før/etter: data/backtest/t2c_unstad_tidevann_2026-11-10.md (variant V3). Gjelder bare Unstad, ikke andre Lofoten-spots (Theodors nei til det 10.11.2026). offshore_strict er fortsatt ikke satt."
     },
     {
       "id": "farstadsanden",
@@ -1224,6 +1229,190 @@
       "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
       "area": "Flakstad",
       "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "bovaer",
+      "name": "Bøvær",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Troms",
+      "spot": {
+        "lat": 69.467964,
+        "lon": 17.227291
+      },
+      "facing": 289.8,
+      "swell_window": [
+        251,
+        326
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[251, 326]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        65,
+        155
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.5024,
+        "lon": 16.9358
+      },
+      "_havpunkt": "Langs midten av vinduet (288.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.469189,
+        "lon": 17.217652
+      },
+      "_barentswatch": "Flyttet til 400 m ut i snittet langs 289.8° (dybde 8.5 m) - spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet. Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 400m@289.8, 400 m ut, dybde 8,5 m.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "_rettet": {
+        "barentswatch_point": "400 m ut (spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet)"
+      },
+      "area": "Senja",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "berlevag-sandfjorden",
+      "name": "Berlevåg Sandfjorden",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Finnmark",
+      "spot": {
+        "lat": 70.798214,
+        "lon": 29.268436
+      },
+      "facing": 58.7,
+      "swell_window": [
+        32,
+        105
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[32, 105]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        194,
+        284
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 70.8446,
+        "lon": 29.6242
+      },
+      "_havpunkt": "Langs midten av vinduet (68.5°), 14 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 70.800563,
+        "lon": 29.280105
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 500m@58.7, 500 m ut, dybde 8,0 m, Hs 1,12 m kl. 2026-11-10T15:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "area": "Berlevåg",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "persfjord",
+      "name": "Persfjord",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Finnmark",
+      "spot": {
+        "lat": 70.42132,
+        "lon": 30.784553
+      },
+      "facing": 358.5,
+      "swell_window": [
+        347,
+        33
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[347, 33]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        134,
+        224
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 70.5905,
+        "lon": 30.873
+      },
+      "_havpunkt": "Langs midten av vinduet (10.0°), 19 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 70.429457,
+        "lon": 30.783921
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 900m@358.5, 900 m ut, dybde 8,8 m, Hs 1,38 m kl. 2026-11-11T21:00Z.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "area": "Vardø",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "seines",
+      "name": "Seines",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Salten",
+      "spot": {
+        "lat": 67.209323,
+        "lon": 14.350718
+      },
+      "facing": 295.0,
+      "swell_window": [
+        [
+          254,
+          258
+        ],
+        [
+          263,
+          285
+        ],
+        [
+          309,
+          311
+        ]
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 258], [263, 285], [287, 287], [309, 311], [314, 315]]; de tre sektorene som er brede nok er brukt ([254, 258], [263, 285] og [309, 311]). [287, 287] og [314, 315] er utelatt fordi de er smalere enn minstebredden i spotfabrikken. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        70,
+        160
+      ],
+      "_offshore_vind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+      "offshore": {
+        "lat": 67.2257,
+        "lon": 13.7492
+      },
+      "_havpunkt": "Langs midten av vinduet (274.0°), 26 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 67.212592,
+        "lon": 14.342707
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 500m@316.3, 500 m ut, dybde 8,5 m, Hs 0,47 m kl. 2026-11-10T12:00Z. Beholdt ved ny facing 295.0°: Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "_rettet": {
+        "facing": "spotansvarlig 10.11.2026: point break, facing satt fra bølgeretningen ved punktet (292-298° i fire timer med lite svell), ubekreftet",
+        "barentswatch_point": "beholdt ved ny facing (Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres)",
+        "offshore_wind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+        "ideal_height/max_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
+      },
+      "_ideal_height": "standard, ubekreftet (Theodors ja 10.11.2026)",
+      "area": "Bodø",
+      "forelopig_fra": "2026-11-10"
     }
   ]
 }

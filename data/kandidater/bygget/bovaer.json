@@ -1,0 +1,157 @@
+{
+ "spot": {
+  "id": "bovaer",
+  "name": "Bøvær",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Troms",
+  "spot": {
+   "lat": 69.467964,
+   "lon": 17.227291
+  },
+  "facing": 289.8,
+  "swell_window": [
+   251,
+   326
+  ],
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[251, 326]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   65,
+   155
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": {
+   "lat": 69.5024,
+   "lon": 16.9358
+  },
+  "_havpunkt": "Langs midten av vinduet (288.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 69.469189,
+   "lon": 17.217652
+  },
+  "_barentswatch": "Flyttet til 400 m ut i snittet langs 289.8° (dybde 8.5 m) - spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet. Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 400m@289.8, 400 m ut, dybde 8,5 m.",
+  "tidevann": {
+   "name": "Andenes",
+   "code": "ANX",
+   "delay": "0",
+   "factor": "1.01",
+   "obsname": "Andenes"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken",
+  "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+  "_rettet": {
+   "barentswatch_point": "400 m ut (spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet)"
+  }
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 69.467964,
+   "lon": 17.227291,
+   "dybde_m": 3.0
+  },
+  {
+   "m": 100,
+   "lat": 69.46827,
+   "lon": 17.224881,
+   "dybde_m": 4.0
+  },
+  {
+   "m": 200,
+   "lat": 69.468577,
+   "lon": 17.222471,
+   "dybde_m": 6.1
+  },
+  {
+   "m": 300,
+   "lat": 69.468883,
+   "lon": 17.220061,
+   "dybde_m": 5.3
+  },
+  {
+   "m": 400,
+   "lat": 69.469189,
+   "lon": 17.217652,
+   "dybde_m": 8.5
+  },
+  {
+   "m": 500,
+   "lat": 69.469496,
+   "lon": 17.215242,
+   "dybde_m": 7.7
+  },
+  {
+   "m": 600,
+   "lat": 69.469802,
+   "lon": 17.212832,
+   "dybde_m": 7.0
+  },
+  {
+   "m": 700,
+   "lat": 69.470108,
+   "lon": 17.210422,
+   "dybde_m": 5.6
+  },
+  {
+   "m": 800,
+   "lat": 69.470415,
+   "lon": 17.208012,
+   "dybde_m": -0.0
+  },
+  {
+   "m": 900,
+   "lat": 69.470721,
+   "lon": 17.205602,
+   "dybde_m": -0.0
+  },
+  {
+   "m": 1000,
+   "lat": 69.471028,
+   "lon": 17.203193,
+   "dybde_m": 5.6
+  },
+  {
+   "m": 1100,
+   "lat": 69.471334,
+   "lon": 17.200783,
+   "dybde_m": 6.0
+  },
+  {
+   "m": 1200,
+   "lat": 69.47164,
+   "lon": 17.198373,
+   "dybde_m": 6.3
+  },
+  {
+   "m": 1300,
+   "lat": 69.471947,
+   "lon": 17.195963,
+   "dybde_m": 4.3
+  },
+  {
+   "m": 1400,
+   "lat": 69.472253,
+   "lon": 17.193553,
+   "dybde_m": 4.7
+  },
+  {
+   "m": 1500,
+   "lat": 69.472559,
+   "lon": 17.191143,
+   "dybde_m": 12.9
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-11-10T11:24+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
+  "lat": 69.467964,
+  "lon": 17.227291
+ },
+ "rettet": "2026-11-10"
+}

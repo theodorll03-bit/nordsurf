@@ -1,0 +1,152 @@
+{
+ "spot": {
+  "id": "storvika",
+  "name": "Storvika",
+  "enabled": true,
+  "status": "forelopig",
+  "region": "Salten",
+  "spot": {
+   "lat": 66.964147,
+   "lon": 13.798879
+  },
+  "facing": 261.6,
+  "swell_window": [
+   268,
+   281
+  ],
+  "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[268, 281]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+  "offshore_wind": [
+   37,
+   127
+  ],
+  "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+  "offshore": {
+   "lat": 66.9826,
+   "lon": 13.2038
+  },
+  "_havpunkt": "Langs midten av vinduet (274.5°), 26 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+  "barentswatch_point": {
+   "lat": 66.964147,
+   "lon": 13.798879
+  },
+  "_barentswatch": "FORELØPIG: første snittpunkt langs facing med EMODnet-dybde ≥ 8 m (0 m ut, 12.4 m dyp). Venter på BarentsWatch-snitt i Actions (find_bw_point.yml) for flat Hs - regelen fra 15.10.",
+  "tidevann": {
+   "name": "Bodø",
+   "code": "BOO",
+   "delay": "0",
+   "factor": "0.98",
+   "obsname": "Bodø"
+  },
+  "ideal_height": [
+   0.8,
+   2.0
+  ],
+  "max_height": 3.5,
+  "kilde": "liste 15.10 + spotfabrikken"
+ },
+ "snitt": [
+  {
+   "m": 0,
+   "lat": 66.964147,
+   "lon": 13.798879,
+   "dybde_m": 12.4
+  },
+  {
+   "m": 100,
+   "lat": 66.964015,
+   "lon": 13.796608,
+   "dybde_m": 15.9
+  },
+  {
+   "m": 200,
+   "lat": 66.963883,
+   "lon": 13.794337,
+   "dybde_m": 18.2
+  },
+  {
+   "m": 300,
+   "lat": 66.963751,
+   "lon": 13.792066,
+   "dybde_m": 19.9
+  },
+  {
+   "m": 400,
+   "lat": 66.963619,
+   "lon": 13.789795,
+   "dybde_m": 19.6
+  },
+  {
+   "m": 500,
+   "lat": 66.963486,
+   "lon": 13.787524,
+   "dybde_m": 19.3
+  },
+  {
+   "m": 600,
+   "lat": 66.963354,
+   "lon": 13.785253,
+   "dybde_m": 18.6
+  },
+  {
+   "m": 700,
+   "lat": 66.963222,
+   "lon": 13.782982,
+   "dybde_m": 18.3
+  },
+  {
+   "m": 800,
+   "lat": 66.96309,
+   "lon": 13.780711,
+   "dybde_m": 18.0
+  },
+  {
+   "m": 900,
+   "lat": 66.962958,
+   "lon": 13.77844,
+   "dybde_m": 17.1
+  },
+  {
+   "m": 1000,
+   "lat": 66.962826,
+   "lon": 13.776169,
+   "dybde_m": 15.9
+  },
+  {
+   "m": 1100,
+   "lat": 66.962694,
+   "lon": 13.773898,
+   "dybde_m": 14.1
+  },
+  {
+   "m": 1200,
+   "lat": 66.962562,
+   "lon": 13.771627,
+   "dybde_m": 13.1
+  },
+  {
+   "m": 1300,
+   "lat": 66.962429,
+   "lon": 13.769355,
+   "dybde_m": 14.3
+  },
+  {
+   "m": 1400,
+   "lat": 66.962297,
+   "lon": 13.767084,
+   "dybde_m": 12.9
+  },
+  {
+   "m": 1500,
+   "lat": 66.962165,
+   "lon": 13.764813,
+   "dybde_m": 11.1
+  }
+ ],
+ "flagg": [],
+ "bygget": "2026-11-10T11:25+00:00",
+ "bygget_fra": {
+  "kilde": "godkjent (spotansvarlig (agent, Theodor 10.11.2026))",
+  "lat": 66.964147,
+  "lon": 13.798879
+ }
+}

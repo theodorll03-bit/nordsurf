@@ -1,4 +1,18 @@
 {
+ "berlevag-sandfjorden": {
+  "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
+  "aar": 2025,
+  "lisens": "CC BY 4.0",
+  "lisens_url": "https://creativecommons.org/licenses/by/4.0/",
+  "kreditering": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+  "utsnitt": [
+   29.19114,
+   70.77902,
+   29.34573,
+   70.81741
+  ],
+  "hentet": "2026-11-16"
+ },
  "bleik": {
   "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
   "aar": 2025,
@@ -10,6 +24,20 @@
    69.26173,
    16.03987,
    69.30012
+  ],
+  "hentet": "2026-11-16"
+ },
+ "bovaer": {
+  "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
+  "aar": 2025,
+  "lisens": "CC BY 4.0",
+  "lisens_url": "https://creativecommons.org/licenses/by/4.0/",
+  "kreditering": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+  "utsnitt": [
+   17.15481,
+   69.44877,
+   17.29977,
+   69.48716
   ],
   "hentet": "2026-11-16"
  },
@@ -181,6 +209,20 @@
   ],
   "hentet": "2026-11-16"
  },
+ "persfjord": {
+  "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
+  "aar": 2025,
+  "lisens": "CC BY 4.0",
+  "lisens_url": "https://creativecommons.org/licenses/by/4.0/",
+  "kreditering": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+  "utsnitt": [
+   30.70869,
+   70.40212,
+   30.86042,
+   70.44052
+  ],
+  "hentet": "2026-11-16"
+ },
  "russelv": {
   "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
   "aar": 2025,
@@ -192,6 +234,20 @@
    69.92918,
    20.29393,
    69.96758
+  ],
+  "hentet": "2026-11-16"
+ },
+ "seines": {
+  "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
+  "aar": 2025,
+  "lisens": "CC BY 4.0",
+  "lisens_url": "https://creativecommons.org/licenses/by/4.0/",
+  "kreditering": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+  "utsnitt": [
+   14.28509,
+   67.19013,
+   14.41635,
+   67.22852
   ],
   "hentet": "2026-11-16"
  },

@@ -2,7 +2,9 @@
 window.SPOTBILDER = {
  "aar": 2025,
  "ids": [
+  "berlevag-sandfjorden",
   "bleik",
+  "bovaer",
   "bunes",
   "ducks",
   "eggum",
@@ -15,7 +17,9 @@ window.SPOTBILDER = {
   "kvalnes",
   "kvalvika",
   "lenangsoyra",
+  "persfjord",
   "russelv",
+  "seines",
   "skagsanden",
   "stave",
   "steinkrossa",
