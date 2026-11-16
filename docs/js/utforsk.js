@@ -31,6 +31,8 @@
       if(b.cls==="forbud"){ const fi = H().forbudInfo(s, Date.parse(dayKeyOrNull + "T12:00:00Z")); return {st:0, word:"Surfing forbudt", forbud:fi, rute:"forbud", miss:false, h:null, t:null, aria:`${s.name}: surfing forbudt (${fi ? fi.periode : ""})`}; }
       if(b.cls==="miss") return {st:0, word:"–", rute:"miss", miss:true, h:null, t:null, aria:`${s.name}: tallet mangler`};
       if(b.cls==="dark") return {st:0, word:"Mørkt", rute:"mork", miss:false, h:null, t:null, aria:`${s.name}: mørkt hele dagen`};
+      // dagens lys er over: ingen vurdering og aldri «0» (fysikk-kontrolløren 16.11.2026) - samme ord som favorittraden
+      if(b.cls==="over") return {st:0, word:STR.hjem.over, rute:"over", miss:false, h:null, t:null, aria:`${s.name}: ${STR.hjem.over.toLowerCase()}`};
       const w = b.h ? ratingWord(b.h) : "–";
       return {st:b.st, word:w, miss:false, h:b.h, t:b.t, aria:`${s.name}: ${w}, ${STR.starsAria(b.st, 0)}`};
     }
@@ -169,10 +171,22 @@
     Kart.setSelected(S.picked);
     renderKort(); renderListe(); lagene();
   }
+  // det kompakte kartet på Hjem (mobil): spotene med tallet for dagen i lista (dag = dayKey, som favorittradene)
+  function hjemKart(spots, dayKey, W){
+    if(!ensureCoast()) return "";
+    // spotene i nærheten av startstedet (topplinja: «Fra Tromsø»), innen 150 km; ellers alle
+    const K = window.KJORETID, km = (s)=> !K ? 0 : 111 * Math.hypot(s.spot.lat - K.fra.lat, (s.spot.lon - K.fra.lon) * Math.cos(K.fra.lat * Math.PI / 180));
+    const naer = spots.filter(s=> s.spot && km(s) <= 150);
+    const pts = (naer.length ? naer : spots.filter(s=> s.spot)).map(s=>{ const v = valueFor(s, dayKey);
+      return {id: s.id, name: s.name, lat: s.spot.lat, lon: s.spot.lon, gap: Kart.midtVindu(s.swell_window), st: v.st, tall: v.rute ? "" : String(min5(v.st)), miss: v.miss,
+        // uten tall: «–» (mangler), «Mørkt» eller forbudet etter navnet; er dagens lys over, står bare navnet (raden under sier det)
+        ord: !v.rute || v.rute==="over" ? "" : v.miss ? "–" : v.word}; });
+    return Kart.hjemKart(pts, W, 220);
+  }
   function thumb(){
     if(!ensureCoast()) return "";
     return Kart.thumb((p)=> valueFor(p.s, null).st, DATA.spots);
   }
   window.addEventListener("resize", ()=>{ if(inited && S && S.view==="utforsk"){ Kart.setArea(area()); const e = viewExtent(); if(e) Kart.setExtent(e, false); } });
-  window.Utforsk = { render, thumb, valueFor };
+  window.Utforsk = { render, thumb, hjemKart, valueFor };
 })();

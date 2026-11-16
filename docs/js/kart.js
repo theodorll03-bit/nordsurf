@@ -16,7 +16,10 @@
    gjennomsiktige, og land og kyst kommer fra OSM-oversikten. Vindstrekene og svellkilen med bølgefronter (fra «kart først»,
    commit dac1d4a) ligger som HTML/SVG over kartet; kilen følger valgt spot via map.project.
 
-   Merker: prikk + lapp «Navn Ord», lappen prøver høyre, venstre, over og under - er det ikke
+   B 4.0 «Papir» (steg 5, SPEC §6A): hav i papirfargen, land i blekk (sand i mørketid) og et grunnvannsbånd langs
+   kysten, alt fra OSM-flisene til zoom 11. Kartverket-rasteret er detaljkartet fra zoom 11 (se KV_DETALJ_Z).
+
+   Merker: Vinduet-merket (ringSvg) + lapp «NAVN 2», lappen prøver høyre, venstre, over og under - er det ikke
    plass, bare prikken. Klynging: merker nærmere hverandre enn CLUSTER_PX på skjermen slås
    sammen til én sirkel med antall og farge etter beste vurdering; trykk zoomer inn. Bare merker
    i utsnittet tegnes, og klyngene regnes på nytt høyst én gang per bilde (requestAnimationFrame).
@@ -24,7 +27,8 @@
 
    Miniatyren på Hjem (PC) bruker fortsatt docs/geo/coast.json (SVG, Nord-Norge). */
 (function(){
-  const CLUSTER_PX = 48, PH = 28, GAP = 12;
+  // GAP: fra midten av merket til lappen (skiva bak ringen er 26 pt); ADV: bredden på ett tegn i Martian Mono 12/800
+  const CLUSTER_PX = 48, PH = 28, GAP = 16, ADV = 8.4;
   const BOUNDS = [[1.0, 56.3], [34.0, 72.3]];          // maxBounds: fastlands-Norge med luft
   // flisene dekker mer enn maxBounds (tools/lag_kartfliser.py, ramme -1..36 Ø, 55..73,5 N), så hele det synlige kartet har land
   const COVER = {s: BOUNDS[0][1], w: BOUNDS[0][0], n: BOUNDS[1][1], e: BOUNDS[1][0]};
@@ -41,28 +45,56 @@
   const merc = (lat)=> Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
   const esc = (s)=> String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const reduced = ()=> matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* Vinduet-merket (SPEC §6A, B 4.0 steg 5): ring på 18 pt med 3 pt strek og en åpning på 84° som peker mot midten
+     av spotens svellvindu, en papirfarget skive på 26 pt bak og en prikk i midten. Farge: korall fra 4, ellers blekk
+     (CSS, --mk-ring). Har spoten flere vinduer, peker åpningen mot det bredeste. Uten vindu: hel ring. */
+  function midtVindu(win){
+    if(!Array.isArray(win) || !win.length) return null;
+    let best = null, bw = -1;
+    for(const [a, b] of (Array.isArray(win[0]) ? win : [win])){ const span = (b - a + 360) % 360; if(span > bw){ bw = span; best = (a + span / 2) % 360; } }
+    return best;
+  }
+  const RING_R = 9, ringCache = new Map();
+  function ringInner(gap){
+    const k = gap==null ? "hel" : gap.toFixed(0);
+    let out = ringCache.get(k);
+    if(out) return out;
+    let bue = `<circle r="${RING_R}" class="ring"/>`;
+    if(gap!=null){
+      const a1 = (gap + 42) * Math.PI / 180, a2 = (gap - 42) * Math.PI / 180, f = (v)=> v.toFixed(2);
+      bue = `<path class="ring" d="M${f(RING_R * Math.sin(a1))} ${f(-RING_R * Math.cos(a1))}A${RING_R} ${RING_R} 0 1 1 ${f(RING_R * Math.sin(a2))} ${f(-RING_R * Math.cos(a2))}"/>`;
+    }
+    out = `<circle r="13" class="skive"/>${bue}<circle r="2.6" class="kjerne"/>`;
+    ringCache.set(k, out);
+    return out;
+  }
+  const ringSvg = (gap)=> `<svg class="vinduet" viewBox="-13 -13 26 26" aria-hidden="true">${ringInner(gap)}</svg>`;
   let root, markersEl, map = null, coast = null, thumbProj = null, attrEl = null, vindEl = null, kileSvg = null;
   let area = {x:0, y:0, w:390, h:600};
   let spots = [], valueOf = ()=>({st:0, word:"", miss:false, aria:""}), onPick = ()=>{}, onCluster = ()=>{}, onMoveEnd = ()=>{};
   let selected = null, rafId = 0;
 
   function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-  function colors(){ return {land: cssVar("--land") || "#F2EDE2", sea: cssVar("--sea") || "#B7D3DF", coast: cssVar("--coast") || "#8F8268"}; }
+  // B 4.0 «Papir» (SPEC §6A, steg 5): hav = papiret (--bg), land = --kartland (blekk om dagen, sand i mørketid),
+  // og et grunnvannsbånd i --data langs kysten, tegnet som linje under landfyllet
+  function colors(){ return {land: cssVar("--kartland") || "#002941", sea: cssVar("--bg") || "#F2EFE8", coast: cssVar("--data") || "#B6DFED"}; }
+  // båndet er 6,5 px der kysten er detaljert; smalere på oversikten, der det ellers fyller fjordene
+  const BAND = ["interpolate", ["linear"], ["zoom"], 4, 1.5, 7, 4, 9, 6.5];
   const dark = ()=> { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
   // Kartverket-rasteret: lyst helt uendret (kildemerket «© Kartverket»); mørkt invertert, uten farge og med litt lavere
   // kontrast (et rolig mørkt kart) - da står det «© Kartverket (farger endret)» (CC BY 4.0: endringer skal opplyses)
   const kvPaint = ()=> dark()
     ? {"raster-brightness-min": 1, "raster-brightness-max": 0, "raster-saturation": -1, "raster-contrast": -0.25}
     : {"raster-brightness-min": 0, "raster-brightness-max": 1, "raster-saturation": 0, "raster-contrast": 0};
-  // Kartverket-flisene er gjennomsiktige der de ikke har noe å tegne: til og med z8 nesten alt (bare linjer og navn -
-  // land og sjø kommer fra OSM-oversikten under), fra z9 er sjøen hvit og landet halvgjennomsiktig over en hvit grunn.
-  // Bakgrunnen under er derfor havfargen til og med z8 og Kartverkets egen grunnfarge fra z9-flisene (invertert i mørk modus:
-  // #FEFEFE blir #212121, målt fra skjermbildet). I reserven er bakgrunnen alltid havfargen.
-  // MapLibre regner zoom i 512 px-fliser: med 256 px-fliser og avrunding brukes z9-flisene fra kartzoom 7,5 (målt
-  // 16.10.2026: zoom 7,8 henter z9, 8,6 henter z10). Fra der er Kartverkets grunnfarge bakgrunnen og OSM-landet av.
-  const KV_GRUNN_Z = 7.5;
-  const havFarge = (c)=> reserve ? c.sea : ["step", ["zoom"], c.sea, KV_GRUNN_Z, dark() ? "#212121" : "#FEFEFE"];
-  const landSynlig = ()=> reserve ? 1 : ["step", ["zoom"], 1, KV_GRUNN_Z, 0];
+  // Fra zoom 11 er bakgrunnen Kartverkets egen grunnfarge (sjøen i flisene er hvit; invertert i mørk modus: #FEFEFE blir
+  // #212121, målt fra skjermbildet 16.10.2026), så hull mellom flisene ikke blir papirfarget. I reserven er den alltid papiret.
+  // B 4.0 steg 5: papirstilen trenger land og kyst som vektor, så OSM-flisene tegner kartet til og med zoom 11.
+  // Kartverket-rasteret (grått, kan ikke farges som blekk på papir) er detaljkartet fra zoom 11, der Theodor ville ha
+  // finere kyst enn OSM (16.10.2026). Under zoom 11 bes det ikke om en eneste Kartverket-flis.
+  const KV_DETALJ_Z = 11, MAX_Z_ALLE = 24;
+  const havFarge = (c)=> reserve ? c.sea : ["step", ["zoom"], c.sea, KV_DETALJ_Z, dark() ? "#212121" : "#FEFEFE"];
+  // detaljlagene (OSM, z8+) stopper der Kartverket tar over - i reserven går de helt inn
+  const DETALJ = ["kjerne-lav", "land-hoy", "kyst-hoy"];
   function style(){
     const c = colors(), abs = (f)=> "pmtiles://" + new URL("geo/" + f, location.href).href;
     return {
@@ -74,16 +106,16 @@
       },
       layers: [
         {id: "hav", type: "background", paint: {"background-color": havFarge(c)}},
+        // grunnvannsbåndet først: linja langs kysten, og landfyllet over dekker den indre halvdelen
+        {id: "kyst-lav", type: "line", source: "lav", "source-layer": "kyst", maxzoom: OVERSIKT_MAX + 1, layout: {"line-join": "round", "line-cap": "round"}, paint: {"line-color": c.coast, "line-width": BAND}},
+        {id: "kyst-hoy", type: "line", source: "hoy", "source-layer": "kyst", minzoom: OVERSIKT_MAX + 1, maxzoom: KV_DETALJ_Z, layout: {"line-join": "round", "line-cap": "round"}, paint: {"line-color": c.coast, "line-width": BAND}},
         // oversikten (precachet) til og med z7. Fra z8: detaljflisene finnes bare der det er kyst innen 1 km; inne på land
         // fyller oversiktens «kjerne» (landet krympet 600 m innover, tools/lag_kartfliser.py) - den når aldri ut i sjøen.
-        {id: "land-lav", type: "fill", source: "lav", "source-layer": "land", maxzoom: OVERSIKT_MAX + 1, paint: {"fill-color": c.land, "fill-opacity": landSynlig()}},
-        {id: "kjerne-lav", type: "fill", source: "lav", "source-layer": "kjerne", minzoom: OVERSIKT_MAX + 1, layout: {visibility: "none"}, paint: {"fill-color": c.land}},
-        {id: "land-hoy", type: "fill", source: "hoy", "source-layer": "land", minzoom: OVERSIKT_MAX + 1, layout: {visibility: "none"}, paint: {"fill-color": c.land}},
-        {id: "kyst-lav", type: "line", source: "lav", "source-layer": "kyst", maxzoom: OVERSIKT_MAX + 1, paint: {"line-color": c.coast, "line-width": 1, "line-opacity": landSynlig()}},
-        {id: "kyst-hoy", type: "line", source: "hoy", "source-layer": "kyst", minzoom: OVERSIKT_MAX + 1, layout: {visibility: "none"}, paint: {"line-color": c.coast, "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 1.6]}},
-        // (detaljlagene og kjernen er av til reserven slås på - da hentes ingen detaljbiter så lenge Kartverket virker)
-        // Kartverket over OSM-reserven: der flisene finnes, dekker de alt; feiler de, synes OSM-kysten under
-        {id: "kartverket", type: "raster", source: "kv", paint: {...kvPaint(), "raster-fade-duration": 0}},
+        {id: "land-lav", type: "fill", source: "lav", "source-layer": "land", maxzoom: OVERSIKT_MAX + 1, paint: {"fill-color": c.land}},
+        {id: "kjerne-lav", type: "fill", source: "lav", "source-layer": "kjerne", minzoom: OVERSIKT_MAX + 1, maxzoom: KV_DETALJ_Z, paint: {"fill-color": c.land}},
+        {id: "land-hoy", type: "fill", source: "hoy", "source-layer": "land", minzoom: OVERSIKT_MAX + 1, maxzoom: KV_DETALJ_Z, paint: {"fill-color": c.land}},
+        // Kartverket fra zoom 11 over alt; feiler flisene (reserven), går OSM-lagene videre innover under
+        {id: "kartverket", type: "raster", source: "kv", minzoom: KV_DETALJ_Z, paint: {...kvPaint(), "raster-fade-duration": 0}},
       ],
     };
   }
@@ -92,18 +124,17 @@
   function setReserve(on){
     if(!map || reserve === on) return;
     reserve = on;
-    // detaljflisene (range fra 33 MB-fila) bare når reserven faktisk vises
-    const vis = on ? "visible" : "none";
-    if(map.getLayer("land-hoy")){ map.setLayoutProperty("land-hoy", "visibility", vis); map.setLayoutProperty("kyst-hoy", "visibility", vis); map.setLayoutProperty("kjerne-lav", "visibility", vis); }
+    // detaljflisene (range fra 33 MB-fila) innover fra zoom 11 bare når reserven faktisk vises
+    for(const id of DETALJ) if(map.getLayer(id)) map.setLayerZoomRange(id, OVERSIKT_MAX + 1, on ? MAX_Z_ALLE : KV_DETALJ_Z);
     root.dataset.kartkilde = on ? "osm" : "kartverket";
     merk();
-    if(map.getLayer("hav")){ map.setPaintProperty("hav", "background-color", havFarge(colors())); map.setPaintProperty("land-lav", "fill-opacity", landSynlig()); map.setPaintProperty("kyst-lav", "line-opacity", landSynlig()); }
+    if(map.getLayer("hav")) map.setPaintProperty("hav", "background-color", havFarge(colors()));
   }
-  // kildemerket: «© Kartverket» alltid; OSM-merket når OSM-data faktisk vises - i reserven, og under zoom 7,5 der
-  // Kartverket-flisene er gjennomsiktige og land/kyst i oversikten kommer fra OSM (ODbL krever kreditering da)
+  // kildemerket: «© Kartverket» alltid; OSM-merket når OSM-data faktisk vises - i reserven, og under zoom 11 der
+  // land og kyst kommer fra OSM (ODbL krever kreditering da)
   function merk(){
     if(!attrEl || !map) return;
-    const osm = reserve || map.getZoom() < KV_GRUNN_Z, endret = dark();
+    const osm = reserve || map.getZoom() < KV_DETALJ_Z, endret = dark();
     if(attrEl.dataset.osm === String(osm) && attrEl.dataset.endret === String(endret)) return;
     attrEl.dataset.osm = String(osm); attrEl.dataset.endret = String(endret);
     attrEl.innerHTML = (endret ? KV_ATTR_ENDRET : KV_ATTR) + (osm ? " · " + OSM_ATTR : "");
@@ -133,6 +164,7 @@
     map.setPaintProperty("hav", "background-color", havFarge(c));
     for(const id of ["land-lav", "kjerne-lav", "land-hoy"]) map.setPaintProperty(id, "fill-color", c.land);
     for(const id of ["kyst-lav", "kyst-hoy"]) map.setPaintProperty(id, "line-color", c.coast);
+    schedule();   // merkene leser fargene fra CSS, men kildemerket og lappene tegnes på nytt med riktig tema
   }
   // MapLibre (1 MB) og PMTiles lastes først når Utforsk åpnes - Hjem skal ikke vente på dem
   const LIB = ["vendor/maplibre-gl-5.24.0.js", "vendor/pmtiles-4.5.0.js"], LIB_CSS = "vendor/maplibre-gl-5.24.0.css";
@@ -321,7 +353,7 @@
   /* ---------- merker og klynger ---------- */
   function init(el, coastJson, list, o){
     Lag.init(el, coastJson);
-    spots = list.map(s=>({s, id: s.id, name: s.name, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon}))
+    spots = list.map(s=>({s, id: s.id, name: s.name, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon, gap: midtVindu(s.swell_window)}))
       .map(p=>({...p, offMap: !(p.lat!=null && p.lon!=null && Lag.covers(p.lat, p.lon))}));
     valueOf = o.valueOf || valueOf; onPick = o.onPick || onPick; onCluster = o.onCluster || onCluster; onMoveEnd = o.onMoveEnd || onMoveEnd;
   }
@@ -373,9 +405,9 @@
     const groups = clusters();
     const html = [];
     const placed = [];   // lapper plassert, til kollisjonssjekk
-    // hindre for lappene: prikker (14 px) og klyngeringer (34 px), og det som ligger over kartet - kildemerket,
+    // hindre for lappene: merkene (skiva 26 px) og klyngeringer (30 px), og det som ligger over kartet - kildemerket,
     // tids- og regionbrikkene og andre knapper (Theodor 16.10: kildemerket kolliderte med Farstadsanden-lappen på PC)
-    const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 17, y: g.y - 17, w: 34, h: 34} : {x: g.x - 7, y: g.y - 7, w: 14, h: 14});
+    const dots = groups.map(g=> g.members.length > 1 ? {x: g.x - 15, y: g.y - 15, w: 30, h: 30} : {x: g.x - 13, y: g.y - 13, w: 26, h: 26});
     dots.push(...overlays());
     const hit = (r)=> placed.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y) || dots.some(q=> r.x < q.x+q.w && r.x+r.w > q.x && r.y < q.y+q.h && r.y+r.h > q.y);
     // valgt først (beholder lappen), så høyest tall
@@ -390,8 +422,9 @@
       }
       const m = g.members[0], sel = m.p.id===selected;
       const tall = m.v.rute ? "" : String(Math.min(5, m.v.st||0));   // tallet 0-5 foran ordet; tom når ruta ville vært tom (mangler, mørkt, forbud)
-      const txt = `${m.p.name} ${tall} ${m.v.miss ? "–" : (m.v.word || "")}`.replace(/\s+/g, " ").trim();
-      const w = 22 + txt.length * 7.4;
+      // lappen er «NAVN 2» (SPEC §6A); uten tall står ordet («Mørkt», «–», forbudet) i stedet for tallet
+      const txt = `${m.p.name} ${tall || (m.v.miss ? "–" : (m.v.word || ""))}`.replace(/\s+/g, " ").trim();
+      const w = 10 + txt.length * ADV;
       const cands = [["right", m.x + GAP, m.y - PH/2], ["left", m.x - GAP - w, m.y - PH/2], ["over", m.x - w/2, m.y - GAP - PH - 2], ["under", m.x - w/2, m.y + GAP + 2]];
       let pos = null;
       for(const [side, x, y] of cands){
@@ -403,7 +436,7 @@
       if(!pos && sel) pos = {side: "right", r: {x: Math.max(area.x + 4, Math.min(area.x + area.w - 4 - w, m.x + GAP)), y: m.y - PH/2, w, h: PH}};
       if(pos) placed.push(pos.r);
       html.push(`<button type="button" class="mk r-${Math.min(5, m.v.st||0)}${m.v.miss ? " miss" : ""}${sel ? " sel" : ""}${pos ? "" : " bare"}" style="transform:translate3d(${(m.x-22).toFixed(1)}px,${(m.y-22).toFixed(1)}px,0)" data-id="${esc(m.p.id)}" aria-label="${esc(m.v.aria || m.p.name)}" aria-pressed="${sel}">
-        <span class="mk-dot"></span>${pos ? `<span class="mk-pill" style="left:${(pos.r.x - (m.x-22)).toFixed(1)}px;top:${(pos.r.y - (m.y-22)).toFixed(1)}px"><span class="nm">${esc(m.p.name)}</span>${tall ? `<span class="mk-tall">${tall}</span>` : ""}<span class="ord">${esc(m.v.miss ? "–" : (m.v.word || ""))}</span></span>` : ""}</button>`);
+        <span class="mk-dot">${ringSvg(m.p.gap)}</span>${pos ? `<span class="mk-pill" style="left:${(pos.r.x - (m.x-22)).toFixed(1)}px;top:${(pos.r.y - (m.y-22)).toFixed(1)}px"><span class="nm">${esc(m.p.name)}</span>${tall ? `<span class="mk-tall">${tall}</span>` : ""}<span class="ord">${esc(m.v.miss ? "–" : (m.v.word || ""))}</span></span>` : ""}</button>`);
     }
     markersEl.innerHTML = html.join("");
     markersEl.querySelectorAll(".mk").forEach(b=> b.onclick = ()=> onPick(b.dataset.id));
@@ -423,9 +456,60 @@
     const pts = (list || []).map(s=>({s, id: s.id, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon})).filter(p=> p.lat!=null && p.lon!=null);
     return Lag.thumbSvg(pts, (p)=> colorOf(p));
   }
+  /* Det kompakte kartet på Hjem (mobil, SPEC §6A punkt 3, B 4.0 steg 5): 220 pt, kant til kant, samme stil som Utforsk -
+     hav i papir, land i --kartland og grunnvannsbåndet i --data under landet - men som SVG fra coast.json, ikke MapLibre,
+     så Hjem aldri venter på kartbiblioteket. pts: [{id, name, lat, lon, gap, st, tall, ord, miss}] - tall er "" når
+     spoten ikke har noe tall (mangler, mørkt, forbud, dagens lys over), og da står ord («–», «Mørkt») i stedet.
+     Merker nærmere enn 24 pt slås sammen til ett merke med navnene etter hverandre: «TROMVIK · GRØTFJORD 2» når
+     alle har samme tall, ellers tallet eller ordet bak hvert navn («TROMVIK 2 · GRØTFJORD –»), så et tall aldri
+     står for en spot det ikke gjelder (fysikk-kontrolløren 16.11.2026). Tomt når ingen av spotene ligger innenfor
+     coast.json (Lofoten til Lyngen). */
+  function hjemKart(list, W, Hh){
+    if(!coast || !thumbProj) return "";
+    const [w0, s0, e0, n0] = thumbProj.bbox;
+    const inn = list.filter(p=> p.lat!=null && p.lon!=null && p.lat >= s0 && p.lat <= n0 && p.lon >= w0 && p.lon <= e0)
+      .map(p=>({...p, x: thumbProj.x(p.lon), y: thumbProj.y(p.lat)}));
+    if(!inn.length) return "";
+    const asp = W / Hh, xs = inn.map(p=>p.x), ys = inn.map(p=>p.y);
+    // utsnittet: spotene med luft til merker og lapper, aldri tettere enn ca. 50 km i bredden, og innenfor coast.json
+    // (utenfor den finnes ingen kyst - landet ville stoppet i en rett kant)
+    let bw = Math.max(200, (Math.max(...xs) - Math.min(...xs)) * 1.4 + 80), bh = Math.max((Math.max(...ys) - Math.min(...ys)) * 1.5 + 60, bw / asp);
+    bw = Math.min(coast.vw, Math.max(bw, bh * asp)); bh = bw / asp;
+    const klem = (v, lo, hi)=> hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v));
+    const vx = klem((Math.max(...xs) + Math.min(...xs)) / 2 - bw / 2, 0, coast.vw - bw), vy = klem((Math.max(...ys) + Math.min(...ys)) / 2 - bh / 2, 0, coast.vh - bh), k = W / bw;
+    const px = inn.map(p=>({...p, sx: (p.x - vx) * k, sy: (p.y - vy) * k}));
+    // sammenslåing innenfor 24 pt (grådig, høyeste tall først; spots uten tall sist)
+    const grupper = [], rang = (p)=> p.tall!=="" ? (p.st||0) : -1;
+    for(const p of px.sort((a, b)=> rang(b) - rang(a))){
+      const g = grupper.find(g=> Math.hypot(g.sx - p.sx, g.sy - p.sy) < 24);
+      if(g) g.m.push(p); else grupper.push({sx: p.sx, sy: p.sy, m: [p]});
+    }
+    // lappene: høyre, venstre, over, under - første plass som ikke treffer et annet merke eller en lapp; ellers bare ringen
+    const opptatt = grupper.map(g=>({x: g.sx - 13, y: g.sy - 13, w: 26, h: 26}));
+    const treff = (r)=> r.x < 4 || r.x + r.w > W - 4 || r.y < 2 || r.y + r.h > Hh - 2 || opptatt.some(q=> r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y);
+    const ringer = [], lapper = [];
+    for(const g of grupper){
+      const best = g.m[0], stor = (s)=> String(s).toLocaleUpperCase("nb-NO"), bak = (p)=> p.tall!=="" ? p.tall : stor(p.ord || "");
+      // ett felles tall bare når alle i gruppa har et tall og det er det samme; ellers tallet eller ordet bak hvert navn
+      const felles = g.m.every(p=> p.tall!=="" && p.tall===best.tall);
+      const deler = felles ? [[g.m.map(p=> stor(p.name)).join(" · "), best.tall]] : g.m.map(p=> [stor(p.name), bak(p)]);
+      const lengde = deler.reduce((n, [a, b])=> n + a.length + (b ? b.length + 1 : 0), 0) + (deler.length - 1) * 3;
+      const bredde = lengde * ADV, H2 = 16;
+      // et sammenslått merke peker mot vinduet til spoten med høyest tall
+      ringer.push(`<g class="hk-mk r-${best.tall!=="" ? Math.min(5, best.st||0) : 0}${best.miss ? " miss" : ""}" transform="translate(${g.sx.toFixed(1)} ${g.sy.toFixed(1)})">${ringInner(best.gap)}</g>`);
+      const valg = [[g.sx + 16, g.sy - H2 / 2, "start"], [g.sx - 16 - bredde, g.sy - H2 / 2, "end"], [g.sx - bredde / 2, g.sy - 16 - H2, "middle"], [g.sx - bredde / 2, g.sy + 16, "middle"]];
+      const v = valg.find(([x, y])=> !treff({x, y, w: bredde, h: H2}));
+      if(!v) continue;
+      const [x, y, anker] = v; opptatt.push({x, y, w: bredde, h: H2});
+      const tx = anker === "start" ? x : anker === "end" ? x + bredde : x + bredde / 2;
+      lapper.push(`<text class="hk-lapp" x="${tx.toFixed(1)}" y="${(y + 12).toFixed(1)}" text-anchor="${anker}">${deler.map(([a, b])=> `${esc(a)}${b ? ` <tspan>${esc(b)}</tspan>` : ""}`).join(" · ")}</text>`);
+    }
+    return `<svg class="hjemkart-svg" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g transform="scale(${k.toFixed(4)}) translate(${(-vx).toFixed(1)} ${(-vy).toFixed(1)})"><path class="vann" d="${coast.d}"/><path class="land" d="${coast.d}"/></g>${ringer.join("")}${lapper.join("")}</svg>`;
+  }
   // åpnes appen rett på Utforsk, lastes MapLibre parallelt med varseldataene i stedet for etter dem
   if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{});
   window.addEventListener("hashchange", ()=>{ if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{}); });
   window.Kart = { lag: Lag, init, loadLib, setCoast, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(), offMapSpots, screenOf, extentOf, thumb, covers: (la, lo)=> Lag.covers(la, lo),
-    setWind, setWedge, hitClass, sentrum: ()=> map ? map.getCenter() : null, zoom: ()=> map ? map.getZoom() : null };
+    setWind, setWedge, hitClass, ringSvg, midtVindu, hjemKart, sentrum: ()=> map ? map.getCenter() : null, zoom: ()=> map ? map.getZoom() : null };
 })();

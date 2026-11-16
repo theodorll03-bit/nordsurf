@@ -320,7 +320,7 @@ def main():
                 page.route("**/data/oversikt.json", data_route)
                 page.route("**/data/spots/*.json", data_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html")
-                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem #bestKort')")
+                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem :is(#bestKort, .hjem-linje)')")
                 cdp = ctx.new_cdp_session(page)
 
                 # Kilden til lokale regler (10.11.2026, Unstads tidevannsregel): hver delregel skrives med sin egen
@@ -640,10 +640,10 @@ def main():
                             assert dom["tall"] is None and knapp == "" and dom["ord"] == {"miss": "Mangler data", "dark": "Mørkt"}[cls], (key, cls, dom, knapp)
                     shot("unstad-6t", scheme); audit("unstad-6t")
                     # tilbakeknappen følger stakken: fra Hjem heter den «Hjem» og går dit
-                    go("#hjem", "#viewHjem:not([hidden]) #bestKort")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
                     go("#spot=unstad", SPOT_KLAR)
                     assert page.get_attribute("#spotBack", "aria-label") == "Tilbake til Hjem" and tekst("#spotBack") == "Hjem"
-                    page.click("#spotBack"); page.wait_for_selector("#viewHjem:not([hidden]) #bestKort")
+                    page.click("#spotBack"); page.wait_for_selector("#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
                     go("#utforsk", "#viewUtforsk:not([hidden])")
                     # ---- Farstadsanden ----
                     go("#spot=farstadsanden", SPOT_KLAR)
@@ -700,7 +700,7 @@ def main():
                     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
                     assert bg == ("rgb(0, 41, 65)" if scheme == "mork" else "rgb(242, 239, 232)"), f"temaet følger ikke systemet ({label}, {scheme}): {bg}"
                     # ---- 6. Hjem ----
-                    go("#hjem", "#viewHjem:not([hidden]) #bestKort")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
                     gen = oslo(FORECAST["generated"])
                     if mobile:   # B 4.0 steg 3: topplinja «ONS 14.10 · LYS 06:50–18:00» og «Fra Tromsø», oppdatert-tiden står nederst
                         dato = f"{WD[TODAY.weekday()][:3].capitalize()} {TODAY:%d.%m} · " + (f"Lys {_LYS[0]:%H:%M}–{_LYS[-1]:%H:%M}" if _LYS else "Mørkt hele dagen")
@@ -739,8 +739,9 @@ def main():
                             assert r["tall"] == r["celler"][0] or (r["tall"] == "" and r["celler"][0] in ("", "–")), f"tallet foran {r['navn']} er ikke dagens rute: {r}"
                             assert len(r["celler"]) == 7 and len(r["dager"]) == 7, f"ukeoversikten på {r['navn']}: {r}"
                             sid = r["href"].split("=")[1]; m = KJORETID.get(sid)
-                            kj = None if not m else (f"{m // 60} t" + (f" {m % 60} min" if m % 60 else "") if m >= 60 else f"{m} min")
-                            assert (f" · {kj} · " in r["meta"]) if kj else (" min" not in r["meta"] and " t ·" not in r["meta"]), f"kjøretiden på {r['navn']}: {r['meta']}"
+                            # «ca.» foran: tallene er anslag (svar 16.11.2026)
+                            kj = None if not m else "ca. " + (f"{m // 60} t" + (f" {m % 60} min" if m % 60 else "") if m >= 60 else f"{m} min")
+                            assert (f" · {kj} · " in r["meta"]) if kj else (" min" not in r["meta"] and " t ·" not in r["meta"] and "ca. " not in r["meta"]), f"kjøretiden på {r['navn']}: {r['meta']}"
                         g = next(r for r in hj["rader"] if r["href"] == f"#spot={FAV_IDS[0]}")
                         assert g["obs"] and g["obs"].startswith("Obs ") and "3 av 5 · Brysthøy · Fralands" in g["obs"], f"OBS-linja fra loggen mangler: {g}"
                         assert all(r["obs"] is None for r in hj["rader"] if r is not g), f"OBS-linje fra en logg eldre enn 7 dager eller fram i tid: {hj['rader']}"
@@ -957,7 +958,7 @@ def main():
                     # ---- 16. 200 % tekst (mobil) og prefers-contrast: more ----
                     if mobile:
                         page.evaluate("document.documentElement.style.fontSize = '200%'")
-                        go("#hjem", "#viewHjem:not([hidden]) #bestKort"); shot("hjem-200", scheme); audit("hjem-200")
+                        go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)"); shot("hjem-200", scheme); audit("hjem-200")
                         go("#spot=unstad", SPOT_KLAR); page.wait_for_timeout(300); shot("unstad-200", scheme); audit("unstad-200")
                         brutt = page.evaluate("""[...document.querySelectorAll('#viewSpot .tall, #viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu')]
                             .filter(el => el.getClientRects().length > 1 || el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
@@ -966,7 +967,7 @@ def main():
                         assert navn[0] <= navn[1] - 15, f"spotnavnet går ut av skjermen ved 200 % tekst: {navn}"
                         page.evaluate("document.documentElement.style.fontSize = ''")
                     media(scheme, "more")
-                    go("#hjem", "#viewHjem:not([hidden]) #bestKort"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")
                     go("#spot=unstad", SPOT_KLAR); page.wait_for_timeout(300); shot("unstad-kontrast", scheme); audit("unstad-kontrast")
                     media(scheme)
                 if not mobile:

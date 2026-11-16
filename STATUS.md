@@ -1,6 +1,6 @@
 # Nordsurf: status
 
-## T3 design B 4.0 «Papir» - steg 4 (spotsiden på mobil), 16.11.2026
+## T3 design B 4.0 «Papir» - steg 5 (Utforsk-kartet og kartet på Hjem), 16.11.2026
 
 Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
 
@@ -63,6 +63,26 @@ Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.
 - `test_spotside_browser`, `test_skalering_browser` og `test_svgtekst_browser` har fått en mobildel som sjekker tallene mot varselet, dra, piltaster og trykk, forbud, manglende data, 6-timers dager, 200 % tekst og høy kontrast.
 - Testene før commit: 17 filer og kontrast grønne i én kjøring, etter rettingene fra kontrolløren.
 
+**Gjort (fletting av main, 16.11, commit 58d237f)**
+- Main er flettet inn (bovaer, berlevag-sandfjorden, persfjord, seines og tidevannsregelen på Unstad). Kornfoto for de fire nye er laget med `tools/spotbilder.py` (26 spots har nå bilde). Alle 17 testfiler og kontrasten grønne etter flettingen.
+
+**Gjort (steg 5, SPEC §6A)**
+- Kartet i Utforsk: hav i papirfargen, land i blekk (sand i mørketid) og et grunnvannsbånd i `--data` langs kysten, tegnet under landet. Båndet er 6,5 px fra zoom 9 og smalere på oversikten.
+- Kartverket-rasteret (grått) kan ikke farges som blekk på papir. Det er nå detaljkartet fra zoom 11. Under det tegner OSM-flisene kartet, og ingen Kartverket-flis bes om. Reserven og kildemerket virker som før, med 11 i stedet for 7,5 som grense.
+- Merkene er Vinduet-merket: ring 18 pt med 3 pt strek, åpning på 84° mot midten av svellvinduet (det bredeste når spoten har flere), papirskive 26 pt bak. Korall fra 4. Lappen er «NAVN 2» i Martian 12/800 med papirglorie. Uten tall står ordet («Mørkt», «–»). Klynger som før, nå som hel ring med antallet. Knappene, VoiceOver-etikettene og klikkene er de samme.
+- Brikkene og kortet over kartet er papir uten glasseffekt.
+- Hjem på mobil: kompakt kart på 220 pt kant til kant, samme stil, med spotene innen 150 km fra startstedet (favorittene, ellers regionen) og dagens tall. Merker nærmere enn 24 pt slås sammen. Kartet er en lenke til Utforsk.
+- «Beste økt» er borte fra Hjem på mobil (svar 16.11, punkt 3b). PC har den fortsatt.
+- «ca.» foran kjøretidene (svar 16.11): `STR.hjem.ca`, brukt i `kjoreText`.
+- Farttesten: CI målte zoom 25 bilder i sekundet for 292523a. Lokalt er 4x CPU taket for skjermen (63). Med 16x CPU gikk zoom fra 42-47 til 59-62 og verste bilde fra 47-55 ms til 28-33 ms. Det som kostet: Kartverket-laget på oversikten (testflisene dekket hele kartet på alle zoomnivåer) og glasseffekten (backdrop-filter) over WebGL-kartet. Begge er borte nå. Grensen er uendret.
+- Testene: `test_kart_browser` sjekker nye farger, at ingen Kartverket-flis bes om på oversikten, og reserven fra zoom 12. Hjem-testene venter på topplinja på mobil og sjekker at «Beste økt» bare finnes på PC.
+- Fysikk-kontrolløren (16.11, første runde): ikke godkjent, to stoppere. Begge er rettet:
+  - «Dagens lys er over» ble til «0» på Hjem-kartet og i Utforsk-lappen. `valueFor` gir nå `rute: "over"`, og lappen viser bare navnet (Hjem) eller ordet (Utforsk).
+  - Et sammenslått merke viste ett tall for alle navnene. Nå står ett felles tall bare når alle har samme tall («TROMVIK · GRØTFJORD 2»). Ellers står tallet eller ordet bak hvert navn («TROMVIK 2 · GRØTFJORD –»). Spots uten tall viser «–», «MØRKT» eller forbudet, og ringen er stiplet når tallet mangler.
+  - Ny test 6c i `test_kart_browser` dekker like tall, ulike tall, mangler, mørkt og lys over.
+- Fysikk-kontrolløren, andre runde: godkjent for commit, ingen stoppere igjen. 17 testfiler og kontrast er grønne i én kjøring etter rettingene (`alle_b4_steg5b.log`).
+- Kontrollørens «kan vente»: ved flere svellvinduer peker åpningen mot det bredeste (Russelv 10° mot ca. 2° for hele spennet, Seines 274° mot 282°). Under zoom 11 står «Kartverket» i kildemerket uten at Kartverket-fliser vises.
+
 **Til Theodor**
 - Valgene for Hjem (ordene, hva overskriften gjelder, andre setning, kjøretidene, lyset i midnattssol, område eller region, vindordene) står som ett spørsmål i `privat/kontor/til-theodor.md`.
 - WCAG regner «stor tekst» fra 14 pt fet (ca. 18,7 px), ikke 14 px. Rutene på Hjem og i listene (19 px fet) er over. Timestripa og klyngeringen på kartet (14 px fet) følger regelen din, men ikke WCAG. `kontrast.py` leser ikke skriftstørrelser, så regelen står bare som kommentar.
@@ -71,7 +91,7 @@ Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.
 
 **Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/` til `steg-4/`.
 
-**Neste:** steg 5 (Utforsk-lista og kartstilen). Da fjernes også «Beste økt» fra Hjem på mobil (Theodors svar 16.11). Før steg 5 merges main inn i grenen, og bildeverktøyet kjøres for nye spots.
+**Neste:** steg 6 (nettsiden fra 1024 px, SPEC 6C og 6D). Da kommer også lista «Beste først» i Utforsk i ny stil (den vises bare på PC). Skjermbilder for steg 5: `privat/design-b4/steg-5/`.
 
 ## Flettet til main 16.11.2026: Troms, Finnmark, Salten og tidevannsregelen på Unstad
 - **Hva:** PR #30 (bovaer), #31 (berlevag-sandfjorden, persfjord), #32 (seines) og #35 (myk tidevannsregel på Unstad) er flettet lokalt med `--no-ff` i den rekkefølgen og lagt på main i én push.

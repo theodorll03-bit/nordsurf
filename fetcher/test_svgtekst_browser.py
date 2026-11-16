@@ -135,7 +135,7 @@ def main():
                 page.route("**/data/oversikt.json", data_route)
                 page.route("**/data/spots/*.json", data_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html")
-                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem #bestKort')")
+                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem :is(#bestKort, .hjem-linje)')")
                 cdp = ctx.new_cdp_session(page)
 
                 def media(scheme):

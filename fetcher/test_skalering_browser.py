@@ -11,7 +11,7 @@ publisert som oversikt-2 + detaljfiler (fetcher/publish.py), servert slik appen 
 5. søk på «a» grupperer per region og viser maks 20 før «Vis flere»;
 6. «Beste økt» gjelder bare valgt region (Innstillinger -> Område, standard Troms), aldri alle 100;
 7. første visning av Hjem under 1,5 s på simulert 4G (CDP: 9 Mbit/s ned, 150 ms latens) - målt fra
-   navigasjonsstart til #bestKort er synlig;
+   navigasjonsstart til #bestKort (PC) eller topplinja (mobil, B 4.0: «Beste økt» er borte der) er synlig;
 8. nett-tabellen: regionfilter og «Vis alle» per gruppe, overskriftsraden står fast (sticky).
 
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5 minutter (hardkill),
@@ -111,7 +111,7 @@ def main():
                 cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 150, "downloadThroughput": 9 * 1024 * 1024 / 8, "uploadThroughput": 3 * 1024 * 1024 / 8})
                 t_start = time.monotonic()
                 page.goto(f"http://127.0.0.1:{port}/index.html#hjem")
-                page.wait_for_selector("#viewHjem:not([hidden]) #bestKort")
+                page.wait_for_selector("#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
                 first_paint = time.monotonic() - t_start
                 cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 0, "downloadThroughput": -1, "uploadThroughput": -1})
                 assert first_paint < 1.5, f"første visning av Hjem tok {first_paint:.2f} s på simulert 4G ({label})"
@@ -123,9 +123,10 @@ def main():
                 def go(hash_, sel):
                     page.evaluate(f"location.hash = '{hash_}'"); page.wait_for_selector(sel); page.wait_for_timeout(300)
 
-                # 6. Hjem: «Beste økt» bare i valgt region (Troms er standard), «Spots i Troms»
-                sub = page.text_content("#viewHjem .sek .sub")
-                assert "Troms" in sub, sub
+                # 6. Hjem: «Beste økt» bare i valgt region (Troms er standard; bare PC fra B 4.0 steg 5), «Spots i Troms»
+                if not mobile:
+                    sub = page.text_content("#viewHjem .sek .sub")
+                    assert "Troms" in sub, sub
                 n_rows = page.evaluate("document.querySelectorAll('#viewHjem .rader .rad, #viewHjem table.spots tr.s').length")
                 troms = sum(1 for s in overview["spots"] if s["region"] == "Troms")
                 if mobile:
@@ -154,8 +155,10 @@ def main():
                 assert heads and not any(h.startswith("I dag") for h in heads) and not page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over"), heads[:8]
                 print(f"PR #12 a-c ({label}): valgt brikke «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
                 # ROADMAP K del C.4: «Foreløpig»/«Forbud nå» ved navnet, og ikke i «Beste økt»
-                best_name = page.text_content("#bestKort .navn").strip()
+                # «Beste økt» finnes bare på PC (B 4.0 steg 5: tatt bort fra Hjem på mobil, Theodors svar 16.11.2026 punkt 3b)
+                best_name = page.text_content("#bestKort .navn").strip() if page.query_selector("#bestKort") else "(ikke på mobil)"
                 assert best_name not in ("Testspot 078", "Testspot 079"), f"foreløpig/forbudt spot i Beste økt: {best_name}"
+                assert bool(page.query_selector("#viewHjem #bestKort")) == (vp[0] >= 1024), f"«Beste økt» skal bare vises på PC ({label})"
                 lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr.s')]
                     .map(r => [r.querySelector('b').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
                 if lbl:   # radene vises (mobil: 5 beste; nett: tabellen)

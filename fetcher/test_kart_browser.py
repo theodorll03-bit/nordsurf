@@ -14,8 +14,8 @@ som GitHub Pages (fetcher/testserver.py), fast klokke.
 3. Tema følger systemet live: bytte prefers-color-scheme uten omlasting endrer havfargen i kartet.
 4. Uten nett (service worker): kartet åpnes og oversiktsflisene tegnes; detaljfliser som er sett
    med nett (Kartverket blokkert, altså OSM-reserven), leveres fra mellomlageret. Kartverket-fliser lagres aldri.
-4c. Kartverket-bakgrunnen (Theodor 16.10.2026): virker flisene, står det bare «© Kartverket» og OSM-detaljlagene er av
-   (under zoom 7,5, der OSM-oversikten synes gjennom Kartverkets gjennomsiktige fliser, krediteres OSM også);
+4c. Kartverket-bakgrunnen (Theodor 16.10.2026; fra B 4.0 steg 5 bare fra zoom 11 - under det tegner OSM-flisene
+   papirstilen, og OSM krediteres): virker flisene, står det ved zoom 12 bare «© Kartverket» og OSM-detaljlagene stopper ved 11;
    feiler de, slås OSM-reserven og OSM-kildemerket på (data-kartkilde="osm").
 4d. Kartverket-flisene lastes («lokal» testflis, som fra nett) mens service workeren styrer siden - og ingen av dem
    havner i service workerens lager (4 kjører med Kartverket blokkert og kan ikke vise det).
@@ -243,16 +243,19 @@ def main():
             print(f"2: ingen rotasjon/tilt, zoom 4-15 ({ov15[0]} lapper ved zoom 11-15, ingen overlapp), maxBounds rundt Norge, ingen «↓»-brikker, klynge zoomer inn (fra {z0:.1f}) - OK")
 
             # ---- 3. tema live ----
-            # med Kartverket er bakgrunnen ["step", ["zoom"], havfargen, 7.5, Kartverkets grunnfarge] (se kart.js havFarge)
+            # med Kartverket er bakgrunnen ["step", ["zoom"], papiret, 11, Kartverkets grunnfarge] (se kart.js havFarge, B 4.0 steg 5)
             HAV_JS = "(() => { const v = window.__kart.getPaintProperty('hav', 'background-color'); return Array.isArray(v) ? v[2] + '|' + v[4] : v; })()"
             before = page.evaluate(HAV_JS)
             page.emulate_media(color_scheme="dark")
             try:
-                page.wait_for_function(f"{HAV_JS}.toUpperCase().startsWith('#0A1923')")
+                page.wait_for_function(f"{HAV_JS}.toUpperCase().startsWith('#002941')")
             except Exception:
                 pass
             after = page.evaluate(HAV_JS)
-            assert before.upper() in ("#B7D3DF|#FEFEFE", "#B7D3DF") and after.upper() in ("#0A1923|#212121", "#0A1923"), (before, after)
+            assert before.upper() in ("#F2EFE8|#FEFEFE", "#F2EFE8") and after.upper() in ("#002941|#212121", "#002941"), (before, after)
+            # landet følger også temaet: blekk på papir om dagen, sand i mørketid (SPEC §2 kartland)
+            land = page.evaluate("window.__kart.getPaintProperty('land-lav', 'fill-color')")
+            assert str(land).upper() == "#E3D3B0", land
             print(f"3: havfargen følger systemtemaet live ({before} → {after}) - OK")
             ctx.close()
 
@@ -331,7 +334,7 @@ def main():
             page.wait_for_function("!!navigator.serviceWorker.controller")
             page.wait_for_function(READY_JS)
             n_for = len(kv_req)
-            for z in (9, 10, 11):
+            for z in (11, 12):   # Kartverket-flisene bes om fra zoom 11 (B 4.0 steg 5)
                 page.evaluate(f"window.__kart.jumpTo({{center: [13.58, 68.27], zoom: {z}}})")
                 page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
             page.wait_for_timeout(1000)   # service workeren lagrer asynkront (c.put) - gi den tid før lageret leses
@@ -348,19 +351,26 @@ def main():
                 route_data(page, ov8, det8, kv=kvmode)
                 page.goto(base + "#utforsk")
                 page.wait_for_function(READY_JS)
-                page.evaluate("window.__kart.jumpTo({center: [13.58, 68.27], zoom: 10})")
+                # Kartverket tegner fra zoom 11 (B 4.0 steg 5); under det er OSM-lagene kartet uansett
+                page.evaluate("window.__kart.jumpTo({center: [13.58, 68.27], zoom: 12})")
                 page.wait_for_function(f"document.querySelector('#kart').dataset.kartkilde === '{want}'")
                 page.wait_for_function("window.__kart.areTilesLoaded() && !window.__kart.isMoving()")
                 txt = page.inner_text("#kartKilde")
-                vis = page.evaluate("window.__kart.getLayoutProperty('land-hoy', 'visibility')")
+                # OSM-detaljlagene stopper ved zoom 11 når Kartverket virker, og går helt inn i reserven
+                vis = "visible" if page.evaluate("window.__kart.getLayer('land-hoy').maxzoom") > 12 else "none"
                 if want == "kartverket":
                     assert "Kartverket" in txt and "OpenStreetMap" not in txt and vis == "none", (txt, vis)
                     assert page.evaluate("document.querySelector('#kartKilde a').href").startswith("https://www.kartverket.no")
-                    # under zoom 7,5 er Kartverket-flisene gjennomsiktige og OSM-oversikten synes - da krediteres OSM også
+                    # under zoom 11 er OSM-flisene kartet - da krediteres OSM også
                     page.evaluate("window.__kart.jumpTo({center: [13.58, 68.27], zoom: 5})")
                     page.wait_for_function("document.querySelector('#kartKilde').textContent.includes('OpenStreetMap')")
                 else:
                     assert "Kartverket" in txt and "OpenStreetMap" in txt and vis == "visible", (txt, vis)
+                    # detaljflisene for zoom 12 bes om først når reserven har åpnet laget innover - vent på dem
+                    try:
+                        page.wait_for_function("window.__kart.queryRenderedFeatures({layers: ['land-hoy']}).length > 0")
+                    except Exception:
+                        pass
                     assert page.evaluate("window.__kart.queryRenderedFeatures({layers: ['land-hoy']}).length") > 0, "reserven tegner ikke land"
                 ctx.close()
             print("4c: Kartverket virker → bare «© Kartverket», OSM-detalj av; Kartverket feiler → OSM-reserven og OSM-kildemerket - OK")
@@ -372,6 +382,8 @@ def main():
             route_data(page, ov8, det8, kv="blokkert")   # kystlinjene i reserven er det som sjekkes
             page.goto(base + "#utforsk")
             page.wait_for_function(READY_JS)
+            # Kartverket bes bare om fra zoom 11 (B 4.0 steg 5): gå inn dit én gang så de blokkerte flisene slår på reserven
+            page.evaluate("window.__kart.jumpTo({center: [13.58, 68.27], zoom: 12})")
             page.wait_for_function("document.querySelector('#kart').dataset.kartkilde === 'osm'")
             FRAME = (-1.0, 55.0, 36.0, 73.5)
             edges = {"vest": (1.6, 62.0), "øst": (33.4, 69.2), "sør": (9.0, 56.9), "nord": (25.0, 71.7)}
@@ -458,9 +470,8 @@ def main():
                         if hoy is not None:
                             assert not hoy, (f"{name} ({label}, {sname}): Kartverket-fliser med z >= {KV_MAKS_Z_BILDE} bedt om mens bildet "
                                              f"tas (Geovekst - kan vises, ikke kopieres): {hoy[:4]}")
-                            assert alle, f"{name}: ingen Kartverket-fliser i bildet"
                         page.screenshot(path=str(SHOT_DIR / f"{name}_{label}_{sname}.png"))
-                        if hoy is not None:
+                        if hoy is not None and any(z is not None for z in alle):
                             kv_maks_z.append(max(z for z in alle if z is not None))
                     # (a) Kartverket-bakgrunnen, bare oversiktsbilder (flis-z < 12)
                     ctx, page = new_page(vp, scheme)
@@ -476,6 +487,8 @@ def main():
                     assert chips == want + ["Hele kartet"], (chips, want)
                     page.click("#utforskChips [data-view='']")
                     shot(page, "hele-kysten", hoy, alle)
+                    # B 4.0 steg 5: under zoom 11 tegner OSM-flisene papirstilen, og ingen Kartverket-flis skal bes om
+                    assert not alle, f"Kartverket-fliser bedt om på oversikten (zoom {page.evaluate('window.__kart.getZoom()'):.1f}): {alle[:4]}"
                     kilde_ok(page, f"uten valgt spot ({label}, {sname})"); n_kilde += 1
                     txt = page.inner_text("#kartKilde")
                     # CC BY 4.0: mørk modus inverterer rasteret - endringen skal opplyses; lys modus er uendret
@@ -507,6 +520,8 @@ def main():
                     route_data(page, ov8, det8, kv="blokkert")
                     page.goto(base + "#utforsk")
                     page.wait_for_function(READY_JS)
+                    # Kartverket bes bare om fra zoom 11: gå inn dit én gang så de blokkerte flisene slår på reserven
+                    page.evaluate("window.__kart.jumpTo({center: [13.58, 68.27], zoom: 12})")
                     page.wait_for_function("document.querySelector('#kart').dataset.kartkilde === 'osm'")
                     # Lyngen: samme utsnitt som Theodors skjermbilde (Russelv og Lenangsøyra)
                     page.evaluate("Kart.setExtent(Kart.extentOf(['russelv', 'lenangsoyra']), false)")
@@ -522,7 +537,7 @@ def main():
                     ctx.close()
             print(f"5c: kildemerket synlig og udekket (elementFromPoint) i {n_kilde} tilfeller - mobil og PC, lys og mørk, med og uten valgt spot; "
                   f"«(farger endret)» bare i mørk modus - OK")
-            print(f"5d: bilder med Kartverket-fliser bare med flis-z < {KV_MAKS_Z_BILDE} (høyeste brukt: z{max(kv_maks_z)}); detaljbildene med OSM-reserven - OK")
+            print(f"5d: bilder med Kartverket-fliser bare med flis-z < {KV_MAKS_Z_BILDE} (høyeste brukt: {('z' + str(max(kv_maks_z))) if kv_maks_z else 'ingen - oversiktsbildene er under zoom 11'}); detaljbildene med OSM-reserven - OK")
             # ---- 6. vind og svellkile ----
             ctx, page = new_page((390, 844))
             route_data(page, ov8, det8)
@@ -614,6 +629,28 @@ def main():
             an = page.evaluate("[getComputedStyle(document.querySelector('#vindLag line')).animationName, getComputedStyle(document.querySelector('#kileG .arc')).animationName]")
             assert an == ["none", "none"], an
             print("6b: prefers-reduced-motion → ingen animasjon i vind og kile - OK")
+            # 6c. Hjem-kartet (B 4.0 steg 5): et tall står aldri for en spot uten tall (fysikk-kontrolløren 16.11.2026).
+            # To spots på samme sted slås sammen; ett felles tall bare når begge har samme tall.
+            # coast.json lastes først når Hjem-kartet blir bedt om (Utforsk selv bruker MapLibre)
+            page.wait_for_function("(() => { const s = DATA.spots.find(x => x.id === 'grotfjord'); return Utforsk.hjemKart([s], s.dager[0].d, 390) !== ''; })()")
+            hk = page.evaluate("""() => {
+                const lapp = (pts) => { const svg = Kart.hjemKart(pts, 390, 220); if(!svg) return null;
+                    const t = new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('text.hk-lapp'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : ''; };
+                const a = (o) => ({id: 'a', name: 'Aa', lat: 69.78, lon: 18.55, gap: 300, miss: false, ord: '', ...o}), b = (o) => ({id: 'b', name: 'Bb', lat: 69.781, lon: 18.552, gap: 300, miss: false, ord: '', ...o});
+                const s = DATA.spots.find(x => x.id === 'grotfjord'), d = s.dager[0], før = d.status;
+                d.status = 'over'; const over = Utforsk.valueFor(s, d.d), overKart = Utforsk.hjemKart([s], d.d, 390); d.status = før;
+                const overLapp = overKart ? new DOMParser().parseFromString(overKart, 'image/svg+xml').querySelector('text.hk-lapp').textContent.trim() : null;
+                return {like: lapp([a({st: 2, tall: '2'}), b({st: 2, tall: '2'})]), ulike: lapp([a({st: 2, tall: '2'}), b({st: 0, tall: '0'})]),
+                    mangler: lapp([a({st: 2, tall: '2'}), b({st: 0, tall: '', ord: '–', miss: true})]), ingen: lapp([a({st: 0, tall: '', ord: 'Mørkt'}), b({st: 0, tall: '', ord: '–', miss: true})]),
+                    nullOgMangler: lapp([a({st: 0, tall: '', ord: '–', miss: true}), b({st: 0, tall: '0'})]), alene: lapp([a({st: 0, tall: '', ord: 'Mørkt'})]),
+                    over: {rute: over.rute, word: over.word}, overLapp}; }""")
+            assert hk["like"] == "AA · BB 2", hk
+            assert hk["ulike"] == "AA 2 · BB 0", hk
+            assert hk["mangler"] == "AA 2 · BB –", hk
+            assert hk["nullOgMangler"] == "BB 0 · AA –", hk   # spoten med tall først, og 0 gjelder bare den
+            assert hk["ingen"] == "AA MØRKT · BB –" and hk["alene"] == "AA MØRKT", hk
+            assert hk["over"] == {"rute": "over", "word": "Dagens lys er over"} and hk["overLapp"] == "GRØTFJORD", hk
+            print("6c: Hjem-kartet: felles tall bare når alle har samme tall, ellers tall eller ord per navn; «dagens lys er over» gir aldri 0 - OK")
             ctx.close()
 
             print("5b: Utforsk-brikkene er regionene (nord til sør), ingen lapp over kildemerket/brikkene/knappene - OK")

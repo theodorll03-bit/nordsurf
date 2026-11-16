@@ -127,6 +127,8 @@
       obs: "Obs", rediger: "Rediger", ferdig: "Ferdig", fjern: "Fjern", leggTil: "Legg til spot",
       fjernAria: (spot) => `Fjern ${spot} fra favoritter`,
       kjoreAria: (tid, sted) => `${tid} fra ${sted}`,
+      ca: "ca.",   // foran kjøretiden: tallene er anslag (Theodors stedfortreder 16.11.2026)
+      kartKilde: "Kart: GSHHS",   // kystlinja i det kompakte kartet (docs/geo/coast.json)
       innstillinger: "Innstillinger",
       // ordet i metalinja når dagen ikke har noe tall, og det som er tapt på vind og tidevann
       forbud: "Surfing forbudt", morktOrd: "Mørkt", over: "Dagens lys er over", mangler: "Mangler data",

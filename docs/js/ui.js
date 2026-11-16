@@ -277,10 +277,11 @@
     return linjer.length ? `<h1 class="t-overskrift hjem-overskrift">${linjer.map(l=>`<span>${esc(l)}</span>`).join("")}</h1>` : "";
   }
   function kjoreText(id){
-    // «45 min», «1 t 20 min», «7 t»; null når spoten ikke står i tabellen (js/kjoretid.js)
+    // «ca. 45 min», «ca. 1 t 20 min», «ca. 7 t»; null når spoten ikke står i tabellen (js/kjoretid.js).
+    // «ca.» fordi tallene er anslag fra skissene (svar 16.11.2026)
     const m = window.KJORETID && KJORETID.min[id]; if(!m) return null;
     const t = Math.floor(m / 60), r = m % 60;
-    return t ? `${t} t${r ? ` ${r} min` : ""}` : `${r} min`;
+    return `${STR.hjem.ca} ${t ? `${t} t${r ? ` ${r} min` : ""}` : `${r} min`}`;
   }
   function favSetning(s, b, utenVindu){
     // én setning om dagens beste time: tallene for en surfbar time, forklaringen bak ordet for en 0-time.
@@ -407,7 +408,7 @@
     const root = $("#viewHjem"); const days = weekDays(); const gen = new Date(DATA.generated); const pc = isDesktop();
     const dato = `${cap(fmtDato.format(new Date()))} · oppdatert ${fmtTime.format(gen)}`;
     const sc = scope(); const best = bestSession(sc.spots);
-    const besteOkt = `<section class="sek"><h2 class="h2">Beste økt</h2><p class="sub">De neste tre dagene, i dagslys · ${esc(sc.txt)}</p></section>${bestHtml(sc)}`;
+    const besteOkt = !pc ? "" : `<section class="sek"><h2 class="h2">Beste økt</h2><p class="sub">De neste tre dagene, i dagslys · ${esc(sc.txt)}</p></section>${bestHtml(sc)}`;
     const kilder = "Varsel fra BarentsWatch, MET Norge, Open-Meteo og Kartverket.";
     if(pc) root.innerHTML = `
       ${typeof staleBanner==="function" ? staleBanner() : ""}
@@ -420,15 +421,16 @@
       <section class="sek"><h2 class="h2">Alle spots</h2><p class="sub">Beste tall i dagslys per dag, med høyeste surf</p></section>${tabellHtml(days)}
       <p class="kilder">${kilder}</p>`;
     else {
-      // mobil (SPEC §6A): topplinje, overskrift av to setninger, favorittene som rader. Kartet (220 pt) kommer med
-      // kartstilen i steg 5 og kornfotoet med bildesteget. Søk ligger i fanelinja, Innstillinger nederst.
+      // mobil (SPEC §6A): topplinje, overskrift av to setninger, kompakt kart (220 pt), favorittene som rader.
+      // «Beste økt» er tatt bort på mobil (Theodors svar 16.11.2026, punkt 3b). Søk ligger i fanelinja, Innstillinger nederst.
       const favs = DATA.spots.filter(s=> isFavSpot(s.id));
+      const kart = window.Utforsk && Utforsk.hjemKart && days.length ? Utforsk.hjemKart(favs.length ? favs : sc.spots, days[0].key, document.documentElement.clientWidth || 390) : "";
       root.innerHTML = `
       ${typeof staleBanner==="function" ? staleBanner() : ""}
       ${topplinjeHtml()}
       ${overskriftHtml(favs.length ? favs : sc.spots, days, favs.length > 0)}
+      ${kart ? `<a class="hjemkart" href="#utforsk" aria-label="Utforsk kartet">${kart}</a><p class="hjemkart-kilde">${esc(STR.hjem.kartKilde)}</p>` : ""}
       ${favHtml(days, false)}
-      ${besteOkt}
       ${regionHtml(days)}
       <p class="kilder">${kilder} ${esc(STR.updated(relDay(gen), fmtTime.format(gen)))}.</p>
       <p class="hjem-bunn"><a class="ghost" href="#innstillinger">${esc(STR.hjem.innstillinger)}</a></p>`;
