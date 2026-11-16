@@ -1,5 +1,66 @@
 # Nordsurf: status
 
+## T1 Troms: breivikeidet får foreløpig overføring 0,15 og flettes til main 16.11.2026 (ja til S6, #37)
+
+- **Hva:** `transfer` 0,15 i spots.json, merket foreløpig. Den gjelder bare reservesonen, der høyden er svell ute × overføring × eksponering. Timene med BarentsWatch (de første dagene) endres ikke.
+- **Hvem sa ja:** stedfortrederen 16.11 kl. 15.45 (S6 i `privat/kontor/svar.md`). Den kommer i stedet for taket på 0,25, som fysikk-kontrolløren ikke godkjente (se seksjonen under).
+- **Kilde for tallet:** BarentsWatch-snittet 12.11.2026 (`data/bw_point_search/result_2026-11-12T1827_kandidater.json`, 19 timer, svell ute 0,8–1,4 m). Totalhøyden ved punktet var 7–26 % av svellet ute (median 22 %), men nesten alt var krapp sjø fra øst på 2–3 s. Den rene svelldelen (7,5 s fra 9°, svell ute fra 12–18°) var ca. 7 %. Med eksponering 0,23–0,53 ved 12–18° slipper 0,15 inn 3,5–8 %, og 12 % midt i vinduet (22°).
+- **Før og etter** (reservesonen, 1 m/s fralands, poeng og surfehøyde i meter):
+
+| Svell ute | Fra 22°, før | Fra 22°, etter | Fra 14°, før | Fra 14°, etter |
+|---|---|---|---|---|
+| 2,0 m, 12 s | 3 (1,6) | 0 (flatt) | 0 (0,4) | 0 (flatt) |
+| 2,5 m, 12 s | 3 (1,9) | 0 (flatt) | 0 (0,4) | 0 (flatt) |
+| 3,0 m, 12 s | 3 (2,2) | 3 (0,7) | 1 (0,5) | 0 (flatt) |
+| 4,0 m, 12 s | 2 (2,8) | 3 (0,9) | 2 (0,6) | 0 (flatt) |
+| 5,0 m, 14 s | 1 (3,6) | 4 (1,2) | 3 (0,9) | 0 (flatt) |
+
+  - Fra 10° og 35° gir 4–5 m svell 0–1 poeng før og 0 etter.
+- **Svakheter:** grunnlaget er én kjøring på 19 timer, og ingen har sett bølger her. Hoppet fra 0 til 3 poeng mellom 2,5 og 3,0 m kommer av flat-grensen (0,35 m), ikke av overføringen. Reserven kan gi 4 poeng ved 5 m og 14 s. Etter 40 godkjente par med BarentsWatch fordelt på minst tre døgn tar den lærte overføringen over. Parene filtreres (svell i vinduet, retning og svellandel), så med et vindu på 6° kan det ta uker.
+- **Fysikk-kontrolløren 16.11:** godkjent for commit etter at setningen om snittet ble rettet (den sa først «høyst 15 %»). Tabellen er regnet på nytt og stemmer. Overføringen brukes bare i reservesonen, læringen og andre spots berøres ikke, og ingen fast observasjon endres. Til senere: spoten har ingen eksponeringsdata ennå, så tallet må sjekkes på nytt når de bygges, og parene må ses over når den lærte overføringen tar over (vindsjø i fjorden kan slippe gjennom).
+- **Feiljegeren 16.11:** ingen stoppere i koden. Til senere: appen (`docs/js/app.js`, `surfAdjustmentLine`) viser fortsatt «kort BarentsWatch-periode» også når ratingen har brukt svellperioden ute (A1). Bare tekst, tas med neste ratingendring.
+- **Første observasjon:** Theodor er der kanskje 17.11. Tallet justeres etter den.
+- **Står igjen:** høyst 3 poeng for ubekreftede spots i reservesonen (kontrollørens forslag, egen ratingregel), og forslaget om vindsjø i fjorden.
+
+## T1 Troms: breivikeidet får lenangsoyras havpunkt 16.11.2026 (Theodors ja til spørsmål a, flettet til main 16.11.2026)
+
+Theodor svarte 16.11 ja til de fire anbefalingene i `data/kandidater/bygget/troms.notater.md`.
+
+- **a) Havpunkt, gjort:** `offshore` er nå lenangsoyras (70.3349, 20.4737), og `offshore_longrange` er 70.5/20.5. Fabrikkens punkt lå 1,0 km unna i samme landmaskerte GFS-celle. Det gir samme svelldata, ingen nye kall, og tall i stedet for «–» fra ca. dag 8.
+- b) Vinduet 20–25° står som foreløpig. c) Ingen endring for vindsjø nå.
+- **d) Foreløpig tak, IKKE lagt inn.** `exposure_override` 0–45° med maks 0,25 ble prøvd og tatt ut igjen før commit. Fysikk-kontrolløren godkjente det ikke:
+  - Et tak slår av skyggekurven og diffraksjonsdempingen i hele sonen. Svell fra 13–32° får da samme høyde som midt i vinduet, og skjermede retninger blir bedre enn uten tak. Eksempel: 4 m og 12 s fra 10° eller 35° går fra 0 til 3 poeng.
+  - Taket endrer også BarentsWatch-timene (dag 1–3), ikke bare reserven: retningen ved punktet brukes i stedet for 1,0, og fem poeng stenges.
+  - Midt i vinduet (22°) gjør taket det flatt under ca. 2,3 m svell ute, og hopper så rett til 3–4 poeng ved 12–14 s. Svell på 4–5 m får to til tre poeng mer enn uten tak.
+  - Alternativet er en egen `transfer` for spoten (ca. 0,19 gir de samme 15 % midt i vinduet, 0,15 er mer forsiktig) uten tak. Da beholdes skyggekurven. Det krever Theodors ja og er lagt fram for ham. (Senere 16.11: ja til 0,15, se seksjonen øverst.)
+- Uten tak står reserven som 12.11: 0,67–0,83 i vinduet, altså 40–50 % av svellet ute. Spoten er merket ubekreftet og er ikke merget. (Senere 16.11: flettet til main med `transfer` 0,15, se seksjonen øverst.)
+- **Fysikk-kontrolløren 16.11:** havpunktet godkjent (samme koordinater som lenangsoyra, samme cache-oppslag, ingen nye kall). Taket ikke godkjent, se over. Ingen manglende data blir 0, ingen faste observasjoner berøres.
+- **Testene før commit:** 16 filer og kontrast grønne i én kjøring 16.11, etter at taket var tatt ut.
+
+## T1 Troms: breivikeidet lagt inn som foreløpig og ubekreftet 12.11.2026 (Theodors ja, gren `region/breivikeidet`, flettet til main 16.11.2026)
+
+Ny spot fra Theodor 12.11 (ikke i lista 15.10): Sandbukta ved Breivikeidet, Tromsø kommune, innerst i Ullsfjorden. `tools/godkjenn_spot.py breivikeidet` har lagt den inn i spots.json med status `forelopig`, `enabled` og 0 restriksjoner. Den er merket ubekreftet i `_ubekreftet`: Theodor har bare hørt at den er bra, kilden er ikke navngitt, og vekten er lav. Pakka står i `data/kandidater/bygget/troms.md` og notatene i `troms.notater.md`.
+
+- **Posisjon og geometri:** posisjonen er 69.659992, 19.664974, 235 m fra Theodors pinne, sikkerhet B. Facing 17,3°, vindu [20, 25], offshore [152, 242], høyder standard for strand.
+  - Vinduet er 6°. Det er samme type fjordgap som russelv og lenangsoyra, så 15°-regelen gjelder ikke.
+  - 10–19° og 26–29° treffer Reinøya, Vanna og Arnøya 31–64 km ut.
+- **Havpunkt:** fabrikkens 70.3284, 20.4562, uten `offshore_longrange`. Det ligger i samme landmaskerte GFS-celle som lenangsoyra og gir «–» fra ca. dag 8, ikke 0. Spørsmål til Theodor. (Besvart 16.11: havpunktet er byttet til lenangsoyras, se seksjonene over.)
+- **Vern:** Sandbukta naturreservat dekker stranda og sjøen innerst i bukta. Det er ikke ferdsels- eller surfeforbud, bare forbud mot motorferdsel på land. Lagt inn for hånd i `vern.json` og `vern_forskrifter.json`.
+- **BarentsWatch** (snitt 12.11 kl. 18:27Z, kjøring 43280036362): det finnes data helt inn i bukta.
+  - Det var krappsjø fra øst (Tp 2–3 s) i 17 av 19 timer. Svell fra NNØ nådde bare inn med 0,09 m (7,5 s) i to timer, mot 1,2 m ute.
+  - Regelen fra 15.10 fant ikke noe punkt. Punktet er satt til 100 m ut (8,8 m) med `--forste-med-data 8`, lavere sikkerhet.
+- **Fysikk-kontrolløren:** SPØR THEODOR.
+  - 100 m-punktet er riktig valg.
+  - Krappsjø fra øst gir 0 stjerner fordi periodefaktoren er 0,3.
+  - Uten `offshore_longrange` blir det «–», ikke 0.
+  - En tekstfeil om velgerens timer er rettet.
+  - Nytt funn: reservesonen (dag 4 til ca. 8) regner 0,40–0,51 av svellet ute, mens BarentsWatch viste høyst ca. 15 %. Uten vind gir 1,4 m fra 21° (12 s) 2 stjerner i reserven og 0 med BarentsWatch, så det blir et hopp ved dag 4.
+  - Taket eller transfer krever Theodors ja.
+  - Første runde (12.11): `exposure_override` for vestlig svell trengs ikke, fordi geometrien gir 0,0 for 200–330°.
+- **Spørsmål til Theodor** (`troms.notater.md`): (1) havpunkt og `offshore_longrange` fra lenangsoyra, (2) vinduet på 6° mot hans 15–30°, (3) vindsjø i fjorden, (4) tak eller transfer for reservesonen. (Alle fire er besvart 16.11, se seksjonene over.)
+- **Kjent risiko:** `tools/importer_kandidater.py` og `tools/kandidat_vern.py skriv` bygger kandidater.json og vern.json på nytt og mister da oppføringene som er lagt inn for hånd.
+- **Gjenstår:** én prøvehenting når grenen pushes. Theodor ser tallene og svarer på spørsmålene før merge.
+
 ## Russelv sa flatt da det var surfbart: periodefaktoren ved BarentsWatch-punktet (gren `fiks/russelv-flatt`, 16.11.2026, flettet til main 16.11.2026 etter ja til S9)
 - **Hva:** observasjon 16.11.2026 (bilde, Russelv): surfbart ca. 09–10Z, rene sett rundt 1 m, fralandsvind. Svell ute 2,4 m fra 20°, 7,9 s. Appen viste 0.
 - **Hvem sa ja:** Theodor 16.11 (oppgaven kom gjennom stedfortrederen i `privat/kontor/svar.md` kl. 13.15). Stedfortrederen sa ja til å flette (a) til main 16.11 kl. 15.45 (S9).

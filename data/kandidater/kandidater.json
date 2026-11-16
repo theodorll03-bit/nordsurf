@@ -15,7 +15,7 @@
   "Sørlandet",
   "Østlandet"
  ],
- "antall": 113,
+ "antall": 114,
  "kandidater": [
   {
    "id": "porsangvika",
@@ -485,6 +485,38 @@
    ],
    "dokumentasjon": "svak",
    "status": "kandidat"
+  },
+  {
+   "id": "breivikeidet",
+   "name": "Breivikeidet",
+   "aliases": [
+    "Sandbukta"
+   ],
+   "fylke": "Troms",
+   "kommune": "Tromsø",
+   "region": "Troms",
+   "pin_liste": {
+    "lat": 69.661848,
+    "lon": 19.662088
+   },
+   "coord_confidence": "estimated",
+   "hint": {
+    "break_type": "beach break",
+    "bottom": "unknown",
+    "best_swell_dir": "NNE",
+    "best_wind_dir": "SSW",
+    "skill_level": "unknown",
+    "_kilde": "spotansvarlig 12.11.2026 fra kystlinje og flyfoto, ubekreftet (ingen observasjon)"
+   },
+   "source_count": 1,
+   "sources": [],
+   "dokumentasjon": "svak",
+   "status": "kandidat",
+   "lagt_til": {
+    "av": "Theodor",
+    "dato": "2026-11-12",
+    "merknad": "Ikke i lista 15.10 - lagt inn for hånd (privat/kontor/ny-spot-breivikeidet.md). Theodor har hørt at det er bra, men ikke surfet der selv; kilden er ikke navngitt (lav vekt). Ubekreftet til noen har observert surf der. NB: tools/importer_kandidater.py bygger fila fra lista og tar ikke med denne oppføringen ved ny kjøring."
+   }
   },
   {
    "id": "andenes",

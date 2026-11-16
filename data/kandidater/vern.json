@@ -3451,6 +3451,21 @@
     "lest": false,
     "merknad": null
    }
+  ],
+  "breivikeidet": [
+   {
+    "naturvernId": "VV00002296",
+    "navn": "Sandbukta naturreservat",
+    "verneform": "Naturreservat",
+    "forskrift": "https://lovdata.no/forskrift/2004-06-04-857",
+    "faktaark": "https://faktaark.naturbase.no/?id=VV00002296",
+    "vernedato": 1086307200000,
+    "avstand_m": 0,
+    "lovdata": "https://lovdata.no/forskrift/2004-06-04-857",
+    "restriksjoner": [],
+    "lest": true,
+    "merknad": "bare motorferdsel på land forbudt; både Theodors pinne og posisjonen ligger inne i reservatet (sjøarealet innerst i Sandbukta er med). Lagt inn for hånd 12.11.2026 (Naturbase-oppslag fra posisjonen, ikke fra tools/kandidat_vern.py)."
+   }
   ]
  }
 }
