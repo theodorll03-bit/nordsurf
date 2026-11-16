@@ -1,0 +1,32 @@
+// Skrevet av tools/spotbilder.py - ikke rediger for hånd. Hvilke spots som har kornfoto i img/spots/, og krediteringen.
+window.SPOTBILDER = {
+ "aar": 2025,
+ "ids": [
+  "bleik",
+  "bunes",
+  "ducks",
+  "eggum",
+  "ersfjordstranda",
+  "farstadsanden",
+  "grotfjord",
+  "haukland",
+  "horseid",
+  "hoyvika",
+  "kvalnes",
+  "kvalvika",
+  "lenangsoyra",
+  "russelv",
+  "skagsanden",
+  "stave",
+  "steinkrossa",
+  "the-frog",
+  "tromvik",
+  "unstad",
+  "utakleiv",
+  "vikten"
+ ],
+ "kredit": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+ "kort": "Sentinel-2 (2025), Copernicus/Kartverket · CC BY 4.0",
+ "lisens": "CC BY 4.0",
+ "lisens_url": "https://creativecommons.org/licenses/by/4.0/"
+};
