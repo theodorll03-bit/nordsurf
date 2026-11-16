@@ -1399,9 +1399,9 @@
     "lon": 14.477
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -1423,17 +1423,34 @@
      "lon": 14.45513
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 67.3245,
+     "lon": 14.477,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Lita sandstrand foran campingplassen i ei bukt som vender NV-V, med sandgrunne, en holme med sandtange i sørvest og mange skjær utenfor. Bremneshalvøya stenger for sørvest. Listepinnen står allerede ca. 100-150 m utenfor stranda i kanten av sanda, så den er ikke flyttet. Ingen bølge synlig, og bukta ligger delvis innaskjærs.",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 0,
+     "alternativ": "Bremnesstranda, vestvendt og mer utsatt: 67.319216, 14.455826"
+    }
+   ],
+   "startpunkt": {
+    "lat": 67.3245,
+    "lon": 14.477
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen er beholdt, men bukta ligger innaskjærs. Med skjær (OSM) er bare enkeltgrader åpne mot vest ved 150 km (9° ved 50 km), og GSHHS gir 7° (272-278°), mens hintet sier dønning fra V-SV og Bremneshalvøya stenger for sørvest. Alternativet Bremnesstranda er ikke klart bedre når skjærene regnes med (OSM 2° ved 150 km), og kildene heter «Lop camping», så det trengs lokalkunnskap om hvor og når det brekker."
   },
   "seines": {
    "spot": {
-    "lat": 67.2098,
-    "lon": 14.353
+    "lat": 67.209323,
+    "lon": 14.350718
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
+   "sikkerhet": "B",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "stedsnavn",
@@ -1448,17 +1465,33 @@
      "lon": 14.37747
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 67.209323,
+     "lon": 14.350718,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Seinesodden er en rullesteinsodde som peker mot NV med tarebelagte grunner. Listepinnen sto ca. 80 m nord for steinstranda; flyttet til ca. 40 m nordvest for spissen (take-off ved odden). Ingen bølge synlig, og det er usikkert hvilken side av odden bølgen går på. Posisjonen ligger fortsatt inne i Seinesodden naturreservat (128 m fra grensa).",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 112
+    }
+   ],
+   "startpunkt": {
+    "lat": 67.2098,
+    "lon": 14.353
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Take-off ved tuppen av Seinesodden etter konvensjonen for pointbreak, 69 m fra kystlinja. Vinduet 263-285° (GSHHS, 150 km) passer hintet om dønning fra SV-V, og ni kilder (blant dem arcticsurfing) viser at stedet surfes. Posisjonen ligger 128 m inne i Seinesodden naturreservat, men forskriften (1997-12-19-1356) § 3 nr. 4 forbyr bare motorferdsel, modellbåter, modellfly og brettseiling, ikke ferdsel eller surfebrett, så det blir ingen «Forbud nå» etter dagens regel; facing settes fra bølgeretningen ved odden."
   },
   "monumentet": {
    "spot": {
-    "lat": 66.9504,
-    "lon": 13.6317
+    "lat": 66.951278,
+    "lon": 13.6329
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
+   "sikkerhet": "B",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "stedsnavn",
@@ -1467,19 +1500,52 @@
      "lon": 13.63167
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 66.951278,
+     "lon": 13.6329,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen sto på land på rasteplassen Ureddplassen. Kysten vender nord med bred rullesteinsfjære og en svak utbuling foran rasteplassen, med stein og tare i vannet. Satt ca. 50 m utenfor utbulingen. Ingen tydelig odde eller bølge synlig, så posisjonen kan ligge et par hundre meter feil langs stranda.",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 111
+    }
+   ],
+   "startpunkt": {
+    "lat": 66.9504,
+    "lon": 13.6317
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Kilden (arcticsurfing) beskriver surfing ved Uredd-statuen, og posisjonen ligger 57 m ut, foran utbulingen ved rasteplassen der listepinnen sto, mot N-NV. Selve odden eller revet er ikke sett, så posisjonen kan ligge et par hundre meter feil langs en jevn kyst. Vinduet er et grensetilfelle: hovedsektoren er 317-329° (13°) i GSHHS, men ca. 60° med OSM ut til 50 km, og hintet NNV ligger i kanten."
   },
   "storvika": {
    "spot": {
+    "lat": 66.964147,
+    "lon": 13.798879
+   },
+   "sikkerhet": "B",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
+   "alternativer": [],
+   "forslag": [
+    {
+     "lat": 66.964147,
+     "lon": 13.798879,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen sto feil sted, på steinfjæra ved Grimstad 3,9 km sørvest for Storvika. Kartet har navnene Storvika og Sanden på ei ca. 1 km lang, buet sandstrand som vender V-VSV, med campingplass i sørenden. Det passer med hintet om sandstrand og dønning fra SV-V. Satt ca. 100 m utenfor vannkanten midt på stranda, over sandbunn. Hovedtoppen er ukjent, og hvor mye dønning som slipper inn mellom øyene er ikke vurdert.",
+     "dato": "2026-11-10",
+     "sikkerhet": "A",
+     "flyttet_m": 3900,
+     "alternativ": "Sandstranda ved Mevik ca. 950 m øst for listepinnen: 66.948493, 13.739994"
+    }
+   ],
+   "startpunkt": {
     "lat": 66.9488,
     "lon": 13.7183
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
-   "alternativer": [],
-   "forslag": []
+   "vurdering": "godkjent",
+   "begrunnelse": "Flyttet 3,9 km: listepinnen sto på steinfjære ved Grimstad, der det ikke finnes noe stedsnavn Storvika. Kartverkets stedsnavn (Storvika, vik i sjø, ca. 650 m VNV, og gården Storvik ca. 350 m Ø) og OSM-strendene «Storvikbukta» (sand, ca. 140 m) og «Storvik bukta» ligger der forslaget er, og ei sandstrand på 1 km mot V-VSV (kystnormal 262°) passer hintet om sandbunn, nybegynnere og dønning fra SV-V; de to kildene (Breakfinder og Surfline) har bare navnet, pinnene deres er ikke sjekket, og aliaset «Storvika Grimstad» peker mot listepinnen. Vinduet er et grensetilfelle (268-281°, 14° i GSHHS og 11° med OSM) og må avgjøres i byggerunden."
   },
   "farstad-reef-hustadvika-gjestegard": {
    "spot": {

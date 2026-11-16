@@ -5,7 +5,8 @@
     {"name": "Troms", "order": 2},
     {"name": "Vesterålen", "order": 3},
     {"name": "Lofoten", "order": 4},
-    {"name": "Møre og Romsdal", "order": 5}
+    {"name": "Salten", "order": 5},
+    {"name": "Møre og Romsdal", "order": 6}
   ],
   "_regions": "15.10.2026 (Tillegg 2): regionnavn og rekkefølge for Hjem/Utforsk/søk - ingen hardkodede lister i JS. Hver spot har «region» (og valgfritt «aliases» for søk). Kartutsnittet per region regnes av publish.py: rammen rundt spotene i regionen pluss margin.",
   "spots": [
@@ -1350,6 +1351,64 @@
       "kilde": "liste 15.10 + spotfabrikken",
       "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
       "area": "Vardø",
+      "forelopig_fra": "2026-11-10"
+    },
+    {
+      "id": "seines",
+      "name": "Seines",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Salten",
+      "spot": {
+        "lat": 67.209323,
+        "lon": 14.350718
+      },
+      "facing": 295.0,
+      "swell_window": [
+        [
+          254,
+          258
+        ],
+        [
+          263,
+          285
+        ],
+        [
+          309,
+          311
+        ]
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[254, 258], [263, 285], [287, 287], [309, 311], [314, 315]]; de tre sektorene som er brede nok er brukt ([254, 258], [263, 285] og [309, 311]). [287, 287] og [314, 315] er utelatt fordi de er smalere enn minstebredden i spotfabrikken. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        70,
+        160
+      ],
+      "_offshore_vind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+      "offshore": {
+        "lat": 67.2257,
+        "lon": 13.7492
+      },
+      "_havpunkt": "Langs midten av vinduet (274.0°), 26 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 67.212592,
+        "lon": 14.342707
+      },
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), regelen fra 15.10: snitt 500m@316.3, 500 m ut, dybde 8,5 m, Hs 0,47 m kl. 2026-11-10T12:00Z. Beholdt ved ny facing 295.0°: Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "_rettet": {
+        "facing": "spotansvarlig 10.11.2026: point break, facing satt fra bølgeretningen ved punktet (292-298° i fire timer med lite svell), ubekreftet",
+        "barentswatch_point": "beholdt ved ny facing (Hs er flat 0,45-0,47 m fra 500 m til 3 km i snittet 10.11 kl. 12Z, og bølgeretningen ved punktet (292-294°) ligger høyst 3° fra ny facing. Nytt snitt langs 295° tas neste gang snittet kjøres)",
+        "offshore_wind": "spotansvarlig 10.11.2026: motsatt av ny facing 295° ±45°, ubekreftet",
+        "ideal_height/max_height": "standard, ubekreftet (Theodors ja 10.11.2026)"
+      },
+      "_ideal_height": "standard, ubekreftet (Theodors ja 10.11.2026)",
+      "area": "Bodø",
       "forelopig_fra": "2026-11-10"
     }
   ]

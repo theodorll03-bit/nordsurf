@@ -1503,7 +1503,8 @@
     "https://arcticsurfing.no/arctic-surfing-pa-en-liten-formiddagstur-til-uredd-statuen.html"
    ],
    "dokumentasjon": "middels",
-   "status": "kandidat"
+   "status": "parkert",
+   "status_begrunnelse": "Parkeres. Fri linje til åpent hav er bare ca. 13° (317-329 i både GSHHS og OSM ved 150 km), og midten av vinduet ligger 46-55° fra kystnormalen (facing 18,4; OSM 9-18), så spoten ville nesten alltid vist «Treffer ikke». Tas opp igjen med lokalkunnskap om hvor bølgen brekker, eller når vi har modell for wrap."
   },
   {
    "id": "storvika",
@@ -1534,7 +1535,8 @@
     "https://www.surfline.com/surf-report/storvika/6418dfce9a43c4d3e737a4d9"
    ],
    "dokumentasjon": "middels",
-   "status": "kandidat"
+   "status": "parkert",
+   "status_begrunnelse": "Parkeres. Stranda ligger innerst i ei lang, smal bukt med fri linje til havet bare gjennom 268-281 (14° i GSHHS, 11° med OSM), og facing 261,6 ligger utenfor dette vinduet, så spoten ville nesten alltid vist «Treffer ikke». Tas opp igjen med lokalkunnskap eller vindbølgemodell for innaskjærs spots."
   },
   {
    "id": "farstad-reef-hustadvika-gjestegard",
