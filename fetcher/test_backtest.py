@@ -126,4 +126,28 @@ assert row["phs0"] is None and row["pdir0"] is None and row["phs1"] == 2.0
 assert ww3_archive.index_of([__import__("datetime").datetime(2026, 10, 7, h, tzinfo=__import__("datetime").timezone.utc) for h in range(0, 12)],
                             __import__("datetime").datetime(2026, 10, 7, 6, tzinfo=__import__("datetime").timezone.utc)) == 6
 print("7: WW3-verdisperre, tomme partisjoner og tidsakse-oppslag OK")
+
+# 8: Unstads myke tidevannsregel (Lofoten Surfsenter, 09.11.2026 - Theodors ja 10.11.2026).
+# To av de faste observasjonene var gode økter PÅ HØYVANN (26.09 kl. 14:45 og 28.09 ca. kl. 13).
+# På høyvann koster regelen høyst én stjerne, lav og middels koster ingenting (samme tall som
+# uten regelen), og en femte stjerne krever lav eller middels vannstand. Ingen fast observasjon
+# kommer under kravet sitt på høyvann. Det er 28.09 (krav 3) som holder regelen myk: med
+# fradrag 1,0 faller den til 2 - 26.09 holder 4 også da.
+import rating  # noqa: E402
+sp8 = backtest.prepare_spot("unstad", backtest.load_spots(), json.loads(backtest.EXPOSURE_BASELINE.read_text(encoding="utf-8")), {}, {})
+assert sp8["local_rules"]["tide_prefer"] == ["lav", "middels"] and sp8["local_rules"]["tide_penalty_high"] == 0.5
+uten8 = dict(sp8, local_rules={k: v for k, v in sp8["local_rules"].items() if not k.startswith("tide_")})
+hard8 = dict(sp8, local_rules=dict(sp8["local_rules"], tide_penalty_high=1.0))
+under_hard8 = []
+for c8 in (c for c in backtest.fixed_cases() if c["spot"] == "unstad"):
+    st8 = {s: rating.rate(dict(c8["hour"], tide={"state": s}), sp8)["stars"] for s in ("lav", "middels", "høy")}
+    for8 = rating.rate(dict(c8["hour"], tide={"state": "høy"}), uten8)["stars"]
+    assert st8["lav"] == st8["middels"] == for8 and for8 - 1 <= st8["høy"] <= st8["lav"] and st8["høy"] < 5, (c8["id"], st8, for8)
+    assert st8["høy"] >= c8["expect"]["stars_min"], (c8["id"], st8)
+    if c8["id"] == "unstad_2609":
+        assert st8["høy"] >= 4 and rating.rate(dict(c8["hour"], tide={"state": "høy"}), hard8)["stars"] >= 4, st8
+    if rating.rate(dict(c8["hour"], tide={"state": "høy"}), hard8)["stars"] < c8["expect"]["stars_min"]:
+        under_hard8.append(c8["id"])
+assert under_hard8 and all(i.startswith("unstad_2809") for i in under_hard8), under_hard8
+print(f"8: Unstads tidevannsregel er myk - høyvann koster høyst én stjerne og ingen fast observasjon faller under kravet (med fradrag 1,0 ville {len(under_hard8)} timer 28.09 falt) OK")
 print("Alle tester ok")

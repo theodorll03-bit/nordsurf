@@ -39,35 +39,98 @@ Ny spot fra Theodor 12.11 (ikke i lista 15.10): Sandbukta ved Breivikeidet, Trom
 - **Kjent risiko:** `tools/importer_kandidater.py` og `tools/kandidat_vern.py skriv` bygger kandidater.json og vern.json på nytt og mister da oppføringene som er lagt inn for hånd.
 - **Gjenstår:** én prøvehenting når grenen pushes. Theodor ser tallene og svarer på spørsmålene før merge.
 
-## T1 Salten: seines lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/salten`, ikke merget)
+## Russelv sa flatt da det var surfbart: periodefaktoren ved BarentsWatch-punktet (gren `fiks/russelv-flatt`, 16.11.2026, flettet til main 16.11.2026 etter ja til S9)
+- **Hva:** observasjon 16.11.2026 (bilde, Russelv): surfbart ca. 09–10Z, rene sett rundt 1 m, fralandsvind. Svell ute 2,4 m fra 20°, 7,9 s. Appen viste 0.
+- **Hvem sa ja:** Theodor 16.11 (oppgaven kom gjennom stedfortrederen i `privat/kontor/svar.md` kl. 13.15). Stedfortrederen sa ja til å flette (a) til main 16.11 kl. 15.45 (S9).
+- **Endring (a):** `rating.bw_can_be_windsea()` og `rating.bw_period_factor_for()`. BarentsWatch-perioden er et varsel om vindsjø. Den brukes nå bare når energien ved punktet kan være vindsjø.
+  - Den kan ikke være vindsjø når bølgene ved punktet kommer fra havet (under 60° fra `facing`) og vinden blåser mer enn 90° fra bølgeretningen ved punktet.
+  - Spotens `offshore_wind` avgjør ikke. Oppgaven sa «når vinden er fralands», men sektoren er satt for vindkvalitet. Unstad har [70, 232], og vind fra 225° kan ha laget sjø fra 250° (fysikk-kontrolløren, stopper i første runde). Russelv 16.11 dekkes fortsatt: vinden sto 100° fra bølgene ved punktet.
+  - Da brukes svellperioden ute i samme kurve. Faktoren blir aldri lavere enn før. Ukjent vind, ukjent retning eller manglende periode ute gir samme svar som før.
+  - Forklaringen i appen sier da «Svellperioden ute (N s) er brukt i stedet».
+- **Før og etter** (de 202 publiserte timene fra 16.11 kl. 11Z, ratet på nytt):
+  - Russelv: 6 timer får høyere tall, 0 timer endrer poeng. Kl. 11Z går høyden fra 0,04 til 0,08 m.
+  - Lenangsøyra: 8 timer får høyere tall, 1 time går fra 0 til 1 poeng (16.11 kl. 21Z). Ingen går ned. Ingen endring på 2 poeng eller mer.
+- **Dette retter ikke 16.11 alene.** BarentsWatch-punktet viste 0,26–0,48 m med 2,9–4,4 s hele dagen, og med facing 315 er retningsfaktoren 0 når bølgene ved punktet kommer fra 23–26°. Facing, punktvalg og full faktor (variant A2) er lagt fram for Theodor (S10) og er ikke i koden.
+- **Ikke gjort (b):** flat-grensen på brytehøyde i stedet for Hs. Den faste observasjonen Grøtfjord 24.09 (0,3 m med 11 s, brytehøyde ca. 0,61 m, flatt) og Russelv 16.11 (høyst ca. 0,47 m, surfbart) kan ikke skilles med en grense på brytehøyde.
+- **Kjente hull, ikke rettet:** regelen ser bare vinden i samme time og på spoten. Gammel vindsjø (4–6 s) blir liggende i timevis etter at vinden har dreid, og vinden i fjorden kan være en annen. Oppfølging: krev at vinden har stått slik i 3–6 timer.
+- **Lavjusteringsvarselet** (`fetch.low_adjustment_warning`) bruker nå samme periodefaktor som ratingen. Det er bare rapport, ingen tall i appen.
+- **Venter på Theodor (fast observasjon, ikke oppfylt ennå):** «Russelv 16.11.2026 ca. 09–10Z (observasjon 16.11.2026 (bilde, Russelv)): surfbart, rene sett rundt 1 m, fralandsvind (ca. 106°). Svell ute 2,4 m fra 20°, 7,9 s. BarentsWatch ved punktet 0,26 m fra 6°, 4,4 s (kl. 11Z, første lagrede time). Skal ikke gi 0.» Den flyttes til «Faste observasjoner» i CLAUDE.md og blir en test når koden gir minst 1 poeng. Ordlyden er fysikk-kontrollørens.
+- **Tester:** ny test 29 i `test_rating.py`. Blokk 9f i `test_pipeline.py` (skyggepunktet på Unstad) har fått pålandsvind i fiksturen, fordi fralandsvinden som sto der nå utløser den nye regelen. 16 testfiler og kontrast er grønne i én kjøring på den ferdige koden 16.11.
+- **Fysikk-kontrolløren:** godkjent for commit på grenen 16.11, i andre runde. Det er ikke et ja til merge.
+  - Første runde hadde én stopper: `offshore_wind` utløste regelen, og Unstad med vind fra 225° og sjø fra 250°, 5 s gikk opp 2 poeng på feil grunnlag. Leddet er fjernet, og eksempelet er test 29.5b.
+  - 60° fra `facing` er samme grense som der retningsfaktoren blir 0. Lenangsøyra 26.09 (89°) ligger utenfor, Russelv 16.11 (51°) innenfor.
+  - Står igjen: vind som nettopp har dreid. Russelv med gammel sjø på 5 s og vinden dreid til 106° går fra 0 til 1 poeng. Det hører til oppfølgingen om vindhistorie.
+
+## T1 Lofoten/Vesterålen: g-frame rettet 12.11.2026 (Theodors ja), fortsatt holdt tilbake (gren `region/lofoten-vesteralen`, #29, flettet til main 16.11.2026)
+
+- **facing 270°** som bølgeretning ved revet (ikke strandnormal, lavere sikkerhet), **offshore_wind [45, 135]**, og **BarentsWatch-punktet 500 m ut langs 270°** (9,2 m dyp). Snittet er kjørt i Actions 12.11 (`data/bw_point_search/result_2026-11-12T1716_kandidater.json`), og punktet er valgt av regelen fra 15.10 (`tools/velg_bw_punkt.py`).
+- **Svakhet:** punktet er valgt på én time (12.11 12Z, Hs 0,36 m). Bare den timen av 18 hadde svell ute fra vinduet. Ellers kom svellet fra nord, og retningen ved punktet var 299-326°, altså 29-56° fra facing.
+- **`enabled: false` står.** Ingen tall i appen endres. Gjenstår: se punktet og retningen i neste vestsvell, og så Theodors ja til å slå på.
+- **Fysikk-kontrollør: godkjent.** Tallene stemmer med resultatfila, og regelen er riktig brukt. Hs- og dybdedelen av regelen velger 500 m i alle 18 timene (400 m ligger i le bak grunnfeltet). Retningskriteriet hviler på én time. Merknad til senere: i den timen sto bølgene 37° fra facing ved punktet (307° mot 270°). Holder det i vestsvell, vil retningsfaktoren straffe treff fra nordvest, og det må vurderes før spoten slås på.
+- Pakka (`data/kandidater/bygget/lofoten-vesteralen.md`) er laget på nytt.
+- **Flettet til main 16.11.2026** lokalt med `--no-ff`, i egen push. Hvem sa ja: stedfortrederen i `privat/kontor/svar.md` 16.11 («behandler du den som de tre over, i en egen push», når testene er grønne og spotansvarlig har godkjent). Spotansvarligs gjennomgang er fra 10.11 (17 godkjent, 3 rett, 7 avvis), og g-frame er rettet slik den ba om. Ingen spot slås på, og ingen tall i appen endres: 31 spots, 26 på, som før.
+- **Tester:** 16 filer og kontrast grønne i én kjøring på det flettede treet 16.11. **Fysikk-kontrolløren:** godkjent for push til main. Bare g-frame er endret i `spots.json`, og ingenting i `fetcher/`, `docs/` eller workflows. **Feiljegeren:** ingen stoppere.
+
+## Flettet til main 16.11.2026: Troms, Finnmark, Salten og tidevannsregelen på Unstad
+- **Hva:** PR #30 (bovaer), #31 (berlevag-sandfjorden, persfjord), #32 (seines) og #35 (myk tidevannsregel på Unstad) er flettet lokalt med `--no-ff` i den rekkefølgen og lagt på main i én push.
+- **Hvem sa ja:** Theodor selv, til regionene 10.11, til å merge dem og #35 12.11, og igjen i chatten 16.11 («Merge #30 → #31 → #32 → #35»). Måten (lokal fletting og én push, fordi PR-ene ikke lot seg ta ut av utkast) kom fra stedfortrederen i `privat/kontor/svar.md` 16.11. Theodor bekreftet i chatten 16.11 at de svarene gjelder som hans.
+- **Tall:** 27 spots (22 på) før, 31 spots (26 på) etter. De fire nye står som foreløpige. Ingen hemmelige.
+- **Ikke med:** #37 (breivikeidet) venter på svar om overføringen. #29 (Lofoten og Vesterålen) ble flettet for seg samme dag, se over.
+- **Tester:** 16 filer og kontrast grønne i én kjøring på det flettede treet 16.11.
+- **Fysikk-kontrolløren:** godkjent med merknader. Kombinasjonen er ren: ingen spot er mistet eller doblet, og `rating.py` har samme syntakstre som main (bare en kommentar er endret).
+  - Tidevannsregelen treffer bare Unstad. 5 184 tilfeller for de 27 felles spotsene ga 0 forskjeller utenom Unstad. På Unstad: lav og middels 0 endringer, høy −1 i 330 av 5 040, ukjent −1 i 405 av 5 040. Ingen går opp, ingen flytter seg 2 eller mer.
+  - De faste observasjonene holder. Unstad 26.09 kl. 14:45 gir 5 på lav og middels og 4 på høy og ukjent (krav minst 3, observert 4).
+  - De fire nye: 1,5 m/10 s midt i vinduet gir 2 poeng (surf 1,4 m), 3,0 m/12 s gir 2 (over ideell høyde). Manglende data gir ingen tall og ingen 0,0.
+  - **Merknad, ikke rettet:** ukjent tidevann straffes litt hardere enn kjent høyvann på Unstad. Porten for fem poeng stenger når tidevannet mangler, og da trekkes vinden fra 4 i stedet for 5 (180 av 5 040 tilfeller, høyst ett poeng). Mekanismen er fra 15.10 og gjelder alt Farstadsanden. Å fjerne portvilkåret er en ratingregel og blir et eget spørsmål.
+  - Kjent fra før og uendret: manglende vind gir −1 og kan vise «Blåst ut» uten vinddata. Seines utenfor BarentsWatch-sonen viser svell rett inn som «treffer ikke».
+- **Feiljegeren:** ingen stoppere. Tre smårettinger i STATUS.md er gjort, og origin/main hentes rett før push. Ni kosmetiske punkter venter, blant annet at `{pen:.1f}` viser 0,35 som «−0.3» i forklaringsteksten i `rating.py`, en gammel overskrift i ROADMAP.md, og at «Berlevåg Sandfjorden» er 20 tegn langt.
+
+## T1 Salten: seines lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/salten`, merget til main 16.11.2026)
 
 `tools/godkjenn_spot.py seines` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/finnmark`. Spots.json har 31 spots, 26 er slått på.
 
 - Salten er ny region mellom Lofoten og Møre og Romsdal: Finnmark 1, Troms 2, Vesterålen 3, Lofoten 4, Salten 5, Møre og Romsdal 6.
 - Seines (point break): facing 295°, satt fra bølgeretningen ved punktet (ubekreftet). Svellvindu i tre sektorer: [254, 258], [263, 285] og [309, 311]. Offshore [70, 160].
 - Høydene er standard, [0,8, 2,0] og maks 3,5, merket ubekreftet (Theodors ja 10.11.2026). Et point break tåler trolig mer, men det finnes ingen observasjon ennå.
-- Kjente svakheter, dokumentert i spoten: facing 295° ligger i gapet mellom sektorene 285° og 309°, så svell rett inn teller som utenfor vinduet når BarentsWatch ikke bekrefter. BarentsWatch-punktet er valgt i snittet langs den gamle facingen (316,5°). Nytt snitt langs 295° tas neste gang snittet kjøres.
+- Kjente svakheter, dokumentert i spoten: facing 295° ligger i gapet mellom sektorene 285° og 309°, så svell rett inn teller som utenfor vinduet når BarentsWatch ikke bekrefter. BarentsWatch-punktet er valgt i snittet langs den gamle facingen (316,3°). Nytt snitt langs 295° tas neste gang snittet kjøres.
 - «Brettseiling forbudt» i Seinesodden naturreservat er lest som seilbrett, ikke surfebrett (Theodors ja 10.11.2026). Spoten har derfor ingen restriksjon.
-- Fysikk-kontrolløren har godkjent. Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. monumentet og storvika er parkert (vindu under ca. 15°), lop venter på lokalkunnskap.
+- Fysikk-kontrolløren har godkjent. Prøvehenting 12.11 ca. 17Z: grønn. monumentet og storvika er parkert (vindu under ca. 15°), lop venter på lokalkunnskap.
 
-## T1 Finnmark: berlevag-sandfjorden og persfjord lagt inn som foreløpige 10.11.2026 (Theodors ja, gren `region/finnmark`, ikke merget)
+## T1 Finnmark: berlevag-sandfjorden og persfjord lagt inn som foreløpige 10.11.2026 (Theodors ja, gren `region/finnmark`, merget til main 16.11.2026)
 
 `tools/godkjenn_spot.py` har flyttet de to bygde forslagene inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Grenen bygger på `region/troms`. Spots.json har 30 spots, 25 er slått på.
 
-- Finnmark er ny region og står først i `regions` (nord til sør): Finnmark 1, Troms 2, Vesterålen 3, Lofoten 4, Møre og Romsdal 5. `order` er bare en sorteringsnøkkel (`publish.regions_for`), og appen bruker navnene.
+- Finnmark er ny region og står først i `regions` (nord til sør): Finnmark 1, Troms 2, Vesterålen 3, Lofoten 4, Møre og Romsdal 5 (rekkefølgen før Salten kom inn). `order` er bare en sorteringsnøkkel (`publish.regions_for`), og appen bruker navnene.
 - Sandfjorden (Berlevåg): facing 58,7°, svellvindu [32, 105], offshore [194, 284].
 - Persfjord: facing 358,5°, svellvindu [347, 33], offshore [134, 224].
 - Begge har standardhøyder for strand (0,8–2,0 m, maks 3,5). Spotansvarlig og fysikk-kontrolløren har godkjent.
-- Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. porsangvika, skallelv og skallneset venter på lokalkunnskap.
+- Prøvehenting 12.11 ca. 17Z: grønn. porsangvika, skallelv og skallneset venter på lokalkunnskap.
 
-## T1 Troms: bovaer lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/troms`, ikke merget)
+## T1 Troms: bovaer lagt inn som foreløpig 10.11.2026 (Theodors ja, gren `region/troms`, merget til main 16.11.2026)
 
 `tools/godkjenn_spot.py bovaer` har flyttet det bygde forslaget inn i spots.json: status `forelopig`, `enabled`, 0 restriksjoner. Spots.json har 28 spots, 23 er slått på.
 
 - Bøvær (Senja): facing 289,8°, svellvindu [251, 326], offshore [65, 155], høyder standard for strand (0,8–2,0 m, maks 3,5).
 - BarentsWatch-punktet ligger 400 m ut (8,5 m dyp) i stedet for 1 500 m. Stranda ligger i le av et skjær 800–900 m ut, og standardregelen ville valgt et punkt utenfor skjæret. Det gir lavere sikkerhet enn vanlig og står i spotens `_barentswatch`.
 - Fysikk-kontrolløren har godkjent innleggingen. Alle tester og kontrastsjekken er grønne.
-- Gjenstår: én prøvehenting når grenen pushes. Theodor ser tallene før merge. laukvika-senja og hamn-senja venter på lokalkunnskap.
+- Prøvehenting 12.11 ca. 17Z: grønn. laukvika-senja og hamn-senja venter på lokalkunnskap.
+
+## T2c Unstad: myk tidevannsregel lagt inn 10.11.2026 (Theodors ja, gren `t2/lofoten-surfsenter`, merget til main 16.11.2026)
+
+Kilde: Lofoten Surfsenter, 09.11.2026 («Lofoten er best på lavvann»), ført opp i CLAUDE.md «Lokalkunnskap». Unstads `local_rules` har fått `tide_prefer: ["lav", "middels"]` og `tide_penalty_high: 0.5`. Med vekten 0,7 er fradraget 0,35 stjerne på høyvann, før avrunding. Regelen gjelder bare Unstad (Theodors nei til flere Lofoten-spots).
+
+| Utsnitt (variant V3 i `data/backtest/t2c_unstad_tidevann_2026-11-10.md`) | Timer som mister 1 stjerne | Av dem lyse | Flytter seg 2 eller mer | Lyse timer med 3+ før → etter | Lyse timer med 4+ før → etter |
+|---|---|---|---|---|---|
+| Neste 48 timer (kjøring 10.11 kl. 06Z) | 0 | 0 | 0 | 0 → 0 | 0 → 0 |
+| 14 dager tilbake (30.09–14.10) | 14 | 10 | 0 | 44 → 42 | 16 → 16 |
+| Alle publiserte timer 24.09–14.10 | 19 | 11 | 0 | 68 → 66 | 23 → 23 |
+
+- Ingen time går opp. Regelen kan bare trekke ned.
+- En femte stjerne krever nå lav eller middels vannstand på Unstad (`five_star_losses`). Er tidevannet ukjent, holdes den også tilbake (`five_star_swell_gate`: tidevannet må være kjent når spoten har preferanse). Den faste observasjonen 26.09 kl. 14:45 (rekonstruert uten tidevann) går derfor fra 5 til 4 i testene. Observasjonen var 4 stjerner, og kravet er minst 3.
+- De faste observasjonene holder. Ny test 8 i `fetcher/test_backtest.py`: høyvann koster høyst én stjerne, lav og middels koster ingenting, og ingen fast Unstad-observasjon kommer under kravet sitt på høyvann. Det er 28.09 (krav 3) som skiller en myk regel fra en hard: med fradrag 1,0 faller den under.
+- Kilden står for seg: `local_rules.source` gjelder energigrensen (observasjonene), nytt felt `tide_source` gjelder tidevannsregelen. Appen skriver «Ifølge Lofoten Surfsenter» på tidevannslinja og «Grense satt ut fra observasjonene 26.09 til 05.10» på energilinja. Cellen «Lokale regler» viser begge kildene.
+- Følge i appen: tidevannskortet på Unstad viser nå båndet for foretrukket vannstand og teksten «Unstad er best på lav til middels vannstand» (samme som Farstadsanden; `tide_regel` i `publish.py` leser `tide_prefer`).
+- Rapportverktøyet `tools/unstad_tidevann_rapport.py` regner «i dag» fra spots.json. Kjøres det på nytt nå, er V3 allerede med i utgangspunktet.
 
 ## T2 Lofoten Surfsenter - rapportert 10.11.2026 (ingenting endret i appen)
 

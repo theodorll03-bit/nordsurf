@@ -810,6 +810,10 @@ def bw_shadow_mock_u(la, lo):
     sh = abs(la - 68.271871) < 1e-5
     return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": 1.5, "dir": 250.0 if sh else 295.0, "period": 4.0 if sh else 12.0} for i in (0, 3, 6, 9)}
 sources.barentswatch_point = bw_shadow_mock_u
+# pålandsvind (260°) i denne blokka: med fralandsvinden i standardmocken (120°) kan ikke 4 s ved punktet være
+# vindsjø, og da brukes svellperioden ute i stedet (rating.bw_can_be_windsea, observasjon 16.11.2026 (bilde, Russelv))
+_saved_wx_9f = sources.metno_weather
+sources.metno_weather = lambda la, lo: hourly(lambda i: {"wind_speed": 2, "wind_dir": 260, "gust": 4, "air_temp": 6})
 try:
     u_cfg = json.loads(json.dumps(next(s for s in spots_cfg if s["id"] == "unstad")))
     assert u_cfg.get("surf_factor_prior") == 1.45 and u_cfg.get("barentswatch_point_shadow")
@@ -817,6 +821,7 @@ try:
     u_sh = fetch.build_spot(u_cfg, now9, {}, {}, "test-run-9f", exposure_baseline_real, {})
 finally:
     sources.barentswatch_point = _saved_bw_9f
+    sources.metno_weather = _saved_wx_9f
     fetch.REPORT.clear()
 u_rated = [h for h in u_sh["hours"] if h.get("surf_height_shadow") is not None and h.get("surf_height_shadow_noprior") is not None and h["surf_height_shadow"] > 0]
 assert u_rated and all(abs(h["surf_height_shadow_noprior"] * 1.45 - h["surf_height_shadow"]) < 0.02 for h in u_rated), [(h["surf_height_shadow"], h["surf_height_shadow_noprior"]) for h in u_rated[:3]]

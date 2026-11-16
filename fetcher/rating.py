@@ -313,6 +313,68 @@ def bw_period_factor(period):
     return 1.0
 
 
+BW_WINDSEA_MAX_WIND_DIFF_DEG = 90  # se bw_can_be_windsea()
+BW_WINDSEA_SEAWARD_DEG = 60  # se bw_can_be_windsea(); samme grense som der spot_direction_factor() når 0
+
+
+def bw_can_be_windsea(hour, spot):
+    """Kan energien ved BarentsWatch-punktet være vindsjø fra vinden på
+    spoten? 16.11.2026, Theodors oppgave (observasjon 16.11.2026 (bilde,
+    Russelv) - se STATUS.md): punktet hadde 0,26 m fra 6 grader med periode
+    4,4 s, vinden var fralands fra 106 grader og svellandelen ute 100 %.
+    Periodefaktoren leste den korte perioden som vindsjø og ganget høyden
+    med 0,3. Men vindsjø går med vinden: retningsspredningen i vindsjø
+    (cos^2 rundt vindretningen, Pierson, Neumann og James 1955; Shore
+    Protection Manual 1984) er null 90 grader og mer fra vinden. Bølger som
+    kommer inn fra havsiden mer enn 90 grader fra vindretningen, er derfor
+    ikke laget av den vinden.
+
+    Returnerer False BARE når alt dette er kjent: vindretningen, retningen
+    ved punktet og facing, retningen ved punktet ligger mot havet (under
+    BW_WINDSEA_SEAWARD_DEG fra facing), og vinden blåser mer enn
+    BW_WINDSEA_MAX_WIND_DIFF_DEG fra retningen ved punktet. Mangler noe,
+    eller kommer bølgene ved punktet langs land eller fra land (da er det
+    sjø laget i fjorden, som Lenangsøyra 26.09.2026): True, og
+    periodefaktoren brukes som før. Vindsjø laget lenger ute fanges fortsatt
+    av svellandelen (swell_share), som ikke røres her.
+
+    Spotens offshore_wind brukes IKKE (fysikk-kontrollør 16.11.2026):
+    sektoren er satt for vindkvalitet, ikke for hvor vinden har strøket.
+    Unstad har [70, 232], og vind fra 225 grader kan godt ha laget sjø fra
+    250 grader.
+
+    Kjente hull (fysikk-kontrollør 16.11.2026, ikke rettet): regelen ser bare
+    vinden i samme time og på spoten. Gammel vindsjø (4-6 s) blir liggende i
+    timevis etter at vinden har dreid, og vinden ute i fjorden kan være en
+    annen enn ved spoten. I de tilfellene tas straffen bort for tidlig."""
+    wind_dir, bw_dir, facing = hour.get("wind_dir"), hour.get("bw_dir"), spot.get("facing")
+    if wind_dir is None or bw_dir is None or facing is None:
+        return True
+    if angle_diff(bw_dir, facing) >= BW_WINDSEA_SEAWARD_DEG:
+        return True
+    return angle_diff(wind_dir, bw_dir) <= BW_WINDSEA_MAX_WIND_DIFF_DEG
+
+
+def bw_period_factor_for(hour, spot):
+    """Periodefaktoren slik barentswatch_height() bruker den, og hvilken
+    periode den bygger på ("bw", "ute" eller None når BarentsWatch-perioden
+    mangler). Når energien ved punktet ikke kan være vindsjø (se
+    bw_can_be_windsea()) og BarentsWatch-perioden er kort, brukes svellperioden
+    ute (Open-Meteo, samme periode som resten av ratingen bruker) i samme
+    kurve i stedet. Aldri lavere enn BarentsWatch-perioden alene ville gitt:
+    regelen kan bare ta bort en vindsjø-straff, ikke legge til en ny.
+    Største løft: 0,3 til 1,0 (BarentsWatch-periode under 6 s, svellperiode
+    ute 8 s eller mer)."""
+    bw_period = hour.get("bw_period")
+    pf = bw_period_factor(bw_period)
+    if bw_period is None or pf >= 1.0 or bw_can_be_windsea(hour, spot):
+        return pf, ("bw" if bw_period is not None else None)
+    pf_ute = bw_period_factor(hour.get("period")) if hour.get("period") is not None else pf
+    if pf_ute > pf:
+        return pf_ute, "ute"
+    return pf, "bw"
+
+
 SPOT_DIRECTION_ERROR_DEG = 150  # se spot_direction_factor() sin docstring
 
 
@@ -403,7 +465,7 @@ def barentswatch_height(hour, spot):
     til 0 eller 1 - da mister man sikringen (Lenangsøyra ville gått opp)."""
     bw = hour["bw_height"]
     share, share_known = swell_share(hour)
-    pf = bw_period_factor(hour.get("bw_period"))
+    pf, pf_basis = bw_period_factor_for(hour, spot)
     bw_dir = hour.get("bw_dir")
     facing = spot.get("facing")
     raw_dirfac, dir_known, dir_offshore = spot_direction_factor(bw_dir, facing)
@@ -433,6 +495,9 @@ def barentswatch_height(hour, spot):
     detail = {
         "swell_share": share, "swell_share_known": share_known,
         "bw_period_factor": pf,
+        # "ute" når svellperioden ute erstattet en kort BarentsWatch-periode
+        # (energien ved punktet kan ikke være vindsjø, se bw_can_be_windsea()).
+        "bw_period_basis": pf_basis,
         "spot_direction_factor": dirfac,
         # "Kjent" rører IKKE overstyringen - den sier bare om vi FAKTISK har
         # en BarentsWatch-retning og facing å sammenligne (uendret av om vi
@@ -625,7 +690,8 @@ PERIOD_SCORE_POINTS = [(6, 0.4), (8, 0.65), (10, 0.85), (12, 0.95), (14, 1.0)]  
 #    lokal) OG offshore eller under FIVE_STAR_CALM_MS effektivt; tidevann uten straff og foretrukket
 #    når spoten har preferanse - ellers holdes den femte stjernen tilbake (bokført som tapt på vind/
 #    tidevann). Krever Theodors ja (stjernegrenser): Unstad 26.09-rekonstruksjonen (test 16.1, 4
-#    observert) oppfyller alle vilkår og får 5. Se STATUS.md 15.10.2026.
+#    observert) oppfylte alle vilkår og fikk 5 fram til 10.11.2026. Med Unstads tidevannsregel
+#    (tide_prefer) får den 4 uten kjent tidevann og på høyvann. Se STATUS.md 15.10.2026 og 10.11.2026.
 FIVE_STAR_HS_MIN = 0.85
 FIVE_STAR_PERIOD_MIN = 13.0   # s, middelperiode ute (hour["period"])
 FIVE_STAR_CALM_MS = 3.0       # = wind_label() sin «nesten blankt»-grense
@@ -988,7 +1054,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     if source == "barentswatch" and bw_detail is not None:
         share_pct = round(bw_detail["swell_share"] * 100)
         items.append(f"Svellandel: {share_pct} % ({_share_word(bw_detail['swell_share'])})")
-        if hour.get("bw_period") is not None:
+        if hour.get("bw_period") is not None and bw_detail.get("bw_period_basis") == "ute":
+            items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: ikke brukt. Vinden kan ikke ha laget bølgene ved punktet. "
+                         f"Svellperioden ute ({period:.0f} s) er brukt i stedet")
+        elif hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         if bw_detail["spot_direction_offshore"]:
             items.append("Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn.")
@@ -1004,7 +1073,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                 if not share_ok and (pf_ok or share <= pf):
                     reasons.append(f"svellandel {round(share * 100)} %")
                 elif not pf_ok:
-                    reasons.append("kort BarentsWatch-periode")
+                    reasons.append("kort svellperiode ute" if bw_detail.get("bw_period_basis") == "ute"
+                                   else "kort BarentsWatch-periode")
                 if not dir_ok:
                     reasons.append("retning ved punktet")
                 items.append(f"Etter justering {_fmt_m(h)} ({', '.join(reasons)})")
