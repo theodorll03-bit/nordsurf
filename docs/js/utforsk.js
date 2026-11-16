@@ -70,7 +70,7 @@
   }
   function regionsHere(){ return (DATA.regions || []).filter(r=> r.extent); }
   function ensureCoast(){
-    // coast.json (SVG, Nord-Norge) - bare til miniatyren på Hjem (PC); kartet selv er MapLibre (S3)
+    // coast.json (SVG, Nord-Norge) - bare til det kompakte kartet på Hjem (mobil); kartet selv er MapLibre (S3)
     if(coast) return true;
     coastLoading = coastLoading || fetch("geo/coast.json", {cache:"force-cache"}).then(r=>r.json()).then(c=>{ coast = c; Kart.setCoast(c); if(!(S && S.view==="utforsk") && window.Front) Front.refresh(); }).catch(e=>console.error(e));
     return false;
@@ -152,8 +152,9 @@
       .sort((a, b)=> srt(b.v) - srt(a.v) || ((b.v.h && b.v.h.surf_height)||0) - ((a.v.h && a.v.h.surf_height)||0) || a.s.name.localeCompare(b.s.name, "nb"));
     const dag = S.utforskDay==null ? "nå" : cap(fmtWdLong.format(new Date(S.utforskDay + "T11:00:00Z")));
     const shown = S.listeAlle ? spots : spots.slice(0, 30);
-    el.innerHTML = `<div class="kort"><h2 class="h2" style="margin-bottom:8px">Beste først</h2><p class="sub" style="margin:0 0 8px">${esc(dag)}${reg ? ` · ${esc(reg)}` : ""}</p><div class="alfa lang" role="list">${shown.map(({s, v})=>{ const hoyde = v.forbud ? null : H().ordOgHoyde(v.h).hoyde;
-      return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}">${ruteHtml(v.st, v.rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>${shown.length < spots.length ? `<button type="button" class="ghost visflere" id="listeFlere">Vis alle ${spots.length}</button>` : ""}</div>`;
+    // B4 steg 6: papirstil - seksjonsstart, navnet i Martian, tallet i ruta og 1 px hair mellom radene (SPEC §4, tabeller på web)
+    el.innerHTML = `<section class="sek"><h2 class="h2">Beste først</h2><p class="sub">${esc(dag)}${reg ? ` · ${esc(reg)}` : ""}</p></section><div class="alfa lang" role="list">${shown.map(({s, v})=>{ const hoyde = v.forbud ? null : H().ordOgHoyde(v.h).hoyde;
+      return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}">${ruteHtml(v.st, v.rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>${shown.length < spots.length ? `<button type="button" class="knapp2 visflere" id="listeFlere">Vis alle ${spots.length}</button>` : ""}`;
     const more = $("#listeFlere", el); if(more) more.onclick = ()=>{ S.listeAlle = true; renderListe(); };
   }
   function render(state){
@@ -183,10 +184,6 @@
         ord: !v.rute || v.rute==="over" ? "" : v.miss ? "–" : v.word}; });
     return Kart.hjemKart(pts, W, 220);
   }
-  function thumb(){
-    if(!ensureCoast()) return "";
-    return Kart.thumb((p)=> valueFor(p.s, null).st, DATA.spots);
-  }
   window.addEventListener("resize", ()=>{ if(inited && S && S.view==="utforsk"){ Kart.setArea(area()); const e = viewExtent(); if(e) Kart.setExtent(e, false); } });
-  window.Utforsk = { render, thumb, hjemKart, valueFor };
+  window.Utforsk = { render, hjemKart, valueFor };
 })();

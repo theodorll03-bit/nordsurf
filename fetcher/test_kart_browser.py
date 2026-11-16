@@ -154,7 +154,7 @@ def main():
             browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
 
             def new_page(vp, scheme="light", sw="block", mobile=None):
-                mobile = vp[0] < 900 if mobile is None else mobile
+                mobile = vp[0] < 1024 if mobile is None else mobile
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme=scheme, locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile, service_workers=sw)
                 page = ctx.new_page()
@@ -601,7 +601,7 @@ def main():
             assert abs(ang[1] - ang[0]) == 20 and abs(ang[2] - ang[1]) <= 180 and ang[3] == "0", ang
             # fanen skjult → animasjonene står
             ps = page.evaluate("""() => { Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); document.dispatchEvent(new Event('visibilitychange'));
-                const k = document.querySelector('#kileG .arc, #kileG .arc-miss'); const st = [getComputedStyle(document.querySelector('#vindLag line')).animationPlayState, k ? getComputedStyle(k).animationPlayState : 'paused'];
+                const k = document.querySelector('#kileG .arc, #kileG .arc-miss'); const st = [getComputedStyle(document.querySelector('#vindLag rect')).animationPlayState, k ? getComputedStyle(k).animationPlayState : 'paused'];
                 Object.defineProperty(document, 'hidden', {configurable: true, get: () => false}); document.dispatchEvent(new Event('visibilitychange')); return st; }""")
             assert ps[0] == "paused", ps
             # bilder per sekund under dra, 4x CPU, med kile + vind: med pause under bevegelse (appen) og uten (tvunget)
@@ -609,7 +609,7 @@ def main():
             cdp.send("Emulation.setCPUThrottlingRate", {"rate": 4})
             page.wait_for_timeout(300)
             fps_pause = page.evaluate(FPS_JS.replace("move(m)", "m.panBy([200, -120], {duration: 1000})"))
-            page.add_style_tag(content=".kart.beveger .vindlag line,.kart.beveger .kile .arc{animation-play-state:running!important}")
+            page.add_style_tag(content=".kart.beveger .vindlag rect,.kart.beveger .kile .arc{animation-play-state:running!important}")
             fps_anim = page.evaluate(FPS_JS.replace("move(m)", "m.panBy([-200, 120], {duration: 1000})"))
             cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
             assert fps_pause["fps"] >= FPS_MIN, f"dra med kile og vind: {fps_pause['fps']:.0f} fps (grense {FPS_MIN})"
@@ -626,7 +626,7 @@ def main():
             page.goto(base + "#utforsk")
             page.wait_for_function(READY_JS)
             page.evaluate("Kart.setWind({wind_speed: 6, wind_dir: 200}); Kart.setWedge(DATA.spots.find(s => s.id === 'unstad'), {dir_offshore: 295, directness: 1, period: 12, stars: 3})")
-            an = page.evaluate("[getComputedStyle(document.querySelector('#vindLag line')).animationName, getComputedStyle(document.querySelector('#kileG .arc')).animationName]")
+            an = page.evaluate("[getComputedStyle(document.querySelector('#vindLag rect')).animationName, getComputedStyle(document.querySelector('#kileG .arc')).animationName]")
             assert an == ["none", "none"], an
             print("6b: prefers-reduced-motion → ingen animasjon i vind og kile - OK")
             # 6c. Hjem-kartet (B 4.0 steg 5): et tall står aldri for en spot uten tall (fysikk-kontrolløren 16.11.2026).

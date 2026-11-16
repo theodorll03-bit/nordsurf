@@ -12,7 +12,8 @@ mobil (390x844) og PC (1440x900), lys og mørk (prefers-color-scheme), og sjekke
 4.  ingen tekst under 11 px (SVG-tekst regnet om med viewBox-skalaen), alle knapper minst
     44x44 (søylene i timegrafen unntatt - hele kolonnen er trykkflaten), alle knapper har navn;
 5.  «grotfjord» (uten ø) finner Grøtfjord først; ingen treff gir «Ingen spots heter «x». …»;
-6.  Hjem: datolinja («Onsdag 14. oktober · oppdatert 21:00»), beste økt, ukerutene;
+6.  Hjem: topplinja/datolinja med lyset og startstedet, ukerutene; PC (B4 steg 6, SPEC §6D): forsiden med
+    hovedbildet (dagens beste), «Beste nå» med samme dagstall som ukerutene og «Neste 7 dager» per spot;
 7.  Utforsk: markørene nå har stjernene nå (ratingklasse r-N), en annen dag har dagens beste
     dagslystime (speil av dayBest i ui.js), valgt markør beholder navnet, kortet nederst sier
     spot og dag;
@@ -32,11 +33,13 @@ mobil (390x844) og PC (1440x900), lys og mørk (prefers-color-scheme), og sjekke
     annen dag med valgt markør, Unstad nå, 25.10 (6-timers steg), Farstadsanden, «Treffer ikke»,
     + 200 % tekst og prefers-contrast: more - mobil og PC, lys og mørk.
 
-Mobil (design B 4.0 steg 4, SPEC §6B) har egen spotside, og punkt 8-11 sjekkes der i spot_mobil():
+Spotsiden i design B 4.0 (mobil steg 4, SPEC §6B; PC steg 6, SPEC §6C) - punkt 8-11 sjekkes i spot_mobil() på begge:
 dommen har samme tall som Hjem og ukeoversikten, timens svell/surf/vind/tidevann er varselets, retningsskiva
 sier vinduet som rating.in_sector, kornfotoet følger temaet (Trykk/Lodd) med kreditering, tilbakeknappen
 følger stakken (Hjem/Utforsk), timevalg med skjult glidebryter, piltaster og trykk, «Tilbake til nå»,
-korall bare fra 4 poeng, tapte poeng stiplet, og mørke, forbudte og tomme timer uten tall.
+korall bare fra 4 poeng, tapte poeng stiplet, og mørke, forbudte og tomme timer uten tall. På PC i tillegg: 7 store
+dagkolonner, etikettkolonnen i «time for time», musa over en time velger den, «Om spotten» med sikkerheten og
+minikartet med kystlinje.
 
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5 minutter (hardkill),
 testserveren stoppes uansett utfall. Trenger: pip install playwright && playwright install chromium.
@@ -262,7 +265,7 @@ AUDIT_JS = r"""() => {
     if(!done && (a.r.right > innerWidth + 1 || a.r.left < -1)) clipped.push(`utenfor vinduet: ${name(a)} (${a.r.left.toFixed(0)}–${a.r.right.toFixed(0)})`);
   }
   const small = leaves.filter(a => a.fs < 10.95).map(a => `${name(a)} ${a.fs.toFixed(1)}px`);
-  const buttons = [...document.querySelectorAll('button, a.tap, .topnav a, .srad, .tabs a, .sokknapp, .chip, .dagfane, a.rad, a.favkort, a.favlinje')]
+  const buttons = [...document.querySelectorAll('button, a.tap, a.knapp1, .topnav a, .srad, .tabs a, .sokknapp, .chip, .dagfane, a.rad, a.favkort, a.favlinje')]
     .filter(b => !b.closest('[hidden]') && vis(b) && !b.classList.contains('soyle') && !b.closest('.mk-pill'))
     .filter(b => { const r = b.getBoundingClientRect(); return r.width < 43.5 || r.height < 43.5; })
     .map(b => { const r = b.getBoundingClientRect(); return `${b.tagName}.${cls(b)} ${r.width.toFixed(0)}x${r.height.toFixed(0)}`; });
@@ -304,7 +307,7 @@ def main():
             nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
             browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
-                mobile = vp[0] < 900
+                mobile = vp[0] < 1024
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="dark", locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS)
@@ -320,7 +323,7 @@ def main():
                 page.route("**/data/oversikt.json", data_route)
                 page.route("**/data/spots/*.json", data_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html")
-                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem :is(#bestKort, .hjem-linje)')")
+                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem :is(#forside, .hjem-linje)')")
                 cdp = ctx.new_cdp_session(page)
 
                 # Kilden til lokale regler (10.11.2026, Unstads tidevannsregel): hver delregel skrives med sin egen
@@ -468,11 +471,9 @@ def main():
                     };
                 }"""
 
-                def ord_dom():
-                    return page.text_content("#viewSpot .vurdering .ord").strip()
-
-                # spotsiden er klar: dommen på mobil (B 4.0 steg 4), vurderingen i PC-oppsettet (urørt til steg 6)
-                SPOT_KLAR = "#viewSpot:not([hidden]) .dom" if mobile else "#viewSpot:not([hidden]) .vurdering .ord"
+                # spotsiden er klar: dommen (B 4.0 - mobil fra steg 4, PC fra steg 6)
+                SPOT_KLAR = "#viewSpot:not([hidden]) .dom"
+                INN = "#viewSpot :is(.sp-inn, .spw-inn)"   # innholdet under navneplata (mobil / PC)
 
                 SYN_STRIPE_JS = r"""() => {
                   // timestripa med kjente timer (21.10, sommertid): 3, 3 med ett tapt på vind, 4 med ett tapt på tidevann,
@@ -485,7 +486,7 @@ def main():
                   const d = {key: dag, idxs: s.hours.map((_, i) => i), step: 1}, best = new Set([2, 3]);
                   const boks = document.createElement('div');
                   boks.innerHTML = Timestripe.html(s, d, 0, best, Hh);
-                  document.querySelector('#viewSpot .sp-inn').appendChild(boks);
+                  document.querySelector('#viewSpot :is(.sp-inn, .spw-inn)').appendChild(boks);
                   const ut = {kol: {}, aria: {}};
                   for(const tk of boks.querySelectorAll('.tk')){
                     const e = tk.querySelector('.segs'), pa = e.querySelector('i.pa'), bst = tk.querySelector('.bst');
@@ -499,7 +500,8 @@ def main():
                 }"""
 
                 def spot_mobil(scheme):
-                    # ---- 8–11 på mobil: spotsiden i design B 4.0 (SPEC §6B) ----
+                    # ---- 8–11: spotsiden i design B 4.0 - mobil (SPEC §6B, steg 4) og PC (SPEC §6C, steg 6) med samme
+                    # innhold: dommen, timen (#spOver), skiva (#spUnder), timestripa og dagvelgeren. Forskjellene står ved sjekken.
                     def tekst(sel):
                         return page.evaluate("(sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\\s+/g, ' ').trim() : null; }", sel)
 
@@ -520,7 +522,8 @@ def main():
                     def aapne(par):
                         go(f"#spot={par[0]}&t={par[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
                         v = valgt(); assert v["i"] == par[1], f"siden skal stå på timen i adressen: {par}, {v}"
-                        t = tekst("#viewSpot .sp-inn"); assert not re.search(r"null|undefined|NaN", t), f"{par}: {t[:300]}"
+                        t = tekst(INN); m_ = re.search(r"(?<![a-zæøå])null|undefined|NaN", t)   # «sjøkartnull» (tidevannsraden på PC) er et ord, ikke en tom verdi
+                        assert not m_, f"{par}: …{t[max(0, m_.start() - 200):m_.end() + 60]}"
                         return details[par[0]]["hours"][par[1]]
 
                     def tallene(t):
@@ -538,7 +541,7 @@ def main():
                     assert page.get_attribute(".dagknapp[aria-pressed='true']", "data-day") == imorgen
                     v = valgt(); h = hs[v["i"]]
                     assert v["dag"] == imorgen and oslo_day(h["t"]) == imorgen and light_of(h) in ("dag", "skumring"), (v, h["t"], light_of(h))
-                    assert tekst("#spOver .sek-spot h2") == f"Kl. {v['hh']}" and tekst("#spUnder .sek-spot h2") == f"Retning kl. {v['hh']}"
+                    assert tekst("#spOver .sek-spot h2") == f"Kl. {v['hh']}" and tekst("#spUnder h2") == f"Retning kl. {v['hh']}"
                     assert not page.query_selector("#tilbakeNa"), "«Tilbake til nå» skal ikke vises når siden står på «nå»"
                     # dommen: samme tall som Hjem og ukeoversikten (dagssammendraget fra publish.py)
                     cls, st = day_cls(OV["unstad"], imorgen); dom = dommen()
@@ -557,23 +560,37 @@ def main():
                     assert re.search(r"\d,\d ?m", maal["Tidevann"]), maal
                     if light_of(h) != "mørkt":
                         assert tekst("#spOver .tdom .rute") == str(min(5, h.get("stars") or 0)) and tekst("#spOver .tdom .to") == page.evaluate("(h) => ratingWord(h)", h)
-                    fakta = tekst("#spOver .fakta-linje")
-                    assert fakta.startswith("Lys ") and "Oppdatert" in fakta, fakta
+                    # faktalinja: under timen på mobil; på PC metalinja under navnet (kjøretid og dato først)
+                    fakta = tekst("#spOver .fakta-linje" if mobile else "#spMeta")
+                    assert (fakta.startswith("Lys ") if mobile else " Lys " in fakta) and "Oppdatert" in fakta, fakta
                     # retningsskiva: vinduet sies likt som rating.in_sector, og sikkerheten står i kildelinja
                     assert vindu_tekst(h, SP["unstad"]) in tekst("#spUnder .skive-forkl"), (tekst("#spUnder .skive-forkl"), h["dir_offshore"], h.get("directness"))
                     sa = page.get_attribute("#spUnder .skive", "aria-label")
                     inne = any(rating.in_sector(h["dir_offshore"], sec) for sec in rating.window_sectors(SP["unstad"]))
                     assert sa.startswith(f"Unstad kl. {v['hh']}: svell fra {r0(h['dir_offshore'])} grader, {'innenfor' if inne else 'utenfor'} svellvinduet"), sa
-                    assert tekst("#spUnder .kilder").startswith(sikkerhet(h["confidence"], h["zone"]) + ". "), tekst("#spUnder .kilder")
+                    if mobile:
+                        assert tekst("#spUnder .kilder").startswith(sikkerhet(h["confidence"], h["zone"]) + ". "), tekst("#spUnder .kilder")
+                    else:   # PC: sikkerheten står i «Om spotten» (Data)
+                        om = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))")
+                        assert om.get("Data", "").startswith(sikkerhet(h["confidence"], h["zone"])), om
+                        assert om.get("Vindu") and om.get("Fralands") and om.get("Vender mot"), om
                     assert page.get_attribute("#tstripe .tsvg", "aria-label").startswith("Tidevann: "), "tidevannskurven skal ha etikett"
                     # kornfotoet: Trykk i lyst tema og Lodd i mørkt, med kreditering under navnet og kortformen under skiva
                     page.wait_for_function("[...document.querySelectorAll('#viewSpot .sp-foto')].some(b => getComputedStyle(b).display !== 'none' && b.naturalWidth > 0)")
                     foto = page.evaluate("[...document.querySelectorAll('#viewSpot .sp-foto')].filter(b => getComputedStyle(b).display !== 'none').map(b => [b.getAttribute('src'), b.alt])")
                     assert foto == [[f"img/spots/unstad-{'lodd' if scheme == 'mork' else 'trykk'}.jpg", "Satellittbilde av Unstad ovenfra, nord opp"]], foto
-                    for sel in ("#viewSpot .sp-inn > .kredit", "#viewSpot .kredit.liten"):
+                    for sel in (INN + " > .kredit", "#viewSpot .kredit.liten"):
                         k = tekst(sel); assert "Sentinel-2" in k and "CC BY 4.0" in k and "Kartverket" in k, (sel, k)
-                    # tilbakeknappen følger stakken: hit kom vi fra Utforsk
-                    assert page.get_attribute("#spotBack", "aria-label") == "Tilbake til Utforsk" and tekst("#spotBack") == "Utforsk", (page.get_attribute("#spotBack", "aria-label"), tekst("#spotBack"))
+                    # tilbakeknappen følger stakken: hit kom vi fra Utforsk (PC har toppmenyen i stedet, og regionen lenker til Utforsk)
+                    if mobile:
+                        assert page.get_attribute("#spotBack", "aria-label") == "Tilbake til Utforsk" and tekst("#spotBack") == "Utforsk", (page.get_attribute("#spotBack", "aria-label"), tekst("#spotBack"))
+                    else:
+                        assert not page.is_visible("#spotBack") and tekst("#spotRegion").startswith("Lofoten"), tekst("#spotRegion")
+                        # SPEC §6C: 7 store dagkolonner, tabellen time for time med etikettkolonnen, minikartet med kystlinje
+                        assert page.locator(".dagvelger.sju .dagknapp.stor").count() == 7, page.locator(".dagvelger.sju .dagknapp").count()
+                        etik = page.evaluate("[...document.querySelectorAll('#tstripe .tetik > *')].map(e => e.textContent.replace(/\\s+/g, ' ').trim())")
+                        assert etik[:5] == ["Kl.", "Vurdering", "Svell m", "Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
+                        page.wait_for_selector("#miniKort .minikart path.land")
                     shot("unstad-na", scheme); audit("unstad-na")
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
                         .filter(el => el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
@@ -602,7 +619,7 @@ def main():
                     page.wait_for_selector("#tilbakeNa")
                     hm = hs[m["i"]]; v2 = valgt()
                     assert page.evaluate("window.__S.idx") == m["i"] and v2["k"] == m["k"], (m, v2)
-                    assert tekst("#spOver .sek-spot h2") == f"Kl. {m['hh']}" and tekst("#spUnder .sek-spot h2") == f"Retning kl. {m['hh']}"
+                    assert tekst("#spOver .sek-spot h2") == f"Kl. {m['hh']}" and tekst("#spUnder h2") == f"Retning kl. {m['hh']}"
                     assert v2["aria"].startswith(f"kl. {m['hh']}, " + ("mørkt, ingen vurdering" if light_of(hm) == "mørkt" else f"{hm.get('stars') or 0} av 5")), v2["aria"]
                     assert nf1(hm["swell_offshore"]) in tekst("#spOver .t-svell")
                     ring = page.evaluate("parseFloat(document.querySelector('#tstripe .ring').style.left)")
@@ -614,7 +631,10 @@ def main():
                     assert tekst("#spOver .sek-spot h2") == f"Kl. {nxt['hh']}"
                     t = next(c for c in kols if c["i"] >= 0 and c["k"] != nxt["k"] and c["k"] != v["k"])
                     x, y = page.eval_on_selector(f"#tstripe .tk[data-k='{t['k']}']", "e => { e.scrollIntoView({block: 'center'}); const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
-                    page.touchscreen.tap(x, y)
+                    if mobile:
+                        page.touchscreen.tap(x, y)
+                    else:   # PC: å holde musa over en time velger den (SPEC §6C punkt 5) - uten klikk
+                        page.mouse.move(x, y)
                     page.wait_for_function(f"window.__S.idx === {t['i']}")
                     assert tekst("#spOver .sek-spot h2") == f"Kl. {t['hh']}" and valgt()["k"] == t["k"]
                     page.click("#tilbakeNa"); page.wait_for_function("window.__S.idx === null")
@@ -639,11 +659,12 @@ def main():
                         else:
                             assert dom["tall"] is None and knapp == "" and dom["ord"] == {"miss": "Mangler data", "dark": "Mørkt"}[cls], (key, cls, dom, knapp)
                     shot("unstad-6t", scheme); audit("unstad-6t")
-                    # tilbakeknappen følger stakken: fra Hjem heter den «Hjem» og går dit
-                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
-                    go("#spot=unstad", SPOT_KLAR)
-                    assert page.get_attribute("#spotBack", "aria-label") == "Tilbake til Hjem" and tekst("#spotBack") == "Hjem"
-                    page.click("#spotBack"); page.wait_for_selector("#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
+                    # tilbakeknappen følger stakken: fra Hjem heter den «Hjem» og går dit (bare mobil)
+                    if mobile:
+                        go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
+                        go("#spot=unstad", SPOT_KLAR)
+                        assert page.get_attribute("#spotBack", "aria-label") == "Tilbake til Hjem" and tekst("#spotBack") == "Hjem"
+                        page.click("#spotBack"); page.wait_for_selector("#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
                     go("#utforsk", "#viewUtforsk:not([hidden])")
                     # ---- Farstadsanden ----
                     go("#spot=farstadsanden", SPOT_KLAR)
@@ -688,8 +709,9 @@ def main():
                     assert dom["ord"] == "Mangler data" and dom["tall"] is None and dom["vindu"] is None, dom
                     assert tekst("#spOver .sek-spot .sub") == "Mangler data" and not page.query_selector("#spOver .tdom") and not page.query_selector("#spOver .t-svell"), tekst("#spOver")
                     assert set(maalene()) <= {"Tidevann"}, f"dagen uten tall skal ikke vise surf eller vind: {maalene()}"
-                    knapp = page.evaluate(f"(() => {{ const r = document.querySelector(\".dagknapp[data-day='{MISS_DAY.isoformat()}'] .rute\"); return [r.className, r.textContent.trim()]; }})()")
-                    assert "miss" in knapp[0].split() and knapp[1] == "", f"dagknappen for dagen uten tall: {knapp}"
+                    # mobil: tom stiplet rute; PC: dagen ligger i de 7 store kolonnene - ordet, ingen tall
+                    knapp = page.evaluate(f"(() => {{ const b = document.querySelector(\".dagknapp[data-day='{MISS_DAY.isoformat()}']\"), r = b.querySelector('.rute'); return r ? [r.className, r.textContent.trim(), ''] : [b.className, b.querySelector('.dk-v').textContent.trim(), b.querySelector('.dk-best').textContent.trim() + [...b.querySelectorAll('.dk-sub')].map(e => e.textContent).join('')]; }})()")
+                    assert "miss" in knapp[0].split() and knapp[1] == ("" if mobile else "Mangler data") and knapp[2] in ("", "–"), f"dagknappen for dagen uten tall: {knapp}"
                     segs = page.evaluate("[...document.querySelectorAll('#tstripe .tk')].filter(k => +k.dataset.i >= 0).map(k => k.querySelector('.segs').className)")
                     assert segs and all(c == "segs miss" for c in segs), f"timene uten data skal være skravert: {segs}"
                     assert "mangler data" in valgt()["aria"]
@@ -700,21 +722,72 @@ def main():
                     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
                     assert bg == ("rgb(0, 41, 65)" if scheme == "mork" else "rgb(242, 239, 232)"), f"temaet følger ikke systemet ({label}, {scheme}): {bg}"
                     # ---- 6. Hjem ----
-                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
                     gen = oslo(FORECAST["generated"])
                     if mobile:   # B 4.0 steg 3: topplinja «ONS 14.10 · LYS 06:50–18:00» og «Fra Tromsø», oppdatert-tiden står nederst
                         dato = f"{WD[TODAY.weekday()][:3].capitalize()} {TODAY:%d.%m} · " + (f"Lys {_LYS[0]:%H:%M}–{_LYS[-1]:%H:%M}" if _LYS else "Mørkt hele dagen")
                         linje = page.text_content("#viewHjem .hjem-linje")
                         assert dato in linje and f"Fra {FRA_NAVN}" in linje, f"topplinja mangler «{dato}» eller startstedet: {linje}"
                         assert f"Oppdatert i dag kl. {gen:%H:%M}." in page.text_content("#viewHjem .kilder"), "oppdatert-tiden mangler nederst på Hjem"
-                    else:
-                        dato = f"{WD[TODAY.weekday()].capitalize()} {TODAY.day}. {MND[TODAY.month - 1]} · oppdatert {gen:%H:%M}"
-                        assert dato in page.text_content("#viewHjem"), f"datolinja mangler «{dato}»"
-                    miss_cells = page.evaluate("""() => { const rad = [...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr')].find(r => r.textContent.includes('Steinkrøssa'));
-                        return rad ? [...rad.querySelectorAll('.uke i, td.celle, .celle')].map(c => ({cls: c.className, txt: c.textContent.trim()})) : null; }""")
+                    else:   # B4 steg 6 (SPEC §6D): datolinja «Onsdag 14.10 · Lys 06:50–18:00 · Fra Tromsø · Oppdatert 21:00 · 8 spots»
+                        dato = f"{WD[TODAY.weekday()].capitalize()} {TODAY:%d.%m} · " + (f"Lys {_LYS[0]:%H:%M}–{_LYS[-1]:%H:%M}" if _LYS else "Mørkt hele dagen")
+                        linje = page.text_content("#forside .fs-dato")
+                        assert linje.startswith(dato) and f"Fra {FRA_NAVN}" in linje and f"Oppdatert {gen:%H:%M}" in linje and linje.endswith(f"{len(OV)} spots"), f"datolinja: {linje}, ventet «{dato} …»"
+                        # «Neste 7 dager» per spot i Steinkrøssas region: dagen uten tall er «–», aldri 0
+                        page.click(f"#forside [data-fsreg='{OV[MISS_ID]['region']}']"); page.wait_for_selector(f"#forside [data-fsreg='{OV[MISS_ID]['region']}'][aria-pressed='true']")
+                    miss_cells = page.evaluate("""() => { const rad = [...document.querySelectorAll('#viewHjem a.rad, #forside table.fs-matrise tbody tr')].find(r => r.textContent.includes('Steinkrøssa'));
+                        return rad ? [...rad.querySelectorAll('.uke i, td')].map(c => ({cls: c.className, txt: c.textContent.trim()})) : null; }""")
                     assert miss_cells, "fant ikke Steinkrøssa på Hjem"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
-                    assert "miss" in cell["cls"] and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
+                    assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
+                    if not mobile:
+                        # forsiden (SPEC §6D): hovedbildet er dagens beste, tabellen «Beste nå» har samme dagstall som matrisen
+                        page.click("#forside [data-fsreg='']"); page.wait_for_selector("#forside [data-fsreg=''][aria-pressed='true']")
+                        fs = page.evaluate("""() => ({helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, tall: (document.querySelector('#forside .fs-helt .fs-tall') || {}).textContent || null,
+                            rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, tall: (r.querySelector('.t-listetall') || {}).textContent || '', stripe: r.querySelectorAll('.fs-stripe i').length})),
+                            kol: [...document.querySelectorAll('#forside table.fs-tabell thead th')].map(t => t.textContent.trim()), dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim()})""")
+                        assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Svell", "06–18"], fs
+                        imorgen = (TODAY + dt.timedelta(days=1)).isoformat()
+                        for r in fs["rader"]:
+                            cls, st = day_cls(OV[r["id"]], imorgen)
+                            assert r["tall"] == (str(min(5, st)) if cls.startswith("r-") else ""), (r, cls, st)
+                            assert r["stripe"] in (0, 13), r
+                        if fs["helt"]:
+                            hid = next(i for i, x in OV.items() if x["name"] == fs["helt"])
+                            cls, st = day_cls(OV[hid], imorgen)
+                            assert cls.startswith("r-") and st >= 1 and fs["tall"] == str(min(5, st)) and all(not r["tall"] or int(r["tall"]) <= int(fs["tall"]) for r in fs["rader"]), (fs, cls, st)
+                        # et vindu som er over, er ikke et råd (fysikk-kontrolløren 16.11.2026): «Best hh–hh» og ringen vises bare mens
+                        # vinduet er åpent, og tidsstripa blanker timene som har gått siden oversikten ble laget. Klokka flyttes til
+                        # 70 minutter etter at det første vinduet er over («slutt» er starten på vinduets siste time, så 130 minutter etter den)
+                        # på en dag med surfbare spots, og settes tilbake etterpå.
+                        t_ = lambda iso: dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                        vinduer = sorted((t_(d["slutt"]), d["d"]) for x in OV.values() for d in x["dager"] if "timer" in d and d.get("slutt") and d.get("h") and (d["h"].get("stars") or 0) >= 1)
+                        assert vinduer, "testvarselet har ingen surfbar dag med «timer»"
+                        sent, sdag = vinduer[0][0] + dt.timedelta(minutes=130), vinduer[0][1]
+                        assert sent.astimezone(OSLO).date().isoformat() == sdag, (sent, sdag)
+                        page.clock.set_fixed_time(sent); page.evaluate("Front.refresh()"); page.wait_for_selector("#forside table.fs-tabell")
+                        fs2 = page.evaluate("""() => ({dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim(),
+                            helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, best: (document.querySelector('#forside .fs-helt .fs-best') || {}).textContent || null,
+                            ring: !!document.querySelector('#forside .fs-helt .fs-best svg'), aria: (document.querySelector('#forside .fs-helt') || {getAttribute(){ return ''; }}).getAttribute('aria-label') || '',
+                            rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, bst: r.querySelector('.fs-bst').textContent.trim(), stripe: [...r.querySelectorAll('.fs-stripe i')].map(i => i.className)}))})""")
+                        assert fs2["dag"] == "I dag", fs2
+                        def apent(sid):
+                            d = next((x for x in OV[sid]["dager"] if x["d"] == sdag), None)
+                            return bool(d and d.get("slutt") and d.get("h") and (d["h"].get("stars") or 0) >= 1 and t_(d["slutt"]) + dt.timedelta(hours=1) > sent)
+                        naa_kl, over_n = sent.astimezone(OSLO).hour, 0
+                        for r in fs2["rader"]:
+                            assert (r["bst"] != "–") == apent(r["id"]), f"«Best» i tabellen skal bare vises mens vinduet er åpent: {r}"
+                            over_n += r["bst"] == "–" and day_cls(OV[r["id"]], sdag)[1] not in (None, 0)
+                            if r["stripe"]:
+                                kode = next(x for x in OV[r["id"]]["dager"] if x["d"] == sdag)["timer"]
+                                vent = ["vaert" if 6 + i < naa_kl else f"r-{c}" if c in "012345" else {"m": "mork", "x": "miss", ".": "vaert"}[c] for i, c in enumerate(kode)]
+                                assert r["stripe"] == vent, f"tidsstripa skal følge «timer» og blanke timene som har gått: {r['id']} {kode} {r['stripe']}"
+                        if fs2["helt"]:
+                            hid = next(i for i, x in OV.items() if x["name"] == fs2["helt"])
+                            assert bool(fs2["best"]) == apent(hid) and bool(re.search(r"Best \d\d–\d\d", fs2["aria"])) == apent(hid), f"«Best» i hovedbildet bare mens vinduet er åpent: {fs2}"
+                            over_n += not apent(hid)
+                        assert over_n >= 1, f"ingen vinduer var over kl. {sent}: testen prøver ingenting"
+                        page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_selector("#forside table.fs-tabell")
                     shot("hjem", scheme); audit("hjem")
                     if mobile:
                         # ---- 6b. Hjem på mobil: overskriften og favorittlinjene (B 4.0 steg 3, SPEC §6A) ----
@@ -852,105 +925,7 @@ def main():
                     assert "miss" in mm["cls"].split() and mm["ord"] == "–", f"markøren for dagen uten tall: {mm}"
                     page.click("#dagChips .chip[data-day='']"); page.wait_for_timeout(200)
                     page.click("#utforskChips [data-view='Troms']"); page.wait_for_timeout(300)
-                    if mobile:
-                        spot_mobil(scheme)
-                    else:
-                        # ---- 8. Unstad nå ----
-                        go("#spot=unstad", "#viewSpot:not([hidden]) .vurdering .ord")
-                        page.wait_for_selector("#miniKort .minikart path.land")
-                        assert page.evaluate("window.__S.idx") is None, "spotsiden uten &t= skal stå på «nå» (S.idx null)"
-                        hs = details["unstad"]["hours"]; idx = now_idx(hs); h = hs[idx]
-                        naa = page.text_content("#viewSpot .naa").strip()
-                        assert naa.startswith("Nå · ") and f"kl. {oslo(h['t']):%H}" in naa, naa
-                        # B4 SPEC §5: en mørk time får ingen vurdering på skjermen - ordet er «Mørkt», uten tall, med «Bare lyse timer får tall»
-                        if light_of(h) == "mørkt":
-                            assert ord_dom() == "Mørkt" and not page.query_selector("#viewSpot .vurdering .rtall"), ord_dom()
-                            assert "bare lyse timer får tall" in page.text_content("#viewSpot .vurdering").lower()
-                        else:
-                            assert ord_dom() == page.evaluate("(h) => ratingWord(h)", h), ord_dom()
-                            assert page.text_content("#viewSpot .vurdering .rtall").strip() == str(min(5, h.get("stars") or 0))
-                        kort4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
-                        surf = kort4[0]
-                        if h["surf_height"] is not None and h["surf_height"] > 0 and not h.get("low_reason"):
-                            assert nf1(h["surf_height"]) in surf, (surf, h["surf_height"])
-                            assert kroppshoyde(h["surf_height"], h.get("surf_height_sets")) in surf, surf
-                        assert nf1(h["swell_offshore"]) in kort4[1] and f"{r0(h['period'])}s" in kort4[1].replace(" ", ""), kort4[1]
-                        assert vindu_tekst(h, SP["unstad"]) in kort4[1], (kort4[1], h["dir_offshore"], h.get("directness"), SP["unstad"]["swell_window"])
-                        assert f"{r0(h['wind_speed'])}m/s" in kort4[2].replace(" ", "").replace(" ", ""), kort4[2]
-                        kj = h.get("energy_swell_kj")
-                        if kj is not None:
-                            assert str(r0(kj)) in kort4[3].replace(" ", "").replace(" ", "").replace("\xa0", ""), (kort4[3], kj)
-                            assert energi_ord(kj) in kort4[3], kort4[3]
-                        assert sikkerhet(h["confidence"], h["zone"]) == page.text_content("#viewSpot .sikker").strip()
-                        shot("unstad-na", scheme); audit("unstad-na")
-                        # punkt 1 (Theodor 15.10): tallspenn på én linje (kortene og dagfanene), tallet aldri brutt
-                        brudd = page.evaluate("""() => [...document.querySelectorAll('#viewSpot .kort4 .v, #viewSpot .dagfane .h')].filter(el => el.getBoundingClientRect().height > 1.5 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '» ' + el.getBoundingClientRect().height.toFixed(0) + 'px')
-                            .concat([...document.querySelectorAll('#viewSpot .tall')].filter(el => el.getClientRects().length > 1).map(el => 'brutt tall «' + el.textContent.trim() + '»'))""")
-                        assert not brudd, f"tallspenn over flere linjer ({label}, {scheme}): {brudd}"
-                        # punkt 3: åpnet på «nå» kl. 22 (mørkt) viser grafen i morgen, kortene nå
-                        assert page.evaluate("document.querySelector('.dagfane[aria-selected=\"true\"]').dataset.day") == (TODAY + dt.timedelta(days=1)).isoformat()
-                        assert page.evaluate("[...document.querySelectorAll('.dagfane')].map(b => b.dataset.day)")[0] > TODAY.isoformat(), "«I dag» skal ikke vises når det er mørkt resten av dagen"
-                        # punkt 2: aldri «0,0–» i et spenn
-                        assert not [x for x in page.evaluate("[...document.querySelectorAll('.dagfane .h')].map(e => e.textContent.trim())") if x.startswith("0,0")]
-                        # ---- 9. sommertiden slutter 25.10: 6-timers dager med riktige Oslo-timer ----
-                        for d in (24, 25, 26):
-                            key = f"2026-10-{d}"
-                            exp = [f"{oslo(x['t']):%H}" for x in hs if oslo_day(x["t"]) == key]
-                            page.click(f".dagfane[data-day='{key}']"); page.wait_for_selector(f".dagfane[data-day='{key}'][aria-selected='true']"); page.wait_for_timeout(150)
-                            hh = [f"{int(x):02d}" for x in page.evaluate("[...document.querySelectorAll('#graf .kol')].map(k => k.dataset.hh)")]
-                            akse = page.evaluate("[...document.querySelectorAll('#graf .akse span')].map(s => s.textContent.trim()).filter(Boolean)")
-                            assert hh == exp, f"{key}: kolonnene skal være {exp}, fikk {hh}"
-                            assert akse == exp, f"{key}: aksen skal være {exp}, fikk {akse}"
-                            assert len(exp) == 4, (key, exp)
-                        shot("unstad-6t", scheme); audit("unstad-6t")
-                        # ---- Farstadsanden ----
-                        go("#spot=farstadsanden", "#viewSpot:not([hidden]) .vurdering .ord")
-                        page.wait_for_selector("#miniKort .minikart path.land")
-                        shot("farstadsanden", scheme); audit("farstadsanden")
-                        # ---- 11. «Treffer ikke» ----
-                        go(f"#spot={treffer[0]}&t={treffer[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                        assert ord_dom() == "Treffer ikke", ord_dom()
-                        assert page.text_content("#viewSpot .vurdering .rtall").strip() == "0", "«Treffer ikke» i en lys time skal vise tallet 0"
-                        shot("treffer-ikke", scheme); audit("treffer-ikke")
-                        if treffer_mork:   # samme i en mørk time: «Mørkt» uten tall øverst, grunnen står fortsatt i surfekortet
-                            go(f"#spot={treffer_mork[0]}&t={treffer_mork[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                            assert ord_dom() == "Mørkt" and not page.query_selector("#viewSpot .vurdering .rtall"), ord_dom()
-                            assert "Treffer ikke" in page.text_content("#viewSpot .kort4"), "grunnen skal stå i kortene også i en mørk time"
-                        # Theodor 16.10 (Grøtfjord 17.10 kl. 14): tallet i valgt søyle er det søylen tegner - ved surfehøyde 0
-                        # ordet, aldri BarentsWatch-høyden («1,3» i en tom søyle)
-                        bo = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("surf_height") == 0
-                                   and x.get("low_reason") == "blown_out" and (x.get("bw_height") or 0) > 0.5 and i > now_idx(d["hours"])), None)
-                        if bo:
-                            go(f"#spot={bo[0]}&t={bo[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                            lbl = page.evaluate("(() => { const e = document.querySelector('#langtid .soyle .tall'); return e ? e.textContent.trim() : null; })()")
-                            word = page.evaluate("(h) => ratingWord(h)", details[bo[0]]["hours"][bo[1]])
-                            assert lbl == word, (bo, lbl, word)
-                        ok = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if (x.get("surf_height") or 0) > 0.3
-                                   and x.get("surf_height_sets") is not None and i > now_idx(d["hours"])), None)
-                        if ok:
-                            go(f"#spot={ok[0]}&t={ok[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                            lbl = page.evaluate("(() => { const e = document.querySelector('#langtid .soyle .tall'); return e ? e.textContent.trim() : null; })()")
-                            want = details[ok[0]]["hours"][ok[1]]["surf_height_sets"]
-                            assert lbl and abs(float(lbl.replace(",", ".")) - want) <= 0.051, (ok, lbl, want)   # JS og Python runder x,x5 ulikt
-                        # ---- ekte 0 (flat-sperren): ordet, aldri «–» eller «null» (fysikk-kontrollør runde 2) ----
-                        flat = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "flat" and x.get("surf_height") == 0 and i > now_idx(d["hours"])), None)
-                        if flat:
-                            go(f"#spot={flat[0]}&t={flat[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                            word = page.evaluate("(h) => ratingWord(h)", details[flat[0]]["hours"][flat[1]])
-                            k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
-                            assert word in k4[0] and "null" not in " ".join(k4) and not k4[0].startswith("Surf –"), (word, k4)
-                        # «Treffer ikke» med surfehøyde > 0: regel (c) sier intet pålitelig tall → ordet, ikke «–» (runde 3)
-                        ti = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "treffer_ikke" and (x.get("surf_height") or 0) > 0 and i > now_idx(d["hours"])), None)
-                        if ti:
-                            go(f"#spot={ti[0]}&t={ti[1]}", "#viewSpot:not([hidden]) #tilbakeNa")
-                            k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort')].map(k => k.textContent.replace(/\\s+/g, ' ').trim())")
-                            assert "Treffer ikke" in k4[0] and not k4[0].startswith("Surf –"), k4[0]
-                        # ---- 10. spotsiden på dagen uten tall: «–», aldri 0 ----
-                        go(f"#spot={MISS_ID}&t={first_miss_idx}", "#viewSpot:not([hidden]) #tilbakeNa")
-                        assert ord_dom() == "–", ord_dom()
-                        k4 = page.evaluate("[...document.querySelectorAll('#viewSpot .kort4 .kort .v')].map(v => v.textContent.trim())")
-                        assert all(v == "–" for v in k4), f"kortene på dagen uten tall skal vise «–»: {k4}"
-                        assert "0" not in page.text_content(f".dagfane[data-day='{MISS_DAY.isoformat()}']"), "dagfanen for dagen uten tall viser et 0"
+                    spot_mobil(scheme)
                     # ---- 12. Logger tom ----
                     go("#logger", "#viewSide:not([hidden])")
                     assert "Ingen økter logget ennå" in page.text_content("#viewSide")
@@ -958,7 +933,7 @@ def main():
                     # ---- 16. 200 % tekst (mobil) og prefers-contrast: more ----
                     if mobile:
                         page.evaluate("document.documentElement.style.fontSize = '200%'")
-                        go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)"); shot("hjem-200", scheme); audit("hjem-200")
+                        go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)"); shot("hjem-200", scheme); audit("hjem-200")
                         go("#spot=unstad", SPOT_KLAR); page.wait_for_timeout(300); shot("unstad-200", scheme); audit("unstad-200")
                         brutt = page.evaluate("""[...document.querySelectorAll('#viewSpot .tall, #viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu')]
                             .filter(el => el.getClientRects().length > 1 || el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
@@ -967,7 +942,7 @@ def main():
                         assert navn[0] <= navn[1] - 15, f"spotnavnet går ut av skjermen ved 200 % tekst: {navn}"
                         page.evaluate("document.documentElement.style.fontSize = ''")
                     media(scheme, "more")
-                    go("#hjem", "#viewHjem:not([hidden]) :is(#bestKort, .hjem-linje)"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")
                     go("#spot=unstad", SPOT_KLAR); page.wait_for_timeout(300); shot("unstad-kontrast", scheme); audit("unstad-kontrast")
                     media(scheme)
                 if not mobile:

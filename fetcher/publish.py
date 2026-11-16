@@ -200,6 +200,41 @@ def day_summary(hours):
     return out
 
 
+# B4 steg 6 (forsiden på PC, SPEC 6D «Beste nå»): tidsstripa 06-18 per spot trenger timene for de første
+# døgnene, men oversikten har ingen timer. «timer» er én tegnkode per klokketime kl. 06-18 (Oslo-tid):
+# «0»-«5» stjerner i en lys time med tall, «m» mørk time (ingen vurdering i mørket), «x» lys time uten
+# tall eller ukjent lys, eller en kommende time som ikke finnes i varselet (mangler - aldri 0, grunnregelen),
+# «.» timen er over (varselet starter ved kjøringen, så dagens tidligere timer finnes ikke).
+# Bare utvalg av stjernene som allerede finnes - ingen tall regnes. Tre døgn: forsiden velger mellom de to
+# første dagene appen viser, og når dagens lys er over (status «over») er det døgn 2 og 3 i oversikten.
+TIMER_DAYS = 3
+TIMER_KL = tuple(range(6, 19))
+
+
+def timer_kode(hours, now, d):
+    """Tegnkoden for kl. 06-18 døgnet d (dato i Oslo-tid, se TIMER_DAYS): timene må høre til det døgnet."""
+    per_kl = {}
+    for h in hours:
+        per_kl.setdefault(_t(h).astimezone(OSLO).hour, h)
+    out = []
+    for kl in TIMER_KL:
+        h = per_kl.get(kl)
+        if datetime(d.year, d.month, d.day, kl, tzinfo=OSLO) + timedelta(hours=1) <= now:
+            out.append(".")
+            continue
+        if h is None:   # hull i varselet: mangler, ikke «over» (fysikk-kontrolløren 16.11.2026)
+            out.append("x")
+            continue
+        l = _light(h)
+        if l == "mørkt":
+            out.append("m")
+        elif l is None or not known(h):
+            out.append("x")
+        else:
+            out.append(str(min(5, max(0, int(h.get("stars") or 0)))))
+    return "".join(out)
+
+
 def naa_hours(now):
     """Antall nå-timer i oversikten: fra «generated» (hel time) til og med timen den neste planlagte kjøringen
     starter i - 4 om dagen, 7 for kjøringen kl. 21 UTC (natthullet 21:17 → 03:17), aldri færre enn NAA_HOURS."""
@@ -241,6 +276,8 @@ def summarise(hours, now, days=SUMMARY_DAYS):
             summ = day_summary(hs) if hs else {"status": "miss"}
             if k == 0 and lyse(hs):
                 summ["lys_til"] = lyse(hs)[-1]["t"]   # siste lyse time i dag - appen regner dagen som over etter den
+        if k < TIMER_DAYS:
+            summ["timer"] = timer_kode(by_day.get(d, []), now, d)   # B4 steg 6: tidsstripa på forsiden (PC)
         summ["d"] = d.isoformat()
         dager.append(summ)
     return {"naa": [_naa_hour(h) for h in naa], "dager": dager}

@@ -7,11 +7,10 @@ Kjør: python tools/kontrast.py (exit 1 ved brudd). Kjøres også av fetcher/tes
 Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
 - tekst: --ink og --muted på --surface/--raised/--sunken og på glasset (blandet over --surface);
   --rN-ink (ordet) på --raised og --surface; --rN-on (tallet i ruta) på --rN for N=1..5;
-  --on-selected på --selected; --ink på --land og --sea (kompassbokstavene i minikartet);
-  --on-kartland på --kartland (stedsnavn på land).
+  --on-selected på --selected; --on-kartland på --kartland (stedsnavn på land).
 - stor tekst og grafikk (3:1): --rN-tall på --surface (tallet alene er stort; korall er bare lov på tekst fra
   24 px fet i dagtema, SPEC §1 regel 2); --r3..--r5 på --raised (fylte ruter); --signal på --surface;
-  --kartland mot --surface; --coast mot --land ELLER --sea; --focus på --surface og --raised; --muted på
+  --kartland mot --surface; --focus på --surface og --raised; --muted på
   --raised (stiplede rammer); --water på --raised (tidevannskurven); --dim på --surface (tekst og pil i mørk
   time, bevisst dempet).
 - IKKE krav: --outline-fyllet (--r0..--r2 og tomme ruter) mot flaten. Ruta er pynt; tallet i ruta bærer
@@ -21,7 +20,10 @@ Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
   --rN der --rN er korall, i begge temaer. Størrelsen står i ui.css (.rute, .uke i, .plot .rs, .klynge .ring)
   og sjekkes ikke her (skriftstørrelser leses ikke). WCAG regner stor tekst fra 14 pt fet (ca. 18,7 px): .rute og
   .uke i (19 px) er over, .plot .rs og .klynge .ring (14 px fet) følger bare Theodors regel.
-- --dim og --swell-miss oppå --night (tekst og pil i mørk time): krav 3:1. Dagfargen er #5E5A51 (Theodor 12.11)."""
+- --dim og --swell-miss oppå --night (tekst og pil i mørk time): krav 3:1. Dagfargen er #5E5A51 (Theodor 12.11).
+- B4 steg 6: vindstrekene (--wind) har en glorie i --bg, så de synes over både hav og land på kartet: --wind på --bg
+  og --bg mot --kartland, begge 3:1 (grafikk). Minikartet bruker kartstilen (--bg, --kartland, --data); de gamle
+  kartfargene --land/--sea/--coast og parene deres er tatt bort."""
 import re
 import sys
 from pathlib import Path
@@ -106,22 +108,21 @@ def pairs(toks, tema="lys"):
                         col(f"r{n}-on"), col(f"r{n}"), GRAPHIC_MIN if korall else TEXT_MIN))
     out.append(("tekst --on-selected på --selected", col("on-selected"), col("selected"), TEXT_MIN))
     out.append(("stedsnavn --on-kartland på --kartland", col("on-kartland"), col("kartland"), TEXT_MIN))
-    for bg in ("land", "sea"):
-        out.append((f"kompass/piler --ink på --{bg}", col("ink"), col(bg), TEXT_MIN))
     for bg in ("surface", "raised"):
         out.append((f"fokusring --focus på --{bg} (grafikk)", col("focus"), col(bg), GRAPHIC_MIN))
     out.append(("korall --signal på --surface (stor tekst og grafikk)", col("signal"), surface, GRAPHIC_MIN))
     out.append(("land --kartland mot --surface (grafikk)", col("kartland"), surface, GRAPHIC_MIN))
+    # B4 steg 6: vindstrekene på Utforsk er staver i --wind med en glorie i --bg (ui.css .vindlag rect): staven synes over
+    # havet (--wind på --bg), glorien over land (--bg mot --kartland). Samme glorie på pilene i minikartet («Spotten»).
+    out.append(("vindstrek --wind på --bg (over havet, grafikk)", col("wind"), col("bg"), GRAPHIC_MIN))
+    out.append(("glorien --bg mot --kartland (vindstrek og piler over land, grafikk)", col("bg"), col("kartland"), GRAPHIC_MIN))
+    out.append(("svellpil utenfor vinduet --swell-miss på --bg (minikartet, grafikk)", col("swell-miss"), col("bg"), GRAPHIC_MIN))
     out.append(("mørk time --dim på --surface (dempet tekst og pil)", col("dim"), surface, GRAPHIC_MIN))
     for fg in ("dim", "swell-miss"):
         out.append((f"mørk time --{fg} oppå --night (tekst og pil)", col(fg), col("night"), GRAPHIC_MIN))
     out.append(("tekst --muted oppå --night", col("muted"), col("night"), TEXT_MIN))
     out.append(("stiplet ramme --muted på --raised (grafikk)", col("muted"), col("raised"), GRAPHIC_MIN))
     out.append(("tidevannskurven --water på --raised (grafikk)", col("water"), col("raised"), GRAPHIC_MIN))
-    # kystlinjen: nok mot minst én av sidene
-    coast = col("coast")
-    best = max(ratio(coast, col("land")), ratio(coast, col("sea")))
-    out.append(("kystlinje --coast mot --land eller --sea (beste side, grafikk)", None, None, GRAPHIC_MIN, best))
     return out
 
 

@@ -239,15 +239,6 @@
     resize(){ if(map) map.resize(); },
     zoomIn(lat, lon){ if(map) map.easeTo({center: [lon, lat], zoom: Math.min(MAX_ZOOM, map.getZoom() + 2), duration: reduced() ? 0 : 500}); },
     drawCoast(){ /* MapLibre tegner kysten selv (flisene) */ },
-    thumbSvg(points, colorOf){
-      if(!coast || !thumbProj) return "";
-      const [w0, s0, e0, n0] = thumbProj.bbox;
-      const pts = points.filter(p=> p.lat >= s0 && p.lat <= n0 && p.lon >= w0 && p.lon <= e0).map(p=>({...p, x: thumbProj.x(p.lon), y: thumbProj.y(p.lat)}));
-      if(!pts.length) return "";
-      const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
-      const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90, y0 = Math.min(...ys) - 70, y1 = Math.max(...ys) + 70;
-      return `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1-x0).toFixed(0)} ${(y1-y0).toFixed(0)}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="coast" d="${coast.d}"/>${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" class="r-${Math.min(5, colorOf(p))}" style="fill:var(--rc);stroke:var(--raised);stroke-width:2"/>`).join("")}</svg>`;
-    },
   };
 
   /* ---------- vind: faste streker, retning/fart via CSS (fra «kart først», dac1d4a) ---------- */
@@ -260,8 +251,10 @@
     let out = "";
     for(let i=0;i<n;i++){
       const len = 16 + rnd()*36, x = rnd()*(W-60), y = rnd()*H;
-      const w = (0.8 + rnd()*1.2).toFixed(2), a = (0.18 + rnd()*0.34).toFixed(2);
-      out += `<line x1="${x.toFixed(0)}" y1="${y.toFixed(0)}" x2="${(x+len).toFixed(0)}" y2="${y.toFixed(0)}" style="stroke-opacity:${a};stroke-width:${w};animation-delay:-${(rnd()*6).toFixed(2)}s;animation-duration:calc(var(--wd) * ${(0.7+rnd()*0.7).toFixed(2)})"/>`;
+      const w = 0.8 + rnd()*1.2, a = (0.18 + rnd()*0.34).toFixed(2);
+      // B4 steg 6: hver strek er en avrundet stav i vindfargen med en glorie i bakgrunnsfargen (stroke under fyllet),
+      // så den synes både over havet (papir) og over land (blekk om dagen, sand i mørketid) - ett element per strek som før
+      out += `<rect x="${x.toFixed(0)}" y="${(y - w / 2).toFixed(1)}" width="${len.toFixed(0)}" height="${w.toFixed(2)}" rx="${(w / 2).toFixed(2)}" style="fill-opacity:${a};stroke-opacity:${a};animation-delay:-${(rnd()*6).toFixed(2)}s;animation-duration:calc(var(--wd) * ${(0.7+rnd()*0.7).toFixed(2)})"/>`;
     }
     const svg = vindEl.querySelector("svg");
     svg.setAttribute("width", W); svg.setAttribute("height", H);
@@ -451,11 +444,6 @@
     const dl = Math.max(0.03, (Math.max(...la) - Math.min(...la)) * 0.6), dn = Math.max(0.08, (Math.max(...lo) - Math.min(...lo)) * 0.6);
     return [Math.min(...la) - dl, Math.min(...lo) - dn, Math.max(...la) + dl, Math.max(...lo) + dn];
   }
-  // miniatyren på Hjem (PC): bare coast.json (SVG), ingen MapLibre
-  function thumb(colorOf, list){
-    const pts = (list || []).map(s=>({s, id: s.id, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon})).filter(p=> p.lat!=null && p.lon!=null);
-    return Lag.thumbSvg(pts, (p)=> colorOf(p));
-  }
   /* Det kompakte kartet på Hjem (mobil, SPEC §6A punkt 3, B 4.0 steg 5): 220 pt, kant til kant, samme stil som Utforsk -
      hav i papir, land i --kartland og grunnvannsbåndet i --data under landet - men som SVG fra coast.json, ikke MapLibre,
      så Hjem aldri venter på kartbiblioteket. pts: [{id, name, lat, lon, gap, st, tall, ord, miss}] - tall er "" når
@@ -510,6 +498,6 @@
   // åpnes appen rett på Utforsk, lastes MapLibre parallelt med varseldataene i stedet for etter dem
   if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{});
   window.addEventListener("hashchange", ()=>{ if(/^#utforsk/.test(location.hash)) loadLib().catch(()=>{}); });
-  window.Kart = { lag: Lag, init, loadLib, setCoast, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(), offMapSpots, screenOf, extentOf, thumb, covers: (la, lo)=> Lag.covers(la, lo),
+  window.Kart = { lag: Lag, init, loadLib, setCoast, setArea, setExtent: (e, a)=> Lag.setExtent(e, a), setSelected, redraw: ()=> draw(), offMapSpots, screenOf, extentOf, covers: (la, lo)=> Lag.covers(la, lo),
     setWind, setWedge, hitClass, ringSvg, midtVindu, hjemKart, sentrum: ()=> map ? map.getCenter() : null, zoom: ()=> map ? map.getZoom() : null };
 })();

@@ -7,6 +7,10 @@
    himmelretninger utenfor. Kystlinjen kommer fra docs/data/minikart.json
    (tools/lag_minikart.py, OpenStreetMap), lastes bare på spotsiden.
 
+   B4 steg 6 (nettsiden, «Spotten»): kartstilen fra Utforsk - hav i papir (--bg), land i --kartland og
+   grunnvannsbåndet i --data langs kysten (kystlinja tegnes bred under landet, så bare havsida synes) -
+   fralandssektoren som stiplet bue utenfor randen, og pilene med en glorie i bakgrunnsfargen så de synes over land.
+
    Ren visning: ingen tall regnes - retningene og vinduet er varselets egne.
    «Innenfor vinduet» er NØYAKTIG samme test som rating.py (inSwellWindow i
    app.js = rating.in_sector). */
@@ -25,7 +29,8 @@
     const dirx = (to[0]-from[0]), diry = (to[1]-from[1]); const L = Math.hypot(dirx, diry) || 1;
     const ux = dirx/L, uy = diry/L; const hx = to[0] - ux*9, hy = to[1] - uy*9;
     const px = -uy, py = ux;
-    return `<g class="${cls}"${extra||""}><line x1="${f(from[0])}" y1="${f(from[1])}" x2="${f(hx)}" y2="${f(hy)}"/><path d="M${f(to[0])},${f(to[1])}L${f(hx+px*5)},${f(hy+py*5)}L${f(hx-px*5)},${f(hy-py*5)}Z"/></g>`;
+    const linje = `x1="${f(from[0])}" y1="${f(from[1])}" x2="${f(hx)}" y2="${f(hy)}"`, spiss = `d="M${f(to[0])},${f(to[1])}L${f(hx+px*5)},${f(hy+py*5)}L${f(hx-px*5)},${f(hy-py*5)}Z"`;
+    return `<g class="${cls}"${extra||""}><line class="u" ${linje}/><path class="u" ${spiss}/><line ${linje}/><path ${spiss}/></g>`;
   }
   function arcs(bearing){
     // tre buer som ruller innover langs svellretningen (CSS-animasjon, slås av med prefers-reduced-motion)
@@ -47,6 +52,10 @@
     for(let d=0; d<360; d+=15){ const a = pt(d, R), b = pt(d, R - (d%45===0 ? 7 : 4)); ticks.push(`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}"/>`); }
     const labels = COMPASS.map(([t,d])=>{ const p = pt(d, R+13); return `<text x="${f(p[0])}" y="${f(p[1])}" text-anchor="middle" dominant-baseline="middle">${t}</text>`; }).join("");
     const land = kyst && kyst.land ? kyst.land.map(d=>`<path class="land" d="${d}"/>`).join("") : "";
+    // fralandssektoren (spots.json offshore_wind): stiplet bue rett utenfor randen
+    const fra = (Array.isArray(spot.offshore_wind) ? (Array.isArray(spot.offshore_wind[0]) ? spot.offshore_wind : [spot.offshore_wind]) : []).map(([a, b])=>{
+      const span = (b - a + 360) % 360 || 360, p1 = pt(a, R + 4), p2 = pt(b, R + 4);
+      return `<path class="fralands" d="M${f(p1[0])},${f(p1[1])}A${R + 4},${R + 4} 0 ${span > 180 ? 1 : 0} 1 ${f(p2[0])},${f(p2[1])}"/>`; }).join("");
     const coast = kyst && kyst.coast ? kyst.coast.map(d=>`<path class="coast" d="${d}"/>`).join("") : "";
     const aria = [
       `Minikart rundt ${spot.name}, 3,5 km radius, nord opp.`,
@@ -57,10 +66,10 @@
     return `<svg class="minikart${o.still ? " still" : ""}" viewBox="-118 -118 236 236" data-tekst-px="12" role="img" aria-label="${esc(aria)}">
       <defs><clipPath id="mkClip-${esc(spot.id)}"><circle r="${R}"/></clipPath></defs>
       <circle class="sjo" r="${R}"/>
-      <g clip-path="url(#mkClip-${esc(spot.id)})">${land}${coast}</g>
+      <g clip-path="url(#mkClip-${esc(spot.id)})">${coast}${land}</g>
       ${spot.swell_window ? `<path class="vindu" d="${wedge(spot.swell_window, R)}"/>` : ""}
       <g class="ticks">${ticks.join("")}</g>
-      <circle class="rand" r="${R}"/>
+      <circle class="rand" r="${R}"/>${fra}
       ${hasSwell ? (hit ? arcs(h.dir_offshore) : "") + arrowFromRim(h.dir_offshore, 40, hit ? "svell" : "svell miss") : ""}
       ${hasWind ? arrowFromRim(h.wind_dir, 26, "vind") : ""}
       <circle class="spot" r="3.2"/>

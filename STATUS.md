@@ -1,5 +1,44 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - steg 6 (nettsiden fra 1024 px, SPEC 6C og 6D), 16.11.2026
+
+Gren `design/b4`. Rapport og skjermbilder: `privat/design-b4/steg-6/`.
+
+**Gjort**
+- Toppen på nett: ordmerket, HJEM / UTFORSK / LOGGER med 3 px understrek, søkefelt med 2 px understrek og knappen «Mørketid». Den bytter tema og husker valget i nettleseren. Uten valg følger siden systemet.
+- Spotsiden fra 1024 px (`renderWeb` i `docs/js/spot.js`): kornfoto 420 px med navneplate i 144 px, dommen, «Kl. hh» og skiva på 300 px i 12 kolonner, «Neste 7 dager» som 7 store kolonner og «time for time» som tabell med etikettkolonne (`Timestripe.html(..., {bred: true})`). Musa over en time velger den. «Spotten» har minikartet i kartstilen, og «Om spotten» har bare felt fra spots.json og sikkerheten.
+- Forsiden fra 1024 px (`renderForside` i `docs/js/ui.js`): datolinje, overskrift (samme `overskrift()` som mobil), I DAG / I MORGEN, regionfaner (starter på Innstillinger → Område), hovedbilde med håndtegnet ring rundt «BEST», «Beste nå» med tidsstripe 06–18, og «Neste 7 dager» som matrise. Favorittene og miniatyrkartet er ikke med på PC (6D har dem ikke).
+- **Henteren:** `fetcher/publish.py` gir dagssammendraget for døgn 0–2 et felt `timer`. Det er én tegnkode per time kl. 06–18: modellens stjerner 0–5, «m» mørkt, «x» mangler (også en kommende time som ikke finnes i varselet), «.» vært. Ingen tall regnes ut. 100 spots gir 50,7 KiB gzip (grense 60).
+- Restene fra steg 5:
+  - «Beste først» i Utforsk er i papirstil.
+  - Minikartet har kartstilen.
+  - Miniatyren på Hjem (PC) er tatt bort.
+  - Vindstrekene i Utforsk har glorie i papirfargen. `kontrast.py` har to nye par for den.
+- Grensen for nettoppsettet er 1024 px (før 900), som skriftskalaen.
+- Bunn på nett med kilder og lenke til Innstillinger.
+- Nye ord ligger i `STR.web` og er foreløpige. Spørsmålene står i rapporten.
+
+**Tester**
+- `test_spotside_browser` kjører samme spotsjekk på mobil og PC, med noen tillegg på PC. Den sjekker forsiden mot dagstallene i oversikten.
+- `test_skalering_browser` sjekker forsiden med 100 spots: regionen først, «Vis alle», fast overskriftsrad og matrise.
+- `test_svgtekst_browser` sjekker tidevannet i timestripa også på PC. Tidevannskortet er borte, og kortets egne sjekker gikk ut med det.
+- `test_kart_browser`: vindstrekene er `rect`.
+- `test_publish` sjekker `timer`.
+- Sjekken for «null», «undefined» og «NaN» i teksten på spotsiden teller ikke «null» inne i ordet «sjøkartnull».
+- Kjøring etter rettingene: 17 testfiler grønne. 16 i én kjøring (`alle_b4_steg6b.log`), og `test_docs_cache` på nytt etter `update_sw_cache.py`. `tools/kontrast.py`: OK.
+
+**Fysikk-kontrolløren (16.11, første runde): ikke godkjent, to stoppere. Begge er rettet:**
+- Sjekken for «null», «undefined» og «NaN» i `test_spotside_browser` kjørte ikke. `assert`-en sto inne i en kommentar. Den står nå på egen linje og kjører på mobil og PC.
+- Forsiden viste «Best 10–13» også etter at vinduet var over. Nå vises «Best» og ringen bare mens vinduet er åpent, med samme regel som overskriften på mobil. Tabellen viser «–» ellers. Testen flytter klokka forbi et vindu og sjekker det.
+- Også rettet: en kommende time som mangler i varselet, er «x» (mangler) i `timer` og ikke «.» (vært). Tidsstripa blanker timene som har gått siden oversikten ble laget. Testen sjekker at rutene følger `timer`.
+- Det holdt i første runde: ingen av de 11 låste filene er rørt, de faste observasjonene er uendret, og `timer` er bare et utvalg av stjernene som finnes.
+- Kan vente: om sommeren kan dagens beste vindu ligge utenfor 06–18, og kildelinja «beregnet kurve (cosinus), Kartverket» fra tidevannskortet er borte på PC.
+
+**Neste**
+- Skjermbilder av alle sju stegene i `privat/design-b4/steg-7/`, så spørsmål om å merge #36.
+- Theodor svarer på avvikene a–p og de foreløpige ordene (rapporten).
+- Rydde gammel PC-kode som ikke brukes lenger: spotgraf, tidevannskortet, CSS for `.kort4`, `.dagfane` og andre.
+
 ## T3 design B 4.0 «Papir» - steg 5 (Utforsk-kartet og kartet på Hjem), 16.11.2026
 
 Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).

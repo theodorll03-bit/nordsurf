@@ -293,7 +293,7 @@ function heightRangeText(h){
 /* ---------- Dagbrikker: ukedag + farget prikk, ingen tall (punkt 1) ---------- */
 
 /* ---------- Visninger ---------- */
-const isDesktop = () => matchMedia("(min-width: 900px)").matches;
+const isDesktop = () => matchMedia("(min-width: 1024px)").matches;
 function wordmarkSvg(){ return window.WORDMARK_SVG || `<svg viewBox="0 0 10 10"></svg>`; }
 function sampleBanner(){
   return DATA.sample ? `<p class="banner sample"><b>${esc(STR.sample)}</b></p>` : "";

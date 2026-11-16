@@ -119,6 +119,35 @@ def main():
     assert publish.summarise(unk_hours, now)["dager"][0]["status"] == "miss"
     gap_hours = [h for h in fc["spots"][0]["hours"] if t_of(h).astimezone(OSLO).date() != now.astimezone(OSLO).date()]
     assert publish.summarise(gap_hours, now)["dager"][0]["status"] == "miss"
+    # B4 steg 6: «timer» (kl. 06-18) for de første døgnene (TIMER_DAYS) - bare utvalg av stjernene, mangler er «x», aldri 0
+    for o, s in zip(overview["spots"], fc["spots"]):
+        for k, day in enumerate(o["dager"]):
+            assert ("timer" in day) == (k < publish.TIMER_DAYS), (s["id"], day["d"])
+            if "timer" not in day:
+                continue
+            assert len(day["timer"]) == len(publish.TIMER_KL) and set(day["timer"]) <= set("012345mx."), day["timer"]
+            for kl, c in zip(publish.TIMER_KL, day["timer"]):
+                hs = [h for h in s["hours"] if t_of(h).astimezone(OSLO).date().isoformat() == day["d"] and t_of(h).astimezone(OSLO).hour == kl]
+                d_ = dt.date.fromisoformat(day["d"])
+                if dt.datetime(d_.year, d_.month, d_.day, kl, tzinfo=OSLO) + dt.timedelta(hours=1) <= now:
+                    assert c == ".", (s["id"], day["d"], kl, c)
+                elif not hs:   # kommende time som ikke finnes i varselet: mangler, aldri «over» og aldri 0
+                    assert c == "x", (s["id"], day["d"], kl, c)
+                elif publish._light(hs[0]) == "mørkt":
+                    assert c == "m", (s["id"], day["d"], kl, c)
+                elif publish._light(hs[0]) is None or not publish.known(hs[0]):
+                    assert c == "x", (s["id"], day["d"], kl, c)
+                else:
+                    assert c == str(hs[0].get("stars") or 0), (s["id"], day["d"], kl, c)
+    syn = [{"t": "2026-10-15T05:00:00+00:00", "stars": 2, "light": "dag", "surf_height": 0.8},
+           {"t": "2026-10-15T06:00:00+00:00", "stars": 0, "light": None},
+           {"t": "2026-10-15T07:00:00+00:00", "stars": 0, "light": "dag"},
+           {"t": "2026-10-15T08:00:00+00:00", "stars": 4, "light": "mørkt", "surf_height": 1.0}]
+    tk = publish.timer_kode(syn, dt.datetime(2026, 10, 15, 0, tzinfo=dt.timezone.utc), dt.date(2026, 10, 15))
+    assert tk == "x2xxmxxxxxxxx", f"kl. 06 mangler, 07 = 2, 08 ukjent lys, 09 uten tall, 10 mørk, 11-18 mangler: {tk}"
+    tk = publish.timer_kode(syn, dt.datetime(2026, 10, 15, 6, 30, tzinfo=dt.timezone.utc), dt.date(2026, 10, 15))
+    assert tk == "..xxmxxxxxxxx", f"kl. 08:30 i Oslo: 06 og 07 er over, 08 er i gang: {tk}"
+    print(f"2c: «timer» kl. 06-18 for {publish.TIMER_DAYS} døgn: stjerner i lyse timer, «m» mørkt, «x» mangler eller hull i varselet (aldri 0), «.» over - OK")
     print("2b: dagens lys er over → «over» (alle spots kl. 21), mørketid → «dark» - OK")
     print("2: best_hour()/day_summary() - flest stjerner, likt -> høyest surf, bare lys, ukjent lys teller ikke, miss/dark, spenn bare fra timer over 0 - OK")
 

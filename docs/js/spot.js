@@ -1,9 +1,8 @@
-/* Nordsurf: spotsiden (Theodor 14.10.2026, punkt 4 + HIG 9).
+/* Nordsurf: spotsiden (Theodor 14.10.2026, punkt 4 + HIG 9; design B 4.0 fra 16.11.2026).
 
-   Rekkefølge: vurdering, fire kort (surf, svell, vind, energi), langtidsvarsel
-   med dagfaner og timegraf, minikart, tidevann, vær, «Hvorfor denne
-   vurderingen?», «Logg en økt her», kilder.
-   På mobil (design B 4.0, SPEC §6B) tegner renderMobil() siden: kornfoto, dom, time, timestripe og skive.
+   Mobil (SPEC §6B): renderMobil() - kornfoto, dom, time, timestripe og retningsskive.
+   Nettsiden fra 1024 px (SPEC §6C, B4 steg 6): renderWeb() - samme deler i et 12-kolonners rutenett, med
+   «Neste 7 dager», timestripa som tabell, minikartet («Spotten») og «Om spotten».
 
    Ren visning: ingen tall regnes - alt kommer fra spots/<id>.json. Tekstene
    som tolker tall (kroppshøyde, energiord, sikkerhetsord, innenfor/utenfor
@@ -15,8 +14,6 @@
   const fmtDato = new Intl.DateTimeFormat("nb-NO", {weekday:"long", day:"numeric", month:"long", timeZone:TZ});
   const fmtWd = new Intl.DateTimeFormat("nb-NO", {weekday:"long", timeZone:TZ});
   const fmtWdShort = new Intl.DateTimeFormat("nb-NO", {weekday:"short", timeZone:TZ});
-  const fmtDayNum = new Intl.DateTimeFormat("nb-NO", {day:"numeric", timeZone:TZ});
-  const fmtHM = new Intl.DateTimeFormat("nb-NO", {hour:"2-digit", minute:"2-digit", timeZone:TZ, hour12:false});
   // minikart: én fil per spot (data/minikart/<id>.json, Tillegg 2) - hentes når spoten åpnes
   const kystCache = {}, kystLoading = {};
   let H = null;   // hjelpere fra ui.js (nowIdx, usable, mork, known, stars, dkOf, heightText, regionOf, close, isDesktop)
@@ -68,7 +65,6 @@
     const v = vinduStatus(h, s);
     return v ? {ikon: v.ikon, txt: v.txt} : null;
   }
-  const logPos = (kj)=> Math.max(0, Math.min(1, Math.log10(Math.max(1, kj) / 100) / 3));   // log-skala 100–100 000 kJ
   function sikkerhet(h){
     if(!h) return "–";
     const c = h.confidence;
@@ -76,9 +72,6 @@
     const sone = h.zone==="barentswatch" ? "kystmodell 100 m" : h.zone==="reserve" ? "havmodell" : h.zone==="langtid" ? "langtidsmodell" : null;
     return [ord, sone].filter(Boolean).join(" · ") || "–";
   }
-  // hardt mellomrom bare i den lille teksten («kraftig fra 2 000»); det store tallet må kunne brekke ved 200 % tekst
-  const kjFmt = (kj, hard)=> kj==null ? "–" : nf0.format(Math.round(kj)).replace(/[ \u00a0\u202f]/g, hard ? "\u00a0" : " ");
-  const lysOrd = (h)=>{ const l = h && (h.light || (h.daylight===false ? "mørkt" : h.daylight===true ? "dag" : null)); return l==="mørkt" ? "mørkt" : l==="skumring" ? "skumring" : l==="dag" ? "dagslys" : "–"; };
 
   /* ---------- tidevann (bare visning: cosinus mellom to hendelser) ---------- */
   function tideLevel(events, t){
@@ -97,55 +90,13 @@
     return local - d.getTime();
   }
 
-  /* ---------- kortene ---------- */
-  const CHECK = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m6.5 10 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const TILDE = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9c2-4 4-4 6 0s4 4 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-  const CROSS = `<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 7 6 6m0-6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
-  function vindPil(dir){
-    // peker dit vinden blåser (wind_dir + 180)
-    return `<svg class="vindpil" viewBox="0 0 20 20" aria-hidden="true" style="transform:rotate(${((dir + 180) % 360).toFixed(0)}deg)"><path d="M10 2 15 17 10 13 5 17z" fill="currentColor"/></svg>`;
-  }
-  function kortHtml(s, h){
-    const hoyde = H.heightText(h); const vh = visHoyde(h);
-    // tallet er kjent, men regel (c) sier «ikke noe pålitelig tall» (flat-sperren, «Treffer ikke» - også med
-    // surfehøyde 0,2-0,4 m): ordet vises. «–» er bare for tall som mangler (surf_height null).
-    const ekteNull = !!(h && h.surf_height!=null && (!vh || vh.a <= 0));
-    const kh = kroppshoyde(h);
-    const ideal = s.ideal_height ? `Best her ${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "";
-    const vt = vinduTekst(h, s);
-    const g = energiGrenser(); const kj = h ? h.energy_swell_kj : null; const eo = energiOrd(kj);
-    const ticks = g.slice(0, 2).map(v=>`<span class="tick" style="left:${(logPos(v)*100).toFixed(1)}%"></span>`).join("");
-    return `<div class="kort4">
-      <div class="kort"><div class="k">Surf</div><div class="v">${ekteNull ? `<span style="font-family:var(--body);font-size:1.375rem;font-weight:700">${esc(ratingWord(h))}</span>` : hoyde ? `<span class="tall">${esc(hoyde)}</span><small>m</small>` : "–"}</div><div class="l">${ekteNull ? "" : esc(kh || "–")}</div><div class="m">${esc(ideal)}</div></div>
-      <div class="kort"><div class="k">Svell ute</div><div class="v">${h && h.swell_offshore!=null ? `<span class="tall">${nf1.format(h.swell_offshore)}</span><small>m</small>` : "–"}${h && h.period!=null ? `<span class="sep">·</span><span class="tall">${nf0.format(h.period)}</span><small>s</small>` : ""}</div>
-        <div class="l">${h && h.dir_offshore!=null ? `fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : "retning mangler"}</div>
-        <div class="m">${!vt ? "" : `<span class="vindu-${vt.ikon}">${vt.ikon==="ja" ? CHECK : vt.ikon==="nei" ? CROSS : TILDE}${esc(vt.txt)}</span>`}</div></div>
-      <div class="kort"><div class="k">Vind</div><div class="v">${h && h.wind_speed!=null ? `${h.wind_dir!=null ? vindPil(h.wind_dir) : ""}<span class="tall">${nf0.format(h.wind_speed)}</span><small>m/s</small>` : "–"}</div>
-        <div class="l">${h && h.wind_speed!=null ? `<b>${esc(cap(windLabel(h)))}</b>${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</div>
-        <div class="m">${h && h.gust!=null ? `Kast ${nf0.format(h.gust)} m/s` : ""}</div></div>
-      <div class="kort"><div class="k">Energi</div><div class="v">${kj!=null ? `<span class="num tall">${kjFmt(kj)}</span><small>kJ</small>` : "–"}</div><div class="l">${esc(eo || "–")}</div>
-        <div class="m"><div class="energi-bar" aria-hidden="true">${kj!=null ? `<div class="fyll" style="width:${(logPos(kj)*100).toFixed(1)}%"></div>` : ""}${ticks}</div><div class="energi-txt"><span>svak</span><span>kraftig fra ${kjFmt(g[1], true)}</span></div></div></div>
-    </div>`;
-  }
+  /* ---------- minikartet (PC: «Spotten», SPEC §6C punkt 6) ---------- */
   function minikartHtml(s, h){
-    const inside = h && h.dir_offshore!=null && s.swell_window ? inSwellWindow(h.dir_offshore, s) : null;
     const kyst = kystCache[s.id] && kystCache[s.id].land ? kystCache[s.id] : null;
     const vt = vinduTekst(h, s);
     const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null, vinduTekst: vt ? vt.txt : null});
-    return `<div class="kort mini" id="miniKort"><div>${svg}${!kyst ? `<p class="muted" style="text-align:center;font-size:var(--fs-caption);margin:6px 0 0">${s.id in kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}</div>
-      <div class="forkl">
-        <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 9q3-5 6-2t6-2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>Svell<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m` : "–"}${h && h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))} ${Math.round(h.dir_offshore)}°` : ""}</b>${vt ? esc(vt.txt) : ""}</div>
-        <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M1 7h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>Vind<b>${h && h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s${h.wind_dir!=null ? ` fra ${esc(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : ""}` : "–"}</b>${h && h.wind_speed!=null ? esc(cap(windLabel(h))) : ""}</div>
-        <div><span class="ikon" aria-hidden="true"><svg viewBox="0 0 14 14" width="14" height="14"><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="currentColor" opacity=".3"/><path d="M7 7 2 2.5A6.5 6.5 0 0 1 12 2.5z" fill="none" stroke="currentColor" stroke-dasharray="2 2"/></svg></span>Vindu<b>${s.swell_window ? esc(windowText(s).replace("Vindu ", "")) : "–"}</b></div>
-      </div></div>`;
-  }
-  function tideHtml(s, ms, nowMs, erNa){
-    // tidevannskortet (docs/js/tidevann.js); grafen tegnes i ekte piksler av Tidevann.mount() etter render
-    return window.Tidevann ? Tidevann.html(s, ms, nowMs, erNa) : "";
-  }
-  function vaerHtml(s, t, h){
-    const lys = lightText(s, t);
-    return `<div class="kort vaer"><div><div class="k">Luft</div><div class="v">${h && h.air_temp!=null ? `${nf0.format(h.air_temp)}°` : "–"}</div></div><div><div class="k">Vann</div><div class="v">${h && h.water_temp!=null ? `${nf0.format(h.water_temp)}°` : "–"}</div></div><div><div class="k">Dagslys</div><div class="v" style="font-size:1.125rem">${esc(lys.v)}</div></div></div>`;
+    return `<figure class="spw-fig" id="miniKort">${svg}${!kyst ? `<p class="kredit">${s.id in kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}
+      <figcaption class="kredit">${esc(STR.web.fig(1, s.name))} ${esc(STR.web.kartOsm)}.</figcaption></figure>`;
   }
   function hvorforHtml(h){
     if(!h || !h.breakdown) return "";
@@ -157,7 +108,7 @@
   /* ---------- mobil (design B 4.0, SPEC §6B) ---------- */
   // Rekkefølge: kornfoto med tilbake- og favorittknapp, navn, metalinje, dagens dom, faktalinje, valgt time
   // (svell stort, så surf, vind og tidevann), time for time, retningsskiva, «Hvorfor», logg og kilder.
-  // Ren visning som resten av fila. PC-oppsettet i render() er urørt til steg 6.
+  // Ren visning som resten av fila. Nettsiden (renderWeb, lenger ned) bruker de samme delene.
   const midtPaa = (key)=> new Date(key + "T11:00:00Z");
   // Krediteringen under bildet, med lisensnavnet som lenke (CC BY 4.0 krever lenke til lisensen der det er praktisk mulig)
   function kreditHtml(){
@@ -232,13 +183,17 @@
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
   function faktaHtml(s, h, t){
+    const f = faktaDeler(s, h, t);
+    return f.length ? `<p class="fakta-linje">${f.map(x=> `<span>${esc(x)}</span>`).join("")}</p>` : "";
+  }
+  function faktaDeler(s, h, t){
     // bare det vi har data for (SPEC §6B punkt 5)
     const f = [], ld = (s.light_days || {})[dayKey(t)];
     if(ld) f.push(ld.start ? `${STR.spot.lys} ${fmtTime.format(new Date(ld.start))}–${fmtTime.format(new Date(ld.end))}` : STR.lightNone);
     if(h && h.air_temp!=null) f.push(`${STR.spot.luft} ${nf0.format(h.air_temp)}°`);
     if(h && h.water_temp!=null) f.push(`${STR.spot.vann} ${nf0.format(h.water_temp)}°`);
     if(DATA.generated){ const g = new Date(DATA.generated); f.push(`${STR.spot.oppdatert} ${dayKey(g)===dayKey(new Date()) ? "" : relDay(g) + " "}${fmtTime.format(g)}`); }
-    return f.length ? `<p class="fakta-linje">${f.map(x=> `<span>${esc(x)}</span>`).join("")}</p>` : "";
+    return f;
   }
   const PIL = (cls, deg, inni)=> `<svg class="ik ${cls}" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"${deg!=null ? ` style="transform:rotate(${Math.round(deg)}deg)"` : ""}>${inni}</svg>`;
   const IK_SVELL = `<path d="M12 2 V13" fill="none" stroke="currentColor" stroke-width="3"/><polygon points="12,21 7.5,13 16.5,13" fill="currentColor"/>`;
@@ -366,72 +321,115 @@
     });
   }
 
+  /* ---------- nettsiden fra 1024 px (design B 4.0 steg 6, SPEC §6C) ---------- */
+  // Samme valg av dag og time, dom, time, timestripe og skive som på mobil - og samme id-er (#spOver, #spUnder, #tstripe,
+  // .dagknapp, #tilbakeNa), så timevalget og testene er felles. Lagt ut i et 12-kolonners rutenett: kornfoto 420 px med
+  // navneplate, dom | kl. hh | skive, «Neste 7 dager», «Time for time» som tabell med etikettkolonne (hold musa over en
+  // time for å velge den), «Spotten» (minikartet i kartstilen) og «Om spotten». Ren visning som resten av fila.
+  function dagKolHtml(s, x, valgt){
+    // én stor kolonne i «Neste 7 dager»: dato, dagens tall (48 px) og ord, beste vindu, svell og vind i den beste timen
+    const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null, h = b.h;
+    const vindu = n!=null && n >= 1 ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;
+    const svell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "";
+    const vind = h && h.wind_speed!=null ? windLabel(h) : "";
+    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + domOrd(b) : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}`;
+    return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
+        <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
+        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(domOrd(b))}</span></span>
+        <span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
+        <span class="dk-sub">${esc(svell)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
+  }
+  function omSpottenHtml(s, h){
+    // det spoten selv har i spots.json, og sikkerheten for timen som er valgt - ingen beskrivelse finnes i dataene
+    const sek = (w)=> !w ? [] : Array.isArray(w[0]) ? w : [w];
+    const rad = (k, v)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${esc(v)}</dd></div>` : "";
+    const sikk = h ? sikkerhet(h) : "–";
+    return `<dl class="spw-om">
+        ${rad(STR.spot.vindu, sek(s.swell_window).map(([a, b])=> `${a}–${b}°`).join(", "))}
+        ${rad(cap(STR.wind.offshore), sek(s.offshore_wind).map(([a, b])=> `${a}–${b}°`).join(", "))}
+        ${rad(STR.web.om.vender, s.facing!=null ? `${compass(s.facing)} ${Math.round(s.facing)}°` : "")}
+        ${rad(STR.spot.tidevann, window.Tidevann ? Tidevann.prefTekst(s) : "")}
+        ${rad(STR.web.om.hoyde, s.ideal_height ? `${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "")}
+        ${rad(STR.web.om.data, `${sikk!=="–" ? sikk + ". " : ""}${STR.web.varselFra(relDay(new Date(DATA.generated)), fmtTime.format(new Date(DATA.generated)))}. ${STR.web.usikre}.`)}
+      </dl>`;
+  }
+  function renderWeb(root, s, S){
+    const {dager, d, idx: idx0} = valgMobil(s, S); let idx = idx0;
+    S.tideMin = 0;
+    const b = dagsdom(s, d), best = besteSett(s, d, b);
+    const ev = window.Tidevann ? Tidevann.hendelser(s) : [];
+    const timen = ()=>{ const h = idx!=null ? s.hours[idx] || null : null; return {h, t: h ? new Date(h.t) : new Date()}; };
+    const foto = !!(window.Skive && Skive.harBilde(s.id)), id = encodeURIComponent(s.id);
+    const K = window.KJORETID, kj = H.kjoreText(s.id), at = midtPaa(d.key), reg = H.regionOf(s);
+    const meta = ()=>{ const {h, t} = timen();
+      return [kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, `${ukedagKort(at)} ${d.key.slice(8, 10)}.${d.key.slice(5, 7)}`, ...faktaDeler(s, h, t)].filter(Boolean).map(x=> `<span>${esc(x)}</span>`).join(" "); };   // mellomrom: skjermleseren leser delene hver for seg
+    const over = ()=>{ const {h, t} = timen(); return timeHtml(s, h, t, ev); };
+    const under = ()=>{ const {h, t} = timen(), hh = fmtHour.format(t); return `<h2 class="sr">${esc(STR.spot.retning(hh))}</h2>${window.Skive ? Skive.html(s, h, hh, {stor: true}) : ""}`; };
+    const hvorfor = ()=> hvorforHtml(timen().h);
+    const merker = H.merker(s);
+    const morkeKol = Timestripe.kolonner(s, d, idx, H).some(c=> c.i >= 0 && H.mork(s.hours[c.i]));
+    const tilbakeNa = ()=> S.idx!=null ? `<button type="button" class="tilbakena" id="tilbakeNa">${esc(STR.spot.tilbakeNa)}</button>` : "";
+    const fav = isFavSpot(s.id);
+    const sju = dager.slice(0, 7), resten = dager.slice(7);
+    root.innerHTML = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="spw">
+      <div class="spw-hode${foto ? "" : " uten"}">
+        ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" decoding="async">` : ""}
+        <div class="spw-plate"><a class="etikett spw-reg" href="#utforsk" id="spotRegion">${esc(reg)} <span aria-hidden="true">›</span></a>
+          <h1 class="t-hero${lengsteOrd(s.name) > 8 ? " lang" : ""}" style="--n:${lengsteOrd(s.name)}">${esc(s.name)}</h1></div>
+      </div>
+      <div class="spw-inn">
+        <p class="fakta-linje spw-meta" id="spMeta">${meta()}</p>${merker.length ? `<p class="etikett sp-merker">${esc(merker.join(" · "))}</p>` : ""}
+        ${foto ? `<p class="kredit">${kreditHtml()}</p>` : ""}
+        <div class="spw-grid">
+          <div class="spw-dom">${domHtml(s, d, b)}
+            <div class="spw-knapper"><button type="button" class="fav-btn knapp1" data-fav="${esc(s.id)}" aria-pressed="${fav}">${esc(fav ? STR.web.fjernFav : STR.web.lagreFav)}</button><button type="button" class="knapp2" id="loggHer">${esc(STR.logSession)}</button></div></div>
+          <div class="spw-time" id="spOver">${over()}</div>
+          <div class="spw-skive" id="spUnder">${under()}</div>
+        </div>
+        <div class="sek-spot"><h2 class="h2">${esc(STR.web.neste7)}</h2><p class="sub">${esc(STR.web.usikre)}</p></div>
+        <div class="dagvelger sju" role="group" aria-label="${esc(STR.spot.velgDag)}">${sju.map(x=> dagKolHtml(s, x, d.key)).join("")}</div>
+        ${resten.length ? dagvelgerHtml(s, resten, d) : ""}
+        <div class="sek-spot"><h2 class="h2">${esc(STR.web.timeForTime(cap(fmtWd.format(at))))}</h2><p class="sub">${esc([morkeKol ? STR.lightOnly : null, STR.web.holdMusa].filter(Boolean).join(" · "))}</p></div>
+        <div id="spStripe">${Timestripe.html(s, d, idx, best, H, {bred: true})}</div>
+        <div class="sp-tilbakena" id="spTilbakeNa">${tilbakeNa()}</div>
+        <div id="spHvorfor">${hvorfor()}</div>
+        <div class="spw-to">
+          <section><div class="sek-spot"><h2 class="h2">${esc(STR.web.spotten)}</h2></div>${minikartHtml(s, timen().h)}</section>
+          <section><div class="sek-spot"><h2 class="h2">${esc(STR.web.omSpotten)}</h2></div><div id="spOm">${omSpottenHtml(s, timen().h)}</div></section>
+        </div>
+      </div></div>`;
+    const heleSiden = (etter)=>{ const y = window.scrollY; renderWeb(root, s, S); window.scrollTo(0, y); if(etter) etter(); };
+    const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
+    const kobleHvorfor = ()=>{ const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open))); };
+    $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
+    $("#spotRegion", root).onclick = ()=>{ S.utforskView = reg; S.utforskViewSatt = true; };   // Utforsk åpner på spotens region
+    wireFavButtons(); kobleTilbakeNa(); kobleHvorfor();
+    $$(".dagknapp", root).forEach(kn=> kn.onclick = ()=>{
+      const nd = dager.find(x=> x.key===kn.dataset.day); if(!nd || nd.key===d.key || !nd.idxs.length) return;
+      const n = H.nowIdx(s);
+      S.idx = nd.key===dayKey(new Date()) && nd.idxs.includes(n) && H.usable(s.hours[n]) ? null : SpotGraf.bestOfDay(s, nd);
+      heleSiden(()=>{ const k2 = $(`.dagknapp[data-day="${nd.key}"]`, root); if(k2) k2.focus({preventScroll: true}); });
+    });
+    Timestripe.mount(root, s, d, idx, best, H, (i)=>{
+      // timevalg i samme dag (dra, trykk, piltaster eller musa over en time): bytt bare det som hører til timen
+      const hv = $("#hvorfor", root), open = hv ? hv.open : false;
+      idx = i; S.idx = i;
+      $("#spMeta", root).innerHTML = meta(); $("#spOver", root).innerHTML = over(); $("#spUnder", root).innerHTML = under();
+      $("#spHvorfor", root).innerHTML = hvorfor(); $("#spOm", root).innerHTML = omSpottenHtml(s, timen().h); $("#spTilbakeNa", root).innerHTML = tilbakeNa();
+      const mk = $("#miniKort", root); if(mk) mk.outerHTML = minikartHtml(s, timen().h);
+      kobleTilbakeNa(); kobleHvorfor();
+      const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
+    });
+    if(!(s.id in kystCache)){
+      kystLoading[s.id] = kystLoading[s.id] || fetch(`data/minikart/${encodeURIComponent(s.id)}.json`, {cache:"force-cache"}).then(r=> r.ok ? r.json() : {}).catch(()=>({}));
+      kystLoading[s.id].then(k=>{ kystCache[s.id] = k || {}; const el = $("#miniKort", root); if(el && S.view==="spot" && S.spotId===s.id) el.outerHTML = minikartHtml(s, timen().h); });
+    }
+  }
+
   /* ---------- render ---------- */
   function render(root, s, S, helpers){
     H = helpers;
-    if(!H.isDesktop() && window.Timestripe && window.SpotGraf) return renderMobil(root, s, S);
-    const n = H.nowIdx(s); const idx = S.idx!=null ? Math.max(0, Math.min(s.hours.length-1, S.idx)) : n;
-    const h = s.hours[idx] || null; const t = h ? new Date(h.t) : new Date();
-    // valgt tidspunkt i tidevannskortet: valgt time + kvarter-forskyvning (S.tideMin, satt ved dra/piltaster i
-    // tidevannsgrafen). På «nå» uten forskyvning er det klokka nå (nedtellingen til neste flo/fjære).
-    const nowMs = Date.now(); const tideMin = S.tideMin || 0;
-    const tideNa = idx===n && !tideMin;
-    const tideMs = tideNa ? nowMs : t.getTime() + tideMin * 6e4;
-    const atNow = idx===n && !tideMin;   // flyttet i tidevannsgrafen: ikke «nå» lenger (overskriften viser minuttene)
-    const tid = `${atNow ? "Nå · " : ""}${esc(fmtWd.format(t))} kl. ${tideMin ? fmtHM.format(new Date(tideMs)) : fmtHour.format(t)} · ${esc(lysOrd(h))}`;
-    const st = H.stars(h);
-    const pc = H.isDesktop();
-    const topp = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>${pc ? "Tilbake" : ""}</button>
-        <div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(H.stedText(s))}</div></div>${favBtnHtml(s.id, false)}</div>
-      <div class="naa"><span>${tid}</span>${atNow ? "" : `<button type="button" class="tilbakena" id="tilbakeNa">Tilbake til nå</button>`}</div>`;
-    // Theodor 16.10.2026: i forbudsperioden «Surfing forbudt nå» og perioden i stedet for tall og ord (bare visning)
-    const fb = H.forbudInfo ? H.forbudInfo(s, t.getTime()) : null;
-    // tapte poeng skrives ut med grunnen (SPEC §5): «−1 tidevann», «−2 vind» (tallene fra rating.py, faded_wind/faded_tide)
-    const taptTxt = h ? [h.faded_wind ? `−${h.faded_wind} vind` : null, h.faded_tide ? `−${h.faded_tide} tidevann` : null].filter(Boolean) : [];
-    if(h && h.faded && !taptTxt.length) taptTxt.push(`−${h.faded}`);   // eldre varsel uten delingen
-    const tapt = taptTxt.length ? `<div class="etikett tapt">${esc(taptTxt.join(" · "))}</div>` : "";
-    const vurdering = fb
-      ? `<div class="vurdering"><div class="forbud"><div class="ord">${esc(fb.tittel)}</div><div class="periode">${esc(fb.periode)}${fb.r.verneomrade ? " · " + esc(fb.r.verneomrade) : ""}</div></div></div>`
-      : H.known(h) && H.mork(h)
-      // mørk time: ingen vurdering på skjermen (SPEC §5) - bare ordet «Mørkt» og hvorfor; kortene under viser tallene som før
-      ? `<div class="vurdering"><div class="r-0"><div class="ord r-0">Mørkt</div><div class="etikett lyse">${esc(STR.lightOnly)}</div></div><div class="sikker">${esc(sikkerhet(h))}</div></div>`
-      : `<div class="vurdering"><div class="r-${Math.min(5,st)}">${H.known(h) ? tallHtml(st, h.faded||0, true) : ""}<div class="ord r-${Math.min(5,st)}">${esc(h ? ratingWord(h) : "–")}</div>${tapt}</div><div class="sikker">${esc(sikkerhet(h))}</div></div>`;   // linja om forbudet står i overskriften (stedText)
-    const venstre = `${vurdering}${kortHtml(s, h)}`;
-    // åpnet på «nå» (S.idx null): grafen viser i dag bare hvis det er minst 2 lyse timer igjen, ellers i morgen -
-    // kortene øverst viser fortsatt nå (Theodor 15.10, punkt 3)
-    const grafDag = S.idx==null && window.SpotGraf ? SpotGraf.defaultDay(s, n, H) : null;
-    const langtid = `<div class="sek-spot"><h2 class="h2">Langtidsvarsel</h2><p class="sub">16 dager</p></div><div id="langtid">${window.SpotGraf ? SpotGraf.html(s, idx, H, grafDag) : ""}</div>`;
-    const resten = `${minikartHtml(s, h)}${tideHtml(s, tideMs, nowMs, tideNa)}${vaerHtml(s, t, h)}${hvorforHtml(h)}
-      <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
-      <p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p>`;
-    root.innerHTML = pc
-      ? `${topp}<div class="spot-venstre">${venstre}${minikartHtml(s, h)}${tideHtml(s, tideMs, nowMs, tideNa)}${vaerHtml(s, t, h)}</div><div class="spot-hoyre">${langtid}${hvorforHtml(h)}<div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div><p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket. Kart: © OpenStreetMap-bidragsytere.</p></div>`
-      : `${topp}${venstre}${langtid}${resten}`;
-    $("#spotBack").onclick = H.close;
-    const tn = $("#tilbakeNa"); if(tn) tn.onclick = ()=>{ S.idx = null; S.tideMin = 0; render(root, s, S, H); };
-    $("#loggHer").onclick = ()=> openSheet(s.id, t);
-    const hv = $("#hvorfor"); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
-    wireFavButtons();
-    if(window.SpotGraf) SpotGraf.wire(root, s, S, H, (i)=>{
-      // timevalg oppdaterer alt over grafen - uten å hoppe i siden eller lukke «Hvorfor»
-      const y = window.scrollY, hv = $("#hvorfor", root), open = hv ? hv.open : false;
-      S.idx = i; S.tideMin = 0; render(root, s, S, H);
-      window.scrollTo(0, y); const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
-    });
-    if(window.Tidevann) Tidevann.mount(root, s, tideMs, {nowMs, onSelect: (ms, fokus)=>{
-      // dra/piltaster i tidevannsgrafen: samme tilstand som timegrafen (S.idx) + kvarter-resten (S.tideMin)
-      let i = 0; for(let k = 0; k < s.hours.length; k++){ if(new Date(s.hours[k].t).getTime() <= ms) i = k; else break; }
-      const y = window.scrollY, hv = $("#hvorfor", root), open = hv ? hv.open : false;
-      S.idx = i; S.tideMin = Math.round((ms - new Date(s.hours[i].t).getTime()) / 6e4);
-      render(root, s, S, H);
-      window.scrollTo(0, y); const hv2 = $("#hvorfor", root); if(hv2 && open) hv2.open = true;
-      if(fokus){ const g = $("#tideGraf", root); if(g) g.focus({preventScroll: true}); }
-    }});
-    if(!(s.id in kystCache)){
-      kystLoading[s.id] = kystLoading[s.id] || fetch(`data/minikart/${encodeURIComponent(s.id)}.json`, {cache:"force-cache"}).then(r=> r.ok ? r.json() : {}).catch(()=>({}));
-      kystLoading[s.id].then(k=>{ kystCache[s.id] = k || {}; const el = $("#miniKort", root); if(el && S.view==="spot" && S.spotId===s.id){ el.outerHTML = minikartHtml(s, h); } });
-    }
-    if(!pc) root.scrollTop = 0;
+    return H.isDesktop() ? renderWeb(root, s, S) : renderMobil(root, s, S);
   }
   window.Spot = { render, kroppshoyde, visHoyde, energiOrd, energiGrenser, vinduTekst, sikkerhet, tideLevel, tzOffsetMs };
 })();

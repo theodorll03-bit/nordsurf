@@ -22,15 +22,17 @@
 <a class="skip" href="#main">Hopp til innholdet</a>
 <header class="topbar pc-only">
   <a class="wm" href="#hjem" id="wordmark" aria-label="Nordsurf, til Hjem"></a>
+  <nav class="topnav" aria-label="Hovedmeny">
+    <a href="#hjem" data-nav="hjem">Hjem</a>
+    <a href="#utforsk" data-nav="utforsk">Utforsk</a>
+    <a href="#logger" data-nav="logger">Logger</a>
+  </nav>
   <div class="topsok">
     <label class="sok-field" for="sokPC"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr">Søk etter spot eller område</span><input id="sokPC" type="search" placeholder="Søk etter spot eller område" autocomplete="off" aria-controls="sokDrop" aria-expanded="false"></label>
     <div class="sok-drop" id="sokDrop" hidden></div>
   </div>
-  <nav class="topnav" aria-label="Hovedmeny">
-    <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg>Hjem</a>
-    <a href="#utforsk" data-nav="utforsk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zm6 0v12m6-10v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Utforsk</a>
-    <a href="#logger" data-nav="logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>Logger</a>
-  </nav>
+  <!-- B4 steg 6 (SPEC §6C punkt 1): temaknappen på nettsiden; teksten settes fra strings.js (ui.js) -->
+  <button type="button" class="temaknapp" id="temaKnapp" aria-pressed="false">Mørketid</button>
 </header>
 <main id="main">
   <section class="view" id="viewHjem" data-view="hjem" aria-label="Hjem"></section>
@@ -45,6 +47,7 @@
   <section class="view" id="viewSide" data-view="side" hidden><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></section>
   <section class="view" id="viewSpot" data-view="spot" aria-label="Spot" hidden></section>
 </main>
+<footer class="bunn pc-only" id="bunn"></footer>
 <nav class="tabbar pc-hide" aria-label="Hovedmeny">
   <div class="tabs">
     <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg><span>Hjem</span></a>

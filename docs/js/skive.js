@@ -29,7 +29,9 @@
   }
   const harBilde = (id)=> !!(window.SPOTBILDER && window.SPOTBILDER.ids.includes(id));
 
-  function html(s, h, hh){
+  function html(s, h, hh, o){
+    // o.stor: nettsiden (SPEC §6C, 300 px) - teksten i skiva holdes på 12 px av svgtekst.js (data-tekst-px)
+    const stor = !!(o && o.stor), px = stor ? 300 : 168;
     const vinduer = sektorer(s.swell_window);
     const svell = h && h.dir_offshore!=null ? h.dir_offshore : null, vind = h && h.wind_speed!=null && h.wind_dir!=null ? h.wind_dir : null;
     const iVindu = svell!=null ? inSwellWindow(svell, s) : null;
@@ -50,7 +52,7 @@
       radier += `M80 80 L${pkt(a, 60).map(f).join(" ")} M80 80 L${pkt(b, 60).map(f).join(" ")} `;
     });
     const fra = sektorer(s.offshore_wind).map(([a, b])=> `<path class="fl" d="${bue(a, b, 67)}"/>`).join("");
-    const svg = `<svg width="168" height="168" viewBox="0 0 160 160" aria-hidden="true">
+    const svg = `<svg width="${px}" height="${px}" viewBox="0 0 160 160" aria-hidden="true"${stor ? ' data-tekst-px="12"' : ""}>
         ${ring}${radier ? `<path class="rd" d="${radier}"/>` : ""}<circle class="tk" cx="80" cy="80" r="64"/>${fra}
         ${svell!=null ? `<g class="sv${iVindu ? " inne" : ""}" style="transform:rotate(${Math.round(svell)}deg)"><path class="u" d="M80 16 L80 42"/><polygon points="80,52 74,42 86,42"/><path class="p" d="M80 16 L80 42"/></g>` : ""}
         ${vind!=null ? `<g class="vd" style="transform:rotate(${Math.round(vind)}deg)"><path class="u" d="M80 54 L80 69 M75 64 L80 71 L85 64"/><path class="p" d="M80 54 L80 69 M75 64 L80 71 L85 64"/></g>` : ""}
@@ -64,7 +66,7 @@
       linje(STR.spot.vindFra, vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
       vinduer.length ? linje(STR.spot.vindu, esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");
-    return `<div class="skive-rad"><div class="skive" role="img" aria-label="${esc(etikett)}">${harBilde(s.id) ? bilde("trykk") + bilde("lodd") : ""}${svg}</div><div class="skive-forkl">${forkl}</div></div>
+    return `<div class="skive-rad${stor ? " stor" : ""}"><div class="skive" role="img" aria-label="${esc(etikett)}">${harBilde(s.id) ? bilde("trykk") + bilde("lodd") : ""}${svg}</div><div class="skive-forkl">${forkl}</div></div>
       ${harBilde(s.id) ? `<p class="kredit liten">${esc(window.SPOTBILDER.kort)}</p>` : ""}`;
   }
   window.Skive = { html, harBilde };

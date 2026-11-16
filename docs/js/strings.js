@@ -160,6 +160,34 @@
       vinduTil: (a, b) => `${a} til ${b}`,
     },
 
+    /* Nettsiden fra 1024 px (design B 4.0 steg 6, SPEC §6C spotsiden og §6D forsiden «Beste nå»).
+       FORELØPIG: ordene i denne blokka er tatt fra skissene eller foreslått av Claude, og venter på Theodors ja
+       (lista står i privat/design-b4/steg-6/nettside-steg6.md, «Ord som mangler»). Ord som fantes fra før
+       (Svell fra, Vind, Tidevann, Lys, Oppdatert, Best, Mørkt …) hentes fra STR.spot og STR.hjem. */
+    web: {
+      morketid: "Mørketid",                      // temaknappen i toppen (SPEC §6C punkt 1)
+      lagreFav: "Lagre som favoritt", fjernFav: "Fjern fra favoritter",
+      neste7: "Neste 7 dager", usikre: "Dag 4–7 er usikre",
+      timeForTime: (dag) => `${dag} time for time`, holdMusa: "Hold musa over en time",
+      rader: {kl: "Kl.", vurdering: "Vurdering", svell: "Svell m", vind: "Vind m/s", tideSub: "over sjøkartnull"},
+      spotten: "Spotten", omSpotten: "Om spotten",
+      fig: (n, navn) => `Fig. ${n} · ${navn}, nord opp.`,
+      kartOsm: "Kart: © OpenStreetMap-bidragsytere",
+      om: {vender: "Vender mot", hoyde: "Best høyde", data: "Data"},
+      varselFra: (dag, kl) => `Varsel fra ${dag} kl. ${kl}`,
+      antall: (n) => `${n} ${n === 1 ? "spot" : "spots"}`,
+      besteNa: "Beste nå", tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
+      kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell", timer: "06–18", region: "Region"},
+      nr: (n) => String(n).padStart(2, "0"),
+      bestDag: (dag) => `Best ${dag}`,
+      visAlle: (n) => `Vis alle ${n}`, apneKart: "Åpne kartet",
+      alle: "Alle", dag: "Dag", region: "Region",
+      perRegion: "Beste tall per region og dag", perSpot: "Beste tall per spot og dag",
+      tegn: {hoy: "4–5", tre: "3", lav: "1–2", null: "0"},
+      bunn: "Surfevarsel for norskekysten. Laget i Tromsø.", kilder: "Kilder",
+      kildeListe: ["BarentsWatch (kystmodell 100 m)", "MET Norge", "Open-Meteo", "Kartverket"],   // samme kilder som linja nederst på spotsiden
+    },
+
     /* advarsler i vanlig språk (én linje, forklaring ved trykk) */
     notice: {
       disagree: "Kildene er uenige, usikkert varsel",

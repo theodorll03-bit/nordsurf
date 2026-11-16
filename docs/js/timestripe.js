@@ -6,11 +6,15 @@
    segmenter (SPEC §5), og timer uten data er skravert - aldri 0.
 
    Ren visning: ingen tall regnes. Timen velges ved å dra eller trykke i stripa, eller med piltaster og
-   VoiceOver gjennom den skjulte glidebryteren. */
+   VoiceOver gjennom den skjulte glidebryteren.
+
+   Nettsiden (B4 steg 6, SPEC §6C punkt 5, valget {bred: true}): samme stripe som tabell med en etikettkolonne
+   (144 px) og to rader til - svellet ute (tallet og en stolpe i outline-farge) og retningen svellet kommer fra -
+   alle timene merket i KL.-raden, vind hver time, og timen velges også ved å holde musa over den. */
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
   const osloHour = (t)=> +fmtHour.format(t);
-  const TIME = 36e5, TIDE_H = 52, TOPP = 16, RING_H = 87, SKYGGE_H = 147;
+  const TIME = 36e5, TIDE_H = 52, TIDE_H_BRED = 64;
   const f1 = (cm)=> nf1.format(cm / 100);
   let cur = null;   // {root, s, d, cols, H, best, onPick, ned}
 
@@ -51,18 +55,23 @@
     return STR.spot.timeAria(hh, dom + (best.has(c.i) ? ", " + STR.spot.timeBest : ""), rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "");
   }
 
-  function html(s, d, sel, best, H){
+  function html(s, d, sel, best, H, o){
+    const bred = !!(o && o.bred);
     const cols = kolonner(s, d, sel, H); const n = cols.length;
     if(!n) return "";
     const ev = window.Tidevann ? Tidevann.hendelser(s) : [];
     const naa = Date.now(); const [t0, t1] = spenn(cols);
     const harNaa = d.key === dayKey(new Date()) && naa >= t0 && naa <= t1;
     const kNaa = harNaa ? Math.min(n - 1, Math.floor(xAv(cols, naa) * n)) : -1;
-    const hvert = d.step !== 1 ? 1 : n > 14 ? 2 : 1;   // mange kolonner: vind annenhver time
+    const hvert = bred || d.step !== 1 ? 1 : n > 14 ? 2 : 1;   // mange kolonner på mobil: vind annenhver time
+    const xNaa = harNaa ? xAv(cols, naa) * n : -9;
     const tikk = cols.map((c, k)=>{
-      const vis = d.step !== 1 || c.hh % 3 === 0;
-      return `<span>${vis && (kNaa < 0 || Math.abs(k - kNaa) > 1) ? String(c.hh).padStart(2, "0") : ""}</span>`;
+      // mobil: hver 3. time og ingen ved siden av «NÅ»; nettsiden: alle timene unntatt den «NÅ» står over
+      const vis = bred ? Math.abs(k + 0.5 - xNaa) >= 0.5 : (d.step !== 1 || c.hh % 3 === 0) && (kNaa < 0 || Math.abs(k - kNaa) > 1);
+      return `<span>${vis ? String(c.hh).padStart(2, "0") : ""}</span>`;
     }).join("");
+    // nettsiden: stolpen for svellet ute er en andel av dagens høyeste svell (bare tegning, tallet står over)
+    const svMaks = bred ? Math.max(0, ...cols.map(c=> c.i >= 0 && s.hours[c.i].swell_offshore!=null ? s.hours[c.i].swell_offshore : 0)) : 0;
     const skygge = cols.map(c=>{ const h = c.i >= 0 ? s.hours[c.i] : null; return `<i class="${h && h.light==="mørkt" ? "natt" : h && h.light==="skumring" ? "skum" : ""}"></i>`; }).join("");
     const kol = cols.map((c, k)=>{
       const h = c.i >= 0 ? s.hours[c.i] : null;
@@ -78,18 +87,30 @@
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
       const vind = visVind ? `${pil}<b>${nf0.format(h.wind_speed)}</b>`
         : h && h.wind_speed==null && c.hh % hvert === 0 ? "<b>–</b>" : "";
-      return `<div class="tk${mork ? " mork" : ""}${!h ? " vaert" : ""}" data-k="${k}" data-i="${c.i}" data-hh="${String(c.hh).padStart(2, "0")}"><div class="bst${h && best.has(c.i) ? " pa" + (st >= 4 ? " k" : "") : ""}"></div>${seg}<div class="vnd">${vind}</div></div>`;
+      let ekstra = "";
+      if(bred){
+        // svellet ute: tallet og en stolpe; retningen det kommer FRA som pil mot spoten - fylt når den er i vinduet
+        const sv = h && h.swell_offshore!=null ? h.swell_offshore : null, dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
+        const inne = dir!=null && s.swell_window ? inSwellWindow(dir, s) : false;
+        ekstra = `<div class="svl">${sv!=null ? `<b>${nf1.format(sv)}</b><i style="height:${svMaks > 0 ? Math.max(2, Math.round(sv / svMaks * 20)) : 2}px"></i>` : h ? "<b>–</b>" : ""}</div>`
+          + `<div class="sfr">${dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${inne ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : h ? "<b>–</b>" : ""}</div>`;
+      }
+      return `<div class="tk${mork ? " mork" : ""}${!h ? " vaert" : ""}" data-k="${k}" data-i="${c.i}" data-hh="${String(c.hh).padStart(2, "0")}"><div class="bst${h && best.has(c.i) ? " pa" + (st >= 4 ? " k" : "") : ""}"></div>${seg}${ekstra}<div class="vnd">${vind}</div></div>`;
     }).join("");
     const valgbare = cols.map((c, k)=> c.i >= 0 ? k : -1).filter(k=> k >= 0);
     const kSel = Math.max(0, cols.findIndex(c=> c.i === sel));
     const rute = `grid-template-columns:repeat(${n},minmax(0,1fr))`;
-    return `<div class="tstripe" id="tstripe" data-day="${d.key}" data-n="${n}">
-      <div class="tikk" style="${rute}" aria-hidden="true">${tikk}${harNaa ? `<em style="left:${(xAv(cols, naa) * 100).toFixed(2)}%">${esc(STR.spot.naa)}</em>` : ""}</div>
+    const inni = `<div class="tikk" style="${rute}" aria-hidden="true">${tikk}${harNaa ? `<em style="left:${(xAv(cols, naa) * 100).toFixed(2)}%">${esc(STR.spot.naa)}</em>` : ""}</div>
       <div class="skygge" style="${rute}" aria-hidden="true">${skygge}</div>
       <div class="kolonner" style="${rute}" aria-hidden="true">${kol}</div>
       <div class="tide"></div>
       <div class="ring" aria-hidden="true" style="left:${(kSel / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>
-      ${harNaa ? `<div class="naalinje" aria-hidden="true" style="left:${(xAv(cols, naa) * 100).toFixed(2)}%"></div>` : ""}
+      ${harNaa ? `<div class="naalinje" aria-hidden="true" style="left:${(xAv(cols, naa) * 100).toFixed(2)}%"></div>` : ""}`;
+    const R = STR.web ? STR.web.rader : null;
+    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.svell)} <small>m</small></span>
+      <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small>m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
+    return `<div class="tstripe${bred ? " bred" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
+      ${bred ? `${etiketter}<div class="tflate">${inni}</div>` : inni}
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>
       <input class="sr" type="range" id="tstripeVelg" min="${valgbare[0]}" max="${valgbare[valgbare.length-1]}" step="1" value="${kSel}" aria-valuetext="${esc(ariaTime(s, cols[kSel], H, best, ev))}">
     </div>`;
@@ -98,6 +119,7 @@
   function tegnTide(){
     // tidevannskurven i ekte piksler (bredden er kjent først når stripa står i siden)
     const {root, s, cols, H} = cur; const boks = $("#tstripe .tide", root); if(!boks || !window.Tidevann) return;
+    const TH = cur.bred ? TIDE_H_BRED : TIDE_H;
     const ev = Tidevann.hendelser(s); const [t0, t1] = spenn(cols);
     const W = Math.round(boks.clientWidth); if(!W || ev.length < 2){ boks.innerHTML = ""; return; }
     const pkt = [];
@@ -106,7 +128,7 @@
     const inne = ev.filter(e=> e.ms >= t0 && e.ms <= t1);
     const cms = pkt.map(p=> p.cm).concat(inne.map(e=> e.cm));
     let lo = Math.min(...cms), hi = Math.max(...cms); if(hi - lo < 20){ const m = (hi + lo) / 2; lo = m - 10; hi = m + 10; }
-    const Y0 = 17, Y1 = 35;
+    const Y0 = cur.bred ? 22 : 17, Y1 = cur.bred ? 46 : 35;
     const x = (ms)=> xAv(cols, ms) * W, y = (cm)=> Y1 - (cm - lo) / (hi - lo) * (Y1 - Y0);
     // båndet: nivåene spoten liker, per halve syklus (tersklene er brøker mellom fjære og flo)
     let band = "";
@@ -118,7 +140,7 @@
         const fj = a.type === "fjære" ? a : b, fl = a.type === "fjære" ? b : a;
         const xa = Math.max(0, x(Math.max(a.ms, t0))), xb = Math.min(W, x(Math.min(b.ms, t1)));
         for(const [f0, f1v] of iv){
-          const yTopp = f1v >= 1 ? 0 : Math.max(0, y(fj.cm + f1v * (fl.cm - fj.cm))), yBunn = f0 <= 0 ? TIDE_H : Math.min(TIDE_H, y(fj.cm + f0 * (fl.cm - fj.cm)));
+          const yTopp = f1v >= 1 ? 0 : Math.max(0, y(fj.cm + f1v * (fl.cm - fj.cm))), yBunn = f0 <= 0 ? TH : Math.min(TH, y(fj.cm + f0 * (fl.cm - fj.cm)));
           if(yBunn > yTopp && xb > xa) band += `<rect class="bnd" x="${xa.toFixed(1)}" y="${yTopp.toFixed(1)}" width="${(xb - xa).toFixed(1)}" height="${(yBunn - yTopp).toFixed(1)}"/>`;
         }
       }
@@ -137,7 +159,7 @@
     }).join("");
     const deler = inne.map(e=> e.type === "fjære" ? STR.spot.tideLav(fmtTime.format(new Date(e.ms)), f1(e.cm)) : STR.spot.tideHoy(fmtTime.format(new Date(e.ms)), f1(e.cm)));
     const etikett = STR.spot.tideAria(deler.length ? deler : [STR.spot.tidevann.toLowerCase()], r && r.prefer && r.prefer.length ? Tidevann.prefTekst(s) : "");
-    boks.innerHTML = `<svg class="tsvg" viewBox="0 0 ${W} ${TIDE_H}" width="${W}" height="${TIDE_H}" role="img" aria-label="${esc(etikett)}">${band}
+    boks.innerHTML = `<svg class="tsvg" viewBox="0 0 ${W} ${TH}" width="${W}" height="${TH}" role="img" aria-label="${esc(etikett)}">${band}
       <path class="linje" d="${strok[false]}"/>${strok[true] ? `<path class="koster" d="${strok[true]}"/>` : ""}${merker}<circle class="valgt" r="4.5"/></svg>`;
     cur.geo = {x, y, ev};
     flyttTide();
@@ -161,20 +183,22 @@
   function mount(root, s, d, sel, best, H, onPick){
     const el = $("#tstripe", root); if(!el) return;
     const cols = kolonner(s, d, sel, H);
-    cur = {root, s, d, cols, H, best, onPick, k: Math.max(0, cols.findIndex(c=> c.i === sel)), ned: false, geo: null};
+    const bred = el.classList.contains("bred"), flate = $(".tflate", el) || el;   // nettsiden: kolonnene står til høyre for etikettene
+    cur = {root, s, d, cols, H, best, onPick, k: Math.max(0, cols.findIndex(c=> c.i === sel)), ned: false, geo: null, bred};
     const meg = cur;
     tegnTide();
     const pick = (clientX)=>{
-      const r = el.getBoundingClientRect(); const n = cols.length;
+      const r = flate.getBoundingClientRect(); const n = cols.length;
       let k = Math.max(0, Math.min(n - 1, Math.floor((clientX - r.left) / (r.width / n))));
       while(k < n - 1 && cols[k].i < 0) k++;   // «har vært» kan ikke velges: nærmeste time med varsel
       if(cols[k].i < 0 || k === meg.k) return;
       velg(k); onPick(cols[k].i);
     };
-    el.addEventListener("pointerdown", (e)=>{ if(e.pointerType==="mouse" && e.button!==0) return; if(e.target.closest("input")) return; meg.ned = true; pick(e.clientX); });
-    el.addEventListener("pointermove", (e)=>{ if(meg.ned) pick(e.clientX); });
+    flate.addEventListener("pointerdown", (e)=>{ if(e.pointerType==="mouse" && e.button!==0) return; if(e.target.closest("input")) return; meg.ned = true; pick(e.clientX); });
+    // nettsiden: musa over en time velger den (SPEC §6C punkt 5); ellers bare mens fingeren eller knappen er nede
+    flate.addEventListener("pointermove", (e)=>{ if(meg.ned || (bred && e.pointerType==="mouse")) pick(e.clientX); });
     const opp = ()=>{ meg.ned = false; };
-    el.addEventListener("pointerup", opp); el.addEventListener("pointercancel", opp); el.addEventListener("pointerleave", opp);
+    flate.addEventListener("pointerup", opp); flate.addEventListener("pointercancel", opp); flate.addEventListener("pointerleave", opp);
     const inp = $("#tstripeVelg", root);
     if(inp) inp.addEventListener("input", ()=>{ const k = +inp.value; if(cols[k] && cols[k].i >= 0 && k !== meg.k){ velg(k); onPick(cols[k].i); } });
     if(!mount.lytter){
