@@ -1457,6 +1457,8 @@
         2.0
       ],
       "max_height": 3.5,
+      "transfer": 0.15,
+      "_transfer": "16.11.2026, FORELØPIG (ja til S6 i privat/kontor/svar.md 16.11 kl. 15.45, i stedet for taket på 0,25 som fysikk-kontrolløren ikke godkjente): andelen av svellet ute som når stranda ved direkte treff, brukt i reservesonen (svell ute × transfer × eksponering) til BarentsWatch har lært en egen. Grunnlag: BarentsWatch-snittet 12.11.2026 (data/bw_point_search/result_2026-11-12T1827_kandidater.json, 19 timer, svell ute 0,8-1,4 m): totalhøyden ved punktet var 7-26 % av svellet ute (median 22 %), men nesten alt var krapp sjø fra øst på 2-3 s. Den rene svelldelen (7,5 s fra 9°, svell ute fra 12-18°) var ca. 7 %. Med eksponering 0,23-0,53 ved 12-18° slipper 0,15 inn 3,5-8 %, og 12 % midt i vinduet (22°, eksponering 0,8). Ingen observasjon ennå. Justeres etter første observasjon.",
       "kilde": "Theodor 12.11.2026 (hørt, kilden ikke navngitt) + spotfabrikken",
       "_ubekreftet": "Theodor 12.11.2026: har hørt at det er bra, men ikke surfet her selv. Kilden er ikke navngitt, så vekten er lav. Posisjon og facing er fra kystlinje og flyfoto (ingen bølger synlige der), ikke fra en observasjon. Fjordspot: bølgene kommer trolig enten som svell fra NNØ gjennom gapet mellom Vanna og Arnøya (lang periode, mye energi tapt på 80 km inn fjorden) eller som vindsjø inn Ullsfjorden. Første observasjon blir fasiten.",
       "_vern": "Sandbukta naturreservat (VV00002296, forskrift 2004-06-04-857): stranda og sjøarealet innerst i bukta, med posisjonen, ligger inne i reservatet. Forskriften har ikke ferdsels- eller surfeforbud - bare motorferdsel på land er forbudt, og dyre- og fuglelivet er fredet mot unødig forstyrrelse. Ingen «Forbud nå».",
