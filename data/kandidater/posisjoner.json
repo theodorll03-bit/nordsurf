@@ -140,9 +140,9 @@
     "lon": 17.2249
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -158,17 +158,33 @@
      "lon": 17.22489
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 69.473596,
+     "lon": 17.224552,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen sto ved bergnabben ved siden av ei lita sandlomme (ca. 40 m bred) nord i bukta. Satt ca. 75 m ut sørvest for lomma, over sandbunn. Kildene er bade- og turistsider, bruddtypen er ukjent, og bukta ligger bare ca. 600 m nord for Bøstranda (bovaer). Usikkert om dette er en egen surfespot.",
+     "dato": "2026-11-10",
+     "sikkerhet": "C",
+     "flyttet_m": 101
+    }
+   ],
+   "startpunkt": {
+    "lat": 69.4745,
+    "lon": 17.2249
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Ei sandlomme på ca. 40 m bare 635 m nord for Bøstranda, mot samme åpne hav (GSHHS 250-304° mot 251-326° for bovaer), så den vil få nesten de samme tallene som bovaer. Kildene er bade- og turistsider uten bruddtype. Trenger noen som vet om det finnes en egen bølge her; hvis ikke, bør den avvises som duplikat av bovaer."
   },
   "bovaer": {
    "spot": {
-    "lat": 69.4682,
-    "lon": 17.2303
+    "lat": 69.467964,
+    "lon": 17.227291
    },
-   "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
-   "metode": "listepinne",
-   "dato": "2026-10-16",
+   "sikkerhet": "B",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
+   "metode": "godkjent forslag (flyfoto)",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -202,7 +218,23 @@
      "lon": 17.23032
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 69.467964,
+     "lon": 17.227291,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Bøstranda, ca. 500 m sandstrand som vender VNV med sandbunn. Listepinnen sto på land; satt ca. 100 m utenfor vannkanten midt på stranda. Små skjær ligger ca. 110 m lenger ut. Hovedtoppen er ukjent.",
+     "dato": "2026-11-10",
+     "sikkerhet": "B",
+     "flyttet_m": 120
+    }
+   ],
+   "startpunkt": {
+    "lat": 69.4682,
+    "lon": 17.2303
+   },
+   "vurdering": "godkjent",
+   "begrunnelse": "Bøstranda, ca. 500 m sandstrand mot VNV. Posisjonen ligger i sjøen 97 m fra kystlinja med kystnormal ca. 290° og fritt hav 251-326° (GSHHS, 150 km; ca. 60° med skjær i OSM). Live-spoten steinkrossa ligger 2,9 km unna men vender mot NØ (45°), så det er ikke samme bølge; hovedtoppen er ukjent, og skjærene ca. 110 m utenfor må holdes unna BarentsWatch-punktet."
   },
   "hamn-senja": {
    "spot": {
@@ -210,9 +242,9 @@
     "lon": 17.1641
    },
    "sikkerhet": "ikke sjekket",
-   "satt_av": "liste",
+   "satt_av": "spotansvarlig (agent, Theodor 10.11.2026)",
    "metode": "listepinne",
-   "dato": "2026-10-16",
+   "dato": "2026-11-10",
    "alternativer": [
     {
      "kilde": "osm-strand",
@@ -252,7 +284,23 @@
      "lon": 17.21298
     }
    ],
-   "forslag": []
+   "forslag": [
+    {
+     "lat": 69.416517,
+     "lon": 17.163551,
+     "satt_av": "claude-flyfoto-2026-11-10",
+     "begrunnelse": "Listepinnen står på anlegget Hamn i Senja, i havna mellom holmene. Området ligger i le bak skjær og grunne sandflater (Bergsøyan) mot nord og nordøst og er bare åpent mot vest. Fant ingen tydelig surfestrand. Posisjonen er beste gjetning, i vannet utenfor den lille stranda ved anlegget. Trolig feil sted; trenger lokalkunnskap.",
+     "dato": "2026-11-10",
+     "sikkerhet": "C",
+     "flyttet_m": 79
+    }
+   ],
+   "startpunkt": {
+    "lat": 69.4172,
+    "lon": 17.1641
+   },
+   "vurdering": "venter_lokalkunnskap",
+   "begrunnelse": "Listepinnen sto på anlegget Hamn i Senja, i havna mellom holmene. Regnet med skjær (OSM) er det bare smale åpninger mot vest (274-279° og 290-299°, ingen sektor over 10°), og kystnormalen ved den lille stranda peker mot sør, inn i havna. Dokumentasjonen er svak (to kilder) og stedet trolig feil; uten lokalkunnskap om et annet sted bør kandidaten avvises."
   },
   "andenes": {
    "spot": {

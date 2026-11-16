@@ -1224,6 +1224,50 @@
       "_barentswatch_snitt": "data/bw_point_search/result_2026-10-16T0950_kandidater.json",
       "area": "Flakstad",
       "forelopig_fra": "2026-10-16"
+    },
+    {
+      "id": "bovaer",
+      "name": "Bøvær",
+      "enabled": true,
+      "status": "forelopig",
+      "region": "Troms",
+      "spot": {
+        "lat": 69.467964,
+        "lon": 17.227291
+      },
+      "facing": 289.8,
+      "swell_window": [
+        251,
+        326
+      ],
+      "_vindu": "Spotfabrikken 2026-11-10: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[251, 326]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet.",
+      "offshore_wind": [
+        65,
+        155
+      ],
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "offshore": {
+        "lat": 69.5024,
+        "lon": 16.9358
+      },
+      "_havpunkt": "Langs midten av vinduet (288.5°), 12 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py).",
+      "barentswatch_point": {
+        "lat": 69.469189,
+        "lon": 17.217652
+      },
+      "_barentswatch": "Flyttet til 400 m ut i snittet langs 289.8° (dybde 8.5 m) - spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet. Snitt langs facing (data/bw_point_search/result_2026-11-10T1135_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 400m@289.8, 400 m ut, dybde 8,5 m.",
+      "ideal_height": [
+        0.8,
+        2.0
+      ],
+      "max_height": 3.5,
+      "kilde": "liste 15.10 + spotfabrikken",
+      "_barentswatch_snitt": "data/bw_point_search/result_2026-11-10T1135_kandidater.json",
+      "_rettet": {
+        "barentswatch_point": "400 m ut (spotansvarlig 10.11.2026: stranda ligger i le av skjæret 800-900 m ut, og regelen fra 15.10 valgte 1500 m utenfor skjæret; lavere sikkerhet)"
+      },
+      "area": "Senja",
+      "forelopig_fra": "2026-11-10"
     }
   ]
 }
