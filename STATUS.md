@@ -1,5 +1,20 @@
 # Nordsurf: status
 
+## T1 Troms: breivikeidet får lenangsoyras havpunkt 16.11.2026 (Theodors ja til spørsmål a, ikke merget)
+
+Theodor svarte 16.11 ja til de fire anbefalingene i `data/kandidater/bygget/troms.notater.md`.
+
+- **a) Havpunkt, gjort:** `offshore` er nå lenangsoyras (70.3349, 20.4737), og `offshore_longrange` er 70.5/20.5. Fabrikkens punkt lå 1,0 km unna i samme landmaskerte GFS-celle. Det gir samme svelldata, ingen nye kall, og tall i stedet for «–» fra ca. dag 8.
+- b) Vinduet 20–25° står som foreløpig. c) Ingen endring for vindsjø nå.
+- **d) Foreløpig tak, IKKE lagt inn.** `exposure_override` 0–45° med maks 0,25 ble prøvd og tatt ut igjen før commit. Fysikk-kontrolløren godkjente det ikke:
+  - Et tak slår av skyggekurven og diffraksjonsdempingen i hele sonen. Svell fra 13–32° får da samme høyde som midt i vinduet, og skjermede retninger blir bedre enn uten tak. Eksempel: 4 m og 12 s fra 10° eller 35° går fra 0 til 3 poeng.
+  - Taket endrer også BarentsWatch-timene (dag 1–3), ikke bare reserven: retningen ved punktet brukes i stedet for 1,0, og fem poeng stenges.
+  - Midt i vinduet (22°) gjør taket det flatt under ca. 2,3 m svell ute, og hopper så rett til 3–4 poeng ved 12–14 s. Svell på 4–5 m får to til tre poeng mer enn uten tak.
+  - Alternativet er en egen `transfer` for spoten (ca. 0,19 gir de samme 15 % midt i vinduet, 0,15 er mer forsiktig) uten tak. Da beholdes skyggekurven. Det krever Theodors ja og er lagt fram for ham.
+- Uten tak står reserven som 12.11: 0,67–0,83 i vinduet, altså 40–50 % av svellet ute. Spoten er merket ubekreftet og er ikke merget.
+- **Fysikk-kontrolløren 16.11:** havpunktet godkjent (samme koordinater som lenangsoyra, samme cache-oppslag, ingen nye kall). Taket ikke godkjent, se over. Ingen manglende data blir 0, ingen faste observasjoner berøres.
+- **Testene før commit:** 16 filer og kontrast grønne i én kjøring 16.11, etter at taket var tatt ut.
+
 ## T1 Troms: breivikeidet lagt inn som foreløpig og ubekreftet 12.11.2026 (Theodors ja, gren `region/breivikeidet`, ikke merget)
 
 Ny spot fra Theodor 12.11 (ikke i lista 15.10): Sandbukta ved Breivikeidet, Tromsø kommune, innerst i Ullsfjorden. `tools/godkjenn_spot.py breivikeidet` har lagt den inn i spots.json med status `forelopig`, `enabled` og 0 restriksjoner. Den er merket ubekreftet i `_ubekreftet`: Theodor har bare hørt at den er bra, kilden er ikke navngitt, og vekten er lav. Pakka står i `data/kandidater/bygget/troms.md` og notatene i `troms.notater.md`.

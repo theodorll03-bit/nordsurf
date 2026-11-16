@@ -1433,10 +1433,15 @@
       ],
       "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
       "offshore": {
-        "lat": 70.3284,
-        "lon": 20.4562
+        "lat": 70.3349,
+        "lon": 20.4737
       },
-      "_havpunkt": "Langs midten av vinduet (22.5°), 80 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py). NB (spotansvarlig 12.11.2026): søket stoppet ved 80 km-grensa i bygg_spot.havpunkt - ved 10 km i retning 220-250° ligger det land (GSHHS), så kravet om 10 km åpent hav rundt er ikke helt oppfylt. Punktet ligger 1,0 km fra Lenangsøyras havpunkt (70.3349, 20.4737), i samme landmaskerte GFS Wave-celle (70,25/20,50) - se lenangsoyra sin offshore_longrange i spots.json.",
+      "offshore_longrange": {
+        "lat": 70.5,
+        "lon": 20.5
+      },
+      "_offshore_longrange": "16.11.2026, Theodors ja (spørsmål 4a): samme havpunkt og langtidspunkt som lenangsoyra. Fabrikkens punkt (70.3284, 20.4562) lå 1,0 km unna i den samme landmaskerte GFS Wave-cella (70,25/20,50), så svelldataene er de samme og det blir ingen nye kall. Se lenangsoyra sin _offshore_longrange.",
+      "_havpunkt": "FØR 16.11.2026 (fabrikkens punkt 70.3284, 20.4562, byttet til lenangsoyra sitt): Langs midten av vinduet (22.5°), 80 km ut, 10 km åpent hav rundt (GSHHS f, som check_spot.py). NB (spotansvarlig 12.11.2026): søket stoppet ved 80 km-grensa i bygg_spot.havpunkt - ved 10 km i retning 220-250° ligger det land (GSHHS), så kravet om 10 km åpent hav rundt er ikke helt oppfylt. Punktet ligger 1,0 km fra Lenangsøyras havpunkt (70.3349, 20.4737), i samme landmaskerte GFS Wave-celle (70,25/20,50) - se lenangsoyra sin offshore_longrange i spots.json.",
       "barentswatch_point": {
         "lat": 69.660855,
         "lon": 19.665743

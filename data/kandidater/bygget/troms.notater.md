@@ -52,7 +52,16 @@ Snittet ble hentet 12.11 kl. 18:27Z (19 tidspunkter, hver 3. time fra 12.11 kl. 
 1. **Havpunkt og langtidsdager:** fabrikkens havpunkt (70.3284, 20.4562) ligger 1,0 km fra Lenangsøyras, i den samme landmaskerte GFS-cellen, og spoten har ingen `offshore_longrange`. Anbefaling: bruk Lenangsøyras havpunkt og `offshore_longrange` 70.5/20.5. Det gir samme svelldata og ingen nye kall.
 2. **Vinduet er 6°, ikke 15–30°:** nye spots har ingen geometrisk grunnlinje (`data/exposure_baseline.json`), så reserven bruker vindu og skyggekurve. Hvis grunnlinjen lages senere, gir den 0,38–0,48 over 10–30°, fordi øyene regnes som smale. Anbefaling: godta 20–25° som foreløpig uten `exposure_override`. Første observasjon og BarentsWatch blir fasiten.
 3. **Vindsjø i fjorden:** med vind fra NNØ er det 31–65 km fetch, og det gir trolig 1–1,5 m med ca. 5 s, onshore. BarentsWatch tar med lokal vindsjø, men surfehøyden bruker GFS-perioden. Anbefaling: lag et forslag med før/etter som merker timer med kort periode hos BarentsWatch som vindsjø. Ingen endring nå.
-4. **Hopp ved overgangen til reservesonen (dag 4 til ca. 8):** reserven regner transfer 0,6 × eksponering 0,67–0,85, det vil si 0,40–0,51 av svellet ute. BarentsWatch viste høyst ca. 15 % (svell i vinduet) og 7 % (svell fra 12–18°). Uten vind gir svell ute 1,0 m fra 25° (9 s) 1 stjerne, 1,4 m fra 21° (12 s) 2 stjerner og 2,0 m fra 22° (12 s) 3 stjerner. Med BarentsWatch er det 0 stjerner. Valg: (i) `exposure_override`-tak på ca. 0,2–0,25, (ii) egen transfer 0,15–0,2, eller (iii) la kalibreringen lære. Ulempen med (iii) er at parene blir krappsjø fra øst. Anbefaling: (i) som foreløpig tak til det finnes en observasjon. Grunnlaget er bare én kjøring på 19 timer.
+4. **Hopp ved overgangen til reservesonen (dag 4 til ca. 8):** reserven regner transfer 0,6 × eksponering 0,67–0,83, det vil si 0,40–0,50 av svellet ute. BarentsWatch viste høyst ca. 15 % (svell i vinduet) og 7 % (svell fra 12–18°). Uten vind gir svell ute 1,0 m fra 25° (9 s) 1 stjerne, 1,4 m fra 21° (12 s) 2 stjerner og 2,0 m fra 22° (12 s) 3 stjerner. Med BarentsWatch er det 0 stjerner. Valg: (i) `exposure_override`-tak på ca. 0,2–0,25, (ii) egen transfer 0,15–0,2, eller (iii) la kalibreringen lære. Ulempen med (iii) er at parene blir krappsjø fra øst. Anbefaling: (i) som foreløpig tak til det finnes en observasjon. Grunnlaget er bare én kjøring på 19 timer.
+
+### Svar 16.11.2026
+
+Theodor svarte ja til alle fire anbefalingene.
+
+1. Havpunktet er byttet til lenangsoyras, med `offshore_longrange` 70.5/20.5.
+2. Vinduet 20–25° står som foreløpig, uten grunnlinje.
+3. Ingen endring for vindsjø nå. Forslaget med før/etter lages senere.
+4. Taket er IKKE lagt inn. `exposure_override` 0–45° med maks 0,25 ble prøvd, men fysikk-kontrolløren godkjente det ikke: et tak slår av skyggekurven i hele sonen, så skjermede retninger (for eksempel 10° og 35°) går fra 0 til 3 poeng ved 4 m svell. Alternativet er en egen `transfer` på 0,15–0,19 uten tak. Det er lagt fram for Theodor. Se STATUS.md.
 
 ## Hva som skal til
 
