@@ -164,7 +164,8 @@ c2 = rate({**base09, "period": 16, "wind_speed": 3, "wind_dir": 300}, G)
 show("6.2: 0,9m/16s, 3 m/s onshore", c2); assert c2["stars"] == 4
 
 c3 = rate({**base09, "period": 16, "wind_speed": 4, "wind_dir": 300}, G)
-show("6.3a: 0,9m/16s, 4 m/s onshore, uten kast", c3); assert c3["stars"] == 3
+# 16.11.2026 (Theodor, punkt e): svak pålandsvind under ca. 5 m/s trekker ikke lenger. Før ga 4 m/s ett poeng ned.
+show("6.3a: 0,9m/16s, 4 m/s onshore, uten kast", c3); assert c3["stars"] == 4
 
 c4 = rate({**base09, "period": 16, "wind_speed": 4, "wind_dir": 300, "gust": 12}, G)
 show("6.3b: 0,9m/16s, 4 m/s onshore, kast 12 (eff. 6,0 - kast teller høyst 2 m/s, Theodor 15.10)", c4); assert c4["stars"] == 3
@@ -1372,8 +1373,9 @@ def old_wind_type(wind_dir, spot):
 
 
 # 15.10.2026: farstadsanden tatt ut - offshore_wind UTVIDET til [85,200] (observasjon 15.10, samme regel som Unstad), ikke lenger eksakt facing+180±45
-EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda", "russelv")
-OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa", "farstadsanden")
+# 16.11.2026: russelv flyttet ned - facing rettet 315 -> 350 (S10), offshore_wind [90,180] beholdt, så senteret (135) er ikke lenger facing+180
+EXACT_CENTER_SPOTS = ("tromvik", "ersfjordstranda")
+OFFSET_CENTER_SPOTS = ("grotfjord", "lenangsoyra", "steinkrossa", "farstadsanden", "russelv")
 
 for other_id in EXACT_CENTER_SPOTS:
     sp = spots[other_id]
@@ -1635,29 +1637,30 @@ print("28: 5-stjerners-porten - alt oppfylt gir 5, hvert vilkår brutt gir høys
 # Tallene er timen kl. 11Z slik den ble publisert: BarentsWatch 0,26 m fra 6° med 4,4 s ved punktet,
 # svell ute 2,42 m fra 20° med 7,9 s, vind 4,6 m/s fra 106° (fralands ved Russelv).
 from rating import bw_can_be_windsea, bw_period_factor, bw_period_factor_for
+R29 = {**R, "gap_spot": False}   # 29 tester periodefaktoren alene; gap-grensa (test 31) er slått av her
 rus_1611 = {"bw_height": 0.2567, "bw_dir": 6.0, "bw_period": 4.43, "bw_height_max": 0.4877, "swell_offshore": 2.42,
             "height_offshore": 2.3, "dir_offshore": 20, "period": 7.9, "wind_speed": 4.6, "wind_dir": 106.0, "gust": 7.1}
 # 29.1: vind fra 106° (100° fra bølgene ved punktet) kan ikke ha laget bølger som kommer inn fra 6° - svellperioden ute (7,9 s) brukes
-assert not bw_can_be_windsea(rus_1611, R)
-pf_new, basis_new = bw_period_factor_for(rus_1611, R)
+assert not bw_can_be_windsea(rus_1611, R29)
+pf_new, basis_new = bw_period_factor_for(rus_1611, R29)
 assert basis_new == "ute" and abs(pf_new - bw_period_factor(7.9)) < 1e-9 and pf_new > bw_period_factor(4.43)
-r29 = rate(dict(rus_1611), R)
-r29_unknown = rate(dict(rus_1611, wind_dir=None), R)
+r29 = rate(dict(rus_1611), R29)
+r29_unknown = rate(dict(rus_1611, wind_dir=None), R29)
 show("29.1: Russelv 16.11 kl. 11Z", r29)
 assert r29["height"] > r29_unknown["height"], (r29["height"], r29_unknown["height"])
 assert any("Svellperioden ute" in line for line in r29["breakdown"]), r29["breakdown"]
 # 29.2: ukjent vind - som før (kan ikke utelukke vindsjø). Dette er også det test 7.3 hviler på.
-assert bw_can_be_windsea(dict(rus_1611, wind_dir=None), R)
-assert bw_period_factor_for(dict(rus_1611, wind_dir=None), R) == (bw_period_factor(4.43), "bw")
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=None), R29)
+assert bw_period_factor_for(dict(rus_1611, wind_dir=None), R29) == (bw_period_factor(4.43), "bw")
 # 29.3: vind som blåser samme vei som bølgene ved punktet (fra 350°, bølgene fra 6°) - kan være vindsjø, som før
-assert bw_can_be_windsea(dict(rus_1611, wind_dir=350.0), R)
-assert bw_period_factor_for(dict(rus_1611, wind_dir=350.0), R) == (bw_period_factor(4.43), "bw")
-# 29.4: bølgene ved punktet kommer fra land (135°, 180° fra facing 315) - de er laget i fjorden bak, som før
-assert bw_can_be_windsea(dict(rus_1611, bw_dir=135.0), R)
-assert bw_period_factor_for(dict(rus_1611, bw_dir=135.0), R) == (bw_period_factor(4.43), "bw")
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=350.0), R29)
+assert bw_period_factor_for(dict(rus_1611, wind_dir=350.0), R29) == (bw_period_factor(4.43), "bw")
+# 29.4: bølgene ved punktet kommer fra land (135°, 145° fra facing 350) - de er laget i fjorden bak, som før
+assert bw_can_be_windsea(dict(rus_1611, bw_dir=135.0), R29)
+assert bw_period_factor_for(dict(rus_1611, bw_dir=135.0), R29) == (bw_period_factor(4.43), "bw")
 # 29.5: vind langt fra bølgeretningen (fra 200°, 166° fra 6°) - ikke vindsjø. Grensa er 90°: 96° (fra 6°) kan være, 97° ikke.
-assert not bw_can_be_windsea(dict(rus_1611, wind_dir=200.0), R)
-assert bw_can_be_windsea(dict(rus_1611, wind_dir=96.0), R) and not bw_can_be_windsea(dict(rus_1611, wind_dir=97.0), R)
+assert not bw_can_be_windsea(dict(rus_1611, wind_dir=200.0), R29)
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=96.0), R29) and not bw_can_be_windsea(dict(rus_1611, wind_dir=97.0), R29)
 # 29.5b: spotens offshore_wind avgjør IKKE (fysikk-kontrollør 16.11.2026). Unstad har [70, 232]: vind fra 225° er
 # "offshore" der, men bare 25° fra sjø som kommer fra 250° - den kan ha laget sjøen, og periodefaktoren står.
 U29 = spots["unstad"]
@@ -1672,11 +1675,108 @@ assert bw_can_be_windsea(l29, L) and bw_period_factor_for(l29, L) == (bw_period_
 r29l = rate(dict(l29), L)
 assert r29l["height"] < 0.35 and r29l["likely_flat"] and r29l["stars"] == 0, (r29l["height"], r29l["stars"])
 # 29.6: mangler svellperioden ute, brukes BarentsWatch-perioden som før (manglende data er aldri en høyere faktor)
-assert bw_period_factor_for(dict(rus_1611, period=None), R) == (bw_period_factor(4.43), "bw")
+assert bw_period_factor_for(dict(rus_1611, period=None), R29) == (bw_period_factor(4.43), "bw")
 # 29.7: faktoren blir aldri LAVERE enn BarentsWatch-perioden alene ga (kort periode ute, lang ved punktet)
-assert bw_period_factor_for(dict(rus_1611, bw_period=7.0, period=5.0), R) == (bw_period_factor(7.0), "bw")
+assert bw_period_factor_for(dict(rus_1611, bw_period=7.0, period=5.0), R29) == (bw_period_factor(7.0), "bw")
 # 29.8: BarentsWatch-periode fra 8 s gir full faktor uansett vind - uendret
-assert bw_period_factor_for(dict(rus_1611, bw_period=9.0), R) == (1.0, "bw")
-assert bw_period_factor_for(dict(rus_1611, bw_period=None), R) == (bw_period_factor(None), None)
+assert bw_period_factor_for(dict(rus_1611, bw_period=9.0), R29) == (1.0, "bw")
+assert bw_period_factor_for(dict(rus_1611, bw_period=None), R29) == (bw_period_factor(None), None)
 print("29: periodefaktoren ved BarentsWatch-punktet - vind mer enn 90° fra bølgene ved punktet bruker svellperioden ute; ukjent vind, medvind, offshore-sektoren alene og bølger langs/fra land som før; aldri lavere enn før - OK")
+# 30: (ledig) A2 med vindhistorikk ble prøvd 16.11.2026 og ikke tatt inn - se rating.bw_period_factor_for().
+
+# 31: gap-regelen (svar.md 16.11.2026 kl. 15.45, funn punkt 3; kilde: observasjon 16.11.2026 (bilde, Russelv)).
+# Nedre grense for Hs ved spoten = svell ute × gap_transfer, bare for spots merket gap_spot.
+from rating import gap_floor, GAP_MIN_PERIOD_S, GAP_EDGE_DEG
+assert [i for i, sp in spots.items() if sp.get("gap_spot")] == ["russelv"]      # ingen andre spots skal endres
+assert R["gap_transfer"] == 0.2 and R["swell_window_tegnet"] == [348, 19] and GAP_MIN_PERIOD_S == 7.0 and GAP_EDGE_DEG == 2
+assert abs(gap_floor(rus_1611, R) - 2.42 * 0.2) < 1e-9
+r31 = rate(dict(rus_1611), R)
+show("31.1: Russelv 16.11 kl. 11Z med gap-grensa", r31)
+# målet i svar.md: 1-2 poeng, sett rundt 1 m. Mer enn 2 er for raust.
+assert r31["stars"] in (1, 2) and r31["gap_floor"] and r31["uncertain"] and r31["height"] == 0.48, (r31["stars"], r31["height"])
+assert 0.9 <= r31["surf_height_sets"] <= 1.2, r31["surf_height_sets"]
+assert any(line.startswith("Løftet til") for line in r31["breakdown"]), r31["breakdown"]
+# 31.2: retningen - i det tegnede vinduet (348-19) eller høyst 2° utenfor kanten
+for d, inne in ((348, True), (0, True), (19, True), (21, True), (22, False), (346, True), (345, False), (90, False)):
+    assert (gap_floor(dict(rus_1611, dir_offshore=d), R) is not None) == inne, d
+# 31.3: perioden ute minst 7 s
+assert gap_floor(dict(rus_1611, period=6.9), R) is None and gap_floor(dict(rus_1611, period=7.0), R) is not None
+# 31.4: ikke blåst ut - pålands eller skrått pålands fra 8 m/s tar grensa bort, fralands gjør det aldri
+assert wind_type(350.0, R) == "onshore" and wind_type(41.0, R) == "sideonshore" and wind_type(106.0, R) == "offshore"
+assert gap_floor(dict(rus_1611, wind_speed=8.0, wind_dir=350.0), R) is None
+assert gap_floor(dict(rus_1611, wind_speed=8.0, wind_dir=41.0), R) is None
+assert gap_floor(dict(rus_1611, wind_speed=7.9, wind_dir=350.0), R) is not None
+assert gap_floor(dict(rus_1611, wind_speed=12.0, wind_dir=106.0), R) is not None
+# 31.5: manglende data er aldri en grense (grunnregelen), og anslag fra totalhøyden teller ikke som svell
+for mangler in ("swell_offshore", "dir_offshore", "period"):
+    assert gap_floor({k: v for k, v in rus_1611.items() if k != mangler}, R) is None, mangler
+assert gap_floor(dict(rus_1611, swell_model="total_fallback"), R) is None
+# 31.6: bare merkede spots, og bare med tegnet vindu
+assert gap_floor(rus_1611, R29) is None and gap_floor(rus_1611, L) is None and gap_floor(rus_1611, G) is None
+assert gap_floor(rus_1611, {k: v for k, v in R.items() if k != "swell_window_tegnet"}) is None
+# uten låst gap_transfer: ingen grense. Spotens vanlige transfer (0,6 som standard, og lært etter hvert) brukes aldri.
+assert gap_floor(rus_1611, dict({k: v for k, v in R.items() if k != "gap_transfer"}, transfer=0.6)) is None
+assert gap_floor(rus_1611, dict(L, gap_spot=True, swell_window_tegnet=[12, 23], transfer=0.6)) is None
+# 31.7: grensa løfter bare. Viser BarentsWatch mer, står BarentsWatch-tallet.
+r31_hoy = rate(dict(rus_1611, bw_height=1.2, bw_period=8.5), R)
+assert r31_hoy["height"] > 0.48 and not r31_hoy["gap_floor"], (r31_hoy["height"], r31_hoy["gap_floor"])
+# 31.8: uten BarentsWatch (reserven svell ute) gjelder samme grense
+r31_res = rate({k: v for k, v in rus_1611.items() if not k.startswith("bw_")}, R)
+assert r31_res["height_source"] == "svell_ute" and r31_res["height"] == 0.48 and r31_res["gap_floor"], (r31_res["height_source"], r31_res["height"])
+# 31.9: varselet for 17.11.2026 slik det sto 16.11 kl. 18Z (svell 2,16 m fra 17°, 7,8 s, vind 4,2 m/s fra 41° med kast 8,7).
+# Dette er en FORVENTNING, ikke en observasjon (fysikk-kontrollør 16.11.2026), så poengene låses ikke her: med andel 0,20
+# blir høyden 0,43 m og timen ligger rett under 1 poeng. Det som låses, er at «kildene uenige» ikke kapper timen bare
+# fordi svellet ligger 2° utenfor det BEREGNEDE vinduet når det ligger midt i det TEGNEDE.
+rus_1711 = {"bw_height": 0.65, "bw_dir": 2.0, "bw_period": 3.0, "swell_offshore": 2.16, "height_offshore": 2.4,
+            "dir_offshore": 17, "period": 7.8, "wind_speed": 4.2, "wind_dir": 41.0, "gust": 8.7}
+r31_17 = rate(dict(rus_1711), R)
+show("31.9: Russelv 17.11 kl. 11Z (varsel)", r31_17)
+assert r31_17["gap_floor"] and r31_17["height"] == 0.43 and not r31_17["sources_disagree"] and r31_17["stars"] <= 1, (r31_17["stars"], r31_17["height"])
+assert rate(dict(rus_1711), R29)["sources_disagree"] and rate(dict(rus_1711), R29)["stars"] == 0
+# pålands 7,8 m/s med kast (17.11 kl. 07Z) gir 0: fralands gir svell, pålands gir vindsjø
+assert rate(dict(rus_1711, wind_speed=7.8, wind_dir=10.0, gust=12.0), R)["stars"] == 0
+# 31.10: unntaket i «kildene uenige» følger retningen ute, ikke om grensa ble brukt (fysikk-kontrollør 16.11.2026):
+# mer energi ved punktet skal aldri gi lavere vurdering. Svell 4 m fra 17°, 10 s, BarentsWatch 1,4 m og 1,6 m.
+stor = {"bw_dir": 2.0, "bw_period": 9.0, "swell_offshore": 4.0, "height_offshore": 4.2, "dir_offshore": 17, "period": 10.0,
+        "wind_speed": 3.0, "wind_dir": 106.0}
+r_lav, r_hoy = rate(dict(stor, bw_height=1.4), R), rate(dict(stor, bw_height=1.6), R)
+assert not r_lav["sources_disagree"] and not r_hoy["sources_disagree"] and r_hoy["stars"] >= r_lav["stars"], (r_lav["stars"], r_hoy["stars"])
+# svell utenfor det tegnede vinduet (22° og mer) får ikke unntaket; vindsjø-andel og retning ved punktet teller som før
+assert rate(dict(rus_1711, dir_offshore=30), R)["sources_disagree"]
+assert rate(dict(rus_1711, swell_offshore=1.0), R)["sources_disagree"]      # svellandel under 50 %
+print("31: gap-regelen - bare Russelv, bare i det tegnede vinduet (±2°), fra 7 s, låst andel, ikke blåst ut, løfter aldri ned; 16.11 gir 1-2 poeng - OK")
+
+# 32: mildere vindkurver ved svak vind (forslag e, Theodor 16.11.2026: «Se bort ifra vinden, når det er snakk om så lite
+# har det jo nesten ingenting å si»). Ingen straff under 6 m/s for side og skrått pålands, under 5 m/s for pålands.
+from rating import wind_curve_penalty, WIND_PENALTY_CURVES, BLOWN_OUT_WIND_MS
+GAMLE_KURVER_32 = {"offshore": ((10, 0), (14, 1), (18, 2)), "side": ((5, 0), (10, 1), (14, 2), (18, 3)),
+                   "sideonshore": ((3, 0), (7, 1), (11, 2), (15, 3)), "onshore": ((2, 0), (5, 1), (8, 2), (11, 3), (14, 4))}
+def _gammel_straff(eff, kind):
+    pts = GAMLE_KURVER_32[kind]
+    if eff <= pts[0][0]:
+        return 0.0
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if eff <= x1:
+            return y0 + (y1 - y0) * (eff - x0) / (x1 - x0)
+    return float(pts[-1][1])
+assert wind_curve_penalty(6.0, "side") == 0 and wind_curve_penalty(6.0, "sideonshore") == 0 and wind_curve_penalty(5.0, "onshore") == 0
+assert WIND_PENALTY_CURVES["offshore"] == GAMLE_KURVER_32["offshore"] and BLOWN_OUT_WIND_MS == 8.0
+MOTER_GAMMEL = {"offshore": 0.0, "side": 10.0, "sideonshore": 8.0, "onshore": 8.0}   # herfra og opp er alt som før
+for kind in GAMLE_KURVER_32:
+    forrige = 0.0
+    for i in range(0, 251):
+        eff = i / 10
+        ny, gml = wind_curve_penalty(eff, kind), _gammel_straff(eff, kind)
+        assert ny <= gml + 1e-9, (kind, eff, ny, gml)              # aldri strengere enn før
+        assert ny >= forrige - 1e-9, (kind, eff)                   # stiger jevnt
+        if eff >= MOTER_GAMMEL[kind]:
+            assert abs(ny - gml) < 1e-9, (kind, eff, ny, gml)      # ekte blåst-ut-vind straffes som før
+        forrige = ny
+print("32: vindkurvene e - ingen straff under 6/6/5 m/s (side/skrått pålands/pålands), aldri strengere enn før, uendret fra 10/8/8 m/s og for fralands - OK")
+
+# 33: Russelv i spots.json etter S10 (ja 16.11.2026): facing 350, punktet lenger ut er hovedpunkt, og eksponeringstabellen gjelder fortsatt
+assert R["facing"] == 350 and R["offshore_wind"] == [90, 180]
+assert R["barentswatch_point"] == {"lat": 69.952217, "lon": 20.208673} and R["barentswatch_point_shadow"] == {"lat": 69.949979, "lon": 20.215157}
+assert _exposure_baseline_real["russelv"]["checksum"] == _spot_checksum(R)
+print("33: Russelv - facing 350, byttet BarentsWatch-punkt, sjekksummen i exposure_baseline.json stemmer - OK")
 print("Alle tester ok")

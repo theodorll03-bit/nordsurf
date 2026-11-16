@@ -468,13 +468,18 @@ function surfAdjustmentLine(h){
   // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som
   // FAKTISK trekker ned (min(svellandel, periodefaktor) - bare den minste
   // av de to er den reelle årsaken, og retningen bare hvis den ikke er 1,0).
+  // 16.11.2026: gap-grensa (rating.gap_floor()) - høyden er løftet, ikke justert ned.
+  if(h.gap_floor && h.height!=null) return `Løftet til ${nf1.format(h.height)} m (svell ute gjennom gapet, anslag)`;
   if(h.height_source!=="barentswatch" || h.bw_height==null || h.height==null) return "";
-  const share = h.swell_share, pf = bwPeriodFactor(h.bw_period), dirfac = h.spot_direction_factor;
+  // 16.11.2026: henterens egen periodefaktor når den finnes - svellperioden ute
+  // kan være brukt i stedet for BarentsWatch sin (rating.bw_period_factor_for()).
+  const share = h.swell_share, pf = h.bw_period_factor!=null ? h.bw_period_factor : bwPeriodFactor(h.bw_period), dirfac = h.spot_direction_factor;
   const shareOk = share==null || share>=0.999, pfOk = pf>=0.999, dirOk = dirfac==null || dirfac>=0.999;
   if(shareOk && pfOk && dirOk) return "";
   const reasons = [];
   if(!shareOk && (pfOk || share<=pf)) reasons.push(`svellandel ${Math.round(share*100)} %`);
-  else if(!pfOk) reasons.push("kort BarentsWatch-periode");
+  // én desimal: 7,9 s skal ikke stå som «8 s» ved siden av «kort svellperiode ute»
+  else if(!pfOk) reasons.push(h.bw_period_basis==="ute" ? `kort svellperiode ute${h.period!=null?` (${nf1.format(h.period)} s)`:""}` : "kort BarentsWatch-periode");
   if(!dirOk) reasons.push(h.spot_direction_diff!=null ? `retning ${Math.round(h.spot_direction_diff)}° skrått ved punktet` : "retning ved punktet");
   return `Etter justering ${nf1.format(h.height)} m (${reasons.join(", ")})`;
 }

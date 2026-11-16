@@ -173,15 +173,16 @@
       },
       "_offshore_longrange": "07.10.2026, Theodors rettelse (langtidsdagene viste '-' fra fredag av). RETTET 07.10.2026 av fysikk-kontrollør: havpunktet ligger IKKE i et smalt sund (det var min første, FEILAKTIGE hypotese) - GSHHS viser åpent hav, 11,7 km fra land, fri sikt over 100 km i hele sektoren 330-30°. Den EKTE årsaken: Open-Meteo GFS Wave velger nærmeste rutenettnode (0,25 grader) for ethvert punkt innenfor cella, og noden begge havpunktene havner i (70,25/20,50) er landmaskert fordi CELLA er ca. 30 % land (Arnøya) - selv om spotens eget havpunkt ligger langt fra land. Dette kan ramme ethvert havpunkt i åpent hav nær en slik rutenettgrense, ikke bare smale sund. offshore_longrange er satt direkte til 70,5/20,5 - noden Open-Meteo FAKTISK bruker for et punkt lenger ute (bekreftet live, 384/384 timer), ikke et anslått punkt nær cellegrensa (unngår Lenangsøyra sin opprinnelige sårbarhet - bare 0,31 km fra grensa mellom land- og sjønoden). Brukes BARE for langtidssonen (dag 8+) når hovedpunktet ikke har noe i det hele tatt - se fetch.py sin build_spot() og STATUS.md for tallene på skjøten mellom kildene (systematisk forskjell, ikke bare et hull fylt igjen).",
       "barentswatch_point": {
-        "lat": 69.949979,
-        "lon": 20.215157
+        "lat": 69.952217,
+        "lon": 20.208673
       },
+      "_barentswatch_point": "16.11.2026 (ja til S10 i svar.md 16.11.2026 kl. 15.45, spotansvarlig 16.11): byttet til punktet som sto i skyggemodus siden 15.10 (600 m ut langs 315, 8,8 m dyp). Det gamle punktet (69.949979, 20.215157) ligger grunnere, i dempingssonen, og viste for lite: skyggepunktet viste 1,2-1,7 ganger mer (median 1,48). Det gamle punktet står nå som barentswatch_point_shadow, så sammenligningen fortsetter. Punktene ligger langs 315 (strandnormalen) og følger ikke facing. Den lærte BarentsWatch-andelen (bw_calibration) er lært mot det gamle punktet og glir mot det nye over 30 dager.",
       "barentswatch_point_near": {
         "lat": 69.949339,
         "lon": 20.21701
       },
-      "barentswatch_point_shadow": {"lat": 69.952217, "lon": 20.208673},
-      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 600m@315, 600 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (8,8 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
+      "barentswatch_point_shadow": {"lat": 69.949979, "lon": 20.215157},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 600m@315, 600 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (8,8 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten. 16.11.2026: ja for Russelv (S10). Skyggepunktet er nå hovedpunkt, og det gamle hovedpunktet står her som skygge, se _barentswatch_point.",
       "swell_window": [
         [
           5,
@@ -201,12 +202,16 @@
         2.0
       ],
       "max_height": 3.5,
-      "facing": 315,
+      "facing": 350,
+      "_facing": "16.11.2026 (ja til S10 i svar.md 16.11.2026 kl. 15.45, spotansvarlig 16.11): 350, lav sikkerhet (±10). Strandnormalen er ca. 318 ± 8, men hele det tegnede vinduet (348-19) ligger 33-64° fra den. Russelv er et skrått brudd: bølgene kommer inn gjennom gapet fra nord, ikke vinkelrett på stranda. Med 315 ble retningsfaktoren 0 for bølger fra 23-26° ved punktet (observasjon 16.11.2026 (bilde, Russelv)). facing brukes for retningen bølgene kommer inn fra og for vindtypen utenfor offshore_wind. offshore_wind [90,180] er beholdt.",
       "_offshore_vind": "Stranda vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         348,
         19
       ],
+      "gap_spot": true,
+      "gap_transfer": 0.2,
+      "_gap_spot": "16.11.2026 (svar.md 16.11.2026 kl. 15.45, funn punkt 3; kilde: observasjon 16.11.2026 (bilde, Russelv)): svellet når Russelv gjennom gapet mellom Vanna og Arnøya, og kystmodellen slipper for lite inn (0,26 m ved punktet da det var rene sett rundt 1 m). Nedre grense for høyden ved spoten: svell ute × gap_transfer når svellet ute ligger i swell_window_tegnet, perioden er minst 7 s og vinden ikke er blåst ut - se rating.gap_floor(). gap_transfer 0,20 (foreløpig): tallet i svar.md, og den lærte BarentsWatch-andelen ved det gamle, grunne punktet var 0,20-0,21 den 16.11.2026 (52 par over 9 dager). 16.11 kl. 11Z gir det 0,48 m ved spoten, sett 1,0 m og 1 poeng. Fysikk-kontrollør 16.11.2026: 0,22 ble prøvd og forkastet - det var valgt for å gi 1 poeng i varselet for 17.11, som er en forventning og ikke en observasjon. Låst her så grensa ikke flytter seg når andelen læres videre; uten låst gap_transfer gir regelen ingen grense. Justeres bare etter nye observasjoner.",
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 46 km ut, retning 10.0 grader."
     },
     {
