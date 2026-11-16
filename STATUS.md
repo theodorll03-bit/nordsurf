@@ -1,10 +1,20 @@
 # Nordsurf: status
 
+## T1 Lofoten/Vesterålen: g-frame rettet 12.11.2026 (Theodors ja), fortsatt holdt tilbake (gren `region/lofoten-vesteralen`, #29, flettet til main 16.11.2026)
+
+- **facing 270°** som bølgeretning ved revet (ikke strandnormal, lavere sikkerhet), **offshore_wind [45, 135]**, og **BarentsWatch-punktet 500 m ut langs 270°** (9,2 m dyp). Snittet er kjørt i Actions 12.11 (`data/bw_point_search/result_2026-11-12T1716_kandidater.json`), og punktet er valgt av regelen fra 15.10 (`tools/velg_bw_punkt.py`).
+- **Svakhet:** punktet er valgt på én time (12.11 12Z, Hs 0,36 m). Bare den timen av 18 hadde svell ute fra vinduet. Ellers kom svellet fra nord, og retningen ved punktet var 299-326°, altså 29-56° fra facing.
+- **`enabled: false` står.** Ingen tall i appen endres. Gjenstår: se punktet og retningen i neste vestsvell, og så Theodors ja til å slå på.
+- **Fysikk-kontrollør: godkjent.** Tallene stemmer med resultatfila, og regelen er riktig brukt. Hs- og dybdedelen av regelen velger 500 m i alle 18 timene (400 m ligger i le bak grunnfeltet). Retningskriteriet hviler på én time. Merknad til senere: i den timen sto bølgene 37° fra facing ved punktet (307° mot 270°). Holder det i vestsvell, vil retningsfaktoren straffe treff fra nordvest, og det må vurderes før spoten slås på.
+- Pakka (`data/kandidater/bygget/lofoten-vesteralen.md`) er laget på nytt.
+- **Flettet til main 16.11.2026** lokalt med `--no-ff`, i egen push. Hvem sa ja: stedfortrederen i `privat/kontor/svar.md` 16.11 («behandler du den som de tre over, i en egen push», når testene er grønne og spotansvarlig har godkjent). Spotansvarligs gjennomgang er fra 10.11 (17 godkjent, 3 rett, 7 avvis), og g-frame er rettet slik den ba om. Ingen spot slås på, og ingen tall i appen endres: 31 spots, 26 på, som før.
+- **Tester:** 16 filer og kontrast grønne i én kjøring på det flettede treet 16.11. **Fysikk-kontrolløren:** godkjent for push til main. Bare g-frame er endret i `spots.json`, og ingenting i `fetcher/`, `docs/` eller workflows. **Feiljegeren:** ingen stoppere.
+
 ## Flettet til main 16.11.2026: Troms, Finnmark, Salten og tidevannsregelen på Unstad
 - **Hva:** PR #30 (bovaer), #31 (berlevag-sandfjorden, persfjord), #32 (seines) og #35 (myk tidevannsregel på Unstad) er flettet lokalt med `--no-ff` i den rekkefølgen og lagt på main i én push.
 - **Hvem sa ja:** Theodor selv, til regionene 10.11, til å merge dem og #35 12.11, og igjen i chatten 16.11 («Merge #30 → #31 → #32 → #35»). Måten (lokal fletting og én push, fordi PR-ene ikke lot seg ta ut av utkast) kom fra stedfortrederen i `privat/kontor/svar.md` 16.11. Theodor bekreftet i chatten 16.11 at de svarene gjelder som hans.
 - **Tall:** 27 spots (22 på) før, 31 spots (26 på) etter. De fire nye står som foreløpige. Ingen hemmelige.
-- **Ikke med:** #37 (breivikeidet) venter på svar om overføringen. #29 (Lofoten og Vesterålen) er fortsatt utkast.
+- **Ikke med:** #37 (breivikeidet) venter på svar om overføringen. #29 (Lofoten og Vesterålen) ble flettet for seg samme dag, se over.
 - **Tester:** 16 filer og kontrast grønne i én kjøring på det flettede treet 16.11.
 - **Fysikk-kontrolløren:** godkjent med merknader. Kombinasjonen er ren: ingen spot er mistet eller doblet, og `rating.py` har samme syntakstre som main (bare en kommentar er endret).
   - Tidevannsregelen treffer bare Unstad. 5 184 tilfeller for de 27 felles spotsene ga 0 forskjeller utenom Unstad. På Unstad: lav og middels 0 endringer, høy −1 i 330 av 5 040, ukjent −1 i 405 av 5 040. Ingen går opp, ingen flytter seg 2 eller mer.
