@@ -1630,4 +1630,53 @@ assert r_fs["stars"] == 5, (r_fs["stars"], r_fs["breakdown"][-4:])
 # faste observasjoner: Unstad 26.09-rekonstruksjonen (test 16.x, Theodor: 4 stjerner) oppfyller alle vilkår og får 5 -
 # KREVER THEODORS JA (står i PR/STATUS); alle andre faste observasjoner er uendret (sjekket av testene over)
 print("28: 5-stjerners-porten - alt oppfylt gir 5, hvert vilkår brutt gir høyst 4, sidevind/flo holder den femte tilbake som blass, Farstadsanden 15.10 med offshore 3 m/s gir Rått - OK")
+# 29: BarentsWatch-perioden som vindsjø-varsel gjelder bare når energien ved punktet KAN være vindsjø
+# (observasjon 16.11.2026 (bilde, Russelv), Theodor: surfbart med fralandsvind mens varselet sa flatt).
+# Tallene er timen kl. 11Z slik den ble publisert: BarentsWatch 0,26 m fra 6° med 4,4 s ved punktet,
+# svell ute 2,42 m fra 20° med 7,9 s, vind 4,6 m/s fra 106° (fralands ved Russelv).
+from rating import bw_can_be_windsea, bw_period_factor, bw_period_factor_for
+rus_1611 = {"bw_height": 0.2567, "bw_dir": 6.0, "bw_period": 4.43, "bw_height_max": 0.4877, "swell_offshore": 2.42,
+            "height_offshore": 2.3, "dir_offshore": 20, "period": 7.9, "wind_speed": 4.6, "wind_dir": 106.0, "gust": 7.1}
+# 29.1: vind fra 106° (100° fra bølgene ved punktet) kan ikke ha laget bølger som kommer inn fra 6° - svellperioden ute (7,9 s) brukes
+assert not bw_can_be_windsea(rus_1611, R)
+pf_new, basis_new = bw_period_factor_for(rus_1611, R)
+assert basis_new == "ute" and abs(pf_new - bw_period_factor(7.9)) < 1e-9 and pf_new > bw_period_factor(4.43)
+r29 = rate(dict(rus_1611), R)
+r29_unknown = rate(dict(rus_1611, wind_dir=None), R)
+show("29.1: Russelv 16.11 kl. 11Z", r29)
+assert r29["height"] > r29_unknown["height"], (r29["height"], r29_unknown["height"])
+assert any("Svellperioden ute" in line for line in r29["breakdown"]), r29["breakdown"]
+# 29.2: ukjent vind - som før (kan ikke utelukke vindsjø). Dette er også det test 7.3 hviler på.
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=None), R)
+assert bw_period_factor_for(dict(rus_1611, wind_dir=None), R) == (bw_period_factor(4.43), "bw")
+# 29.3: vind som blåser samme vei som bølgene ved punktet (fra 350°, bølgene fra 6°) - kan være vindsjø, som før
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=350.0), R)
+assert bw_period_factor_for(dict(rus_1611, wind_dir=350.0), R) == (bw_period_factor(4.43), "bw")
+# 29.4: bølgene ved punktet kommer fra land (135°, 180° fra facing 315) - de er laget i fjorden bak, som før
+assert bw_can_be_windsea(dict(rus_1611, bw_dir=135.0), R)
+assert bw_period_factor_for(dict(rus_1611, bw_dir=135.0), R) == (bw_period_factor(4.43), "bw")
+# 29.5: vind langt fra bølgeretningen (fra 200°, 166° fra 6°) - ikke vindsjø. Grensa er 90°: 96° (fra 6°) kan være, 97° ikke.
+assert not bw_can_be_windsea(dict(rus_1611, wind_dir=200.0), R)
+assert bw_can_be_windsea(dict(rus_1611, wind_dir=96.0), R) and not bw_can_be_windsea(dict(rus_1611, wind_dir=97.0), R)
+# 29.5b: spotens offshore_wind avgjør IKKE (fysikk-kontrollør 16.11.2026). Unstad har [70, 232]: vind fra 225° er
+# "offshore" der, men bare 25° fra sjø som kommer fra 250° - den kan ha laget sjøen, og periodefaktoren står.
+U29 = spots["unstad"]
+u29 = {"bw_height": 1.2, "bw_dir": 250.0, "bw_period": 5.0, "swell_offshore": 1.5, "height_offshore": 1.8,
+       "dir_offshore": 290, "period": 11, "wind_speed": 6, "wind_dir": 225.0, "gust": 9}
+assert bw_can_be_windsea(u29, U29) and bw_period_factor_for(u29, U29) == (bw_period_factor(5.0), "bw")
+# 29.5c: bølger langs land ved punktet er sjø laget i fjorden. Lenangsøyra 26.09 (test 7.1): 290° er 89° fra facing 19,
+# vinden 200° er fralands der. Med kort periode ved punktet skal faktoren stå (og 7.1 er fortsatt flatt).
+l29 = {"bw_height": 0.7, "bw_height_max": 1.4, "swell_offshore": 1.3, "dir_offshore": 277, "height_offshore": 2.7,
+       "period": 9, "bw_dir": 290, "bw_period": 4.5, "wind_speed": 7, "wind_dir": 200, "gust": 10}
+assert bw_can_be_windsea(l29, L) and bw_period_factor_for(l29, L) == (bw_period_factor(4.5), "bw")
+r29l = rate(dict(l29), L)
+assert r29l["height"] < 0.35 and r29l["likely_flat"] and r29l["stars"] == 0, (r29l["height"], r29l["stars"])
+# 29.6: mangler svellperioden ute, brukes BarentsWatch-perioden som før (manglende data er aldri en høyere faktor)
+assert bw_period_factor_for(dict(rus_1611, period=None), R) == (bw_period_factor(4.43), "bw")
+# 29.7: faktoren blir aldri LAVERE enn BarentsWatch-perioden alene ga (kort periode ute, lang ved punktet)
+assert bw_period_factor_for(dict(rus_1611, bw_period=7.0, period=5.0), R) == (bw_period_factor(7.0), "bw")
+# 29.8: BarentsWatch-periode fra 8 s gir full faktor uansett vind - uendret
+assert bw_period_factor_for(dict(rus_1611, bw_period=9.0), R) == (1.0, "bw")
+assert bw_period_factor_for(dict(rus_1611, bw_period=None), R) == (bw_period_factor(None), None)
+print("29: periodefaktoren ved BarentsWatch-punktet - vind mer enn 90° fra bølgene ved punktet bruker svellperioden ute; ukjent vind, medvind, offshore-sektoren alene og bølger langs/fra land som før; aldri lavere enn før - OK")
 print("Alle tester ok")

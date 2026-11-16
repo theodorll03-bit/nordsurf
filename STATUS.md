@@ -1,5 +1,27 @@
 # Nordsurf: status
 
+## Russelv sa flatt da det var surfbart: periodefaktoren ved BarentsWatch-punktet (gren `fiks/russelv-flatt`, 16.11.2026, IKKE merget)
+- **Hva:** observasjon 16.11.2026 (bilde, Russelv): surfbart ca. 09–10Z, rene sett rundt 1 m, fralandsvind. Svell ute 2,4 m fra 20°, 7,9 s. Appen viste 0.
+- **Hvem sa ja:** Theodor 16.11 (oppgaven kom gjennom stedfortrederen i `privat/kontor/svar.md` kl. 13.15). Merge og go-live er et eget spørsmål (S9).
+- **Endring (a):** `rating.bw_can_be_windsea()` og `rating.bw_period_factor_for()`. BarentsWatch-perioden er et varsel om vindsjø. Den brukes nå bare når energien ved punktet kan være vindsjø.
+  - Den kan ikke være vindsjø når bølgene ved punktet kommer fra havet (under 60° fra `facing`) og vinden blåser mer enn 90° fra bølgeretningen ved punktet.
+  - Spotens `offshore_wind` avgjør ikke. Oppgaven sa «når vinden er fralands», men sektoren er satt for vindkvalitet. Unstad har [70, 232], og vind fra 225° kan ha laget sjø fra 250° (fysikk-kontrolløren, stopper i første runde). Russelv 16.11 dekkes fortsatt: vinden sto 100° fra bølgene ved punktet.
+  - Da brukes svellperioden ute i samme kurve. Faktoren blir aldri lavere enn før. Ukjent vind, ukjent retning eller manglende periode ute gir samme svar som før.
+  - Forklaringen i appen sier da «Svellperioden ute (N s) er brukt i stedet».
+- **Før og etter** (de 202 publiserte timene fra 16.11 kl. 11Z, ratet på nytt):
+  - Russelv: 6 timer får høyere tall, 0 timer endrer poeng. Kl. 11Z går høyden fra 0,04 til 0,08 m.
+  - Lenangsøyra: 8 timer får høyere tall, 1 time går fra 0 til 1 poeng (16.11 kl. 21Z). Ingen går ned. Ingen endring på 2 poeng eller mer.
+- **Dette retter ikke 16.11 alene.** BarentsWatch-punktet viste 0,26–0,48 m med 2,9–4,4 s hele dagen, og med facing 315 er retningsfaktoren 0 når bølgene ved punktet kommer fra 23–26°. Facing, punktvalg og full faktor (variant A2) er lagt fram for Theodor (S10) og er ikke i koden.
+- **Ikke gjort (b):** flat-grensen på brytehøyde i stedet for Hs. Den faste observasjonen Grøtfjord 24.09 (0,3 m med 11 s, brytehøyde ca. 0,61 m, flatt) og Russelv 16.11 (høyst ca. 0,47 m, surfbart) kan ikke skilles med en grense på brytehøyde.
+- **Kjente hull, ikke rettet:** regelen ser bare vinden i samme time og på spoten. Gammel vindsjø (4–6 s) blir liggende i timevis etter at vinden har dreid, og vinden i fjorden kan være en annen. Oppfølging: krev at vinden har stått slik i 3–6 timer.
+- **Lavjusteringsvarselet** (`fetch.low_adjustment_warning`) bruker nå samme periodefaktor som ratingen. Det er bare rapport, ingen tall i appen.
+- **Venter på Theodor (fast observasjon, ikke oppfylt ennå):** «Russelv 16.11.2026 ca. 09–10Z (observasjon 16.11.2026 (bilde, Russelv)): surfbart, rene sett rundt 1 m, fralandsvind (ca. 106°). Svell ute 2,4 m fra 20°, 7,9 s. BarentsWatch ved punktet 0,26 m fra 6°, 4,4 s (kl. 11Z, første lagrede time). Skal ikke gi 0.» Den flyttes til «Faste observasjoner» i CLAUDE.md og blir en test når koden gir minst 1 poeng. Ordlyden er fysikk-kontrollørens.
+- **Tester:** ny test 29 i `test_rating.py`. Blokk 9f i `test_pipeline.py` (skyggepunktet på Unstad) har fått pålandsvind i fiksturen, fordi fralandsvinden som sto der nå utløser den nye regelen. 16 testfiler og kontrast er grønne i én kjøring på den ferdige koden 16.11.
+- **Fysikk-kontrolløren:** godkjent for commit på grenen 16.11, i andre runde. Det er ikke et ja til merge.
+  - Første runde hadde én stopper: `offshore_wind` utløste regelen, og Unstad med vind fra 225° og sjø fra 250°, 5 s gikk opp 2 poeng på feil grunnlag. Leddet er fjernet, og eksempelet er test 29.5b.
+  - 60° fra `facing` er samme grense som der retningsfaktoren blir 0. Lenangsøyra 26.09 (89°) ligger utenfor, Russelv 16.11 (51°) innenfor.
+  - Står igjen: vind som nettopp har dreid. Russelv med gammel sjø på 5 s og vinden dreid til 106° går fra 0 til 1 poeng. Det hører til oppfølgingen om vindhistorie.
+
 ## Flettet til main 16.11.2026: Troms, Finnmark, Salten og tidevannsregelen på Unstad
 - **Hva:** PR #30 (bovaer), #31 (berlevag-sandfjorden, persfjord), #32 (seines) og #35 (myk tidevannsregel på Unstad) er flettet lokalt med `--no-ff` i den rekkefølgen og lagt på main i én push.
 - **Hvem sa ja:** Theodor selv, til regionene 10.11, til å merge dem og #35 12.11, og igjen i chatten 16.11 («Merge #30 → #31 → #32 → #35»). Måten (lokal fletting og én push, fordi PR-ene ikke lot seg ta ut av utkast) kom fra stedfortrederen i `privat/kontor/svar.md` 16.11. Theodor bekreftet i chatten 16.11 at de svarene gjelder som hans.
