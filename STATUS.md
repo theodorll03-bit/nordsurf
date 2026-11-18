@@ -1,5 +1,63 @@
 # Nordsurf: status
 
+## Ratingpushen 17.11.2026 (S17), flettet til main 18.11.2026 – periodefaktoren, Breivikeidet på sandbanken, S11–S14 (gren `fiks/russelv-gap`)
+
+Flettet etter ja på S18 (a, b og c) i `privat/kontor/svar.md` 18.11.2026 kl. 20.25. Gjenstår: `find_bw_point.yml` for den nye Breivikeidet-pinnen, og ny `exposure_baseline` for spoten. Tabeller og varianter ligger i `privat/kontor/observasjoner/s17-tabell-2026-11-17.md`, og fysikk-kontrollørens dom i `privat/kontor/observasjoner/kontroll-s17-2026-11-17.md`.
+
+- **Hva og hvem:** bestilt 17.11 kl. 12.20 og 12.45 i `privat/kontor/svar.md` (ja til S11–S15, og S17 fra Theodor: «Dette er et stort problem vi må fikse.»). Kilde: observasjon 17.11.2026, Theodor. Breivikeidet var hoftehøyt og rent kl. 08–09Z med hodehøye sett ca. kl. 09.30–09.50Z, vindstille. Appen viste 0 poeng og «flatt».
+- **Periodefaktoren** (`rating.bw_swell_dominates()`): den korte toppperioden ved BarentsWatch-punktet settes til side (faktor 1,0) når alt dette er kjent og oppfylt:
+  - Svellandelen ute er 0,9 eller mer, og svellet er et ekte svellfelt (ikke anslag fra totalhøyden).
+  - Svellperioden ute er 7 s eller mer.
+  - Bølgene ved punktet kommer fra havsiden (under 60° fra facing).
+  - Vinden på spoten er ikke kraftig pålands: middelvind under 6 m/s, eller ikke pålands og skrått pålands. Grensa er fysikk-kontrollørens.
+  - Regelen erstatter A1 fra 16.11 (vindretning mot retningen ved punktet). A2 ble aldri tatt inn.
+  - Regelen er empirisk, ikke fysikk. 2,4–2,9 s ved punktet er vindsjø i kystmodellen. Den traff observasjonen fordi modellvinden var feil (5,5 m/s i varselet, vindstille på stranda). Varig løsning for Breivikeidet er en egen gap-grense. Den trenger Theodors ja og venter.
+- **Breivikeidet i spots.json** (Theodors ja 17.11): pinnen flyttet til sandbanken (69.6680714, 19.6554882, ca. 970 m NNV for den gamle), ikke lenger ubekreftet, facing 20, vindu 15–25, idealhøyde 0,5–1,5, fralandsvind 155–245.
+  - BarentsWatch-punktet er det gamle. Nytt punkt regnes med `find_bw_point.yml` etter pushen.
+  - `data/exposure_baseline.json` har aldri hatt Breivikeidet, så spoten bruker reserven `directness()`: 0,8 ved 17° med det nye vinduet, mot 0,47 med det gamle. Overføringen 0,15 (`_transfer`) ble begrunnet med det gamle vinduet og ses på når tabellen bygges for den nye pinnen.
+- **Energiregelen:** Breivikeidet er unntatt (`no_energy_rule` i spots.json, med kilde). Standardgrensene (2000/500 kJ) tok 1 poeng av en hoftehøy og ren dag med ca. 900 kJ. For alle andre spots er regelen som før. S17 ba om at standardgrensene tas bort for alle spots uten egen kilde. Det ga 7–8 % av lyse timer opp 2 poeng eller mer og 160 lyse timer til 3 poeng eller mer uten observasjon, så det er ikke gjort (stoppregelen i S17 punkt 7, og kontrolløren godkjenner det ikke i dag).
+- **Pålandskurven (S13):** `(5,0) (8,2) (11,3) (14,4)`, som i forslaget 16.11. Fysikk-kontrollørens alternativ `(5,0) (7; 5/3) (8,2)` var strengere mellom 5 og 8 m/s, og kontrolløren trakk det 17.11.
+- **S11, S12 og S14** er med som besvart: gap-regelen og facing 350 for Russelv (seksjonen under), unntaket i «kildene uenige», og ordlyden «Løftet til 0,5 m: svell ute gjennom gapet (anslag)» i appen. Appen sier «kort BarentsWatch-periode» bare når perioden ved punktet faktisk er brukt.
+- **Faste observasjoner:**
+  - Ny: Breivikeidet 17.11.2026 kl. 08–09Z, minst 1 poeng (test 34). Kl. 07–10Z gir 1, 1, 2 og 2 poeng med surfehøyde 0,6–0,8 m. Uten modellvinden gir alle fire timene 2.
+  - Russelv 16.11 kl. 11–13Z: 1 poeng som før. Russelv 17.11 (pålands, 3 s ved punktet): 0 poeng til kl. 11Z og 1 poeng kl. 12–13Z, likt S11.
+  - Grøtfjord 24.–26.09, Lenangsøyra 26.09, Unstad og Farstadsanden: uendret (testene 1–28).
+- **Før og etter** (publiserte kjøringer 16.11 kl. 18Z og 17.11 kl. 11Z ratet på nytt, 27 spots, 5913 timer, 1661 lyse; før er main):
+  - 325 timer går opp og 7 går ned. Ingen lyse timer går ned.
+  - 11 lyse timer (0,7 %) går opp 2 poeng eller mer: Skagsanden 6, Breivikeidet 4, Kvalvika 1. 2 lyse timer er nye på 3 poeng eller mer (Unstad 1, Seines 1).
+  - Snittet over lyse timer går fra 0,20 til 0,27 poeng.
+  - De 7 timene ned er i mørket og går ned 1 poeng (Bunes 1, Eggum 1, Kvalnes 1, Berlevåg Sandfjorden 3, Persfjord 1). Det er timer med fralandsvind og svellandel 52–80 % som fikk svellperioden ute med A1.
+- **Kjente svakheter:** bråkanter ved andel 0,9, periode 7,0 s og vind 6 m/s (faktoren hopper fra 0,3 til 1,0). Regelen ser bare vinden i samme time og på spoten. Ingen data skiller Breivikeidet 17.11 fra Russelv 17.11 ved punktet, bare vinden.
+- **Kan vente:** glidende overganger i periodefaktoren, egen gap-grense for Breivikeidet (andel ca. 0,19), energiregelen bort for alle med mykere avrunding, nytt BarentsWatch-punkt og ny eksponeringstabell for Breivikeidet, og Logger-teksten i appen som nevner standardgrensene også for spots uten energiregel.
+- **Fysikk-kontrolløren 17.11:** godkjent med rettinger, og rettingene er gjort (6 m/s, havsiden, klokkeslettet, unntaket som data, kurven fra 16.11). Ikke godkjent: energiregelen bort for alle, vindkast som ikke teller på Breivikeidet, og halverte energigrenser.
+- **Tester:** test 29 er skrevet om for den nye regelen, 31.9 er delt i to, og test 34 er ny. Test 7.3 bruker `height_offshore` 1,4 (før 1,3).
+
+## Grunnlaget fra 16.11.2026: Russelv facing 350, nytt BarentsWatch-punkt, gap-regel og mildere vindkurver (gren `fiks/russelv-gap`; A1 og ordlyden i appen er endret 17.11, se seksjonen over)
+
+Ingenting her er flettet. Det venter på ja i `privat/kontor/svar.md` (spørsmål S11–S14 i `til-theodor.md`). Før/etter-tabellen time for time ligger i `privat/kontor/observasjoner/gap-tabell-2026-11-16.md`.
+
+- **Hva og hvem:** bestilt av stedfortrederen 16.11 kl. 15.45 (ja til S10, og gap-regelen som forslag) og av Theodor 16.11 (mildere vind ved svak vind: «Se bort ifra vinden, når det er snakk om så lite har det jo nesten ingenting å si.»). Kilde for gap-regelen: observasjon 16.11.2026 (bilde, Russelv).
+- **S10, bare russelv i spots.json:** `facing` 350 (lav sikkerhet), og BarentsWatch-punktet byttet med det som sto i skyggemodus lenger ut. Sjekksummen i `data/exposure_baseline.json` er oppdatert for russelv.
+- **Gap-regelen** (`rating.gap_swell_in_window()`, `rating.gap_floor()`): nedre grense for Hs ved spoten = svell ute × `gap_transfer`.
+  - Bare for spots med `gap_spot`, `swell_window_tegnet` og låst `gap_transfer` i spots.json. Det er bare russelv (0,20, foreløpig). Uten låst andel gir regelen ingen grense.
+  - Vilkår: det ekte svellfeltet ute kommer fra det tegnede vinduet eller høyst 2° utenfor kanten, perioden ute er minst 7 s, og det er ikke blåst ut (8 m/s pålands eller skrått pålands).
+  - Timer der grensa brukes, er alltid usikre (høyst 3 poeng).
+  - Unntak i «kildene uenige»: lav eksponering ute utløser ikke regelen alene når svellet kommer fra det tegnede vinduet. Vindsjø-andel og retning ved punktet teller som før. Eget spørsmål til eieren.
+- **Vindkurvene** (`rating.WIND_PENALTY_CURVES`): side uten straff til 6 m/s (før 5), skrått pålands til 6 m/s (før 3), pålands til 5 m/s (før 2). Fra 8 m/s (side: 10) er kurvene som før. `blown_out` (8 m/s pålands) er urørt.
+- **Fast observasjon, ny:** Russelv 16.11.2026, se CLAUDE.md. Kl. 11Z gir Hs 0,48 m, sett 1,0 m og 1 poeng (før: 0). Test 31 i `test_rating.py`.
+- **Før og etter** (publiserte timer ratet på nytt, kjøringene 16.11 kl. 11Z og 18Z):
+  - Russelv 16.11 kl. 11–13Z: 0 → 1 poeng. 17.11 kl. 07–13Z: 0 → 0. Ingen time går ned.
+  - Russelv, hele kjøringene: 14 og 9 timer endrer poeng. Største endring er +2, kl. 20 og 21Z 16.11 i 18Z-kjøringen, i mørket (se «Kjent svakhet»).
+  - Lenangsøyra og Breivikeidet: ingen timer endres.
+  - Vindkurvene over alle 27 spots (18Z-kjøringen, 5427 timer, forenklet oppskrift): 234 timer går opp 1 poeng, ingen går ned, ingen mer enn +1. 82 av dem er i dagslys eller skumring, 19 av de lyse har effektiv vind fra 6 m/s.
+  - Faste observasjoner: alle 15 i testlaben holder med samme poeng og surfehøyde som før. Kurvene er ikke testet mot loggene (de ligger i det private loggrepoet).
+- **Kjent svakhet, ikke rettet:** med det nye punktet gir regelen fra `fiks/russelv-flatt` (svellperioden ute brukes når bølgene ved punktet ikke kan være vindsjø) 2 poeng i to mørke timer. Punktet viste 1,04–1,06 m med 3,8 s, perioden ute var 8,0 s, og periodekurven hopper fra 0,6 til 1,0 ved nøyaktig 8 s. Timene rundt hadde 7,95 s og fikk 1 poeng. Kurven gjelder alle spots og er ikke rørt her. Det samme skjer alt på main ved Lenangsøyra 16.11.2026 kl. 20–21Z (mørkt). Tallene bygger på to punkter: høyden er fra det nye punktet, perioden og retningen fra det gamle.
+- **Prøvd og tatt ut:** full periodefaktor etter 3 timer uten mulig vindsjø (A2). Fysikk-kontrolløren godkjente den ikke: perioden bevares inn mot land, så 1,0 m med 3,8 s ved punktet er ung vindsjø og ikke svellet på 8 s ute. Andel 0,22 ble også forkastet, den var valgt for å gi 1 poeng i varselet for 17.11.
+- **Kan vente (fysikk-kontrolløren):** myke kanter i gap-regelen (21° mot 22°, 7,0 mot 6,9 s), ikke bruk grensa når punktet selv viser svellperiode, hvordan facing 350 flytter vindtypene for vind fra 280–305°, og eksponeringslinja i appen ved siden av «Løftet til … gjennom gapet». Egen foreslått regel som trenger eget ja: ikke bruk svellperioden ute når brattheten ved punktet er 0,03 eller mer. Den fjerner de mørke timene med 1–2 poeng ved Russelv, Lenangsøyra og Breivikeidet, og rører ikke observasjonstimen (bratthet 0,008–0,012). Tak 0,6 på faktoren er ikke trygt (Kvalvika 18.11 kl. 07–08Z ville gått fra 2 til 0).
+- **Appen:** `surfAdjustmentLine` i `docs/js/app.js` sier «Løftet til X m (svell ute gjennom gapet, anslag)» når grensa er brukt, og «kort svellperiode ute (N s)» når svellperioden ute er brukt. Nye ord, venter på ja.
+- **Fysikk-kontrolløren 16.11:** to runder. Første runde: andel 0,22 og A2 ikke godkjent, unntaket for «kildene uenige» måtte bygge på retning og periode ute og ikke på om grensa slo inn, og `gap_transfer` måtte være påkrevd. Alt er rettet. Etterkontrollen: godkjent for lokal commit som forslag. Det er ikke et ja til merge. Kontrolløren så ikke på `docs/js/app.js`, `docs/sw.js` og `data/exposure_baseline.json` i etterkontrollen.
+- **Tester:** 16 filer og kontrast grønne på grenen 16.11. `test_kart_browser.py` falt først på lastetidsgrensa (2,0 s) mens maskinen var opptatt, også på main (3,09 s mot 2,98 s på grenen), og gikk grønt i ny kjøring. Backtest: 15 av 15 faste observasjoner holder, ellers likt main. Vindkurvene er ikke testet mot loggene (de ligger i et privat repo).
+
 ## T1 Troms: breivikeidet får foreløpig overføring 0,15 og flettes til main 16.11.2026 (ja til S6, #37)
 
 - **Hva:** `transfer` 0,15 i spots.json, merket foreløpig. Den gjelder bare reservesonen, der høyden er svell ute × overføring × eksponering. Timene med BarentsWatch (de første dagene) endres ikke.

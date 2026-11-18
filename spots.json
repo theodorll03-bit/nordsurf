@@ -173,15 +173,16 @@
       },
       "_offshore_longrange": "07.10.2026, Theodors rettelse (langtidsdagene viste '-' fra fredag av). RETTET 07.10.2026 av fysikk-kontrollør: havpunktet ligger IKKE i et smalt sund (det var min første, FEILAKTIGE hypotese) - GSHHS viser åpent hav, 11,7 km fra land, fri sikt over 100 km i hele sektoren 330-30°. Den EKTE årsaken: Open-Meteo GFS Wave velger nærmeste rutenettnode (0,25 grader) for ethvert punkt innenfor cella, og noden begge havpunktene havner i (70,25/20,50) er landmaskert fordi CELLA er ca. 30 % land (Arnøya) - selv om spotens eget havpunkt ligger langt fra land. Dette kan ramme ethvert havpunkt i åpent hav nær en slik rutenettgrense, ikke bare smale sund. offshore_longrange er satt direkte til 70,5/20,5 - noden Open-Meteo FAKTISK bruker for et punkt lenger ute (bekreftet live, 384/384 timer), ikke et anslått punkt nær cellegrensa (unngår Lenangsøyra sin opprinnelige sårbarhet - bare 0,31 km fra grensa mellom land- og sjønoden). Brukes BARE for langtidssonen (dag 8+) når hovedpunktet ikke har noe i det hele tatt - se fetch.py sin build_spot() og STATUS.md for tallene på skjøten mellom kildene (systematisk forskjell, ikke bare et hull fylt igjen).",
       "barentswatch_point": {
-        "lat": 69.949979,
-        "lon": 20.215157
+        "lat": 69.952217,
+        "lon": 20.208673
       },
+      "_barentswatch_point": "16.11.2026 (ja til S10 i svar.md 16.11.2026 kl. 15.45, spotansvarlig 16.11): byttet til punktet som sto i skyggemodus siden 15.10 (600 m ut langs 315, 8,8 m dyp). Det gamle punktet (69.949979, 20.215157) ligger grunnere, i dempingssonen, og viste for lite: skyggepunktet viste 1,2-1,7 ganger mer (median 1,48). Det gamle punktet står nå som barentswatch_point_shadow, så sammenligningen fortsetter. Punktene ligger langs 315 (strandnormalen) og følger ikke facing. Den lærte BarentsWatch-andelen (bw_calibration) er lært mot det gamle punktet og glir mot det nye over 30 dager.",
       "barentswatch_point_near": {
         "lat": 69.949339,
         "lon": 20.21701
       },
-      "barentswatch_point_shadow": {"lat": 69.952217, "lon": 20.208673},
-      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 600m@315, 600 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (8,8 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten.",
+      "barentswatch_point_shadow": {"lat": 69.949979, "lon": 20.215157},
+      "_skyggepunkt": "15.10.2026 (Theodors oppgave): SKYGGEMODUS 14 dager - snittregelens punkt (snitt 600m@315, 600 m ut langs facing; regelen fant ingen 15.10 (vindsjø) - første punkt med >= 8 m dyp (8,8 m)). Hentes og rates bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i appen eller kalibreringen. Ingen spot flyttes før Theodor sier ja for akkurat den spoten. 16.11.2026: ja for Russelv (S10). Skyggepunktet er nå hovedpunkt, og det gamle hovedpunktet står her som skygge, se _barentswatch_point.",
       "swell_window": [
         [
           5,
@@ -201,12 +202,16 @@
         2.0
       ],
       "max_height": 3.5,
-      "facing": 315,
+      "facing": 350,
+      "_facing": "16.11.2026 (ja til S10 i svar.md 16.11.2026 kl. 15.45, spotansvarlig 16.11): 350, lav sikkerhet (±10). Strandnormalen er ca. 318 ± 8, men hele det tegnede vinduet (348-19) ligger 33-64° fra den. Russelv er et skrått brudd: bølgene kommer inn gjennom gapet fra nord, ikke vinkelrett på stranda. Med 315 ble retningsfaktoren 0 for bølger fra 23-26° ved punktet (observasjon 16.11.2026 (bilde, Russelv)). facing brukes for retningen bølgene kommer inn fra og for vindtypen utenfor offshore_wind. offshore_wind [90,180] er beholdt.",
       "_offshore_vind": "Stranda vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         348,
         19
       ],
+      "gap_spot": true,
+      "gap_transfer": 0.2,
+      "_gap_spot": "16.11.2026 (svar.md 16.11.2026 kl. 15.45, funn punkt 3; kilde: observasjon 16.11.2026 (bilde, Russelv)): svellet når Russelv gjennom gapet mellom Vanna og Arnøya, og kystmodellen slipper for lite inn (0,26 m ved punktet da det var rene sett rundt 1 m). Nedre grense for høyden ved spoten: svell ute × gap_transfer når svellet ute ligger i swell_window_tegnet, perioden er minst 7 s og vinden ikke er blåst ut - se rating.gap_floor(). gap_transfer 0,20 (foreløpig): tallet i svar.md, og den lærte BarentsWatch-andelen ved det gamle, grunne punktet var 0,20-0,21 den 16.11.2026 (52 par over 9 dager). 16.11 kl. 11Z gir det 0,48 m ved spoten, sett 1,0 m og 1 poeng. Fysikk-kontrollør 16.11.2026: 0,22 ble prøvd og forkastet - det var valgt for å gi 1 poeng i varselet for 17.11, som er en forventning og ikke en observasjon. Låst her så grensa ikke flytter seg når andelen læres videre; uten låst gap_transfer gir regelen ingen grense. Justeres bare etter nye observasjoner.",
       "_havpunkt": "Sjekket mot kystlinje (GSHHS full oppløsning): rett linje fra spoten til havpunktet krysser ikke land, og havpunktet har minst 10 km åpent hav rundt seg. 46 km ut, retning 10.0 grader."
     },
     {
@@ -1423,20 +1428,22 @@
       "status": "forelopig",
       "region": "Troms",
       "spot": {
-        "lat": 69.659992,
-        "lon": 19.664974
+        "lat": 69.6680714,
+        "lon": 19.6554882
       },
-      "facing": 17.3,
+      "_pinne": "17.11.2026, Theodor: pinnen er flyttet til sandbanken der bølgene brøt (observasjon 17.11.2026, Theodor), ca. 970 m NNV for den gamle (69.659992, 19.664974).",
+      "facing": 20,
+      "_facing": "17.11.2026: 20°, midten av den frie sektoren mot åpent hav fra den nye pinnen (OSM: 14-26° fri minst 35 km, 21-26° fri 150 km) og av vinduet 15-25. Fabrikkens kystnormal fra den nye pinnen (148,4°, 149 m til kysten) peker på siden av odden og er ikke brukt. Før 17.11: 17,3 (kystnormal fra den gamle pinnen). Ikke kontrollert mot flyfoto.",
       "swell_window": [
-        20,
+        15,
         25
       ],
-      "_vindu": "Spotfabrikken 2026-11-12: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[20, 25]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet. Spotansvarlig 12.11.2026 (OSM, uten kysttoleranse, fra posisjonen): fritt 150 km 20-25°; 10-17° treffer land 31-39 km ut, 18-19° 50-51 km ut, 26-29° Arnøya 55-64 km ut, 30° og over under 15 km, 9° og under under 8 km. Theodors 15-30° (12.11) er fri linje ut Ullsfjorden, ikke til åpent hav. Samme type gap som russelv/lenangsoyra (15°-regelen gjelder ikke).",
+      "_vindu": "17.11.2026, Theodor: vinduet er 15-25. Svell ute fra 17° ga surf (observasjon 17.11.2026, Theodor). Fra den nye pinnen (OSM, uten kysttoleranse): fritt 150 km 21-26°, 14-20° treffer land 35-51 km ut, 11-13° 5-6 km ut, 27-31° 53-61 km ut. FØR 17.11 (vindu 20-25, gammel pinne): Spotfabrikken 2026-11-12: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[20, 25]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet. Spotansvarlig 12.11.2026 (OSM, uten kysttoleranse, fra posisjonen): fritt 150 km 20-25°; 10-17° treffer land 31-39 km ut, 18-19° 50-51 km ut, 26-29° Arnøya 55-64 km ut, 30° og over under 15 km, 9° og under under 8 km. Theodors 15-30° (12.11) er fri linje ut Ullsfjorden, ikke til åpent hav. Samme type gap som russelv/lenangsoyra (15°-regelen gjelder ikke).",
       "offshore_wind": [
-        152,
-        242
+        155,
+        245
       ],
-      "_offshore_vind": "standard, ubekreftet (motsatt av facing ±45°)",
+      "_offshore_vind": "standard, ubekreftet (motsatt av facing 20° ±45°)",
       "offshore": {
         "lat": 70.3349,
         "lon": 20.4737
@@ -1451,16 +1458,19 @@
         "lat": 69.660855,
         "lon": 19.665743
       },
-      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1827_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 100m@17.3, 100 m ut, dybde 8,8 m. Lavere sikkerhet (spotansvarlig 12.11.2026): 15.10-regelen fant ikke noe punkt: velgeren prøver bare timer med svell ute fra innenfor vinduet (12 av 19), og i alle de 12 var retningen ved 100 m 69-88° (46-66° fra svellet ute). BarentsWatch viste kort krapp sjø fra øst i 17 av 19 timer (100 m: 0,12-0,28 m, Tp 2,0-2,9 s) mens svellet ute var 0,8-1,4 m fra 11-27°. I de to roligste timene (12.11 kl. 18Z og 13.11 kl. 00Z) sto det igjen 0,09 m fra 9° med Tp 7,5 s ved 100 m - ca. 7 % av svellet ute (1,2-1,26 m fra 12-18°, like utenfor vinduet). Hs øker fra 0,19 m (100 m) til 0,30 m (800 m) og flater ut der; økningen er le bak Breivikneset for østlig krappsjø, ikke brytesone (8,8 m er dypt vann for 3 s bølger). 100 m er derfor beholdt som punktet som best ligner stranda.",
+      "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1827_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 100m@17.3, 100 m ut, dybde 8,8 m. Lavere sikkerhet (spotansvarlig 12.11.2026): 15.10-regelen fant ikke noe punkt: velgeren prøver bare timer med svell ute fra innenfor vinduet (12 av 19), og i alle de 12 var retningen ved 100 m 69-88° (46-66° fra svellet ute). BarentsWatch viste kort krapp sjø fra øst i 17 av 19 timer (100 m: 0,12-0,28 m, Tp 2,0-2,9 s) mens svellet ute var 0,8-1,4 m fra 11-27°. I de to roligste timene (12.11 kl. 18Z og 13.11 kl. 00Z) sto det igjen 0,09 m fra 9° med Tp 7,5 s ved 100 m - ca. 7 % av svellet ute (1,2-1,26 m fra 12-18°, like utenfor vinduet). Hs øker fra 0,19 m (100 m) til 0,30 m (800 m) og flater ut der; økningen er le bak Breivikneset for østlig krappsjø, ikke brytesone (8,8 m er dypt vann for 3 s bølger). 100 m er derfor beholdt som punktet som best ligner stranda. 17.11.2026: punktet er BEHOLDT etter at pinnen ble flyttet, og ligger nå ca. 900 m SSØ for pinnen. Det er det eneste punktet med en observasjon å holde mot: 0,41-0,44 m ved punktet da det var hoftehøyt på sandbanken (observasjon 17.11.2026, Theodor). Nytt snitt fra den nye pinnen hentes i Actions (find_bw_point.yml) når pinnen er på main.",
       "ideal_height": [
-        0.8,
-        2.0
+        0.5,
+        1.5
       ],
+      "_ideal": "17.11.2026, Theodor: sandbanke, hoftehøyt er bra. Før: 0,8-2,0 (standard).",
       "max_height": 3.5,
       "transfer": 0.15,
       "_transfer": "16.11.2026, FORELØPIG (ja til S6 i privat/kontor/svar.md 16.11 kl. 15.45, i stedet for taket på 0,25 som fysikk-kontrolløren ikke godkjente): andelen av svellet ute som når stranda ved direkte treff, brukt i reservesonen (svell ute × transfer × eksponering) til BarentsWatch har lært en egen. Grunnlag: BarentsWatch-snittet 12.11.2026 (data/bw_point_search/result_2026-11-12T1827_kandidater.json, 19 timer, svell ute 0,8-1,4 m): totalhøyden ved punktet var 7-26 % av svellet ute (median 22 %), men nesten alt var krapp sjø fra øst på 2-3 s. Den rene svelldelen (7,5 s fra 9°, svell ute fra 12-18°) var ca. 7 %. Med eksponering 0,23-0,53 ved 12-18° slipper 0,15 inn 3,5-8 %, og 12 % midt i vinduet (22°, eksponering 0,8). Ingen observasjon ennå. Justeres etter første observasjon.",
-      "kilde": "Theodor 12.11.2026 (hørt, kilden ikke navngitt) + spotfabrikken",
-      "_ubekreftet": "Theodor 12.11.2026: har hørt at det er bra, men ikke surfet her selv. Kilden er ikke navngitt, så vekten er lav. Posisjon og facing er fra kystlinje og flyfoto (ingen bølger synlige der), ikke fra en observasjon. Fjordspot: bølgene kommer trolig enten som svell fra NNØ gjennom gapet mellom Vanna og Arnøya (lang periode, mye energi tapt på 80 km inn fjorden) eller som vindsjø inn Ullsfjorden. Første observasjon blir fasiten.",
+      "no_energy_rule": true,
+      "_no_energy_rule": "17.11.2026 (svar på S17 i privat/kontor/svar.md): Breivikeidet er unntatt energiregelen (rating.energy_factor()). Kilde: observasjon 17.11.2026, Theodor: hoftehøyt og rent på sandbanken med ca. 900 kJ svellenergi ute. Standardgrensene (2000/500 kJ) tok 1 poeng. Unntaket gjelder bare denne spoten og står som eget felt, ikke i local_rules, fordi det ikke er en lokal regel som skal vises per time. Å fjerne standardgrensene for alle spots ble regnet på samme dag og ga 7-8 % av lyse timer opp 2 poeng eller mer, så det venter på flere logger.",
+      "kilde": "observasjon 17.11.2026, Theodor",
+      "_observasjon": "17.11.2026, Theodor: hoftehøyt kl. 08-09Z (09-10 norsk tid) og hodehøye sett ca. kl. 09.30-09.50Z. Bratte bølger som er vanskelige å lese, middels kraft. Vindstille og rent. Svell ute 2,2-2,3 m fra 17° med 7,75 s, BarentsWatch 0,37-0,43 m med 2,4-2,6 s ved punktet. Appen viste 0 poeng og «flatt». FØR 17.11.2026 var spoten merket ubekreftet (hørt 12.11.2026, kilden ikke navngitt).",
       "_vern": "Sandbukta naturreservat (VV00002296, forskrift 2004-06-04-857): stranda og sjøarealet innerst i bukta, med posisjonen, ligger inne i reservatet. Forskriften har ikke ferdsels- eller surfeforbud - bare motorferdsel på land er forbudt, og dyre- og fuglelivet er fredet mot unødig forstyrrelse. Ingen «Forbud nå».",
       "_barentswatch_snitt": "data/bw_point_search/result_2026-11-12T1827_kandidater.json",
       "_rettet": {

@@ -810,8 +810,8 @@ def bw_shadow_mock_u(la, lo):
     sh = abs(la - 68.271871) < 1e-5
     return {sources.hour_key(now2 + dt.timedelta(hours=i)): {"height": 1.5, "dir": 250.0 if sh else 295.0, "period": 4.0 if sh else 12.0} for i in (0, 3, 6, 9)}
 sources.barentswatch_point = bw_shadow_mock_u
-# pålandsvind (260°) i denne blokka: med fralandsvinden i standardmocken (120°) kan ikke 4 s ved punktet være
-# vindsjø, og da brukes svellperioden ute i stedet (rating.bw_can_be_windsea, observasjon 16.11.2026 (bilde, Russelv))
+# pålandsvind (260°) i denne blokka. Satt 16.11.2026 da vindretningen avgjorde om 4 s ved punktet kunne være vindsjø
+# (A1). Fra 17.11.2026 avgjør svellandelen og vindstyrken det (rating.bw_swell_dominates()), og mocken står urørt.
 _saved_wx_9f = sources.metno_weather
 sources.metno_weather = lambda la, lo: hourly(lambda i: {"wind_speed": 2, "wind_dir": 260, "gust": 4, "air_temp": 6})
 try:
