@@ -1,8 +1,8 @@
 # Nordsurf: status
 
-## FORSLAG, ikke live: ratingpushen 17.11.2026 (S17) – periodefaktoren, Breivikeidet på sandbanken, S11–S14 (gren `fiks/russelv-gap`)
+## Ratingpushen 17.11.2026 (S17), flettet til main 18.11.2026 – periodefaktoren, Breivikeidet på sandbanken, S11–S14 (gren `fiks/russelv-gap`)
 
-Ingenting her er flettet. Det venter på svar på S18 i `privat/kontor/til-theodor.md`. Tabeller og varianter ligger i `privat/kontor/observasjoner/s17-tabell-2026-11-17.md`, og fysikk-kontrollørens dom i `privat/kontor/observasjoner/kontroll-s17-2026-11-17.md`.
+Flettet etter ja på S18 (a, b og c) i `privat/kontor/svar.md` 18.11.2026 kl. 20.25. Gjenstår: `find_bw_point.yml` for den nye Breivikeidet-pinnen, og ny `exposure_baseline` for spoten. Tabeller og varianter ligger i `privat/kontor/observasjoner/s17-tabell-2026-11-17.md`, og fysikk-kontrollørens dom i `privat/kontor/observasjoner/kontroll-s17-2026-11-17.md`.
 
 - **Hva og hvem:** bestilt 17.11 kl. 12.20 og 12.45 i `privat/kontor/svar.md` (ja til S11–S15, og S17 fra Theodor: «Dette er et stort problem vi må fikse.»). Kilde: observasjon 17.11.2026, Theodor. Breivikeidet var hoftehøyt og rent kl. 08–09Z med hodehøye sett ca. kl. 09.30–09.50Z, vindstille. Appen viste 0 poeng og «flatt».
 - **Periodefaktoren** (`rating.bw_swell_dominates()`): den korte toppperioden ved BarentsWatch-punktet settes til side (faktor 1,0) når alt dette er kjent og oppfylt:
