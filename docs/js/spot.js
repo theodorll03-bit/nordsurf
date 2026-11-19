@@ -166,8 +166,9 @@
     return {cls: `r-${Math.min(5, best.st)}`, st: best.st, h, t: h.t, start: s.hours[d.idxs[a]].t, slutt: s.hours[d.idxs[z]].t};
   }
   function besteSett(s, d, b){
-    // timene i dagens beste vindu (streken over kolonnene i timestripa); ingen når dagen ikke har surf
-    if(b.st==null || b.st < 1 || !b.start) return new Set();
+    // timene i dagens beste vindu (streken over kolonnene i timestripa); ingen når dagen ikke har surf,
+    // og ingen når vinduet er over - samme regel som «Best» i dommen (domHtml)
+    if(b.st==null || b.st < 1 || !b.start || !H.fsApent(b)) return new Set();
     const a = Date.parse(b.start), z = Date.parse(b.slutt || b.start);
     return new Set(d.idxs.filter(i=>{ const ms = Date.parse(s.hours[i].t); return ms >= a && ms <= z; }));
   }

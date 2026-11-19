@@ -637,17 +637,30 @@
     else if(S.view==="logger" || S.view==="innstillinger") renderSide();
     else if(S.view==="spot") renderSpotView();
   }
+  function redraw(){
+    // tegn det som står framme på nytt uten å flytte brukeren (ny time, ny bredde, økt logget): render() går til toppen
+    // som ved navigasjon, så rullingen settes tilbake, og en åpen «Hvorfor» på spotsiden står åpen
+    const y = window.scrollY, hv = S.view==="spot" ? $("#viewSpot #hvorfor") : null, apen = !!(hv && hv.open);
+    render();
+    if(apen){ const hv2 = $("#viewSpot #hvorfor"); if(hv2) hv2.open = true; }
+    window.scrollTo(0, y);
+  }
+  // nøkkelen for «ny time» er klokketimen, ikke nå-timen til første spot: mangler den spoten «nå» (hentingen feilet i regionen),
+  // ble siden ellers aldri tegnet på nytt (fysikk-kontrolløren 19.11.2026)
+  const klokketime = ()=> Math.floor(Date.now() / 36e5);
   function tickNow(){
     // ny time mens appen står åpen / kommer tilbake fra bakgrunnen: nå-timen flytter seg
     if(document.hidden || !DATA) return;
-    const h = naaOf(DATA.spots[0]); const n = h ? h.t : null; if(n===S.now) return; S.now = n;
-    if(S.view==="sok") return;
-    render();
+    const n = klokketime(); if(n===S.now) return; S.now = n;
+    // Søk og Innstillinger viser ingenting som følger klokka, og tegnes de på nytt, mister brukeren teksten de holder på
+    // å skrive (feiljegeren 19.11.2026)
+    if(S.view==="sok" || S.view==="innstillinger") return;
+    redraw();
   }
 
   /* ---------- oppstart (kalles fra app.js start()) ---------- */
   async function start(data){
-    const h = naaOf(data.spots[0]); S.now = h ? h.t : null;
+    S.now = klokketime();
     S.region = chosenRegion();
     $("#loading").hidden = true;
     wireTopSearch(); temaKnapp();
@@ -656,16 +669,12 @@
     window.addEventListener("hashchange", ()=>{ parseRoute(); render(); });
     // spotsiden velger mobil- eller PC-oppsett når den tegnes (spot.js render): tegn på nytt når bredden krysser 1024 px
     // (et nettbrett som snus), ellers står mobiloppsettet under PC-stilene (feiljegeren 19.11.2026)
-    let bred = isDesktop();
+    // Hjem tegnes bare når bredden endrer seg: på mobil endrer høyden seg hver gang adresselinja glir inn og ut.
+    // Utforsk flytter kartet selv ved ny størrelse (utforsk.js) og tegnes bare på nytt når oppsettet byttes
+    let bred = isDesktop(), bredde = window.innerWidth;
     window.addEventListener("resize", ()=>{
-      const b = isDesktop(), byttet = b!==bred; bred = b;
-      if(S.view==="hjem" || S.view==="utforsk") render();
-      else if(byttet && S.view==="spot"){   // uten show(): brukeren blir stående der de var, og en åpen «Hvorfor» står åpen
-        const y = window.scrollY, hv = $("#viewSpot #hvorfor"), apen = !!(hv && hv.open);
-        renderSpotView();
-        const hv2 = $("#viewSpot #hvorfor"); if(hv2 && apen) hv2.open = true;
-        window.scrollTo(0, y);
-      }
+      const b = isDesktop(), byttet = b!==bred, w = window.innerWidth, nyBredde = w!==bredde; bred = b; bredde = w;
+      if((nyBredde && S.view==="hjem") || (byttet && (S.view==="spot" || S.view==="utforsk"))) redraw();
     });
     document.addEventListener("visibilitychange", tickNow);
     setInterval(tickNow, 60e3);
@@ -673,7 +682,7 @@
     render();
     started = true;
   }
-  function refresh(){ if(DATA && started && S.view!=="sok") render(); }
+  function refresh(){ if(DATA && started && S.view!=="sok") redraw(); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
   window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();

@@ -500,11 +500,15 @@ def main():
                     def les():
                         go("#hjem", "#viewHjem:not([hidden])"); go(f"#spot={sid}&t={bi}", SPOT_KLAR)
                         return page.evaluate("""(dag) => { const q = (s) => { const e = document.querySelector('#viewSpot ' + s); return e ? e.textContent.trim() : null; };
-                            return {tall: q('.dom .t-tall'), vindu: q('.dom .t-vindu'), kol: q(`.dagknapp.stor[data-day="${dag}"] .dk-best`), koltall: q(`.dagknapp.stor[data-day="${dag}"] .dk-tall`)}; }""", dag)
+                            return {tall: q('.dom .t-tall'), vindu: q('.dom .t-vindu'), kol: q(`.dagknapp.stor[data-day="${dag}"] .dk-best`), koltall: q(`.dagknapp.stor[data-day="${dag}"] .dk-tall`),
+                                strek: document.querySelectorAll('#viewSpot #spStripe .bst.pa').length, aria: [...document.querySelectorAll('#viewSpot #spStripe [aria-label], #viewSpot #spStripe [aria-valuetext]')].some(e => /beste vindu/.test((e.getAttribute('aria-label') || '') + (e.getAttribute('aria-valuetext') || '')))}; }""", dag)
                     over = les()
                     page.clock.set_fixed_time(T0); apen = les(); page.clock.set_fixed_time(naar)
                     assert (over["tall"] or "").isdigit() and int(over["tall"]) >= 1 and over["vindu"] is None, f"dommen på spotsiden skal ikke vise «Best» etter at vinduet er over ({sid}, {naar}): {over}"
                     assert apen["tall"] == over["tall"] and re.fullmatch(r"\d\d–\d\d", apen["vindu"] or ""), f"dommen på spotsiden skal vise vinduet mens det er åpent ({sid}): {apen}"
+                    # streken over det beste vinduet i timestripa følger samme regel (feiljegeren 19.11.2026)
+                    assert over["strek"] == 0 and not over["aria"], f"streken over det beste vinduet skal ikke stå etter at vinduet er over ({sid}, {naar}): {over}"
+                    assert apen["strek"] >= 1 and apen["aria"], f"streken over det beste vinduet skal stå mens vinduet er åpent ({sid}): {apen}"
                     if not mobile:
                         assert over["koltall"] == over["tall"] and over["kol"] == "–", f"kolonnen i «Neste 7 dager» skal ikke vise «Best» etter at vinduet er over ({sid}): {over}"
                         assert re.fullmatch(r"Best \d\d–\d\d", apen["kol"] or ""), f"kolonnen i «Neste 7 dager» skal vise vinduet mens det er åpent ({sid}): {apen}"
@@ -522,11 +526,49 @@ def main():
                             return [...document.querySelectorAll('#viewSpot .spw-time .maal > *')].filter(e => e.textContent.trim() && (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > k.right + 1))
                               .map(e => e.className + ' «' + e.textContent.trim() + '»'); }""")
                         assert page.query_selector("#viewSpot .spw-time .maal") and not ute, f"målene renner ut av timekolonnen ved 1024 px ({sid}): {ute}"
+                        # det lengste ordet som kan stå der tallet står («Surfing forbudt», 135 px mot 114 px kolonne målt 19.11.2026), brytes i to linjer.
+                        # Ordet settes inn i siden som står framme: spoten i testen har ingen forbudsperiode.
+                        ord_ute = page.evaluate("""() => { const k = document.querySelector('#viewSpot .spw-time').getBoundingClientRect(), mv = document.querySelector('#viewSpot .spw-time .maal .mv'), for_ = mv.innerHTML;
+                            mv.innerHTML = '<span class="ordv">Surfing forbudt</span>'; const rg = document.createRange(); rg.selectNodeContents(mv); const ut = Math.round(rg.getBoundingClientRect().right - k.right);
+                            mv.innerHTML = for_; return ut; }""")
+                        assert ord_ute <= 1, f"«Surfing forbudt» renner {ord_ute} px ut av timekolonnen ved 1024 px"
                         page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_selector("#viewSpot .spw-hode")
                         assert not page.query_selector("#viewSpot .sp-hode") and page.evaluate("window.__S.idx") == bi, "mobiloppsettet står igjen over 1024 px, eller timen ble byttet"
                         st = page.evaluate("() => ({y: window.scrollY, apen: !!(document.querySelector('#viewSpot #hvorfor') || {}).open})")
                         assert st["y"] >= 300 and st["apen"], f"spotsiden hoppet til toppen eller lukket «Hvorfor» på vei tilbake over 1024 px: {st}"
+                    # siden tegnes også på nytt av seg selv: ved ny time (tickNow) og etter Front.refresh() (økt logget, synk ferdig).
+                    # Brukeren blir stående der de var (feiljegeren 19.11.2026). Merket på dommen viser at siden faktisk ble tegnet på nytt.
+                    for hva, utlos in (("ny time", "() => { window.__S.now = 'gammel time'; document.dispatchEvent(new Event('visibilitychange')); }"), ("Front.refresh()", "() => Front.refresh()")):
+                        page.evaluate("() => { document.querySelector('#viewSpot #hvorfor').open = true; document.querySelector('#viewSpot .dom').dataset.gammel = '1'; window.scrollTo(0, 320); }")
+                        page.evaluate(utlos); page.wait_for_selector(SPOT_KLAR)
+                        st = page.evaluate("() => ({y: window.scrollY, apen: !!(document.querySelector('#viewSpot #hvorfor') || {}).open, gammel: !!document.querySelector('#viewSpot .dom[data-gammel]')})")
+                        assert not st["gammel"], f"spotsiden ble ikke tegnet på nytt ved {hva}: testen prøver ingenting"
+                        assert st["y"] >= 300 and st["apen"], f"spotsiden hoppet til toppen eller lukket «Hvorfor» ved {hva} ({label}): {st}"
+                    # Ny time når første spot mangler «nå» (hentingen feilet i regionen): nøkkelen er klokketimen, så siden tegnes
+                    # likevel på nytt. Med nå-timen til første spot som nøkkel sto null mot null resten av økta (fysikk-kontrolløren 19.11.2026).
+                    ms0 = page.evaluate("() => { window.__naa0 = DATA.spots[0].naa; DATA.spots[0].naa = []; document.dispatchEvent(new Event('visibilitychange')); return Date.now(); }")
+                    page.wait_for_selector(SPOT_KLAR); page.evaluate("() => { document.querySelector('#viewSpot .dom').dataset.gammel = '1'; }")
+                    page.clock.set_fixed_time(dt.datetime.fromtimestamp(ms0 / 1000 + 3600, dt.timezone.utc)); page.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); page.wait_for_selector(SPOT_KLAR)
+                    assert not page.query_selector("#viewSpot .dom[data-gammel]"), f"spotsiden ble ikke tegnet på nytt ved ny time når første spot mangler «nå» ({label})"
+                    page.clock.set_fixed_time(dt.datetime.fromtimestamp(ms0 / 1000, dt.timezone.utc)); page.evaluate("() => { DATA.spots[0].naa = window.__naa0; document.dispatchEvent(new Event('visibilitychange')); }"); page.wait_for_selector(SPOT_KLAR)
+                    # Innstillinger tegnes ikke på nytt ved ny time: tekst som ikke er lagret, og fokus, blir stående (feiljegeren 19.11.2026)
+                    go("#innstillinger", "#viewSide:not([hidden]) #syncRepo")
+                    inn = page.evaluate("""() => { const i = document.querySelector('#syncRepo'); i.value = 'theo/halv'; i.focus(); window.__S.now = 'gammel time'; document.dispatchEvent(new Event('visibilitychange'));
+                        return {repo: document.querySelector('#syncRepo').value, fokus: document.activeElement.id, now: window.__S.now}; }""")
+                    assert inn["repo"] == "theo/halv" and inn["fokus"] == "syncRepo" and inn["now"] != "gammel time", f"Innstillinger mistet teksten eller fokus ved ny time ({label}): {inn}"
                     go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
+                    # Hjem: bare høyden endrer seg når adresselinja på mobil glir inn og ut, og da skal ingenting tegnes på nytt.
+                    # Ny bredde tegner Hjem på nytt (kartet følger bredden), men brukeren blir stående der de var.
+                    HM = "#viewHjem :is(#forside, .hjem-linje)"
+                    hjem_na = lambda: page.evaluate("(hm) => ({y: window.scrollY, gammel: !!document.querySelector(hm + '[data-gammel]')})", HM)
+                    page.evaluate("(hm) => { document.querySelector(hm).dataset.gammel = '1'; window.scrollTo(0, 150); }", HM)
+                    assert hjem_na()["y"] >= 140, f"Hjem er for kort til å prøve rullingen ({label})"
+                    page.set_viewport_size({"width": vp[0], "height": vp[1] - 80}); page.wait_for_timeout(200)
+                    st = hjem_na(); assert st["gammel"] and st["y"] >= 140, f"Hjem ble tegnet på nytt eller hoppet til toppen da bare høyden endret seg ({label}): {st}"
+                    page.set_viewport_size({"width": vp[0] + 10, "height": vp[1] - 80}); page.wait_for_timeout(200)
+                    st = hjem_na(); assert not st["gammel"] and st["y"] >= 140, f"Hjem skal tegnes på nytt ved ny bredde og bli stående ({label}): {st}"
+                    page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(200)
+                    page.evaluate("window.scrollTo(0, 0)")
 
                 SYN_STRIPE_JS = r"""() => {
                   // timestripa med kjente timer (21.10, sommertid): 3, 3 med ett tapt på vind, 4 med ett tapt på tidevann,
@@ -949,6 +991,15 @@ def main():
                     # ---- 7. Utforsk (Tillegg 2: standardutsnitt = valgt region, klynger under 48 px) ----
                     go("#utforsk", "#viewUtforsk:not([hidden]) .mk, #viewUtforsk:not([hidden]) .klynge")
                     page.wait_for_timeout(500)
+                    # ny størrelse tegner ikke Utforsk på nytt (kartet flytter seg selv, utforsk.js); bare når oppsettet byttes ved 1024 px
+                    UM = "#utforskChips [data-view]"
+                    u_gammel = lambda: page.evaluate("(um) => !!document.querySelector(um + '[data-gammel]')", UM)
+                    page.evaluate("(um) => { document.querySelector(um).dataset.gammel = '1'; }", UM)
+                    page.set_viewport_size({"width": vp[0] + 10, "height": vp[1] - 80}); page.wait_for_timeout(200)
+                    assert u_gammel() and page.query_selector("#viewUtforsk:not([hidden]) :is(.mk, .klynge)"), f"Utforsk ble tegnet på nytt, eller kartet mistet spotene, ved ny størrelse ({label})"
+                    page.set_viewport_size({"width": 800 if not mobile else 1100, "height": vp[1]}); page.wait_for_timeout(300)
+                    assert not u_gammel(), f"Utforsk skal tegnes på nytt når oppsettet byttes ved 1024 px ({label})"
+                    page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_selector("#viewUtforsk:not([hidden]) :is(.mk, .klynge)"); page.wait_for_timeout(500)
                     def click_mk(sid):
                         # lappen er trykkflaten når den vises (lappene kolliderer aldri); ellers prikken
                         pill = page.query_selector(f".mk[data-id='{sid}']:not(.bare) .mk-pill")

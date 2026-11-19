@@ -1,5 +1,19 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - småting 2 etter go-live, 19.11.2026
+
+Gren `design/b4-etter-2` fra main `bad495a` (småting 1, live 19.11 kl. 15:25Z). Bare visning: ingen ratingfil og ikke spots.json er rørt.
+
+- **Siden blir stående når den tegnes på nytt av seg selv** (feiljegeren 19.11): spotsiden hoppet til toppen og lukket «Hvorfor» hver gang en ny time begynte, når appen kom tilbake fra bakgrunnen, og etter at en økt var logget eller synken var ferdig. Ny `redraw()` i ui.js tegner på nytt og setter rullingen og en åpen «Hvorfor» tilbake. Den brukes av `tickNow`, `refresh()` og ved endret størrelse.
+- **Ny time følger klokka** (fysikk-kontrolløren 19.11): `tickNow` brukte nå-timen til første spot som nøkkel. Mangler den spoten «nå» (hentingen feilet i regionen), ble siden aldri tegnet på nytt resten av økta. Nøkkelen er nå klokketimen.
+- **Innstillinger tegnes ikke på nytt ved ny time** (feiljegeren 19.11): tekst som ikke var lagret (repo, e-post, navn) ble borte, og fokus forsvant. Siden viser ingenting som følger klokka.
+- **Hjem tegnes bare på nytt når bredden endres:** på mobil endrer høyden seg hver gang adresselinja glir inn og ut, og da skal ingenting skje. Spotsiden og Utforsk tegnes bare på nytt når 1024 px krysses. Utforsk flytter kartet selv ved ny størrelse (utforsk.js), så knappene og lista ble før tegnet unødig (teknisk-leder 19.11).
+- **Streken over det beste vinduet i timestripa står bare mens vinduet er åpent** (feiljegeren 19.11): samme regel som «Best hh–hh» i dommen. «Beste vindu» leses heller ikke opp for timene etterpå.
+- **«Surfing forbudt» brytes i to linjer i tallkolonnen under 1360 px:** målt 19.11 ved 1024 px er ordet 135 px og kolonnen 114 px, så det sto 21 px ut i luften mot skiva. Høyder som «2,1–2,7 m» (112 px) får plass.
+- **Målt, ingen retting:** ingen av de publiserte spotnavnene stikker ut av navneplata ved 1024, 1100 eller 1280 px.
+- **Tester:** test_spotside_browser.py prøver ny time og `Front.refresh()` på spotsiden (mobil og PC), ny time når første spot mangler «nå», Innstillinger ved ny time, Hjem ved endret høyde og endret bredde, Utforsk ved ny størrelse og når oppsettet byttes, streken etter at vinduet er over og mens det er åpent, og «Surfing forbudt» ved 1024 px. Hver ny prøve er sett feile uten rettingen sin.
+- **Ikke gjort:** Innstillinger tegnes fortsatt på nytt ved inn- og utlogging og når synken er ferdig, og mister da tekst som ikke er lagret. Utforsk-kartet går tilbake til regionen ved ny time og etter innlogging eller synk (valgt spot og kortet står). På spotsiden på mobil mister en knapp eller velger fokus når siden tegnes på nytt ved ny time (feiljegeren 19.11, ingen av dem er nye). Lange navn kuttes fortsatt med «…» i regionradene på 375 px. Når vinduet er over, står dagens tall igjen uten å si at det gjelder en time som har vært (spørsmål til Theodor). Rullingen settes tilbake i piksler: blir innholdet over brukeren høyere eller lavere mens siden tegnes på nytt, havner de litt feil. Zoomen på Utforsk-kartet nullstilles ved ny størrelse, som før. Dagvelgerens sidelengs rulling huskes ikke. Død kode (`surfAdjustmentLine`, `detailsGrid` og forklaringsskuffen i app.js) tas samlet i oppryddingen av gammel PC-kode (teknisk-leder 19.11).
+
 ## T3 design B 4.0 «Papir» - småting etter go-live (S15 a og b), 19.11.2026
 
 Gren `design/b4-etter` fra main etter go-live (`50c68a8`, live 19.11 kl. 14:16Z). Bare visning: ingen ratingfil og ikke spots.json er rørt.
