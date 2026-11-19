@@ -821,6 +821,29 @@ def main():
                         # overskriften sier aldri noe annet enn lista (SPEC §8): ordet er ordet for tallet i ruta den dagen, og ingen favoritt har høyere
                         assert 1 <= len(hj["set"]) <= 2, f"overskriften skal være én eller to setninger: {hj['set']}"
                         sjekk_overskrift(hj)
+                        # et vindu som er over, er ikke et råd, heller ikke på favorittradene (fysikk-kontrolløren 19.11.2026): «Best kl. hh–hh.»
+                        # står bare mens vinduet er åpent. Spoten med det første vinduet den dagen radene viser, legges til som favoritt,
+                        # klokka flyttes til 70 minutter etter at det vinduet er over (samme regel som på PC-forsiden over), og alt settes tilbake.
+                        tf = lambda iso: dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                        vist = lambda sid, r: next((d for d in OV[sid]["dager"][:2] if WD[dt.date.fromisoformat(d["d"]).weekday()].startswith(r["dager"][0].lower())), None)
+                        surfbar = lambda d: bool(d and d.get("slutt") and d.get("h") and (d["h"].get("stars") or 0) >= 1)
+                        fdag = vist(FAV_IDS[0], hj["rader"][0])["d"]
+                        fvind = sorted((tf(d["slutt"]), i) for i, x in OV.items() for d in x["dager"][:2] if d["d"] == fdag and surfbar(d))
+                        assert fvind, f"testvarselet har ingen surfbar spot {fdag}"
+                        fsent, fid = fvind[0][0] + dt.timedelta(minutes=130), fvind[0][1]
+                        page.clock.set_fixed_time(fsent)
+                        page.evaluate("(id) => { window.__fav0 = new Set(Auth.state.favorites); Auth.state.favorites.add(id); Front.refresh(); }", fid); page.wait_for_selector(f'#viewHjem a.favlinje[href="#spot={fid}"]')
+                        hj2, fover = page.evaluate(HJEM_JS), 0
+                        for r in hj2["rader"]:
+                            sid = r["href"].split("=")[1]; d0 = vist(sid, r)
+                            assert d0 and d0["d"] == fdag, f"fant ikke dagen raden til {r['navn']} viser: {r['dager']}"
+                            surf = surfbar(d0) and r["tall"].isdigit() and int(r["tall"]) >= 1
+                            aapent = surf and tf(d0["slutt"]) + dt.timedelta(hours=1) > fsent
+                            assert ("Best kl." in r["setn"]) == aapent, f"«Best kl.» på favorittraden bare mens vinduet er åpent (kl. {fsent}): {r}"
+                            fover += surf and not aapent
+                        assert fover >= 1, f"ingen favorittvinduer var over kl. {fsent}: testen prøver ingenting"
+                        page.clock.set_fixed_time(T0); page.evaluate("() => { Auth.state.favorites = window.__fav0; Front.refresh(); }"); page.wait_for_selector("#viewHjem a.favlinje")
+                        assert len(page.evaluate(HJEM_JS)["rader"]) == len(FAV_IDS), "favorittene ble ikke satt tilbake etter vindusprøven"
                         # de samme reglene på oppdiktede dager (kontrolløren 12.11.2026): manglende data er aldri «ingen surf»,
                         # «dagens lys er over» og forbud sies som det er, en foreløpig favoritt teller, aldri «de neste 1 dagene»
                         syn = page.evaluate(SYN_JS)

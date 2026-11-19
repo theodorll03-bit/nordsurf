@@ -252,7 +252,8 @@
     }
     const hoyde = heightText(h);
     const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
-    if(utenVindu) return deler.length ? cap(deler.join(", ")) + "." : null;
+    // et vindu som er over, er ikke et råd (fysikk-kontrolløren 19.11.2026): da står bare tallene, som i fsApent på PC-forsiden
+    if(utenVindu || !fsApent(b)) return deler.length ? cap(deler.join(", ")) + "." : null;
     return `${deler.length ? cap(deler.join(", ")) + ". " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
   }
   function favObs(s){

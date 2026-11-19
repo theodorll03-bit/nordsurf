@@ -18,7 +18,7 @@ import sun
 import tide as tidemod
 import longrange
 from exposure import spot_checksum
-from rating import (angle_diff, directness, rate, swell_share, bw_period_factor,
+from rating import (angle_diff, directness, rate, swell_share, bw_period_factor, bw_period_factor_for,
                      SURF_FACTOR_DEFAULT, SURF_FACTOR_MIN, SURF_FACTOR_MAX)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -309,7 +309,7 @@ def bw_point_in_lee_warning(hours, spot, name):
 LOW_ADJUSTMENT_RATIO = 0.25  # se low_adjustment_warning()
 
 
-def low_adjustment_warning(hours, name):
+def low_adjustment_warning(hours, name, spot=None):
     """27.09.2026, Theodors rettelse (Unstad for lav - se STATUS.md, punkt 5):
     fornuftssjekk mot at BarentsWatch-justeringen (min(svellandel, periode-
     faktor) × retningsfaktor, se rating.barentswatch_height()) trekker for
@@ -331,7 +331,8 @@ def low_adjustment_warning(hours, name):
     shares, pfs, dirfacs = [], [], []
     for h in low:
         share, share_known = swell_share(h)
-        pf = bw_period_factor(h.get("bw_period"))
+        # samme periodefaktor som ratingen brukte (bw_period_factor_for, 16.11.2026) når spoten er kjent
+        pf = bw_period_factor_for(h, spot)[0] if spot is not None else bw_period_factor(h.get("bw_period"))
         if share <= pf:
             shares.append(share)
         else:
@@ -919,7 +920,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
 
     bw_plausibility_report(hours, name)
 
-    low_adj = low_adjustment_warning(hours, name)
+    low_adj = low_adjustment_warning(hours, name, spot)
     if low_adj:
         LOW_ADJUSTMENT_WARNINGS.append(low_adj)
 

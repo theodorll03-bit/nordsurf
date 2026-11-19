@@ -454,8 +454,14 @@ function surfAdjustmentLine(h){
   // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som
   // FAKTISK trekker ned (min(svellandel, periodefaktor) - bare den minste
   // av de to er den reelle årsaken, og retningen bare hvis den ikke er 1,0).
+  // 16.11.2026: gap-grensa (rating.gap_floor()) - høyden er løftet, ikke justert ned.
+  // 17.11.2026 (S14): ordlyden er «Løftet til 0,5 m: svell ute gjennom gapet (anslag)».
+  if(h.gap_floor && h.height!=null) return `Løftet til ${nf1.format(h.height)} m: svell ute gjennom gapet (anslag)`;
   if(h.height_source!=="barentswatch" || h.bw_height==null || h.height==null) return "";
-  const share = h.swell_share, pf = bwPeriodFactor(h.bw_period), dirfac = h.spot_direction_factor;
+  // 16.11.2026: henterens egen periodefaktor når den finnes. 17.11.2026: den er 1,0
+  // når nesten alt ute er svell, selv om BarentsWatch-perioden er kort
+  // (rating.bw_period_factor_for(), bw_period_basis "ute") - da er det ingen justering å vise.
+  const share = h.swell_share, pf = h.bw_period_factor!=null ? h.bw_period_factor : bwPeriodFactor(h.bw_period), dirfac = h.spot_direction_factor;
   const shareOk = share==null || share>=0.999, pfOk = pf>=0.999, dirOk = dirfac==null || dirfac>=0.999;
   if(shareOk && pfOk && dirOk) return "";
   const reasons = [];
