@@ -175,7 +175,8 @@
   function domHtml(s, d, b){
     const n = b.st!=null ? Math.min(5, b.st) : null;
     // beste vindu som klokkeslett; dager med seks timer mellom varslene har bare tidspunktet
-    const vindu = n!=null && n >= 1 ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
+    // et vindu som er over, er ikke et råd (fysikk-kontrolløren 19.11.2026) - samme regel som favorittradene og forsiden
+    const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
         <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(STR.starsAria(n, (b.h && b.h.faded) || 0))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
@@ -329,7 +330,7 @@
   function dagKolHtml(s, x, valgt){
     // én stor kolonne i «Neste 7 dager»: dato, dagens tall (48 px) og ord, beste vindu, svell og vind i den beste timen
     const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null, h = b.h;
-    const vindu = n!=null && n >= 1 ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;
+    const vindu = n!=null && n >= 1 && H.fsApent(b) ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;   // som i domHtml: et vindu som er over, vises ikke
     const svell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "";
     const vind = h && h.wind_speed!=null ? windLabel(h) : "";
     const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + domOrd(b) : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}`;

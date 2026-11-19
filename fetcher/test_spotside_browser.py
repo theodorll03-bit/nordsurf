@@ -339,6 +339,23 @@ def main():
                         assert energi_ == "Grense satt ut fra observasjonene 26.09 til 05.10" and tide_ == "Ifølge Lofoten Surfsenter", (energi_, tide_)
                         assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 26.09-05.10.2026; tidevann: Lofoten Surfsenter"
 
+                # «For mye vind» (Theodor S15 a, 17.11.2026): fralandsvind som har tatt poeng heter ikke «Blåst ut». «Blåst ut» står
+                # når vinden ikke er fralands, og når ingen poeng er tapt på vind (det meste er vindsjø i svak fralandsvind).
+                vo = page.evaluate("""() => { const b = {stars: 0, period: 10, surf_height: 1.2, wind_speed: 15, light: 'dag'}, z = (w) => ({energy: 0, wind: w, tide: 0, local: 0, cap: 0});
+                    const par = (x) => [ratingWord({...b, ...x}), ratingWordExplain({...b, ...x})];
+                    return {fra: par({low_reason: 'blown_out', wind_type: 'offshore', zero_losses: z(3)}), gammel: par({low_reason: 'blown_out', wind_type: 'offshore', faded_wind: 2}),
+                        null_fra: par({wind_type: 'offshore', zero_losses: z(3)}), pa: par({low_reason: 'blown_out', wind_type: 'onshore', zero_losses: z(3)}),
+                        side: par({low_reason: 'blown_out', wind_type: 'side', zero_losses: z(2)}), sjo: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 3, zero_losses: z(0)}),
+                        null_pa: par({wind_type: 'onshore', zero_losses: z(3)}),
+                        sterk: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 15, zero_losses: z(0)}), kast: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 10.5, gust: 17, zero_losses: z(0)}),
+                        band: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 11, faded_wind: 1, zero_losses: z(0)}), under: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 11.5, gust: 12, zero_losses: z(0)}),
+                        ukjent: par({low_reason: 'blown_out', wind_type: 'offshore', wind_speed: null, zero_losses: z(0)}), sterk_pa: par({low_reason: 'blown_out', wind_type: 'onshore', wind_speed: 15, zero_losses: z(0)}), ny: STR.wordTooMuchWind, ut: STR.lowReason.blown_out, fork: STR.wordExplain[STR.wordTooMuchWind]}; }""")
+                assert vo["ny"] == "For mye vind" and vo["ny"] != vo["ut"] and vo["fork"], vo
+                assert vo["fra"] == [vo["ny"], vo["fork"]] and vo["null_fra"] == [vo["ny"], vo["fork"]] and vo["gammel"][0] == vo["ny"], f"fralandsvind som tar poengene skal hete «{vo['ny']}»: {vo}"
+                # sterk fralandsvind uten poeng å ta (potensial 0) og båndet der bare faded_wind viser tapet (fysikk-kontrolløren 19.11.2026)
+                assert all(vo[k][0] == vo["ny"] for k in ("sterk", "kast", "band")), f"sterk fralandsvind skal hete «{vo['ny']}» også uten tapte poeng: {vo}"
+                assert all(vo[k][0] == vo["ut"] for k in ("pa", "side", "sjo", "null_pa", "under", "ukjent", "sterk_pa")), f"«{vo['ut']}» skal stå når vinden ikke er fralands, eller er svakere enn 12 m/s uten tapte poeng: {vo}"
+
                 def media(scheme, contrast="no-preference"):
                     cdp.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if scheme == "mork" else "light"}, {"name": "prefers-contrast", "value": contrast}]})
                     page.wait_for_timeout(150)
@@ -474,6 +491,42 @@ def main():
                 # spotsiden er klar: dommen (B 4.0 - mobil fra steg 4, PC fra steg 6)
                 SPOT_KLAR = "#viewSpot:not([hidden]) .dom"
                 INN = "#viewSpot :is(.sp-inn, .spw-inn)"   # innholdet under navneplata (mobil / PC)
+
+                def vindu_over(sid, dag, naar):
+                    # spotsiden følger samme regel som forsiden og favorittradene (kontrolløren 19.11.2026): dommen og kolonnen i
+                    # «Neste 7 dager» viser «Best hh–hh» bare mens vinduet er åpent. `naar` er etter vinduet til `sid` den dagen;
+                    # kl. T0 er dagen i morgen og vinduet åpent. Siden åpnes på dagens beste time, og Hjem står igjen etterpå.
+                    bi = next(i for i, x in enumerate(details[sid]["hours"]) if x["t"] == next(d for d in OV[sid]["dager"] if d["d"] == dag)["h"]["t"])
+                    def les():
+                        go("#hjem", "#viewHjem:not([hidden])"); go(f"#spot={sid}&t={bi}", SPOT_KLAR)
+                        return page.evaluate("""(dag) => { const q = (s) => { const e = document.querySelector('#viewSpot ' + s); return e ? e.textContent.trim() : null; };
+                            return {tall: q('.dom .t-tall'), vindu: q('.dom .t-vindu'), kol: q(`.dagknapp.stor[data-day="${dag}"] .dk-best`), koltall: q(`.dagknapp.stor[data-day="${dag}"] .dk-tall`)}; }""", dag)
+                    over = les()
+                    page.clock.set_fixed_time(T0); apen = les(); page.clock.set_fixed_time(naar)
+                    assert (over["tall"] or "").isdigit() and int(over["tall"]) >= 1 and over["vindu"] is None, f"dommen på spotsiden skal ikke vise «Best» etter at vinduet er over ({sid}, {naar}): {over}"
+                    assert apen["tall"] == over["tall"] and re.fullmatch(r"\d\d–\d\d", apen["vindu"] or ""), f"dommen på spotsiden skal vise vinduet mens det er åpent ({sid}): {apen}"
+                    if not mobile:
+                        assert over["koltall"] == over["tall"] and over["kol"] == "–", f"kolonnen i «Neste 7 dager» skal ikke vise «Best» etter at vinduet er over ({sid}): {over}"
+                        assert re.fullmatch(r"Best \d\d–\d\d", apen["kol"] or ""), f"kolonnen i «Neste 7 dager» skal vise vinduet mens det er åpent ({sid}): {apen}"
+                        # siden velger oppsett når den tegnes: krysser bredden 1024 px (et nettbrett som snus), tegnes den på nytt (feiljegeren 19.11.2026)
+                        assert page.query_selector("#viewSpot .spw-hode") and not page.query_selector("#viewSpot .sp-hode"), "PC-oppsettet mangler på spotsiden"
+                        # brukeren blir stående der de var: rullingen og en åpen «Hvorfor» overlever byttet (feiljegeren 19.11.2026)
+                        page.evaluate("() => { document.querySelector('#viewSpot #hvorfor').open = true; window.scrollTo(0, 320); }")
+                        page.set_viewport_size({"width": 800, "height": vp[1]}); page.wait_for_selector("#viewSpot .sp-hode")
+                        st = page.evaluate("() => ({y: window.scrollY, apen: !!(document.querySelector('#viewSpot #hvorfor') || {}).open})")
+                        assert st["y"] >= 300 and st["apen"], f"spotsiden hoppet til toppen eller lukket «Hvorfor» da bredden krysset 1024 px: {st}"
+                        assert not page.query_selector("#viewSpot .spw-hode"), "PC-oppsettet står igjen under 1024 px"
+                        # på den smaleste nettsiden (1024 px) får forklaringa egen linje, og ingenting renner ut av timekolonnen og over skiva
+                        page.set_viewport_size({"width": 1024, "height": vp[1]}); page.wait_for_selector("#viewSpot .spw-hode")
+                        ute = page.evaluate("""() => { const k = document.querySelector('#viewSpot .spw-time').getBoundingClientRect();
+                            return [...document.querySelectorAll('#viewSpot .spw-time .maal > *')].filter(e => e.textContent.trim() && (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > k.right + 1))
+                              .map(e => e.className + ' «' + e.textContent.trim() + '»'); }""")
+                        assert page.query_selector("#viewSpot .spw-time .maal") and not ute, f"målene renner ut av timekolonnen ved 1024 px ({sid}): {ute}"
+                        page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_selector("#viewSpot .spw-hode")
+                        assert not page.query_selector("#viewSpot .sp-hode") and page.evaluate("window.__S.idx") == bi, "mobiloppsettet står igjen over 1024 px, eller timen ble byttet"
+                        st = page.evaluate("() => ({y: window.scrollY, apen: !!(document.querySelector('#viewSpot #hvorfor') || {}).open})")
+                        assert st["y"] >= 300 and st["apen"], f"spotsiden hoppet til toppen eller lukket «Hvorfor» på vei tilbake over 1024 px: {st}"
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
 
                 SYN_STRIPE_JS = r"""() => {
                   // timestripa med kjente timer (21.10, sommertid): 3, 3 med ett tapt på vind, 4 med ett tapt på tidevann,
@@ -738,6 +791,12 @@ def main():
                     miss_cells = page.evaluate("""() => { const rad = [...document.querySelectorAll('#viewHjem a.rad, #forside table.fs-matrise tbody tr')].find(r => r.textContent.includes('Steinkrøssa'));
                         return rad ? [...rad.querySelectorAll('.uke i, td')].map(c => ({cls: c.className, txt: c.textContent.trim()})) : null; }""")
                     assert miss_cells, "fant ikke Steinkrøssa på Hjem"
+                    if mobile:
+                        # ordet i regionradene gjelder nå-timen, ukerutene ved siden av er dagens beste (Theodor S15 b, 17.11.2026): «Nå» står foran ordet
+                        naa_r = page.evaluate("[...document.querySelectorAll('#viewHjem a.rad')].map(r => ({naa: (r.querySelector('.na .na-tid') || {}).textContent || null, na: r.querySelector('.na').textContent.trim(), aria: r.getAttribute('aria-label')}))")
+                        assert naa_r and any(r["naa"] for r in naa_r), f"ingen regionrader med «Nå»: {naa_r[:3]}"
+                        for r in naa_r:
+                            assert (r["naa"] == "Nå" and r["na"].startswith("Nå") and ": nå " in r["aria"]) or (r["na"] == "–" and r["naa"] is None), f"«Nå» skal stå foran ordet i regionraden: {r}"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     if not mobile:
@@ -787,6 +846,7 @@ def main():
                             assert bool(fs2["best"]) == apent(hid) and bool(re.search(r"Best \d\d–\d\d", fs2["aria"])) == apent(hid), f"«Best» i hovedbildet bare mens vinduet er åpent: {fs2}"
                             over_n += not apent(hid)
                         assert over_n >= 1, f"ingen vinduer var over kl. {sent}: testen prøver ingenting"
+                        vindu_over(next(i for i, x in OV.items() if any(d["d"] == sdag and d.get("slutt") and t_(d["slutt"]) == vinduer[0][0] and (d.get("h") or {}).get("stars") for d in x["dager"])), sdag, sent)
                         page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_selector("#forside table.fs-tabell")
                     shot("hjem", scheme); audit("hjem")
                     if mobile:
@@ -796,7 +856,7 @@ def main():
                             rader: [...document.querySelectorAll('#viewHjem .favlinje')].map(r => ({navn: r.querySelector('.t-navn').textContent.trim(), tall: r.querySelector('.t-listetall').textContent.trim(),
                                 meta: r.querySelector('.etikett').textContent.trim(), obs: (r.querySelector('.etikett.obs') || {}).textContent || null, href: r.getAttribute('href'),
                                 celler: [...r.querySelectorAll('.uke i')].map(c => c.textContent.trim()), cls: [...r.querySelectorAll('.uke i')].map(c => c.className), setn: (r.querySelector('.setn') || {}).textContent || '', dager: [...r.querySelectorAll('.uke b')].map(c => c.textContent.trim())})),
-                            ord: STR.starWords, nullord: [STR.starWords[0], STR.wordSmall, STR.wordMushy, STR.wordTide, STR.wordNotNow.replace(/\\s+nå$/, ''), STR.wordLittleSwell, STR.wordUncertain, ...Object.values(STR.lowReason)], rediger: (document.querySelector('#favRediger') || {}).textContent || null, fjern: document.querySelectorAll('#viewHjem [data-fjern]').length})"""
+                            ord: STR.starWords, nullord: [STR.starWords[0], STR.wordSmall, STR.wordMushy, STR.wordTide, STR.wordNotNow.replace(/\\s+nå$/, ''), STR.wordLittleSwell, STR.wordUncertain, STR.wordTooMuchWind, ...Object.values(STR.lowReason)], rediger: (document.querySelector('#favRediger') || {}).textContent || null, fjern: document.querySelectorAll('#viewHjem [data-fjern]').length})"""
                         uten = page.evaluate(HJEM_JS)
                         assert 1 <= len(uten["set"]) <= 2 and not uten["rader"] and uten["rediger"] is None, f"Hjem uten favoritter: {uten}"
                         page.evaluate("""(ids) => { window.__auth0 = window.Auth; window.__logs0 = localStorage.getItem('nordsurf.logs.v1');
@@ -842,6 +902,7 @@ def main():
                             assert ("Best kl." in r["setn"]) == aapent, f"«Best kl.» på favorittraden bare mens vinduet er åpent (kl. {fsent}): {r}"
                             fover += surf and not aapent
                         assert fover >= 1, f"ingen favorittvinduer var over kl. {fsent}: testen prøver ingenting"
+                        vindu_over(fid, fdag, fsent); page.wait_for_selector(f'#viewHjem a.favlinje[href="#spot={fid}"]')
                         page.clock.set_fixed_time(T0); page.evaluate("() => { Auth.state.favorites = window.__fav0; Front.refresh(); }"); page.wait_for_selector("#viewHjem a.favlinje")
                         assert len(page.evaluate(HJEM_JS)["rader"]) == len(FAV_IDS), "favorittene ble ikke satt tilbake etter vindusprøven"
                         # de samme reglene på oppdiktede dager (kontrolløren 12.11.2026): manglende data er aldri «ingen surf»,

@@ -303,8 +303,10 @@
   }
   function radHtml(s, days){
     const h = naaOf(s), {st, oh} = naaVisning(s, h);
-    return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${oh.ord}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
-      <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
+    // ordet og høyden gjelder nå-timen, ukerutene ved siden av er dagens beste (Theodor S15 b, 17.11.2026): «Nå» står foran
+    const ord = oh.ord.replace(/\s+nå$/, ""), naa = ord==="–" ? "" : STR.spot.naa;   // uten time er det ikke noe ord å merke
+    return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${naa ? naa.toLowerCase() + " " : ""}${ord.toLowerCase()}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
+      <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${naa ? `<span class="na-tid">${esc(naa)}</span> ` : ""}${esc(ord)}${oh.hoyde ? ` <span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
       ${ukeHtml(s, days, false)}</a>`;
   }
   function regionChips(current, onPickAttr){
@@ -623,7 +625,7 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent});
   }
   function render(){
     if(!DATA) return;
@@ -652,7 +654,19 @@
     const bunn = $("#bunn"); if(bunn) bunn.innerHTML = bunnHtml();
     const retry = $("#feilRetry"); if(retry) retry.onclick = ()=> location.reload();
     window.addEventListener("hashchange", ()=>{ parseRoute(); render(); });
-    window.addEventListener("resize", ()=>{ if(S.view==="hjem" || S.view==="utforsk") render(); });
+    // spotsiden velger mobil- eller PC-oppsett når den tegnes (spot.js render): tegn på nytt når bredden krysser 1024 px
+    // (et nettbrett som snus), ellers står mobiloppsettet under PC-stilene (feiljegeren 19.11.2026)
+    let bred = isDesktop();
+    window.addEventListener("resize", ()=>{
+      const b = isDesktop(), byttet = b!==bred; bred = b;
+      if(S.view==="hjem" || S.view==="utforsk") render();
+      else if(byttet && S.view==="spot"){   // uten show(): brukeren blir stående der de var, og en åpen «Hvorfor» står åpen
+        const y = window.scrollY, hv = $("#viewSpot #hvorfor"), apen = !!(hv && hv.open);
+        renderSpotView();
+        const hv2 = $("#viewSpot #hvorfor"); if(hv2 && apen) hv2.open = true;
+        window.scrollTo(0, y);
+      }
+    });
     document.addEventListener("visibilitychange", tickNow);
     setInterval(tickNow, 60e3);
     parseRoute();

@@ -33,7 +33,7 @@
       title: "Surfehøyde",
       what: "Høyden der bølgene brekker - det du faktisk ser fra stranda. Langt svell reiser seg mye mer på grunt vann enn kort svell med samme høyde ute. Eksempel: 0,9 m signifikant høyde med 15 s periode gir rundt 1,7 m med formelen alene; med Unstads surf-faktor (ca. 1,4, lært fra observasjonene) rundt 2,4 m (Unstad 26.09.2026, over hodet).",
       numbers: (h) => [
-        ["Surfehøyde", h.surf_height!=null ? m(h.surf_height) : (h.low_reason ? "ikke beregnet (" + lowWord(h.low_reason) + ")" : "mangler")],
+        ["Surfehøyde", h.surf_height!=null ? m(h.surf_height) : (h.low_reason ? "ikke beregnet (" + (h.low_reason==="blown_out" && typeof windLossWord === "function" ? windLossWord(h) : lowWord(h.low_reason)) + ")" : "mangler")],
         ["Sett", m(h.surf_height_sets)],
         ["Signifikant høyde på spoten", m(h.height)],
         ["Periode ute", s(h.period)],
@@ -139,7 +139,7 @@
     },
     stars: {
       title: "Poeng",
-      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 poeng sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til ett poeng). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Stiplede ruter i timestripa er poeng som vind og tidevann tar fra svellets potensial.",
+      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 poeng sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til ett poeng). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden) eller «For mye vind» (sterk fralandsvind), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Stiplede ruter i timestripa er poeng som vind og tidevann tar fra svellets potensial.",
       numbers: (h) => [["Poeng", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
       how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på tallet for hele regnestykket."],
     },
@@ -172,7 +172,7 @@
         ["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"],
       ],
       how: () => ["\"Kildene er uenige\": BarentsWatch viser høyde ved punktet, men svellet ute treffer ikke vinduet eller er mest vindsjø - da er timen usikker og rates forsiktig.",
-                  "\"Blåst ut\": vinden tar poengene. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",
+                  "\"Blåst ut\": vinden tar poengene. \"For mye vind\": det samme i sterk fralandsvind. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",
                   "Langt frem i tid (dag 8-16) er alt et anslag fra den globale modellen - derfor \"usikkert så langt frem\"."],
     },
     shelter: {

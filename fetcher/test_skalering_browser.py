@@ -147,7 +147,8 @@ def main():
                 # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag».
                 # B4 steg 2: rutene viser tallet 0-5, så «0» er en ekte vurdering der (aldri en høyde)
                 if mobile:
-                    txt = page.evaluate("[...document.querySelectorAll('#viewHjem .rad .na')].map(e => e.textContent.trim())")
+                    # «Nå» står foran ordet (S15 b): se på teksten etter merket og på høyden alene, ellers kan ikke vakten slå til
+                    txt = page.evaluate("[...document.querySelectorAll('#viewHjem .rad .na')].flatMap(e => [e.textContent.trim().replace(/^Nå\\s*/, ''), ...[...e.querySelectorAll('.num')].map(n => n.textContent.trim())])")
                     uke = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i')].map(e => e.textContent.trim())")
                     tomme = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i.miss, #viewHjem .uke i.dark, #viewHjem .uke i.forbud, #viewHjem .uke i.over')].map(e => e.textContent.trim())")
                     heads = page.evaluate("[...document.querySelectorAll('#viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")

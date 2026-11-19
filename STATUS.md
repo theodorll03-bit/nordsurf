@@ -1,5 +1,20 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - småting etter go-live (S15 a og b), 19.11.2026
+
+Gren `design/b4-etter` fra main etter go-live (`50c68a8`, live 19.11 kl. 14:16Z). Bare visning: ingen ratingfil og ikke spots.json er rørt.
+
+- **«For mye vind» (S15 a, delvis):** fralandsvind heter «For mye vind» og ikke «Blåst ut» når den har tatt poeng, eller er på minst 12 m/s effektiv vind (middelvind pluss kasttillegget, samme tall som fralandskurven i rating.py runder til ett poeng ved). Det siste la fysikk-kontrolløren til 19.11: uten poeng å ta sto «Blåst ut» fortsatt ved 15 m/s fralands. `windLossWord()` i app.js, ordet i strings.js, og forklaringene i explain.js nevner ordet.
+  - **Ikke løst, spørsmål til Theodor:** «Blåst ut» står fortsatt i svak fralandsvind (1 til 9 m/s) når det meste av høyden er vindsjø (`rating.is_blown_out`). I varselet 19.11 kl. 14Z gjaldt det alle 32 fralandstimene med «Blåst ut», og ingen time fikk «For mye vind». Årsaken der er lite svell og ikke vinden, så teksten «vinden ødelegger dem» passer ikke. Hvilket ord de timene skal ha, er Theodors valg. Klassifiseringen ligger i ratingen og er ikke endret.
+- **«Nå» foran ordet i regionradene på Hjem (S15 b):** ordet og høyden gjelder nå-timen, ukerutene ved siden av er dagens beste. «Nå» står foran ordet og i teksten skjermleseren får. Mangler timen, står bare «–».
+- **Spotsiden tegnes på nytt når bredden krysser 1024 px** (feiljegeren 19.11): et nettbrett som snus, fikk før mobiloppsettet under PC-stilene. Timen som er valgt, rullingen og en åpen «Hvorfor» beholdes.
+- **«Best hh–hh» på spotsiden bare mens vinduet er åpent** (fysikk-kontrolløren 19.11): dommen og kolonnen i «Neste 7 dager» følger samme regel som forsiden og favorittradene.
+- **Navneplata på PC følger navnet** (feiljegeren 19.11): lange navn sto delvis på bildet fordi plata hadde fast største bredde.
+- **Spotsiden på 1024 til 1359 px:** forklaringa til surf, vind og tidevann («Godt over hodet») står på egen linje under tallet. Før rant den ut over skiva, også i 4.0 slik den gikk live. Funnet på skjermbildene 19.11.
+- **Høyden i regionradene brytes hel:** med «Nå» foran ble «2,1–2,7 m» delt over to linjer på 390 px. Nå går hele høyden til neste linje.
+- **Tester:** test_spotside_browser.py prøver ordene på oppdiktede timer, «Nå» i radene, spotsidens dom og ukekolonne etter at vinduet er over og mens det er åpent, at oppsettet byttes ved 800 og 1440 px, at rullingen og «Hvorfor» overlever byttet, og at ingenting renner ut av timekolonnen ved 1024 px. Vakten mot «0,0» i test_skalering_browser.py ser nå på teksten etter «Nå». Hver ny prøve er sett feile uten rettingen sin.
+- **Ikke gjort:** lange navn kuttes fortsatt med «…» i regionradene på 375 px. Spotsiden ruller til toppen når en ny time begynner, og Hjem ved hver endring av bredden (fra før, feiljegeren 19.11). Når vinduet er over, står dagens tall igjen uten å si at det gjelder en time som har vært, likt som på forsiden (kontrolløren 19.11). Etiketten «Svell» og overskriften «Beste nå» er spørsmål til Theodor (ord fra strings.js finnes ikke på nytt uten ja).
+
 ## T3 design B 4.0 «Papir» - main flettet inn før go-live (S15), 19.11.2026
 
 Gren `design/b4`. Theodors ja står i S15 (17.11) og ble gjentatt 19.11. Skjermbilder av det flettede treet: `privat/design-b4/steg-7-flettet/` (36 bilder).

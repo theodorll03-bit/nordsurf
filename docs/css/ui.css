@@ -269,7 +269,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .rad .nm b{display:block;font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm small{display:block;color:var(--muted);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rad .nm .na{color:var(--rc-ink);font-weight:600;font-size:var(--fs-secondary)}
-.rad .nm .na .num{color:var(--ink);font-weight:500;margin-left:6px}
+.rad .nm .na .num{color:var(--ink);font-weight:500;margin-left:2px;white-space:nowrap}   /* høyden brytes hel til neste linje */
+.rad .nm .na .na-tid{color:var(--muted);font-weight:500;margin-right:2px}   /* «Nå»: ordet gjelder nå-timen, rutene er dagens beste */
 .visalle{margin:8px auto 0;display:flex}
 /* søkeresultat-rad */
 .srad{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border-radius:12px;cursor:pointer}
@@ -717,7 +718,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-hode{position:relative;height:420px;margin-bottom:96px;background:var(--sunken)}
   .spw-hode.uten{height:120px;background:none}
   .spw-hode .sp-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 55%}
-  .spw-plate{position:absolute;left:0;bottom:-64px;max-width:min(100%, calc(var(--web-marg) + 760px));padding:16px 40px 0 var(--web-marg);background:var(--bg)}
+  /* plata følger navnet (skriften under er regnet fra vindusbredden), så lange navn aldri står rett på bildet (SPEC §7) */
+  .spw-plate{position:absolute;left:0;bottom:-64px;max-width:100%;padding:16px 40px 0 var(--web-marg);background:var(--bg)}
   .spw-reg{display:inline-flex;align-items:center;min-height:44px;margin:-12px 0 -4px;color:var(--ink);font-weight:700;text-decoration:none}
   .spw-reg:hover{text-decoration:underline;text-underline-offset:3px}
   .spw-plate .t-hero{font-size:min(var(--t-hero), calc((100vw - 2 * var(--web-marg)) / (var(--n) * .66)))}
@@ -739,6 +741,10 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-time .svell{margin-top:12px}
   .spw-time .svell > .svell-sub{margin-top:16px}   /* kommaet i 96 px går under linja */
   .spw-time .maal{grid-template-columns:96px auto 1fr}
+  @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */
+    .spw-time .maal{grid-template-columns:96px minmax(0,1fr)}
+    .spw-time .maal .mu{grid-column:2}
+  }
   .spw-skive{grid-column:10/13}
   .skive-rad.stor{flex-direction:column;align-items:flex-start;margin-top:0}
   .skive-rad.stor .skive{width:min(300px, 100%);height:auto;aspect-ratio:1}

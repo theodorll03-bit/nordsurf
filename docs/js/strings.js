@@ -35,12 +35,15 @@
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
     wordUncertain: "Usikkert",
+    // Sterk fralandsvind som tar poengene heter ikke «Blåst ut» (Theodor S15 a, 17.11.2026) - se windLossWord() i app.js
+    wordTooMuchWind: "For mye vind",
     wordExplain: {
       "Smått": "Litt bølger, men for lite til ett poeng.",
       // Grøtete har to tekster etter perioden (Theodor 09.10.2026, fjerde runde), se mushyShort/mushyLong
       "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake.",
       "Usikkert": "Kildene er uenige om svellet når inn til spoten.",
       "Blåst ut": "Bølgene er der, men vinden ødelegger dem.",
+      "For mye vind": "Bølgene er der, men vinden ødelegger dem.",
       "Feil tidevann": "Bølgene er der, men tidevannet passer ikke spoten nå.",
       "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.",
     },

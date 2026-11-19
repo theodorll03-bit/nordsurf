@@ -160,6 +160,21 @@ function localSourceLabel(src, sr){
   const s = src || "lokalkunnskap";
   return sr && sr.tide_source ? STR.localSourcesBoth(s, sr.tide_source.split(",")[0].trim()) : s;
 }
+// Ordet når vinden tar poengene: «Blåst ut», men «For mye vind» når vinden er fralands (Theodor S15 a, 17.11.2026:
+// 15 m/s fralands er ikke blåst ut). Det gjelder når fralandsvinden har tatt poeng, og når den er sterk nok til å ta
+// dem selv om det ikke var noen å ta: effektiv vind fra 12 m/s, der fralandskurven i fetcher/rating.py
+// (WIND_PENALTY_CURVES og effective_wind, samme tall her) runder til ett poeng (fysikk-kontrolløren 19.11.2026).
+// «Blåst ut» fordi det meste er vindsjø (rating.is_blown_out) i svakere fralandsvind beholder ordet. Bare visningsordet.
+const OFFSHORE_STRONG_MS = 12, GUST_FACTOR = 0.3, GUST_MAX_ADD_MS = 2;
+function effectiveWind(h){
+  const v = h.wind_speed, g = h.gust;
+  return v==null ? null : (g!=null && g > v ? v + Math.min(GUST_MAX_ADD_MS, GUST_FACTOR * (g - v)) : v);
+}
+function windLossWord(h){
+  if(!h || h.wind_type!=="offshore") return LOW_REASON_WORD.blown_out;
+  const z = h.zero_losses, tapt = Math.max((z && z.wind)||0, h.faded_wind||0), eff = effectiveWind(h);
+  return tapt > 0 || (eff!=null && eff >= OFFSHORE_STRONG_MS) ? STR.wordTooMuchWind : LOW_REASON_WORD.blown_out;
+}
 function zeroCause(h){
   const per = h.period;
   const shortPer = per!=null && per < MUSHY_PERIOD_MAX_S;
@@ -187,7 +202,7 @@ function zeroCause(h){
     }
     return mushy;
   }
-  if(w==="wind") return {word: LOW_REASON_WORD.blown_out, explain: STR.wordExplain[LOW_REASON_WORD.blown_out]};
+  if(w==="wind"){ const ord = windLossWord(h); return {word: ord, explain: STR.wordExplain[ord]}; }
   if(w==="tide") return {word: STR.wordTide, explain: STR.wordExplain[STR.wordTide]};
   // lokale regler: linjene som faktisk trakk (inneholder «−»)
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
@@ -214,6 +229,7 @@ function ratingWord(h){
   // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
   if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";
   const z = zeroWord(h); if(z!=null) return z;
+  if(h.low_reason==="blown_out") return windLossWord(h);
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }
