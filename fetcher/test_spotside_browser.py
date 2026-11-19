@@ -540,7 +540,16 @@ def main():
                     # Brukeren blir stående der de var (feiljegeren 19.11.2026). Merket på dommen viser at siden faktisk ble tegnet på nytt.
                     for hva, utlos in (("ny time", "() => { window.__S.now = 'gammel time'; document.dispatchEvent(new Event('visibilitychange')); }"), ("Front.refresh()", "() => Front.refresh()")):
                         page.evaluate("() => { document.querySelector('#viewSpot #hvorfor').open = true; document.querySelector('#viewSpot .dom').dataset.gammel = '1'; window.scrollTo(0, 320); }")
+                        # fokus (et felt med id ved ny time, en dagknapp ved refresh) og dagrekka står også (feiljegeren 19.11.2026)
+                        LES_FOKUS = "() => { const dv = document.querySelector('#viewSpot .dagvelger'), a = document.activeElement; return {x: dv ? dv.scrollLeft : null, fokus: a.id || (a.dataset || {}).day || a.tagName}; }"
+                        page.evaluate("""(dagknapp) => { const dv = document.querySelector('#viewSpot .dagvelger'); if(dv) dv.scrollLeft = dv.scrollWidth;
+                            const e = (dagknapp && document.querySelector('#viewSpot .dagknapp[aria-pressed="false"]')) || document.querySelector('#viewSpot #tstripeVelg') || document.querySelector('#viewSpot #loggHer');
+                            e.focus({preventScroll: true}); }""", hva != "ny time")
+                        fo = page.evaluate(LES_FOKUS)
+                        assert fo["fokus"] not in ("BODY", "") and (fo["x"] or 0) > (0 if mobile else -1), f"fikk ikke satt fokus eller rullet dagrekka før {hva} ({label}): {fo}"
                         page.evaluate(utlos); page.wait_for_selector(SPOT_KLAR)
+                        fo2 = page.evaluate(LES_FOKUS)
+                        assert fo2 == fo, f"spotsiden mistet fokus eller plassen i dagrekka ved {hva} ({label}): før {fo}, etter {fo2}"
                         st = page.evaluate("() => ({y: window.scrollY, apen: !!(document.querySelector('#viewSpot #hvorfor') || {}).open, gammel: !!document.querySelector('#viewSpot .dom[data-gammel]')})")
                         assert not st["gammel"], f"spotsiden ble ikke tegnet på nytt ved {hva}: testen prøver ingenting"
                         assert st["y"] >= 300 and st["apen"], f"spotsiden hoppet til toppen eller lukket «Hvorfor» ved {hva} ({label}): {st}"
@@ -556,6 +565,20 @@ def main():
                     inn = page.evaluate("""() => { const i = document.querySelector('#syncRepo'); i.value = 'theo/halv'; i.focus(); window.__S.now = 'gammel time'; document.dispatchEvent(new Event('visibilitychange'));
                         return {repo: document.querySelector('#syncRepo').value, fokus: document.activeElement.id, now: window.__S.now}; }""")
                     assert inn["repo"] == "theo/halv" and inn["fokus"] == "syncRepo" and inn["now"] != "gammel time", f"Innstillinger mistet teksten eller fokus ved ny time ({label}): {inn}"
+                    # Ved innlogging (authchange) og når synken er ferdig (Front.refresh()) tegnes Innstillinger på nytt: teksten som ikke
+                    # er lagret, fokus og markøren står (feiljegeren 19.11.2026)
+                    for hva in ("authchange", "Front.refresh()"):
+                        inn = page.evaluate("""(hva) => { const i = document.querySelector('#syncRepo'); i.value = 'theo/halv'; i.focus(); i.setSelectionRange(4, 4); i.dataset.gammel = '1';
+                            if(hva === 'authchange') window.dispatchEvent(new Event('authchange')); else Front.refresh();
+                            const j = document.querySelector('#syncRepo'); return {tegnet: !j.dataset.gammel, repo: j.value, fokus: document.activeElement.id, merket: j.selectionStart}; }""", hva)
+                        assert inn["tegnet"], f"Innstillinger ble ikke tegnet på nytt ved {hva}: testen prøver ingenting"
+                        assert inn["repo"] == "theo/halv" and inn["fokus"] == "syncRepo" and inn["merket"] == 4, f"Innstillinger mistet teksten, fokus eller markøren ved {hva} ({label}): {inn}"
+                    # er verdien lagret i mellomtiden («Lagre og synk» trimmer og lagrer, og synken tegner siden på nytt), vinner den lagrede
+                    lagret = page.evaluate("""() => { const k = 'nordsurf.sync.v1', for0 = localStorage.getItem(k); document.querySelector('#syncRepo').value = ' theo/ny ';
+                        localStorage.setItem(k, JSON.stringify({repo: 'theo/ny'})); Front.refresh(); const v = document.querySelector('#syncRepo').value;
+                        if(for0 == null) localStorage.removeItem(k); else localStorage.setItem(k, for0);
+                        Front.refresh(); return {v, etter: document.querySelector('#syncRepo').value}; }""")
+                    assert lagret["v"] == "theo/ny" and lagret["etter"] != " theo/ny ", f"den lagrede verdien skal vinne over teksten i feltet ({label}): {lagret}"
                     go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
                     # Hjem: bare høyden endrer seg når adresselinja på mobil glir inn og ut, og da skal ingenting tegnes på nytt.
                     # Ny bredde tegner Hjem på nytt (kartet følger bredden), men brukeren blir stående der de var.
@@ -1000,6 +1023,29 @@ def main():
                     page.set_viewport_size({"width": 800 if not mobile else 1100, "height": vp[1]}); page.wait_for_timeout(300)
                     assert not u_gammel(), f"Utforsk skal tegnes på nytt når oppsettet byttes ved 1024 px ({label})"
                     page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_selector("#viewUtforsk:not([hidden]) :is(.mk, .klynge)"); page.wait_for_timeout(500)
+                    # kartet står der brukeren la det ved ny time og Front.refresh() (innlogging, synk ferdig): før hoppet det tilbake til
+                    # regionen hver hele time (feiljegeren 19.11.2026). Regionknappen og navigasjon hit setter utsnittet som før
+                    zoom = lambda: page.evaluate("window.__kart.getZoom()")
+                    NY_TIME = "() => { window.__S.now = 'gammel time'; document.dispatchEvent(new Event('visibilitychange')); }"
+                    z0 = zoom()
+                    for hva, utlos in (("ny time", NY_TIME), ("Front.refresh()", "() => Front.refresh()")):
+                        page.evaluate("(um) => { window.__kart.jumpTo({zoom: window.__kart.getZoom() + 2}); document.querySelector(um).dataset.gammel = '1'; }", UM); page.wait_for_timeout(200)
+                        z1 = zoom(); page.evaluate(utlos); page.wait_for_timeout(300)
+                        assert z1 > z0 + 1 and not u_gammel(), f"Utforsk ble ikke zoomet inn eller ikke tegnet på nytt ved {hva}: testen prøver ingenting ({label}): {z0} -> {z1}"
+                        assert abs(zoom() - z1) < 0.01, f"Utforsk-kartet hoppet tilbake ved {hva} ({label}): zoom {z1} -> {zoom()}"
+                        page.click("#utforskChips [data-view='Troms']"); page.wait_for_timeout(1000)
+                        assert abs(zoom() - z0) < 0.01, f"regionknappen skal sette utsnittet som før ({label}): zoom {zoom()}, ventet {z0}"
+                    page.evaluate("window.__kart.jumpTo({zoom: window.__kart.getZoom() + 2})")
+                    go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)"); go("#utforsk", "#viewUtforsk:not([hidden]) :is(.mk, .klynge)"); page.wait_for_timeout(500)
+                    assert abs(zoom() - z0) < 0.01, f"navigasjon til Utforsk skal sette utsnittet som før ({label}): zoom {zoom()}, ventet {z0}"
+                    # etter et trykk på en klynge er ingen region valgt: uten rettingen zoomet timen ut til hele kartet
+                    kl0 = page.query_selector("#viewUtforsk .klynge")
+                    if kl0:
+                        kl0.click(); page.wait_for_timeout(1000); zk = zoom()
+                        page.evaluate(NY_TIME); page.wait_for_timeout(300)
+                        assert zk > z0 and abs(zoom() - zk) < 0.01, f"Utforsk-kartet hoppet ut av klyngen ved ny time ({label}): zoom {z0} -> {zk} -> {zoom()}"
+                        page.click("#utforskChips [data-view='Troms']"); page.wait_for_timeout(1000)
+                        assert abs(zoom() - z0) < 0.01, f"regionknappen skal sette utsnittet som før etter klyngen ({label}): zoom {zoom()}, ventet {z0}"
                     def click_mk(sid):
                         # lappen er trykkflaten når den vises (lappene kolliderer aldri); ellers prikken
                         pill = page.query_selector(f".mk[data-id='{sid}']:not(.bare) .mk-pill")
