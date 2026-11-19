@@ -2,7 +2,7 @@
    Ren visning: ALLE tall kommer fra varselet (docs/data/oversikt.json og spots/<id>.json, S2) slik fetcher/rating.py
    skrev dem - appen regner aldri stjerner eller høyder selv. Tekster i js/strings.js,
    forklaringer i js/explain.js, grafen i js/chart.js. Vanlig <script>, ikke modul -
-   js/map.js bruker flere av funksjonene her (starsSVG, heightMForDisplay, openSheet ...). */
+   js/map.js bruker flere av funksjonene her (tallHtml, heightMForDisplay, openSheet ...). */
 /* ---------- Oppsett ---------- */
 const TZ = "Europe/Oslo";
 const LOG_KEY = "nordsurf.logs.v1";
@@ -26,9 +26,8 @@ const STAR_WORDS = STR.starWords;
 const PICK_WORDS = STR.pickWords;
 const WIND_WORD = STR.wind;
 // "sidevind" inneholder allerede "vind" - "sidevind"+"vinden" ville gitt
-// "sidevindvinden". De andre (offshore/side-onshore/onshore) er låneord uten
-// "vind" i seg, og tåler "vinden" rett på (offshorevinden, onshorevinden,
-// side-onshorevinden er alle riktige som de er).
+// "sidevindvinden". De andre (fralands, pålands) har ikke "vind" i seg og
+// tåler "vinden" rett på (fralandsvinden, pålandsvinden).
 function windNoun(type){
   const w = WIND_WORD[type];
   if(!w) return "vinden";
@@ -106,11 +105,11 @@ function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
 
-/* ---------- Rating: ord eller stjerner (punkt 2) ---------- */
-// Samme ord overalt (liste, detaljside, dagbrikker, kartets høydeplate):
-// 0 stjerner viser ORDET i dempet ratingfarge, 1 og mer viser stjernene i
-// ratingfargen. Farge er aldri eneste informasjon - ordet/stjernene står
-// alltid der. Tallene kommer fra forecast.json (rating.py) - aldri regnet her.
+/* ---------- Rating: tallet 0-5 og ordet (punkt 2; tall i stedet for stjerneikoner fra design B 4.0) ---------- */
+// Samme ord overalt (liste, detaljside, dagbrikker, kartets høydeplate).
+// Farge er aldri eneste informasjon - tallet og ordet står alltid der.
+// Tallene kommer fra forecast.json (rating.py, feltet `stars`) - aldri regnet her.
+// STAR_PATH brukes bare av favorittknappen.
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1L3.2 9.3l6.1-.9z";
 function ratingClass(h){ const n = h && h.stars ? Math.min(5, h.stars) : 0; return `r-${n}`; }
 // Ordet ved 0 stjerner med årsak «flat» (low_reason flat, eller 0 stjerner
@@ -196,7 +195,7 @@ function zeroCause(h){
   const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
   if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
   if(/^Vind/.test(line)){
-    // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger offshore, nå 5 m/s sidevind
+    // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger fralandsvind, nå 5 m/s sidevind
     const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
     return {word: LOW_REASON_WORD.blown_out, explain: `${srcText}: ${STR.localWindExplain(spot ? spot.name : "spoten", now)}`};
   }
@@ -223,26 +222,19 @@ function ratingWordExplain(h){
   if(h && !h.stars && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).explain;
   const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null;
 }
-function starsSVG(solid, faded, big){
-  let out = "";
-  for(let i=0;i<5;i++){
-    const cls = i<solid ? "st" : i<solid+faded ? "st f" : "st e";
-    // pathLength 100: stiplingen på tapte stjerner (.st.f) fordeles likt rundt hele stjerna i alle størrelser (Theodor 16.10)
-    out += `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${cls}" pathLength="100" d="${STAR_PATH}"/></svg>`;
-  }
-  return `<span class="stars${big?" big":""} r-${Math.min(5,solid||0)}" role="img" aria-label="${STR.starsAria(solid, faded)}">${out}</span>`;
+// Vurderingen vises som tallet 0-5 (design B 4.0, SPEC §5): det samme tallet som stjernene var, bare vist som tall.
+// tallHtml: tallet alene, stort (korall fra 4, ellers blekk, 0 dempet). `lost` = poeng tapt på vind eller tidevann
+// (leses opp; på skjermen skriver spotsiden grunnen ut som tekst, «−1 tidevann»).
+function tallHtml(n, lost, big){
+  const v = Math.min(5, n||0);
+  return `<span class="rtall${big?" big":""} r-${v}" role="img" aria-label="${esc(STR.starsAria(v, lost||0))}"><b>${v}</b></span>`;
 }
-function ratingHtml(h, big){
-  // 0 stjerner: ordet alene (stort, dempet), ingen stjerner, aldri punktum.
-  // 1-5 stjerner: stjernene i ratingfargen. Har timen 1 stjerne OG en
-  // low_reason ("Blåst ut", "Treffer ikke" ...), står ordet under stjernen
-  // - Theodors regel 05.10.2026 ("samme fire ord for 0 og 1 stjerne
-  // overalt") gjelder fortsatt (fysikk-kontrollør 09.10.2026).
-  if(!h) return `<span class="word r-0${big?" big":""}">–</span>`;
-  if(!h.stars) return `<span class="word r-0${big?" big":""}">${esc(ratingWord(h))}</span>`;
-  const stars = starsSVG(h.stars, h.faded, big);
-  if(h.low_reason) return `<span class="lr${big?" big":""}">${stars}<span class="word lrw ${ratingClass(h)}" aria-hidden="true">${esc(ratingWord(h))}</span></span>`;
-  return stars;
+// ruteHtml: tallet i en 24 px rute (korall fylt fra 4, ellers omriss). `cls` i stedet for tall: «miss» (data mangler,
+// skravur), «mork» (mørk time, ingen vurdering) eller «forbud» - da er ruta tom og ordet ved siden av sier hvorfor.
+function ruteHtml(n, cls){
+  if(cls) return `<span class="rute ${cls}" aria-hidden="true"></span>`;
+  const v = Math.min(5, n||0);
+  return `<span class="rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
 }
 function windArrowHtml(h){
   if(!h || h.wind_dir==null) return "";
@@ -301,7 +293,7 @@ function heightRangeText(h){
 /* ---------- Dagbrikker: ukedag + farget prikk, ingen tall (punkt 1) ---------- */
 
 /* ---------- Visninger ---------- */
-const isDesktop = () => matchMedia("(min-width: 900px)").matches;
+const isDesktop = () => matchMedia("(min-width: 1024px)").matches;
 function wordmarkSvg(){ return window.WORDMARK_SVG || `<svg viewBox="0 0 10 10"></svg>`; }
 function sampleBanner(){
   return DATA.sample ? `<p class="banner sample"><b>${esc(STR.sample)}</b></p>` : "";
@@ -364,12 +356,6 @@ function noticeFor(h){
   if(h.uncertain) return {key:"notice", text: STR.notice.uncertain, warn:true};
   if(h.zone==="langtid") return {key:"notice", text: STR.notice.farAhead, warn:true};
   return null;
-}
-function tipHtml(h){
-  const t = new Date(h.t);
-  const range = heightRangeText(h);
-  const line = [range, h.period!=null?`${nf0.format(h.period)} s`:null, kjText(h), windShort(h)].filter(Boolean).join(" · ");
-  return `<b>${esc(cap(relDay(t)))} kl. ${fmtHour.format(t)}</b> · ${esc(h.stars ? `${h.stars} ${h.stars===1?"stjerne":"stjerner"}` : ratingWord(h))}<br>${esc(line)}`;
 }
 function tapCell(key, k, v, n){
   return `<button type="button" class="cell tap" data-explain="${key}"><div class="k">${esc(k)}</div><div class="v">${v}</div>${n?`<div class="n">${n}</div>`:""}</button>`;
@@ -503,7 +489,7 @@ function localRulesHtml(h){
   const lost = lr.stars_lost, sr = (spotOfHour(h)||{}).local_rules;
   return `<div class="cell wide"><div class="k">${esc(STR.cell.localRules)} (${esc(localSourceLabel(lr.source, sr))})</div>
       ${(lr.lines||[]).map(l=>`<div class="n">${esc(l)}</div>`).join("")}
-      ${lost ? `<div class="n"><b>Trekker ${lost} stjerne${lost===1?"":"r"} fra tidevann/vind-reglene.</b></div>` : ""}
+      ${lost ? `<div class="n"><b>Trekker ${lost} poeng fra tidevann/vind-reglene.</b></div>` : ""}
     </div>`;
 }
 function energyText(h){
@@ -642,7 +628,7 @@ function currentHour(spot){
 }
 
 /* ---------- Rapporter ---------- */
-const WIND_IMPRESSION_WORD = {offshore:"Offshore", onshore:"Onshore", side:"Sidevind", stille:"Stille"};
+const WIND_IMPRESSION_WORD = STR.reportWind;
 function reportItemHtml(r){
   const mine = !!(window.Auth && Auth.state.user && r.user_id === Auth.state.user.id);
   const name = r.profiles && r.profiles.display_name ? esc(r.profiles.display_name) : "Ukjent";
@@ -677,8 +663,8 @@ function reportFormHtml(){
       <label for="reportWind">Vind</label>
       <select id="reportWind">
         <option value="">Ikke oppgitt</option>
-        <option value="offshore">Offshore</option>
-        <option value="onshore">Onshore</option>
+        <option value="offshore">${STR.reportWind.offshore}</option>
+        <option value="onshore">${STR.reportWind.onshore}</option>
         <option value="side">Sidevind</option>
         <option value="stille">Stille</option>
       </select>
@@ -725,7 +711,8 @@ function saveLogs(l){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(l)); ret
 // og blandet med den geometriske kurven fra del C - se fetcher/exposure_learn.py.
 // Fargeskala 0-5 stjerner, uavhengig av rav-fargen (--star) som ellers
 // betyr "stjerner" i appen - her trengs en skala, ikke en enkeltfarge.
-const STAR_SCALE = ["#c0392b","#e0672c","#e0a72c","#c9c22b","#7fbf3f","#2f9e44"];
+// B 4.0: 0 i grått, 1-3 i blekk, korall fra 4 (tokenene i css/ui.css)
+const STAR_SCALE = [0,1,2,3,4,5].map(n=>`var(--r${n}-tall)`);
 function exposureChartSVG(spotId, curve, logs){
   if(!curve) return "";
   const W = 380, H = 130, padL = 26, padR = 8, padT = 6, plotH = 84, axisY = padT + plotH;
@@ -743,10 +730,11 @@ function exposureChartSVG(spotId, curve, logs){
     const w = (W - padL - padR) / 36 - 2;
     return `<rect x="${bx(i)-w/2}" y="${H-14+ (14-h)}" width="${w}" height="${h}" fill="var(--muted)" opacity=".35"/>`;
   }).join("");
-  const dots = (pts, color) => pts.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.6" fill="${color}"/>`).join("");
+  // lang periode: hel strek og fylte prikker; kort periode: åpne prikker (form, ikke farge, skiller dem)
+  const dots = (pts, apen) => pts.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="2.6" fill="${apen ? "var(--bg)" : "var(--ink)"}" stroke="var(--ink)" stroke-width="1.2"/>`).join("");
   const marks = (logs||[]).filter(l=>l.spot===spotId && l.dirOffshore!=null && l.stars!=null).map(l=>{
     const i = Math.floor((l.dirOffshore % 360) / 10);
-    return `<circle cx="${bx(i)}" cy="${axisY+6}" r="3" fill="${STAR_SCALE[Math.max(0,Math.min(5,l.stars))]}"><title>${l.stars} stjerner</title></circle>`;
+    return `<circle cx="${bx(i)}" cy="${axisY+6}" r="3" fill="${STAR_SCALE[Math.max(0,Math.min(5,l.stars))]}"><title>${l.stars} poeng</title></circle>`;
   }).join("");
   const ticks = [0,90,180,270].map(d=>{
     const i = d/10;
@@ -757,9 +745,9 @@ function exposureChartSVG(spotId, curve, logs){
     <line x1="${padL}" y1="${axisY}" x2="${W-padR}" y2="${axisY}" stroke="var(--line)"/>
     ${bars}
     <polyline points="${geoPts}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 2"/>
-    ${langPts.length>1 ? `<polyline points="${langPts.join(" ")}" fill="none" stroke="#2f6fed" stroke-width="1.8"/>` : ""}
-    ${dots(langPts, "#2f6fed")}
-    ${dots(kortPts, "#e08b2f")}
+    ${langPts.length>1 ? `<polyline points="${langPts.join(" ")}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>` : ""}
+    ${dots(langPts, false)}
+    ${dots(kortPts, true)}
     ${marks}
     ${ticks}${yTicks}
   </svg>`;
@@ -836,8 +824,8 @@ function renderLogs(){
     if(!withF.length) return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen logger med varsel å sammenligne mot ennå.</p></div>`;
     const hits = withF.filter(l=>Math.abs(l.stars-l.forecastStars)<=1).length;
     const bias = withF.reduce((a,l)=>a+(l.stars-l.forecastStars),0)/withF.length;
-    const dir = Math.abs(bias)<0.5 ? "Varselet ligger omtrent riktig." : bias>0 ? `Varselet undervurderer med ${nf1.format(bias)} stjerner i snitt.` : `Varselet overvurderer med ${nf1.format(-bias)} stjerner i snitt.`;
-    return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor én stjerne.</p></div>`;
+    const dir = Math.abs(bias)<0.5 ? "Varselet ligger omtrent riktig." : bias>0 ? `Varselet undervurderer med ${nf1.format(bias)} poeng i snitt.` : `Varselet overvurderer med ${nf1.format(-bias)} poeng i snitt.`;
+    return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor ett poeng.</p></div>`;
   }).join("");
   // 26.09.2026: transfer (modell mot modell, reserven mot BarentsWatch -
   // læres ALDRI fra loggene lenger) og surf_factor (loggene/observasjonene
@@ -881,13 +869,13 @@ function renderLogs(){
       `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren - fjernes aldri automatisk.</div>`
     ).join("");
     return `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
-      <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter stjerner.</p>
+      <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
       ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå - ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
         <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>
-        <span><i style="background:#2f6fed"></i>Lært, lang periode</span>
-        <span><i style="background:#e08b2f"></i>Lært, kort periode</span>
+        <span><i style="background:var(--ink)"></i>Lært, lang periode</span>
+        <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--ink)"></i>Lært, kort periode</span>
       </div>
       ${sugg}</div>`;
   }).join("");
@@ -943,13 +931,13 @@ function renderLogs(){
       // (var energyTotalKj, samme feil som selve regelen hadde).
       const broke = good.filter(l=>l.energySwellKj!=null && l.energySwellKj < zero);
       if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
-        items.push(`<div class="sugg">${broke.length} gode økter (3+ stjerner) hadde under ${nf0.format(zero)} kJ svellenergi - under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) hadde under ${nf0.format(zero)} kJ svellenergi - under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
       }
     }
     if(lr.tide_prefer && lr.tide_penalty_high!=null){
       const broke = good.filter(l=>l.tideState!=null && !lr.tide_prefer.includes(l.tideState));
       if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
-        items.push(`<div class="sugg">${broke.length} gode økter (3+ stjerner) var utenfor tidevannet den lokale regelen favoriserer (${lr.tide_prefer.join("/")}) . Vurder å myke opp tidevanns-straffen. Endres aldri automatisk.</div>`);
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) var utenfor tidevannet den lokale regelen favoriserer (${lr.tide_prefer.join("/")}) . Vurder å myke opp tidevanns-straffen. Endres aldri automatisk.</div>`);
       }
     }
     if(!items.length) return "";
@@ -976,7 +964,7 @@ function renderLogs(){
     const curTxt = lr ? `${esc(s.name)} sin egen regel (full ${nf0.format(lr.full)}, zero ${nf0.format(lr.zero)})`
                        : `standardgrensene (full 2000, zero 500)`;
     return `<div class="calib"><div class="t">${esc(s.name)}: energiterskel fra ${withE.length} logger</div>
-      <p>Dårligste gode økt (2+ stjerner): ${nf0.format(full)} kJ svellenergi. Beste dårlige økt (0-1 stjerne): ${nf0.format(zero)} kJ. Dagens grenser er ${curTxt}. Vurder full ~${nf0.format(full)}, zero ~${nf0.format(zero)}. Endres aldri automatisk.</p></div>`;
+      <p>Dårligste gode økt (2+ poeng): ${nf0.format(full)} kJ svellenergi. Beste dårlige økt (0-1 poeng): ${nf0.format(zero)} kJ. Dagens grenser er ${curTxt}. Vurder full ~${nf0.format(full)}, zero ~${nf0.format(zero)}. Endres aldri automatisk.</p></div>`;
   }).join("");
   // ROADMAP oppgave B: treffprosent per antall dager frem, per spot - målt
   // av henteren selv (eldre varsel mot nyeste varsel og mot loggene dine),
@@ -987,15 +975,15 @@ function renderLogs(){
     const measured = acc.filter(a=>a.source==="målt").length;
     const cells = acc.map(a=>`<span class="acc${a.source==="målt"?" malt":""}" title="${a.day} dager frem: ${a.pct} % (${a.source}, ${a.n} sammenligninger)">${a.day}d ${a.pct}%</span>`).join("");
     return `<div class="calib"><div class="t">${esc(s.name)}: ${measured} av 16 dager frem er målt</div>
-      <p>Sannsynlighet for treff innenfor én stjerne, per antall dager frem. Uthevet = målt fra dine logger og henterens egne sammenligninger (minst 30), ellers startverdi.</p>
+      <p>Sannsynlighet for treff innenfor ett poeng, per antall dager frem. Uthevet = målt fra dine logger og henterens egne sammenligninger (minst 30), ellers startverdi.</p>
       <div class="accrow">${cells}</div></div>`;
   }).join("");
   const rows = logs.map(l=>{
     const s = DATA.spots.find(x=>x.id===l.spot); const d = new Date(l.t);
-    const extra = [l.size,l.wind].filter(Boolean).join(", ");
+    const extra = [l.size, STR.logWind[l.wind] || l.wind].filter(Boolean).join(", ");
     const fc = l.forecastStars!=null ? `Varsel: ${l.forecastStars}` : "Uten varsel";
     const obs = l.type==="observed" ? `Observert${l.source?` (${esc(l.source)})`:""}. ` : "";
-    return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${starsSVG(l.stars,0)}</span>
+    return `<div class="logrow"><span><b>${esc(s?s.name:l.spot)}</b> ${ruteHtml(l.stars)}</span>
       <button class="del" data-id="${l.id}" aria-label="Slett økt ${fmtDate.format(d)}">Slett</button>
       <span class="m">${obs}${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
   }).join("");
@@ -1143,7 +1131,7 @@ function renderSettings(){
     </div>
     <h2 class="sec">Varsler</h2>
     <div class="form">
-      <p>Du får varsel når en spot får <b>${n.min_stars??3} stjerner eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
+      <p>Du får varsel når en spot får <b>${n.min_stars??3} poeng eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
       <p>Varslene kommer i ntfy-appen. Grensen endres i notify.json.</p>
     </div>
     <h2 class="sec">Sikkerhetskopi av logger</h2>
@@ -1196,7 +1184,7 @@ function openSheet(spotId, time){
   updateLogTimeText();
   $("#starPick").innerHTML = [0,1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}"><b>${n}</b>${PICK_WORDS[n]}</button>`).join("");
   document.querySelector('[data-group="size"]').innerHTML = SIZES.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
-  document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false">${v}</button>`).join("");
+  document.querySelector('[data-group="wind"]').innerHTML = WINDS.map(v=>`<button aria-pressed="false" data-v="${v}">${STR.logWind[v] || v}</button>`).join("");
   // Type: egen økt eller observert (sett selv, eller via en pålitelig kilde
   // uten å surfe). Eksklusivt valg (alltid ett av de to), ikke en valgfri
   // av/på-brikke som størrelse/vind - derfor egen håndtering under, ikke
@@ -1219,7 +1207,7 @@ function openSheet(spotId, time){
     const on = b.getAttribute("aria-pressed")==="true";
     g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
     b.setAttribute("aria-pressed", on ? "false" : "true");
-    logDraft[g.dataset.group] = on ? null : b.textContent;
+    logDraft[g.dataset.group] = on ? null : (b.dataset.v || b.textContent);
   }));
   $("#sheet").classList.add("open"); $("#scrim").classList.add("open"); $("#sheet").setAttribute("aria-hidden","false");
   setTimeout(()=>$("#starPick button").focus(), 50);
@@ -1480,7 +1468,7 @@ function maybeShowWitnessPrompt(){
   const spot = DATA.spots.find(s=>s.id===entry.spot);
   if(!spot) return;
   const when = new Date(entry.t);
-  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 stjerner.`;
+  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 poeng.`;
   $("#witnessPick").innerHTML = PICK_WORDS.map((w,n)=>`<button data-n="${n}"><b>${n}</b>${w}</button>`).join("");
   $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=async ()=>{
     const stars = +b.dataset.n;

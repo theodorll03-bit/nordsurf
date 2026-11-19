@@ -23,7 +23,7 @@
     const n=["N","NNØ","NØ","ØNØ","Ø","ØSØ","SØ","SSØ","S","SSV","SV","VSV","V","VNV","NV","NNV"];
     return n[Math.round(((d%360)+360)%360/22.5)%16];
   };
-  const WIND_WORD = {offshore:"offshore", side:"sidevind", sideonshore:"side-onshore", onshore:"onshore"};
+  const WIND_WORD = STR.wind;
   const SOURCE_WORD = {barentswatch:"BarentsWatch (kystmodell, 100 m)", svell_ute:"reservemodellen (svell ute × transfer × eksponering)", metno_korrigert:"met.no sin totalhøyde på spoten, justert"};
 
   // low_reason-ordet som i resten av appen (LOW_REASON_WORD i app.js), aldri "blown out"
@@ -110,16 +110,16 @@
     },
     wind: {
       title: "Vind",
-      what: "Offshore (fra land) holder bølgene rene og glatte; onshore (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett offshore - lange, rene linjer.",
+      what: "Fralandsvind (fra land) holder bølgene rene og glatte; pålandsvind (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett fralandsvind - lange, rene linjer.",
       numbers: (h) => [
         ["Vind", h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
         ["Kast", h.gust!=null ? `${nf0.format(h.gust)} m/s` : "mangler"],
         ["Type", WIND_WORD[h.wind_type] || "mangler"],
-        ["Stjerner tapt på vind", h.faded_wind!=null ? String(h.faded_wind) : (h.faded!=null ? String(h.faded) : "mangler")],
+        ["Poeng tapt på vind", h.faded_wind!=null ? String(h.faded_wind) : (h.faded!=null ? String(h.faded) : "mangler")],
         ["Kilde", h.wind_source==="openmeteo" ? "Open-Meteo GFS (langtid)" : h.wind_source==="metno" ? "met.no" + (h.wind_interpolated ? ", jevnet ut mellom 6-timersverdier" : "") : "mangler"],
       ],
-      how: () => ["Offshore avgjøres av spotens offshore-sektor. Side/side-onshore/onshore måles fra spotens facing: innenfor 45° er onshore, 45–80° side-onshore, over 80° side.",
-                  "Vindtabellen trekker stjerner etter styrke og type - vist som blasse stjerner."],
+      how: () => ["Fralands avgjøres av spotens fralandssektor. Ellers måles vinden mot retningen stranda vender: innenfor 45° er rett pålands, 45–80° skrått pålands, over 80° sidevind. Begge sies som «pålands», men vindtabellen skiller dem.",
+                  "Vindtabellen trekker poeng etter styrke og type - vist som stiplede ruter i timestripa."],
     },
     tide: {
       title: "Tidevann",
@@ -127,21 +127,21 @@
       numbers: (h, spot) => [
         ["Nå", h.tide ? `${h.tide.rising?"stigende":"fallende"}, ${h.tide.state}${h.tide.level!=null?` (${nf1.format(h.tide.level)})`:""}` : "mangler"],
         ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : "tåler alt tidevann"],
-        ["Stjerner tapt på tidevann", h.faded_tide!=null ? String(h.faded_tide) : "mangler"],
+        ["Poeng tapt på tidevann", h.faded_tide!=null ? String(h.faded_tide) : "mangler"],
       ],
-      how: () => ["Kartverket sin tidevannsvarsel for nærmeste punkt. Lokale regler (med navngitt kilde) kan trekke én stjerne ved feil tidevann, dempet med regelens vekt."],
+      how: () => ["Kartverket sin tidevannsvarsel for nærmeste punkt. Lokale regler (med navngitt kilde) kan trekke ett poeng ved feil tidevann, dempet med regelens vekt."],
     },
     confidence: {
       title: "Sikkerhet",
-      what: "Hvor sannsynlig det er at stjernene treffer innenfor én stjerne. Startverdier per antall dager frem, erstattet av målt treffsikkerhet når spoten har nok sammenligninger. Varsler sendes bare for timer med minst 70 %.",
+      what: "Hvor sannsynlig det er at tallet treffer innenfor ett poeng. Startverdier per antall dager frem, erstattet av målt treffsikkerhet når spoten har nok sammenligninger. Varsler sendes bare for timer med minst 70 %.",
       numbers: (h) => [["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"], ["Grunnlag", h.confidence_source==="målt" ? "målt" : "anslag"], ["Dager frem", h.day!=null ? String(h.day) : "mangler"], ["Sone", h.zone==="langtid" ? "langtid (dag 8–16, GFS)" : h.zone==="reserve" ? "reservemodell" : "BarentsWatch"]],
       how: () => ["Hver kjøring arkiveres og sammenlignes med varselet laget under 6 timer før, og med loggene dine. Fra 30 sammenligninger brukes målt prosent."],
     },
     stars: {
-      title: "Stjerner",
-      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 stjerner sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til en stjerne). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Blasse stjerner er det vind og tidevann tar fra svellets potensial.",
-      numbers: (h) => [["Stjerner", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
-      how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på stjernene for hele regnestykket."],
+      title: "Poeng",
+      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 poeng sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til ett poeng). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Stiplede ruter i timestripa er poeng som vind og tidevann tar fra svellets potensial.",
+      numbers: (h) => [["Poeng", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
+      how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på tallet for hele regnestykket."],
     },
     sources: {
       title: "Kilder",
@@ -172,7 +172,7 @@
         ["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"],
       ],
       how: () => ["\"Kildene er uenige\": BarentsWatch viser høyde ved punktet, men svellet ute treffer ikke vinduet eller er mest vindsjø - da er timen usikker og rates forsiktig.",
-                  "\"Blåst ut\": vinden tar stjernene. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",
+                  "\"Blåst ut\": vinden tar poengene. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",
                   "Langt frem i tid (dag 8-16) er alt et anslag fra den globale modellen - derfor \"usikkert så langt frem\"."],
     },
     shelter: {

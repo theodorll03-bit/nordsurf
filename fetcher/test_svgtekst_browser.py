@@ -23,6 +23,13 @@ lys og mørk, og sjekker:
 8.  tidevann mangler (tide_events tom): «Tidevann mangler», aldri et tall;
 9.  skjermbilder i docs/design/tidevann/etter/: Farstadsanden og Unstad, mobil og PC, lys og mørk (kortet).
 
+Design B 4.0 har ikke tidevannskortet lenger (mobil fra steg 4, PC fra steg 6, SPEC §6C: tidevannet er en rad i
+«time for time»): vannstanden står i måleraden og kurven i timestripa. spot_mobil() - samme sjekk på 390 og 1440 px -
+sjekker samme cosinus-kurve, retningen mot neste flo/fjære («snur» nær ekstremen), båndet for foretrukket vannstand,
+SVG-teksten i stripa og retningsskiva (og kompasset i minikartet på PC), og at manglende tidevann aldri blir et tall.
+Punktene 3, 6 og 7 over gjaldt kortet og er borte med det; den tykke delen av kortets kurve mot tide.state_at
+er erstattet av båndet i stripa (samme terskler, punkt 5).
+
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5 minutter (hardkill),
 testserveren stoppes uansett utfall. Kjør: python fetcher/test_svgtekst_browser.py"""
 import datetime as dt
@@ -83,16 +90,6 @@ SVG_TEXT_JS = r"""(sel) => [...document.querySelectorAll(sel)].filter(t => { con
     const fs = parseFloat(getComputedStyle(t).fontSize) * (vb && vb.width ? w / vb.width : 1);
     return {fs, txt: t.textContent.trim().slice(0, 30), svg: (svg.className.baseVal || '') + ' ' + w.toFixed(0) + '/' + (vb ? vb.width.toFixed(0) : '-'), h: t.getBoundingClientRect().height}; })"""
 
-OVERLAP_JS = r"""() => { const els = [...document.querySelectorAll('#tideKort .tv-lbl, #tideKort .tv-ax')];
-  const r = els.map(e => e.getBoundingClientRect()); const out = [];
-  for(let i = 0; i < r.length; i++) for(let j = i + 1; j < r.length; j++){
-    const w = Math.min(r[i].right, r[j].right) - Math.max(r[i].left, r[j].left), h = Math.min(r[i].bottom, r[j].bottom) - Math.max(r[i].top, r[j].top);
-    if(w > 0.5 && h > 0.5) out.push(els[i].textContent + ' × ' + els[j].textContent); }
-  const kort = document.querySelector('#tideKort').getBoundingClientRect();
-  r.forEach((b, i) => { if(b.left < kort.left - 0.5 || b.right > kort.right + 0.5) out.push('utenfor kortet: ' + els[i].textContent); });
-  return {out, n: els.length}; }"""
-
-
 def main():
     watchdog = _watchdog()
     srv, port = testserver.serve(DOCS)
@@ -112,7 +109,7 @@ def main():
             nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
             browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
-                mobile = vp[0] < 900
+                mobile = vp[0] < 1024
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="light", locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS)
@@ -131,29 +128,17 @@ def main():
                 page.route("**/data/oversikt.json", data_route)
                 page.route("**/data/spots/*.json", data_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html")
-                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem #bestKort')")
+                page.wait_for_function("window.Front && typeof DATA !== 'undefined' && DATA && document.querySelector('#viewHjem :is(#forside, .hjem-linje)')")
                 cdp = ctx.new_cdp_session(page)
 
                 def media(scheme):
                     cdp.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if scheme == "mork" else "light"}]})
                     page.wait_for_timeout(150)
 
-                def go(hash_):
+                def go(hash_, sel="#viewSpot:not([hidden]) .dom"):
                     page.evaluate(f"location.hash = '{hash_}'")
-                    page.wait_for_selector("#viewSpot:not([hidden]) #tideKort")
+                    page.wait_for_selector(sel)
                     page.wait_for_timeout(200)
-
-                def show_card():
-                    page.evaluate("document.querySelector('#tideKort').scrollIntoView({block: 'center'})")
-                    # animasjonen (bare første gang kortet kommer i bildet) skal starte når kortet er i bildet og bli ferdig
-                    page.wait_for_function("() => { const c = document.querySelector('#tideGraf svg').classList; return !c.contains('intro') || c.contains('go'); }")
-                    page.wait_for_timeout(50)
-                    page.wait_for_function("""() => document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming().iterations !== Infinity).length === 0""")
-                    page.wait_for_timeout(100)
-                    synlig = page.evaluate("""() => [...document.querySelectorAll('#tideKort .tv-ext')].map(e => getComputedStyle(e).opacity)""")
-                    assert synlig and all(o == "1" for o in synlig), f"flo/fjære-etikettene er ikke synlige etter animasjonen: {synlig}"
-                    dash = page.evaluate("getComputedStyle(document.querySelector('#tideKort .tv-curve')).strokeDashoffset")
-                    assert dash in ("0", "0px"), f"kurven er ikke ferdig tegnet: {dash}"
 
                 def check_text(sel, where, minimum=1):
                     tx = page.evaluate(SVG_TEXT_JS, sel)
@@ -162,109 +147,86 @@ def main():
                     assert not bad, f"SVG-tekst utenfor 10-14 px {where}: {bad[:6]}"
                     return tx
 
+                def spot_mobil(scheme, where):
+                    # spotsiden (design B 4.0, mobil steg 4 og PC steg 6): tidevannet står i måleraden og som kurve i timestripa
+                    STRIPE = "#viewSpot:not([hidden]) #tstripe"
+
+                    def tide_rad():
+                        return page.evaluate("""(() => { const m = [...document.querySelectorAll('#spOver .maal')].find(m => m.querySelector('.etikett').textContent.trim() === 'Tidevann');
+                            return m ? {v: m.querySelector('.mv').textContent.replace(/\s+/g, ' ').trim(), u: m.querySelector('.mu').textContent.replace(/\s+/g, ' ').trim()} : null; })()""")
+
+                    def valgt_t(sid):
+                        i = page.evaluate("(() => { const inp = document.querySelector('#tstripeVelg'); return +document.querySelector(`#tstripe .tk[data-k='${inp.value}']`).dataset.i; })()")
+                        return dt.datetime.fromisoformat(details[sid]["hours"][i]["t"].replace("Z", "+00:00"))
+
+                    def sjekk_rad(sid, hva):
+                        t = valgt_t(sid); rad = tide_rad(); cm, stiger, nxt = tide_cm(SP[sid]["tide_events"], t)
+                        assert rad and re.fullmatch(r"\d+,\d ?m", rad["v"]) and rad["v"].startswith(f1(cm)), f"vannstand {hva} {where}: {rad}, ventet {f1(cm)} m"
+                        ekstr = [dt.datetime.fromisoformat(e["time"].replace("Z", "+00:00")) for e in SP[sid]["tide_events"]]
+                        naer = [x for x in ekstr if abs((x - t).total_seconds()) <= 40 * 60]
+                        if naer:
+                            assert rad["u"].startswith("snur ") and any(f"{x.astimezone(OSLO):%H:%M}" in rad["u"] for x in naer), f"nær flo/fjære {hva} {where}: {rad}"
+                        else:
+                            nt = dt.datetime.fromisoformat(nxt["time"].replace("Z", "+00:00"))
+                            assert rad["u"].startswith("↑" if stiger else "↓") and rad["u"].endswith(f"{'høy' if stiger else 'lav'} {nt.astimezone(OSLO):%H:%M}"), f"retning {hva} {where}: {rad}, ventet {'↑ høy' if stiger else '↓ lav'} {nt.astimezone(OSLO):%H:%M}"
+                        return t
+
+                    def kurve_ok(hva):
+                        ov = page.evaluate("""() => { const svg = document.querySelector('#tstripe .tsvg').getBoundingClientRect(), els = [...document.querySelectorAll('#tstripe .tsvg text')], r = els.map(e => e.getBoundingClientRect()), out = [];
+                          for(let i = 0; i < r.length; i++) for(let j = i + 1; j < r.length; j++){
+                            const w = Math.min(r[i].right, r[j].right) - Math.max(r[i].left, r[j].left), h = Math.min(r[i].bottom, r[j].bottom) - Math.max(r[i].top, r[j].top);
+                            if(w > 0.5 && h > 0.5) out.push(els[i].textContent + ' × ' + els[j].textContent); }
+                          r.forEach((b, i) => { if(b.left < svg.left - 0.5 || b.right > svg.right + 0.5) out.push('utenfor stripa: ' + els[i].textContent); });
+                          return {out, n: els.length}; }""")
+                        assert ov["n"] >= 2 and not ov["out"], f"flo/fjære-etiketter som overlapper eller faller utenfor {hva} {where}: {ov}"
+                        check_text("#tstripe .tsvg text", f"tidevannskurven i timestripa {hva} {where}", 2)
+                        check_text("#viewSpot .skive svg text", f"retningsskiva {hva} {where}", 4)
+
+                    # ---- Farstadsanden nå (tirsdag 20.10 kl. 11) ----
+                    go("#spot=farstadsanden", STRIPE + " .tsvg")
+                    assert page.get_attribute("#tstripe", "data-day") == NOW.astimezone(OSLO).date().isoformat() and page.evaluate("window.__S.idx") is None
+                    t0 = sjekk_rad("farstadsanden", "Farstadsanden")
+                    assert t0 == NOW, f"siden skal stå på timen som er nå {where}: {t0}"
+                    assert page.locator("#tstripe .naalinje").count() == 1 and "Nå" in page.text_content("#tstripe .tikk"), f"nå-linja mangler i dag {where}"
+                    # foretrukket vannstand (tide_regel, samme terskler som tide.state_at): bånd bak kurven og setningen i etiketten
+                    assert page.locator("#tstripe .tsvg rect.bnd").count() >= 1, f"båndet for foretrukket vannstand mangler {where}"
+                    etikett = page.get_attribute("#tstripe .tsvg", "aria-label")
+                    assert etikett.startswith("Tidevann: ") and "Farstadsanden er best på lav til middels vannstand" in etikett, f"etiketten {where}: {etikett}"
+                    kurve_ok("Farstadsanden")
+                    if not mobile:   # minikartet på PC (SPEC §6C punkt 6): kompasset i ekte piksler
+                        page.wait_for_selector("#miniKort .minikart path.land")
+                        check_text("#viewSpot .minikart text", f"kompasset i minikartet {where}", 4)
+                    page.locator("#spStripe").screenshot(path=str(SHOT_DIR / f"farstadsanden_{label}_{scheme}.png"))
+                    # ---- samhandling: piltast flytter valgt time for hele siden, også tidevannet ----
+                    page.focus("#tstripeVelg"); page.keyboard.press("ArrowRight"); page.wait_for_timeout(250)
+                    assert page.text_content("#spOver .sek-spot h2").strip() == "Kl. 12" and page.text_content("#spUnder h2").strip() == "Retning kl. 12", f"piltast høyre {where}"
+                    assert page.evaluate("document.activeElement && document.activeElement.id") == "tstripeVelg", f"fokus forlot timevelgeren {where}"
+                    assert page.locator("#tilbakeNa").count() == 1, f"«Tilbake til nå» mangler etter piltast {where}"
+                    assert sjekk_rad("farstadsanden", "kl. 12") == NOW + dt.timedelta(hours=1)
+                    assert re.search(r"(stigende|synkende|høyvann|lavvann|snur)", page.get_attribute("#tstripeVelg", "aria-valuetext")), page.get_attribute("#tstripeVelg", "aria-valuetext")
+                    page.click("#tilbakeNa"); page.wait_for_timeout(200)
+                    assert page.locator("#tilbakeNa").count() == 0 and page.text_content("#spOver .sek-spot h2").strip() == "Kl. 11", f"«Tilbake til nå» {where}"
+                    # ---- en annen dag: ingen nå-linje ----
+                    i_ons = next(i for i, h in enumerate(details["farstadsanden"]["hours"]) if h["t"] == "2026-10-21T10:00Z")
+                    go(f"#spot=farstadsanden&t={i_ons}", STRIPE + "[data-day='2026-10-21'] .tsvg")
+                    assert page.locator("#tstripe .naalinje").count() == 0, f"nå-linja skal bare vises i dag {where}"
+                    sjekk_rad("farstadsanden", "onsdag kl. 12")
+                    # ---- Unstad: ingen preferanse, ikke noe bånd ----
+                    go("#spot=unstad", STRIPE + " .tsvg")
+                    assert page.locator("#tstripe .tsvg rect.bnd").count() == 0 and "best på" not in page.get_attribute("#tstripe .tsvg", "aria-label"), f"Unstad har foretrukket vannstand {where}"
+                    sjekk_rad("unstad", "Unstad")
+                    kurve_ok("Unstad")
+                    page.locator("#spStripe").screenshot(path=str(SHOT_DIR / f"unstad_{label}_{scheme}.png"))
+                    # ---- tidevann mangler: ingen rad og ingen kurve, aldri et tall ----
+                    go(f"#spot={MISS_ID}", STRIPE + " .kolonner")
+                    page.wait_for_timeout(200)
+                    assert tide_rad() is None and page.locator("#tstripe .tsvg").count() == 0, f"tidevann mangler {where}: {tide_rad()}"
+                    assert "tidevann" not in (page.get_attribute("#tstripeVelg", "aria-valuetext") or "").lower(), f"tidevann mangler, men leses opp {where}"
+
                 for scheme in ("lys", "mork"):
                     media(scheme)
                     where = f"({label}, {scheme})"
-                    # ---- Farstadsanden nå (tirsdag 20.10 kl. 11) ----
-                    go("#spot=farstadsanden")
-                    show_card()
-                    sp = SP["farstadsanden"]
-                    cm, stiger, nxt = tide_cm(sp["tide_events"], NOW)
-                    h_txt = page.text_content("#tideKort .tv-h").replace("\u00a0", " ").strip()
-                    assert re.fullmatch(r"\d+,\d\s*m", h_txt) and h_txt.startswith(f1(cm)), f"vannstand {where}: «{h_txt}», ventet {f1(cm)} m"
-                    trend = page.text_content("#tideKort .tv-trend").strip()
-                    assert trend == ("Stiger" if stiger else "Synker"), f"trend {where}: {trend}"
-                    neste = page.text_content("#tideKort .tv-neste").replace("\u00a0", " ").strip()
-                    nt = dt.datetime.fromisoformat(nxt["time"].replace("Z", "+00:00"))
-                    mins = round((nt - NOW).total_seconds() / 60)
-                    om = f"om {mins // 60} t {mins % 60} min" if mins >= 60 else f"om {mins} min"
-                    nf1 = f"{nxt['cm'] / 100:.1f}".replace(".", ",")
-                    want = f"{nxt['type'].capitalize()} {nt.astimezone(OSLO):%H:%M} · {nf1} m · {om}"
-                    assert neste == want, f"neste ekstrem {where}: «{neste}», ventet «{want}»"
-                    sl = page.locator("#tideGraf")
-                    assert sl.get_attribute("role") == "slider", "grafen er ikke role=slider"
-                    vt = sl.get_attribute("aria-valuetext")
-                    assert vt == f"11:00, {f1(cm)} meter, {'stiger' if stiger else 'synker'}", f"aria-valuetext {where}: {vt}"
-                    # foretrukket vannstand er selve kurven, tykkere - ikke bånd (Theodor 16.10)
-                    assert page.locator("#tideKort .tv-band").count() == 0, f"trappetrinnsbånd igjen {where}"
-                    assert page.locator("#tideKort .tv-pref").count() == 1, f"foretrukket del av kurven mangler {where}"
-                    # fasiten fra Python (kontrollør 16.10): tide.state_at - samme funksjon som ratingen - for hvert av
-                    # kurvens 241 punkter (d0 + i/240 av døgnet); punktet skal være tykt hvis og bare hvis tilstanden er
-                    # foretrukket. Punkter innen 0,02 av en grense hoppes over (avrunding JS/Python, tersklene 0,3333/0,6667).
-                    kurve = page.evaluate("""() => {
-                      const pp = (d) => (d.match(/-?[\\d.]+ -?[\\d.]+/g) || []).map(s => s.split(' ').map(Number));
-                      return {c: pp(document.querySelector('#tideKort .tv-curve').getAttribute('d')),
-                              p: pp(document.querySelector('#tideKort .tv-pref').getAttribute('d'))};
-                    }""")
-                    assert len(kurve["c"]) == 241, f"kurven har ikke 241 punkter (testdataene dekker ikke døgnet?) {where}: {len(kurve['c'])}"
-                    tykk = {f"{q[0]:.1f},{q[1]:.1f}" for q in kurve["p"]}
-                    assert tykk <= {f"{q[0]:.1f},{q[1]:.1f}" for q in kurve["c"]}, f"tykk del ligger ikke på kurven {where}"
-                    sys.path.insert(0, str(ROOT / "fetcher"))
-                    import tide as _tide
-                    d0 = dt.datetime.combine(NOW.astimezone(OSLO).date(), dt.time(0), tzinfo=OSLO).astimezone(dt.timezone.utc)
-                    pref = set(details["farstadsanden"]["tide_regel"]["prefer"])
-                    feil, sjekket = [], {True: 0, False: 0}
-                    for i, q in enumerate(kurve["c"]):
-                        t = d0 + dt.timedelta(days=1) * i / 240
-                        st = _tide.state_at(sp["tide_events"], t)
-                        assert st is not None, f"tidevann mangler kl. {t} i testdataene"
-                        if min(abs(st["level"] - 1 / 3), abs(st["level"] - 2 / 3)) <= 0.02:
-                            continue
-                        venter = st["state"] in pref
-                        sjekket[venter] += 1
-                        if (f"{q[0]:.1f},{q[1]:.1f}" in tykk) != venter:
-                            feil.append((t.astimezone(OSLO).strftime("%H:%M"), st["state"], st["level"]))
-                    assert not feil, f"tykk del følger ikke tide.state_at {where}: {feil[:6]}"
-                    assert sjekket[True] > 20 and sjekket[False] > 20, f"for få punkter på hver side av grensen {where}: {sjekket}"
-                    fot = page.text_content("#tideKort .tv-fot").strip()
-                    assert "Farstadsanden er best på lav til middels vannstand" in fot, f"forklaringen {where}: {fot}"
-                    assert page.locator("#tideKort .tv-past").count() == 1, f"delen av dagen som har gått er ikke dempet {where}"
-                    smal = page.evaluate("document.querySelector('#tideGraf').clientWidth") < 520
-                    lbl = [t.strip() for t in page.locator("#tideKort .tv-lbl").all_text_contents()]
-                    assert lbl and all((re.fullmatch(r"\d\d:\d\d \d+,\d", t) if smal else re.fullmatch(r"(Flo|Fjære) \d\d:\d\d · \d+,\d m", t)) for t in lbl), f"etikettene {where}: {lbl}"
-                    ov = page.evaluate(OVERLAP_JS)
-                    assert ov["n"] >= 7 and not ov["out"], f"etiketter som overlapper eller faller utenfor {where}: {ov}"
-                    check_text("#tideKort svg text", f"tidevannskortet {where}", 7)
-                    check_text("#viewSpot .tv-mini svg text", f"tidevannsraden i timegrafen {where}", 5)
-                    check_text("#viewSpot .minikart text", f"kompasset i minikartet {where}", 4)
-                    page.locator("#tideKort").screenshot(path=str(SHOT_DIR / f"farstadsanden_{label}_{scheme}.png"))
-                    # ---- samhandling: piltast og trykk flytter valgt tid for hele siden ----
-                    sl.focus(); page.keyboard.press("ArrowRight"); page.wait_for_timeout(250)
-                    vt2 = page.get_attribute("#tideGraf", "aria-valuetext")
-                    assert vt2.startswith("11:15, "), f"piltast høyre {where}: {vt2}"
-                    assert page.evaluate("document.activeElement && document.activeElement.id") == "tideGraf", f"fokus forlot grafen {where}"
-                    assert "kl. 11" in page.text_content("#viewSpot .naa"), f"overskriften fulgte ikke valgt tid {where}"
-                    assert page.locator("#tilbakeNa").count() == 1, f"«Tilbake til nå» mangler etter piltast {where}"
-                    n2 = page.text_content("#tideKort .tv-neste").strip()
-                    assert n2.startswith("Neste: ") and " om " not in n2, f"nedtelling bare på nå {where}: {n2}"
-                    page.keyboard.press("ArrowLeft"); page.wait_for_timeout(250)
-                    assert page.get_attribute("#tideGraf", "aria-valuetext").startswith("11:00, "), f"piltast venstre {where}"
-                    box = sl.bounding_box()
-                    page.mouse.click(box["x"] + 6 + (box["width"] - 12) * 15 / 24, box["y"] + box["height"] / 2)
-                    page.wait_for_timeout(300)
-                    vt3 = page.get_attribute("#tideGraf", "aria-valuetext")
-                    assert vt3.startswith("15:00, "), f"trykk i grafen {where}: {vt3}"
-                    assert "kl. 15" in page.text_content("#viewSpot .naa"), f"trykk flyttet ikke valgt time {where}"
-                    assert page.locator("#viewSpot .kol.valgt[data-hh='15']").count() == 1, f"timegrafen fulgte ikke {where}"
-                    page.click("#tilbakeNa"); page.wait_for_timeout(200)
-                    # ---- en annen dag: ikke dempet ----
-                    i_ons = next(i for i, h in enumerate(details["farstadsanden"]["hours"]) if h["t"] == "2026-10-21T10:00Z")
-                    go(f"#spot=farstadsanden&t={i_ons}")
-                    assert page.locator("#tideKort .tv-past").count() == 0, f"en annen dag skal ikke dempes {where}"
-                    # ---- Unstad: ingen preferanse ----
-                    go("#spot=unstad")
-                    show_card()
-                    assert page.locator("#tideKort .tv-pref").count() == 0, f"Unstad har foretrukket vannstand {where}"
-                    assert "Spoten tåler alt tidevann" in page.text_content("#tideKort .tv-fot"), f"Unstad-teksten {where}"
-                    ov = page.evaluate(OVERLAP_JS)
-                    assert not ov["out"], f"etiketter som overlapper {where} (Unstad): {ov}"
-                    check_text("#tideKort svg text", f"tidevannskortet Unstad {where}", 7)
-                    check_text("#viewSpot .minikart text", f"kompasset Unstad {where}", 4)
-                    page.locator("#tideKort").screenshot(path=str(SHOT_DIR / f"unstad_{label}_{scheme}.png"))
-                    # ---- tidevann mangler ----
-                    go(f"#spot={MISS_ID}")
-                    t = page.text_content("#tideKort").strip()
-                    assert "Tidevann mangler" in t and not re.search(r"\d", t), f"tidevann mangler {where}: «{t}»"
+                    spot_mobil(scheme, where)
                     # ---- Utforsk og eksponeringsgrafen (Logger) ----
                     page.evaluate("location.hash = '#utforsk'"); page.wait_for_timeout(400)
                     tx = page.evaluate(SVG_TEXT_JS, "main .view:not([hidden]) svg text")

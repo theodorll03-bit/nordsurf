@@ -1,5 +1,150 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - main flettet inn før go-live (S15), 19.11.2026
+
+Gren `design/b4`. Theodors ja står i S15 (17.11) og ble gjentatt 19.11. Skjermbilder av det flettede treet: `privat/design-b4/steg-7-flettet/` (36 bilder).
+
+**Gjort**
+- main (`60648de`, med ratingpushen S17) er flettet inn i `design/b4`. Konflikter i `STATUS.md` og `docs/sw.js`. Filene som lager tallene, er like main (`test_display_only.py`).
+- **Kontrollørens funn, rettet:** favorittradene på Hjem (mobil) viste «Best kl. hh–hh.» også etter at vinduet var over. `favSetning` i `docs/js/ui.js` bruker nå samme regel som PC-forsiden (`fsApent`): er vinduet over, står bare tallene. `fetcher/test_spotside_browser.py` prøver raden med klokka flyttet til etter vinduet (testen feilet før rettingen).
+- Fysikk-kontrolløren 19.11: ratingen er uendret (bare `fetcher/publish.py` har nytt felt `timer`, ingen tall regnes), visningen er tro mot tallene, og manglende data vises aldri som 0.
+
+**Ikke stoppere, tas etter go-live** (ord hentes fra strings.js, nye ord spørres det om)
+- Sterk fralandsvind heter «Blåst ut» (S15 a), og ordet i listene gjelder nå-timen mens tallet er dagens beste (S15 b).
+- «Svell» på spotsiden er det største svellet uten «ute» (`spot.js`), dommen på spotsiden viser vinduet etter at det er over, og overskriften «Beste nå» på PC-forsiden viser dagens beste tall.
+
+## T3 design B 4.0 «Papir» - steg 6 (nettsiden fra 1024 px, SPEC 6C og 6D), 16.11.2026
+
+Gren `design/b4`. Rapport og skjermbilder: `privat/design-b4/steg-6/`.
+
+**Gjort**
+- Toppen på nett: ordmerket, HJEM / UTFORSK / LOGGER med 3 px understrek, søkefelt med 2 px understrek og knappen «Mørketid». Den bytter tema og husker valget i nettleseren. Uten valg følger siden systemet.
+- Spotsiden fra 1024 px (`renderWeb` i `docs/js/spot.js`): kornfoto 420 px med navneplate i 144 px, dommen, «Kl. hh» og skiva på 300 px i 12 kolonner, «Neste 7 dager» som 7 store kolonner og «time for time» som tabell med etikettkolonne (`Timestripe.html(..., {bred: true})`). Musa over en time velger den. «Spotten» har minikartet i kartstilen, og «Om spotten» har bare felt fra spots.json og sikkerheten.
+- Forsiden fra 1024 px (`renderForside` i `docs/js/ui.js`): datolinje, overskrift (samme `overskrift()` som mobil), I DAG / I MORGEN, regionfaner (starter på Innstillinger → Område), hovedbilde med håndtegnet ring rundt «BEST», «Beste nå» med tidsstripe 06–18, og «Neste 7 dager» som matrise. Favorittene og miniatyrkartet er ikke med på PC (6D har dem ikke).
+- **Henteren:** `fetcher/publish.py` gir dagssammendraget for døgn 0–2 et felt `timer`. Det er én tegnkode per time kl. 06–18: modellens stjerner 0–5, «m» mørkt, «x» mangler (også en kommende time som ikke finnes i varselet), «.» vært. Ingen tall regnes ut. 100 spots gir 50,7 KiB gzip (grense 60).
+- Restene fra steg 5:
+  - «Beste først» i Utforsk er i papirstil.
+  - Minikartet har kartstilen.
+  - Miniatyren på Hjem (PC) er tatt bort.
+  - Vindstrekene i Utforsk har glorie i papirfargen. `kontrast.py` har to nye par for den.
+- Grensen for nettoppsettet er 1024 px (før 900), som skriftskalaen.
+- Bunn på nett med kilder og lenke til Innstillinger.
+- Nye ord ligger i `STR.web` og er foreløpige. Spørsmålene står i rapporten.
+
+**Tester**
+- `test_spotside_browser` kjører samme spotsjekk på mobil og PC, med noen tillegg på PC. Den sjekker forsiden mot dagstallene i oversikten.
+- `test_skalering_browser` sjekker forsiden med 100 spots: regionen først, «Vis alle», fast overskriftsrad og matrise.
+- `test_svgtekst_browser` sjekker tidevannet i timestripa også på PC. Tidevannskortet er borte, og kortets egne sjekker gikk ut med det.
+- `test_kart_browser`: vindstrekene er `rect`.
+- `test_publish` sjekker `timer`.
+- Sjekken for «null», «undefined» og «NaN» i teksten på spotsiden teller ikke «null» inne i ordet «sjøkartnull».
+- Kjøring etter rettingene: 17 testfiler grønne. 16 i én kjøring (`alle_b4_steg6b.log`), og `test_docs_cache` på nytt etter `update_sw_cache.py`. `tools/kontrast.py`: OK.
+
+**Fysikk-kontrolløren (16.11, første runde): ikke godkjent, to stoppere. Begge er rettet:**
+- Sjekken for «null», «undefined» og «NaN» i `test_spotside_browser` kjørte ikke. `assert`-en sto inne i en kommentar. Den står nå på egen linje og kjører på mobil og PC.
+- Forsiden viste «Best 10–13» også etter at vinduet var over. Nå vises «Best» og ringen bare mens vinduet er åpent, med samme regel som overskriften på mobil. Tabellen viser «–» ellers. Testen flytter klokka forbi et vindu og sjekker det.
+- Også rettet: en kommende time som mangler i varselet, er «x» (mangler) i `timer` og ikke «.» (vært). Tidsstripa blanker timene som har gått siden oversikten ble laget. Testen sjekker at rutene følger `timer`.
+- Det holdt i første runde: ingen av de 11 låste filene er rørt, de faste observasjonene er uendret, og `timer` er bare et utvalg av stjernene som finnes.
+- Kan vente: om sommeren kan dagens beste vindu ligge utenfor 06–18, og kildelinja «beregnet kurve (cosinus), Kartverket» fra tidevannskortet er borte på PC.
+
+**Neste**
+- Skjermbilder av alle sju stegene i `privat/design-b4/steg-7/`, så spørsmål om å merge #36.
+- Theodor svarer på avvikene a–p og de foreløpige ordene (rapporten).
+- Rydde gammel PC-kode som ikke brukes lenger: spotgraf, tidevannskortet, CSS for `.kort4`, `.dagfane` og andre.
+
+## T3 design B 4.0 «Papir» - steg 5 (Utforsk-kartet og kartet på Hjem), 16.11.2026
+
+Gren `design/b4`, PR mot main. **Merges ikke før Theodor har sett skjermbilder.** Fasit: `docs/design/b4/SPEC.md` (tekstkopi; satellittbildene i skissene ligger bare i `privat/`).
+
+**Gjort (steg 1)**
+- Fargene for dag og mørketid ligger som CSS-variabler øverst i `docs/css/ui.css` (SPEC §2) og følger systemets lys/mørk. `docs/css/app.css` har ikke lenger egne tokens eller fonter.
+- Martian Mono og Familjen Grotesk ligger selvhostet i `docs/fonts/` (Google Fonts, OFL, latin-utsnitt, 38 og 19 kB). Bricolage Grotesque, Inter, Geist og Geist Mono er fjernet.
+- Skriftskala (`--t-*`, app og web fra 1024 px), avstandsskala (`--s1`-`--s8`) og seksjonsstreken (2 px, 3 px luft, 0,75 px) på `.seksjon`, `.sek` og `.sek-spot`.
+- Ingen lyseblå tekst. Eksponeringsgrafen i loggen bruker blekk (fylt prikk = lang periode, åpen = kort).
+- `tools/kontrast.py` sjekker B4-parene. Tall, stjerner, ord og fetcher er urørt. Kartfargene er urørt til steg 5.
+- Fysikk-kontrolløren (agent): tokenverdiene stemmer med SPEC, ingen udefinerte tokens, ingen endring i tall eller tekst. Funnene er rettet: 3-feltet var usynlig på valgt dagfane, 0 og 1-2 var like i dagfanens felt, svellkilen for 1-2 forsvant mot sjøen, `--dim` ble målt mot feil flate.
+
+**Gjort (steg 2, SPEC §5)**
+- Vurderingen vises som tallet 0-5 og ordet, ikke som stjerner. Tallene er modellens (`stars`), uendret: bare visningen er ny. 0-2 er omriss, 3 er blekk, 4-5 er korall.
+- Hjem (ukeruter og nett-tabell), spotsiden (stort tall, timestripe, dagfaner), Utforsk (lapper, kort, «Beste først») og søk bruker samme rute.
+- Tapte poeng skrives med grunnen: «−2 vind», «−1 tidevann» (fra `faded_wind` og `faded_tide`).
+- Mørke timer viser ikke tall: ordet «Mørkt» og «Bare lyse timer får tall», skygget kolonne og tom rute. Høyde, vind og tidevann står som før. Modellen regner som før, og rekkefølgen i listene følger fortsatt modellens tall også om natta.
+- Mangler, mørkt, forbud og «dagens lys er over» har alltid tom rute, aldri 0.
+- Theodors avgjørelser 12.11: korallfargen beholdes, og tallet oppå korall er minst 14 px fet. `--dim` og `--swell-miss` er #5E5A51 om dagen (4,74:1 oppå nattskyggen).
+- `tools/stjerner_skjermbilder.py` er slettet (brukte stjernene, ingen bruker den). De fire bildene i `docs/design/stjerner/` står igjen som historikk.
+- Fysikk-kontrolløren (agent): ikke godkjent i første runde. Rettet: forbudstimer viste «0» i timestripa (nå tom rute, med test), og en mørk nå-time endret rekkefølgen i Utforsk (nå sorteres det på modellens tall som før). Også rettet: mørk dag i nett-tabellen er skygge og ikke «–», «mangler» sjekkes før «mørkt» på spotsiden, og testene sjekker høyden i tabellcellene og tomme ruter for seg. Alle 16 tester og kontrastsjekken er grønne etter rettingene.
+
+**Gjort (steg 3, SPEC §6A, bare mobil)**
+- Topplinje med dato, brukbart lys i dag ved startstedet («Lys 07:00–18:00», sola over −6° som i `fetcher/sun.py`) og «Fra Tromsø».
+- Overskrift på to korte setninger, laget av de samme dagstallene (`dayBest`) som rutene i lista. Den gjelder favorittene når brukeren har noen, ellers den valgte regionen.
+- Favorittene som rader: tallet, navnet, «område · kjøretid · ord · −1 vind», én setning, OBS-linje fra siste egne logg (siste 7 dager) og uka med dagnavn under. «Rediger» gir «Fjern» på hver rad og «Legg til spot».
+- Kjøretidene ligger i `docs/js/kjoretid.js`: en tabell uten rutetjeneste, med Theodors anslag fra skissene. De er ikke bekreftet. En spot uten tall viser ingen kjøretid.
+- Flat fanelinje (Hjem, Utforsk, Logger) uten glasseffekt. Søk er fortsatt knappen ved siden av, Innstillinger en lenke nederst.
+- Utsatt: kartet på 220 pt (steg 5), kornfotoet på første favoritt med 4 eller mer (bildesteget), bytte av startsted (krever rutetjeneste og Theodors ja). PC er urørt (steg 6).
+- Ordene i overskriften og radene er nye maler i `STR.hjem` og venter på Theodors ja.
+- Fysikk-kontrolløren (agent): ikke godkjent i første runde, godkjent i andre. Rettet: overskriften sa «Ingen data i lyse timer» når dagens lys var over, en favoritt uten data ble regnet som «ingen surf», en ny foreløpig favoritt ble holdt utenfor, «Ikke surfbart nå i dag» og «de neste 1 dagene», og fokus forsvant etter Rediger/Fjern. Etter runde 2: «Ingen surf resten av dagen.» når lyset er over for én favoritt, og flere oppdiktede tilfeller i testen (24 i alt). Kjent og ikke rettet: uten favoritter kan overskriften nevne en spot bak «Vis alle» når en region har over 8 spots (ingen region har det i dag).
+- `test_spotside_browser` kjenner igjen hver setning i overskriften og sjekker den mot rutene. Favorittene i testen er to med kjøretid og én uten, som også har en dag uten tall.
+- `test_kart_browser`: lastetiden for Utforsk med 500 spots måles nå etter én oppvarmingslast uten tidtaking. Uten glasseffekten på fanelinja falt 0,9 s av grafikkoppstarten i testnettleseren utenfor det testen trekker fra, så målingen røk (2,22 s mot 2,0 s) selv om hele lastingen var like lang før og etter (2,7–3,0 s). Grensen er uendret.
+- Kontrolløren er ikke kjørt på nytt etter de små rettingene som fulgte runde 2 («Ingen surf resten av dagen.» og de ekstra tilfellene i testen).
+- Testene før commit: 16 filer og kontrast grønne i én kjøring. `test_kart_browser` røk to ganger (tidsavbrudd, nettleseren lukket) fordi maskinen gikk i dvale midt i kjøringen, og gikk grønn alene etterpå på de samme filene. `test_spotside_browser` hang én gang på et klikk under samme forhold og gikk grønn på neste kjøring.
+
+**Gjort (bildesteget, flyttet fram av Theodor 12.11, ja til alle spots 16.11)**
+- `tools/spotbilder.py` henter et utsnitt rundt hver spot fra Kartverkets skyfrie Sentinel-2-mosaikk (wms.geonorge.no, CC BY 4.0) og lager Trykk (lyst tema) og Lodd (mørkt tema) med samme korn som skissene. EOxCloudless og Norge i bilder brukes ikke.
+- 22 spots har bilder i `docs/img/spots/`: toppbilde og skivebilde i to temaer, 88 filer. Det er de 22 påslåtte, offentlige spotene. Verktøyet nekter hemmelige spots, også ved navn.
+- `kilder.json` har kilde, år, lisens og kreditering per spot. `docs/js/spotbilder.js` skrives av verktøyet og sier hvilke spots som har bilde.
+- Full kreditering står under toppbildet på spotsiden, med «CC BY 4.0» som lenke til lisensen. Kortformen står under skiva.
+- `fetcher/test_spotbilder.py` sjekker rampene, kornet, utsnittet, krediteringen og at hemmelige nektes.
+
+**Gjort (steg 4, SPEC §6B, bare mobil)**
+- Spotsiden under 1024 px er bygget om: kornfoto med navneplate, dommen (tall, ord, dag, beste vindu og én setning), faktalinje, måleradene for valgt time, dagvelger, timestripe med tidevannskurve, retningsskive og kilder. Koden ligger i `docs/js/spot.js` (`spot_mobil()`), `docs/js/timestripe.js` og `docs/js/skive.js`. PC-siden er urørt (steg 6).
+- Timestripa kan dras, styres med piltaster og trykkes på. Mørke timer, manglende timer og forbudstimer får aldri tall. Korall brukes bare fra 4 poeng.
+- Skiva viser svellvinduene, fralandssektoren og piler for svell og vind i valgt time. «I vinduet», «I kanten av vinduet» og «Utenfor vinduet» kommer fra de samme reglene som resten av appen.
+- Ordene: «stjerner» heter «poeng», og vinden heter fralands, pålands og sidevind i all tekst appen selv lager (`docs/js/strings.js`, `explain.js`, `app.js`). Theodors svar 16.11.
+- **Ikke endret: teksten henteren lager.** Regnestykket under «Hvorfor denne vurderingen?» og varseltittelen sier fortsatt «stjerner», «offshore» og «onshore». En designgren kan ikke røre `fetcher/rating.py` (`test_display_only`). Endringen ble laget, tatt ut igjen og ligger som patch i `privat/`. Den må bli en egen PR fra main, med Theodors ja.
+- Tilbakeknappen følger stakken også når siden åpnes med lenke eller med fram og tilbake i nettleseren.
+- Avvik fra skissen og nye ord i `STR.spot` er lagt fram for Theodor (se under).
+- Fysikk-kontrolløren (agent): godkjent med merknader. Appen regner ikke ut poeng, surfehøyde eller vindu selv, og manglende data blir aldri 0. Ingen hemmelige spots i bildefilene, filnavnene eller diffen. Rettet etter funnene:
+  - Timestripa tegnet vindpil mot nord når retningen manglet. Nå tegnes bare tallet.
+  - Krediteringen manglet lenke til lisensen. Lagt inn.
+- Kjent og ikke rettet (kontrolløren sa «kan vente»):
+  - `dagsdom()` i `spot.js` velger beste time og vindu selv for dag 9–16, som ikke står i `dager`. Regelen er den samme som i `publish.best_hour()`, men ingen test sammenligner de to.
+  - «snur hh:mm» kan vise en flo eller fjære som var for opptil 40 minutter siden.
+  - Det står ikke «over sjøkartnull» ved vannstanden på mobil.
+  - Går man via Søk, kan tilbakeknappen peke på feil fane. Det er feil mål, ikke løkke, og fantes før.
+  - Verktøyet lager bilde for en avslått spot i spots.json hvis den nevnes ved navn. Hemmelige nektes alltid.
+- `test_spotside_browser`, `test_skalering_browser` og `test_svgtekst_browser` har fått en mobildel som sjekker tallene mot varselet, dra, piltaster og trykk, forbud, manglende data, 6-timers dager, 200 % tekst og høy kontrast.
+- Testene før commit: 17 filer og kontrast grønne i én kjøring, etter rettingene fra kontrolløren.
+
+**Gjort (fletting av main, 16.11, commit 58d237f)**
+- Main er flettet inn (bovaer, berlevag-sandfjorden, persfjord, seines og tidevannsregelen på Unstad). Kornfoto for de fire nye er laget med `tools/spotbilder.py` (26 spots har nå bilde). Alle 17 testfiler og kontrasten grønne etter flettingen.
+
+**Gjort (steg 5, SPEC §6A)**
+- Kartet i Utforsk: hav i papirfargen, land i blekk (sand i mørketid) og et grunnvannsbånd i `--data` langs kysten, tegnet under landet. Båndet er 6,5 px fra zoom 9 og smalere på oversikten.
+- Kartverket-rasteret (grått) kan ikke farges som blekk på papir. Det er nå detaljkartet fra zoom 11. Under det tegner OSM-flisene kartet, og ingen Kartverket-flis bes om. Reserven og kildemerket virker som før, med 11 i stedet for 7,5 som grense.
+- Merkene er Vinduet-merket: ring 18 pt med 3 pt strek, åpning på 84° mot midten av svellvinduet (det bredeste når spoten har flere), papirskive 26 pt bak. Korall fra 4. Lappen er «NAVN 2» i Martian 12/800 med papirglorie. Uten tall står ordet («Mørkt», «–»). Klynger som før, nå som hel ring med antallet. Knappene, VoiceOver-etikettene og klikkene er de samme.
+- Brikkene og kortet over kartet er papir uten glasseffekt.
+- Hjem på mobil: kompakt kart på 220 pt kant til kant, samme stil, med spotene innen 150 km fra startstedet (favorittene, ellers regionen) og dagens tall. Merker nærmere enn 24 pt slås sammen. Kartet er en lenke til Utforsk.
+- «Beste økt» er borte fra Hjem på mobil (svar 16.11, punkt 3b). PC har den fortsatt.
+- «ca.» foran kjøretidene (svar 16.11): `STR.hjem.ca`, brukt i `kjoreText`.
+- Farttesten: CI målte zoom 25 bilder i sekundet for 292523a. Lokalt er 4x CPU taket for skjermen (63). Med 16x CPU gikk zoom fra 42-47 til 59-62 og verste bilde fra 47-55 ms til 28-33 ms. Det som kostet: Kartverket-laget på oversikten (testflisene dekket hele kartet på alle zoomnivåer) og glasseffekten (backdrop-filter) over WebGL-kartet. Begge er borte nå. Grensen er uendret.
+- Testene: `test_kart_browser` sjekker nye farger, at ingen Kartverket-flis bes om på oversikten, og reserven fra zoom 12. Hjem-testene venter på topplinja på mobil og sjekker at «Beste økt» bare finnes på PC.
+- Fysikk-kontrolløren (16.11, første runde): ikke godkjent, to stoppere. Begge er rettet:
+  - «Dagens lys er over» ble til «0» på Hjem-kartet og i Utforsk-lappen. `valueFor` gir nå `rute: "over"`, og lappen viser bare navnet (Hjem) eller ordet (Utforsk).
+  - Et sammenslått merke viste ett tall for alle navnene. Nå står ett felles tall bare når alle har samme tall («TROMVIK · GRØTFJORD 2»). Ellers står tallet eller ordet bak hvert navn («TROMVIK 2 · GRØTFJORD –»). Spots uten tall viser «–», «MØRKT» eller forbudet, og ringen er stiplet når tallet mangler.
+  - Ny test 6c i `test_kart_browser` dekker like tall, ulike tall, mangler, mørkt og lys over.
+- Fysikk-kontrolløren, andre runde: godkjent for commit, ingen stoppere igjen. 17 testfiler og kontrast er grønne i én kjøring etter rettingene (`alle_b4_steg5b.log`).
+- Kontrollørens «kan vente»: ved flere svellvinduer peker åpningen mot det bredeste (Russelv 10° mot ca. 2° for hele spennet, Seines 274° mot 282°). Under zoom 11 står «Kartverket» i kildemerket uten at Kartverket-fliser vises.
+
+**Til Theodor**
+- Valgene for Hjem (ordene, hva overskriften gjelder, andre setning, kjøretidene, lyset i midnattssol, område eller region, vindordene) står som ett spørsmål i `privat/kontor/til-theodor.md`.
+- WCAG regner «stor tekst» fra 14 pt fet (ca. 18,7 px), ikke 14 px. Rutene på Hjem og i listene (19 px fet) er over. Timestripa og klyngeringen på kartet (14 px fet) følger regelen din, men ikke WCAG. `kontrast.py` leser ikke skriftstørrelser, så regelen står bare som kommentar.
+- Spotsiden: ordene (pålands og skrått pålands, og egen PR for teksten fra henteren), avvikene fra skissen og de nye ordene står som spørsmål i `privat/kontor/til-theodor.md`.
+- Kjøretidene på Hjem og spotsiden er fortsatt anslagene fra skissene. Theodor fyller inn tallene selv (svar 16.11).
+
+**Skjermbilder:** nettlesertestene skriver dem til `docs/design/spotside/etter/` (ikke i git, lastes opp som artifact «design-screenshots» av «Tester»). Lokalt utvalg: `privat/design-b4/steg-1/` til `steg-4/`.
+
+**Neste:** steg 6 (nettsiden fra 1024 px, SPEC 6C og 6D). Da kommer også lista «Beste først» i Utforsk i ny stil (den vises bare på PC). Skjermbilder for steg 5: `privat/design-b4/steg-5/`.
+
 ## Ratingpushen 17.11.2026 (S17), flettet til main 18.11.2026 – periodefaktoren, Breivikeidet på sandbanken, S11–S14 (gren `fiks/russelv-gap`)
 
 Flettet etter ja på S18 (a, b og c) i `privat/kontor/svar.md` 18.11.2026 kl. 20.25. Gjenstår: `find_bw_point.yml` for den nye Breivikeidet-pinnen, og ny `exposure_baseline` for spoten. Tabeller og varianter ligger i `privat/kontor/observasjoner/s17-tabell-2026-11-17.md`, og fysikk-kontrollørens dom i `privat/kontor/observasjoner/kontroll-s17-2026-11-17.md`.

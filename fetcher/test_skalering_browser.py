@@ -9,10 +9,11 @@ publisert som oversikt-2 + detaljfiler (fetcher/publish.py), servert slik appen 
 4. Hjem laster bare oversikt.json (ingen spots/<id>.json før en spot åpnes); å åpne en spot laster
    nøyaktig én detaljfil;
 5. søk på «a» grupperer per region og viser maks 20 før «Vis flere»;
-6. «Beste økt» gjelder bare valgt region (Innstillinger -> Område, standard Troms), aldri alle 100;
+6. forsiden på PC (B4 steg 6, «Beste nå») starter i valgt region (Innstillinger -> Område, standard Troms),
+   aldri alle 100 før man velger «Alle»;
 7. første visning av Hjem under 1,5 s på simulert 4G (CDP: 9 Mbit/s ned, 150 ms latens) - målt fra
-   navigasjonsstart til #bestKort er synlig;
-8. nett-tabellen: regionfilter og «Vis alle» per gruppe, overskriftsraden står fast (sticky).
+   navigasjonsstart til #forside (PC) eller topplinja (mobil, B 4.0: «Beste økt» er borte der) er synlig;
+8. forsidetabellen på PC: regionfaner, «Vis alle» og matrisen per region/spot, overskriftsraden står fast (sticky).
 
 Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5 minutter (hardkill),
 testserveren stoppes uansett utfall. Kjør: python fetcher/test_skalering_browser.py"""
@@ -21,6 +22,7 @@ import gzip
 import http.server
 import json
 import os
+import re
 import socket
 import sys
 import threading
@@ -82,7 +84,7 @@ def main():
             nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
             browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
             for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
-                mobile = vp[0] < 900
+                mobile = vp[0] < 1024
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="light", locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS)
@@ -110,7 +112,7 @@ def main():
                 cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 150, "downloadThroughput": 9 * 1024 * 1024 / 8, "uploadThroughput": 3 * 1024 * 1024 / 8})
                 t_start = time.monotonic()
                 page.goto(f"http://127.0.0.1:{port}/index.html#hjem")
-                page.wait_for_selector("#viewHjem:not([hidden]) #bestKort")
+                page.wait_for_selector("#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
                 first_paint = time.monotonic() - t_start
                 cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 0, "downloadThroughput": -1, "uploadThroughput": -1})
                 assert first_paint < 1.5, f"første visning av Hjem tok {first_paint:.2f} s på simulert 4G ({label})"
@@ -122,34 +124,58 @@ def main():
                 def go(hash_, sel):
                     page.evaluate(f"location.hash = '{hash_}'"); page.wait_for_selector(sel); page.wait_for_timeout(300)
 
-                # 6. Hjem: «Beste økt» bare i valgt region (Troms er standard), «Spots i Troms»
-                sub = page.text_content("#viewHjem .sek .sub")
-                assert "Troms" in sub, sub
-                n_rows = page.evaluate("document.querySelectorAll('#viewHjem .rader .rad, #viewHjem table.spots tr.s').length")
+                # 6. Hjem: mobil «Spots i Troms»; PC (B4 steg 6): forsiden starter på regionfanen fra Innstillinger -> Område
                 troms = sum(1 for s in overview["spots"] if s["region"] == "Troms")
                 if mobile:
+                    n_rows = page.evaluate("document.querySelectorAll('#viewHjem .rader .rad').length")
                     assert n_rows == min(troms, 5) or n_rows == troms, (n_rows, troms)
                     assert page.text_content("#viewHjem").count("Spots i Troms") == 1
-                # PR #12 punkt a: valgt regionbrikke synlig, rekkefølge som oversikt.regions (spots.json, nord til sør)
-                chip = page.evaluate("""() => { const row = document.querySelector('#viewHjem .regionvelger'); const c = row && row.querySelector('[aria-pressed="true"]');
-                    if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
-                    return {txt: c.textContent.trim(), inside: b.left >= r.left - 1 && b.right <= r.right + 1,
-                            order: [...row.querySelectorAll('.chip')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")
-                assert chip and (mobile and chip["txt"] == "Troms" or not mobile) and chip["inside"], f"valgt regionbrikke ikke synlig ({label}): {chip}"
+                    # PR #12 punkt a: valgt regionbrikke synlig, rekkefølge som oversikt.regions (spots.json, nord til sør)
+                    chip = page.evaluate("""() => { const row = document.querySelector('#viewHjem .regionvelger'); const c = row && row.querySelector('[aria-pressed="true"]');
+                        if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
+                        return {txt: c.textContent.trim(), inside: b.left >= r.left - 1 && b.right <= r.right + 1,
+                                order: [...row.querySelectorAll('.chip')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")
+                else:
+                    chip = page.evaluate("""() => { const row = document.querySelector('#forside .fs-faner'); const c = row && row.querySelector('[aria-pressed="true"]');
+                        if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
+                        return {txt: c.dataset.fsreg, inside: b.left >= r.left - 1 && b.right <= r.right + 1,
+                                order: [...row.querySelectorAll('[data-fsreg]')].map(x => x.dataset.fsreg).filter(Boolean)}; }""")
+                    rader = page.evaluate("[...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => DATA.spots.find(s => s.id === r.dataset.spot).region)")
+                    assert rader and set(rader) == {"Troms"}, f"forsiden viser andre regioner enn Troms før «Alle» er valgt: {set(rader)}"
+                assert chip and chip["txt"] == "Troms" and chip["inside"], f"valgt region ikke synlig ({label}): {chip}"
                 assert chip["order"] == [r["name"] for r in overview["regions"]] and chip["order"][0] == "Finnmark", chip["order"]
-                # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag»-kolonne
-                txt = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i, #viewHjem .celle, #viewHjem .rad .na, #viewHjem td.na')].map(e => e.textContent.trim())")
-                assert not any(t in ("0,0", "0") or t.startswith("0,0") for t in txt), [t for t in txt if t.startswith("0")][:5]
-                heads = page.evaluate("[...document.querySelectorAll('#viewHjem table.spots thead th.dag, #viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
-                assert heads and not any(h.startswith("I dag") for h in heads) and not page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over"), heads[:8]
-                print(f"PR #12 a-c ({label}): valgt brikke «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
-                # ROADMAP K del C.4: «Foreløpig»/«Forbud nå» ved navnet, og ikke i «Beste økt»
-                best_name = page.text_content("#bestKort .navn").strip()
-                assert best_name not in ("Testspot 078", "Testspot 079"), f"foreløpig/forbudt spot i Beste økt: {best_name}"
-                lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #viewHjem table.spots tr.s')]
-                    .map(r => [r.querySelector('b').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
-                if lbl:   # radene vises (mobil: 5 beste; nett: tabellen)
-                    assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Surfing forbudt nå" in t) for n, t in lbl.items()), lbl
+                # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag».
+                # B4 steg 2: rutene viser tallet 0-5, så «0» er en ekte vurdering der (aldri en høyde)
+                if mobile:
+                    txt = page.evaluate("[...document.querySelectorAll('#viewHjem .rad .na')].map(e => e.textContent.trim())")
+                    uke = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i')].map(e => e.textContent.trim())")
+                    tomme = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i.miss, #viewHjem .uke i.dark, #viewHjem .uke i.forbud, #viewHjem .uke i.over')].map(e => e.textContent.trim())")
+                    heads = page.evaluate("[...document.querySelectorAll('#viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
+                    idag = page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over")
+                else:
+                    txt = page.evaluate("[...document.querySelectorAll('#forside td.fs-sv, #forside td.fs-bst, #forside .fs-fakta')].map(e => e.textContent.trim())")
+                    uke = page.evaluate("[...document.querySelectorAll('#forside .t-listetall, #forside .fs-tall, #forside .fs-matrise .mx')].map(e => e.textContent.trim())")
+                    # celler uten tall (mangler, mørkt, forbud, over) har ord eller «–», aldri et siffer
+                    tomme = [t for t in page.evaluate("[...document.querySelectorAll('#forside .fs-matrise td.tom')].map(e => e.textContent.trim())") if re.search(r"\d", t)]
+                    heads = page.evaluate("[...document.querySelectorAll('#forside .fs-matrise thead th, #forside .fs-seg button')].map(e => e.textContent.trim())")
+                    idag = page.query_selector("#forside .fs-matrise thead th.idag")
+                assert not any(t in ("0,0", "0", "0 m") or t.startswith("0,0") for t in txt), [t for t in txt if t.startswith("0")][:5]
+                assert uke and all(t in ("0", "1", "2", "3", "4", "5") or (mobile and t == "") for t in uke), [t for t in uke if len(t) != 1][:5]
+                assert not any(tomme), [t for t in tomme if t][:5]
+                assert heads and not any(h.startswith("I dag") for h in heads) and not idag, heads[:8]
+                print(f"PR #12 a-c ({label}): valgt region «{chip['txt']}» synlig, rekkefølge nord-sør, ingen «0,0», tabellen starter på i morgen etter mørket - OK")
+                # ROADMAP K del C.4: «Foreløpig»/«Forbud nå» ved navnet, og ikke som dagens beste (hovedbildet på PC)
+                # «Beste økt» er borte på mobil (B 4.0 steg 5, Theodors svar 16.11.2026 punkt 3b); på PC er hovedbildet dagens beste
+                best_name = page.text_content("#forside .fs-helt .fs-navn").strip() if page.query_selector("#forside .fs-helt") else "(ikke på mobil)"
+                assert best_name not in ("Testspot 078", "Testspot 079"), f"foreløpig/forbudt spot som dagens beste: {best_name}"
+                assert bool(page.query_selector("#viewHjem #bestKort, #viewHjem .fs-helt")) == (vp[0] >= 1024), f"dagens beste skal bare vises på PC ({label})"
+                if not mobile and page.query_selector("#fsAlle"):
+                    page.click("#fsAlle"); page.wait_for_selector("#forside table.fs-tabell"); page.wait_for_timeout(150)
+                lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #forside table.fs-tabell tr.s')]
+                    .map(r => [r.querySelector('b, a.t-navn').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
+                if lbl:   # radene vises (mobil: 5 beste; PC: tabellen etter «Vis alle»)
+                    assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Surfing forbudt" in t) for n, t in lbl.items()), lbl
+                assert mobile or len(lbl) == 2, f"Testspot 078/079 mangler i forsidetabellen etter «Vis alle»: {sorted(lbl)}"
                 f79 = page.evaluate("""() => { const H = Front.helpers, s = DATA.spots.find(x => x.id === 'test079'), n = DATA.spots.find(x => x.id === 'test000');
                     const fi = H.forbudInfo(s), v = H.naaVisning(s, H.naaOf(s));
                     return [H.forbudNa(s), H.stedText(s), H.forbudNa(s, Date.parse('2026-05-01T12:00:00Z')), H.forbudNa(n), H.iBesteOkt(s, Date.parse('2026-05-01T12:00:00Z')),
@@ -157,17 +183,24 @@ def main():
                 # Theodor 16.10: i perioden «Surfing forbudt nå» + «1. okt–31. mars, fuglefredning», ingen stjerner/høyde; linje om forbudet alltid
                 assert f79[0] is True and "Surfing forbudt 1. okt–31. mars" in f79[1] and f79[2] is False and f79[3] is False and f79[4] is True, f79
                 assert f79[5] == "Surfing forbudt nå" and f79[6] == "1. okt–31. mars, fuglefredning" and f79[7] == 0 and f79[8] == "Surfing forbudt nå" and f79[9] is None, f79
-                print(f"C.4 ({label}): Beste økt = {best_name}, merkelapper {sorted(lbl)}, «Surfing forbudt nå» 1.10-31.3 (ikke 1.5) - OK")
+                print(f"C.4 ({label}): dagens beste = {best_name}, merkelapper {sorted(lbl)}, «Surfing forbudt nå» 1.10-31.3 (ikke 1.5) - OK")
                 shot("hjem")
-                # 8. nett-tabellen: regionfilter, «Vis alle», sticky
+                # 8. forsidetabellen (PC): regionfaner, «Vis alle», matrisen per region/spot, sticky overskrift
                 if not mobile:
-                    assert page.evaluate("getComputedStyle(document.querySelector('table.spots thead th')).position") == "sticky"
-                    page.click("[data-tabellregion='Troms']"); page.wait_for_timeout(200)
-                    heads = page.evaluate("[...document.querySelectorAll('table.spots tr.g td')].map(td => td.textContent.trim().split(' ')[0])")
-                    assert heads == ["Troms"], heads
-                    page.click("[data-tabellregion='']"); page.wait_for_timeout(200)
-                    page.click("table.spots .visalle"); page.wait_for_timeout(200)
+                    assert page.evaluate("getComputedStyle(document.querySelector('table.fs-tabell thead th')).position") == "sticky"
+                    page.click("[data-fsreg='']"); page.wait_for_timeout(200)
+                    mx = page.evaluate("[...document.querySelectorAll('table.fs-matrise tbody th')].map(th => th.textContent.trim())")
+                    assert mx == [r["name"] for r in overview["regions"]], mx
+                    n_alle = page.evaluate("document.querySelectorAll('table.fs-tabell tr.s').length")
+                    assert 0 < n_alle <= 10, f"«Alle» skal vise de beste radene før «Vis alle», ikke alle {len(overview['spots'])}: {n_alle}"
+                    page.click("#fsAlle"); page.wait_for_timeout(200)
+                    n_alle = page.evaluate("document.querySelectorAll('table.fs-tabell tr.s').length + document.querySelectorAll('#forside .fs-helt').length")
+                    assert n_alle == len(overview["spots"]), (n_alle, len(overview["spots"]))
                     shot("tabell")
+                    page.click("[data-fsreg='Troms']"); page.wait_for_timeout(200)
+                    mx = page.evaluate("[...document.querySelectorAll('table.fs-matrise tbody th')].map(th => th.textContent.trim())")
+                    assert len(mx) == troms and "Troms" not in mx, mx[:5]
+                    print(f"8 (pc): forsidetabellen med «Vis alle» ({n_alle} spots), matrisen per region og per spot i Troms ({len(mx)}), sticky overskrift - OK")
                 # 5. søk på «a»
                 if mobile:
                     page.click(".sokknapp"); page.wait_for_selector("#sokM"); page.fill("#sokM", "a"); page.wait_for_selector("#sokRes .srad")
@@ -211,15 +244,22 @@ def main():
                 # 4. åpne en spot laster nøyaktig én detaljfil
                 first = overview["spots"][0]["id"] if any(s["region"] == "Troms" for s in overview["spots"]) else overview["spots"][0]["id"]
                 troms_id = next(s["id"] for s in overview["spots"] if s["region"] == "Troms")
-                go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .vurdering .ord")
+                go(f"#spot={troms_id}", "#viewSpot:not([hidden]) .dom")
                 assert loaded["det"] == [troms_id], loaded["det"]
-                # Theodor 16.10: spotsiden i forbudsperioden - «Surfing forbudt nå» og perioden, ingen stjerner
-                go("#spot=test079", "#viewSpot:not([hidden]) .vurdering .forbud")
-                vt = page.text_content("#viewSpot .vurdering").strip()
-                assert "Surfing forbudt nå" in vt and "1. okt–31. mars, fuglefredning" in vt and not page.query_selector("#viewSpot .vurdering .stars"), vt
-                lt = page.text_content("#viewSpot #langtid") or ""
-                assert "Surfing forbudt" in lt and not page.query_selector("#viewSpot #langtid .stars"), lt[:200]
-                print(f"Forbud på spotsiden ({label}): «{vt[:60]}», langtidsvarselet uten stjerner - OK")
+                # spotsiden i design B 4.0 (steg 4 mobil, steg 6 PC): «Surfing forbudt» og perioden i dommen, ingen tall noe sted
+                go("#spot=test079", "#viewSpot:not([hidden]) .dom")
+                page.wait_for_selector("#tstripe .segs")
+                fb = page.evaluate("""(() => { const q = (s) => [...document.querySelectorAll('#viewSpot ' + s)];
+                    return {ord: q('.dom-ord b').map(e => e.textContent.trim()), setn: q('.dom-setn').map(e => e.textContent.trim()).join(' '), tall: q('.dom .t-tall, .dom .t-vindu, .tdom').length,
+                            time: q('#spOver .sek-spot .sub').map(e => e.textContent.trim()), segs: q('#tstripe .tk').filter(k => +k.dataset.i >= 0).map(k => [k.querySelector('.segs').className, k.querySelector('.segs').children.length]),
+                            knapp: q('.dagknapp[aria-pressed="true"] :is(.rute, .dk-v)').map(e => [e.closest('.dagknapp').className + ' ' + e.className, e.textContent.trim()]), surf: q('#spOver .maal').map(m => m.textContent.replace(/\\s+/g, ' ').trim()).filter(t => /^Surf/i.test(t)),
+                            aria: document.querySelector('#tstripeVelg').getAttribute('aria-valuetext')}; })()""")
+                assert fb["ord"] == ["Surfing forbudt"] and "1. okt–31. mars" in fb["setn"] and "fuglefredning" in fb["setn"] and fb["tall"] == 0, fb
+                assert fb["time"] == ["Surfing forbudt"] and "surfing forbudt" in fb["aria"], fb
+                # timestripa: forbudstimene har ingen segmenter - aldri «0» (stars:0 i forbudKopi er ikke en vurdering fra modellen)
+                assert fb["segs"] and all(n == 0 and ("forbud" in c.split() or c == "segs") for c, n in fb["segs"]) and any("forbud" in c.split() for c, _ in fb["segs"]), fb["segs"]
+                assert fb["knapp"] and all("forbud" in c.split() and not re.search(r"\d", x) and (x == "" or not mobile) for c, x in fb["knapp"]) and not any(re.search(r"\d", t) for t in fb["surf"]), (fb["knapp"], fb["surf"])   # surf-raden: ordet, aldri en høyde
+                print(f"Forbud på spotsiden ({label}): «{fb['ord'][0]}», «{fb['setn'][:60]}», stripa uten tall - OK")
                 ctx.close()
             # Theodor 16.10.2026 (punkt 1c): gammelt varsel eller gammelt format → banner på Hjem, Utforsk og spotsiden;
             # ferskt varsel (alt over, klokka 70 min etter generated) → ingen banner
@@ -260,7 +300,7 @@ def main():
                 sid = json.loads(OV_BODY)["spots"][0]["id"]
                 funn = {}
                 for side, hsh, sel in (("Hjem", "#hjem", "#viewHjem:not([hidden])"), ("Utforsk", "#utforsk", "#viewUtforsk:not([hidden])"),
-                                       ("spotsiden", f"#spot={sid}", "#viewSpot:not([hidden]) .spot-topp")):
+                                       ("spotsiden", f"#spot={sid}", "#viewSpot:not([hidden]) .sp-hode")):
                     page.goto(f"http://127.0.0.1:{port}/index.html{hsh}"); page.wait_for_selector(sel); page.wait_for_timeout(600)
                     funn[side] = page.evaluate(f"[...document.querySelectorAll('{sel.split(' ')[0]} .banner.stale')].map(b => b.textContent).join(' | ')")
                 for side, t in funn.items():

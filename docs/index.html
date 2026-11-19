@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2F5F6">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A1822">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2EFE8">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#002941">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Nordsurf">
@@ -22,15 +22,17 @@
 <a class="skip" href="#main">Hopp til innholdet</a>
 <header class="topbar pc-only">
   <a class="wm" href="#hjem" id="wordmark" aria-label="Nordsurf, til Hjem"></a>
+  <nav class="topnav" aria-label="Hovedmeny">
+    <a href="#hjem" data-nav="hjem">Hjem</a>
+    <a href="#utforsk" data-nav="utforsk">Utforsk</a>
+    <a href="#logger" data-nav="logger">Logger</a>
+  </nav>
   <div class="topsok">
     <label class="sok-field" for="sokPC"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.8 12.8 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr">Søk etter spot eller område</span><input id="sokPC" type="search" placeholder="Søk etter spot eller område" autocomplete="off" aria-controls="sokDrop" aria-expanded="false"></label>
     <div class="sok-drop" id="sokDrop" hidden></div>
   </div>
-  <nav class="topnav" aria-label="Hovedmeny">
-    <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg>Hjem</a>
-    <a href="#utforsk" data-nav="utforsk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zm6 0v12m6-10v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Utforsk</a>
-    <a href="#logger" data-nav="logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg>Logger</a>
-  </nav>
+  <!-- B4 steg 6 (SPEC §6C punkt 1): temaknappen på nettsiden; teksten settes fra strings.js (ui.js) -->
+  <button type="button" class="temaknapp" id="temaKnapp" aria-pressed="false">Mørketid</button>
 </header>
 <main id="main">
   <section class="view" id="viewHjem" data-view="hjem" aria-label="Hjem"></section>
@@ -45,13 +47,14 @@
   <section class="view" id="viewSide" data-view="side" hidden><div class="pagebar" id="pageBar"></div><section class="pane" id="detailPane" aria-live="polite"></section></section>
   <section class="view" id="viewSpot" data-view="spot" aria-label="Spot" hidden></section>
 </main>
+<footer class="bunn pc-only" id="bunn"></footer>
 <nav class="tabbar pc-hide" aria-label="Hovedmeny">
-  <div class="tabs glass">
+  <div class="tabs">
     <a href="#hjem" data-nav="hjem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z" fill="currentColor"/></svg><span>Hjem</span></a>
     <a href="#utforsk" data-nav="utforsk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zm6 0v12m6-10v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Utforsk</span></a>
     <a href="#logger" data-nav="logger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5zm2 2v14h10V7h-2V5zm2 5h6v2H9zm0 4h6v2H9z"/></svg><span>Logger</span></a>
   </div>
-  <a class="sokknapp glass" href="#sok" aria-label="Søk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></a>
+  <a class="sokknapp" href="#sok" aria-label="Søk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></a>
 </nav>
 <p class="loading" id="loading" role="status">Henter varselet …</p>
 <div class="feil" id="feil" role="alert" hidden><h2>Fikk ikke hentet varselet</h2><p>Sjekk at du er på nett, og prøv igjen.</p><button type="button" class="primary" id="feilRetry">Prøv igjen</button></div>
@@ -117,7 +120,11 @@
 <script src="js/minikart.js"></script>
 <script src="js/spotgraf.js"></script>
 <script src="js/tidevann.js"></script>
+<script src="js/spotbilder.js"></script>
+<script src="js/timestripe.js"></script>
+<script src="js/skive.js"></script>
 <script src="js/spot.js"></script>
+<script src="js/kjoretid.js"></script>
 <script src="js/utforsk.js"></script>
 <script src="js/ui.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
