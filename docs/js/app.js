@@ -170,9 +170,15 @@ function effectiveWind(h){
   const v = h.wind_speed, g = h.gust;
   return v==null ? null : (g!=null && g > v ? v + Math.min(GUST_MAX_ADD_MS, GUST_FACTOR * (g - v)) : v);
 }
+// Ukjent retning med kjent styrke (fysikk-kontrolløren 19.11.2026): henteren regner vinden som pålands, men vi vet det
+// ikke. Har den tatt poeng, eller er den fra 8 m/s (BLOWN_OUT_WIND_MS i fetcher/rating.py, vindstyrken uten kast som der),
+// heter det «For mye vind».
+const UNKNOWN_DIR_STRONG_MS = 8;
 function windLossWord(h){
-  if(!h || h.wind_type!=="offshore") return LOW_REASON_WORD.blown_out;
+  if(!h) return LOW_REASON_WORD.blown_out;
   const z = h.zero_losses, tapt = Math.max((z && z.wind)||0, h.faded_wind||0), eff = effectiveWind(h);
+  if(h.wind_type==null) return h.wind_speed!=null && (tapt > 0 || h.wind_speed >= UNKNOWN_DIR_STRONG_MS) ? STR.wordTooMuchWind : LOW_REASON_WORD.blown_out;
+  if(h.wind_type!=="offshore") return LOW_REASON_WORD.blown_out;
   return tapt > 0 || (eff!=null && eff >= OFFSHORE_STRONG_MS) ? STR.wordTooMuchWind : LOW_REASON_WORD.blown_out;
 }
 function zeroCause(h){

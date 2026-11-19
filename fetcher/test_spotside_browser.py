@@ -356,6 +356,24 @@ def main():
                 assert all(vo[k][0] == vo["ny"] for k in ("sterk", "kast", "band")), f"sterk fralandsvind skal hete «{vo['ny']}» også uten tapte poeng: {vo}"
                 assert all(vo[k][0] == vo["ut"] for k in ("pa", "side", "sjo", "null_pa", "under", "ukjent", "sterk_pa")), f"«{vo['ut']}» skal stå når vinden ikke er fralands, eller er svakere enn 12 m/s uten tapte poeng: {vo}"
 
+                # Ukjent vind (fysikk-kontrolløren 19.11.2026, forslag S22). Mangler vindstyrken, bokfører henteren det faste poenget
+                # som usikkert varsel (zero_losses.cap), og ordet ved 0 poeng er «Ikke surfbart nå», aldri «Blåst ut». Er styrken kjent
+                # og retningen ukjent, heter vind som tar poeng (eller er fra 8 m/s) «For mye vind».
+                uv = page.evaluate("""() => { const b = {stars: 0, period: 10, surf_height: 1.0, light: 'dag'}, z = (w, c) => ({energy: 0, wind: w, tide: 0, local: 0, cap: c});
+                    return {styrke: [ratingWord({...b, low_reason: null, wind_speed: null, wind_type: null, zero_losses: z(0, 1)}), ratingWordExplain({...b, low_reason: null, wind_speed: null, wind_type: null, zero_losses: z(0, 1)})],
+                        retning: ratingWord({...b, low_reason: 'blown_out', wind_speed: 9, wind_type: null, zero_losses: z(0, 0)}), tapt: ratingWord({...b, stars: 1, low_reason: 'blown_out', wind_speed: 7.9, wind_type: null, zero_losses: z(2, 0)}),
+                        null_retning: ratingWord({...b, wind_speed: 7.9, wind_type: null, zero_losses: z(2, 0)}), svak: ratingWord({...b, low_reason: 'blown_out', wind_speed: 3, wind_type: null, zero_losses: z(0, 0)}),
+                        maalt: ratingWord({...b, low_reason: 'blown_out', wind_speed: null, wind_type: null, zero_losses: z(0, 1)}),
+                        atte: ratingWord({...b, low_reason: 'blown_out', wind_speed: 8, wind_type: null, zero_losses: z(0, 0)}), under: ratingWord({...b, low_reason: 'blown_out', wind_speed: 7.9, wind_type: null, zero_losses: z(0, 0)}),
+                        kast: ratingWord({...b, low_reason: 'blown_out', wind_speed: 6, gust: 14, wind_type: null, zero_losses: z(0, 0)}),
+                        ikke: STR.wordNotNow, cap: STR.notNowCap, mye: STR.wordTooMuchWind, ut: STR.lowReason.blown_out}; }""")
+                assert uv["styrke"] == [uv["ikke"], uv["cap"]] and uv["ikke"] == "Ikke surfbart nå", f"ukjent vindstyrke ved 0 poeng skal hete «{uv['ikke']}»: {uv}"
+                assert uv["retning"] == uv["mye"] and uv["tapt"] == uv["mye"] and uv["null_retning"] == uv["mye"], f"ukjent retning med kjent styrke skal hete «{uv['mye']}»: {uv}"
+                # svak vind fra ukjent retning som ikke har tatt poeng, og målt vindsjø uten vindvarsel (rating.is_blown_out), beholder «Blåst ut»
+                assert uv["svak"] == uv["ut"] and uv["maalt"] == uv["ut"], uv
+                # grensa er 8 m/s på vindstyrken uten kast, som BLOWN_OUT_WIND_MS i henteren: 8,0 er «For mye vind», 7,9 og 6 m/s med kast 14 er det ikke
+                assert uv["atte"] == uv["mye"] and uv["under"] == uv["ut"] and uv["kast"] == uv["ut"], f"grensa for ukjent retning skal være 8 m/s uten kast: {uv}"
+
                 def media(scheme, contrast="no-preference"):
                     cdp.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if scheme == "mork" else "light"}, {"name": "prefers-contrast", "value": contrast}]})
                     page.wait_for_timeout(150)

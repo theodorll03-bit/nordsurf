@@ -1857,4 +1857,74 @@ for t in (7, 8, 9, 10):
 r34_vind = rate(dict(bre_1711[8], wind_speed=6.0), B34)
 assert r34_vind["bw_period_basis"] == "bw" and r34_vind["stars"] == 0, (r34_vind["bw_period_basis"], r34_vind["stars"])
 print("34: Breivikeidet 17.11 - ikke flatt, hoftehøyt, uten energiregel; kl. 07-10Z gir 1, 1, 2, 2 poeng, og 2 uten modellvinden - OK")
+# 35: ukjent vind (19.11.2026, fysikk-kontrollørens regel, forslag til svar.md S22; kilder: samme konvensjon som
+# wind_penalty() og bw_swell_dominates() (ukjent retning regnes som pålands), og grunnregelen: manglende data er aldri 0).
+from rating import gap_blocked_by_wind, BLOWN_OUT_WIND_MS, FLAT_HS_THRESHOLD
+assert BLOWN_OUT_WIND_MS == 8.0
+# 35.1: kjent styrke fra 8 m/s og ukjent retning tar gap-grensa bort, som kjent pålandsvind. Under 8 m/s står den.
+assert gap_floor(dict(rus_1611, wind_speed=8.0, wind_dir=None), R) is None and gap_blocked_by_wind(dict(rus_1611, wind_speed=8.0, wind_dir=None), R)
+assert abs(gap_floor(dict(rus_1611, wind_speed=7.9, wind_dir=None), R) - 0.484) < 1e-9
+assert not gap_blocked_by_wind(dict(rus_1611, wind_speed=7.9, wind_dir=None), R) and not gap_blocked_by_wind(dict(rus_1611, wind_speed=12.0, wind_dir=106.0), R)
+# hjelperen følger de samme vilkårene som grensa: bare gap-spots, bare svell i vinduet, bare fra 7 s
+u35 = dict(rus_1611, wind_speed=9.0, wind_dir=None)
+assert gap_blocked_by_wind(u35, R) and not gap_blocked_by_wind(u35, R29) and not gap_blocked_by_wind(u35, G)
+assert not gap_blocked_by_wind(dict(u35, dir_offshore=30), R) and not gap_blocked_by_wind(dict(u35, period=6.9), R)
+# 35.2: ukjent STYRKE tar ikke grensa bort. Høyden står (0,48 m), og vinden vi mangler koster sitt faste ene poeng.
+ukjent35 = dict(wind_speed=None, wind_dir=None, gust=None)
+assert abs(gap_floor(dict(rus_1611, **ukjent35), R) - 0.484) < 1e-9 and not gap_blocked_by_wind(dict(rus_1611, **ukjent35), R)
+r35_obs = rate(dict(rus_1611, **ukjent35), R)
+assert r35_obs["gap_floor"] and r35_obs["uncertain"] and r35_obs["height"] == 0.48, (r35_obs["gap_floor"], r35_obs["height"])
+# 35.6: observasjonstimen uten vindvarsel får aldri vinden som grunn
+assert r35_obs["low_reason"] != "blown_out" and r35_obs["zero_losses"]["wind"] == 0, (r35_obs["low_reason"], r35_obs["zero_losses"])
+# 35.3: en tenkt time med mye svell gjennom gapet (4,0 m, 10 s fra 10°; BarentsWatch 0,3 m med 4 s ved punktet)
+def t35(**kw):
+    h = dict(swell_offshore=4.0, height_offshore=4.4, swell_model="gfs", dir_offshore=10, period=10.0, bw_height=0.3, bw_dir=350.0,
+             bw_period=4.0, wind_speed=2.0, wind_dir=135.0, gust=None, tide={"level": 0.5, "state": "middels", "rising": True}, turn=0)
+    h.update(kw)
+    return h
+r35 = {"fralands": rate(t35(), R), "palands": rate(t35(wind_speed=9.0, wind_dir=350.0), R),
+       "retning": rate(t35(wind_speed=9.0, wind_dir=None), R), "styrke": rate(t35(**ukjent35), R)}
+for k in ("fralands", "palands", "retning", "styrke"):
+    show(f"35.3: Russelv, svell 4,0 m, vind {k}", r35[k])
+assert r35["fralands"]["stars"] == 3 and r35["fralands"]["gap_floor"] and r35["fralands"]["low_reason"] is None
+# kjent pålands 9 m/s: grensa er borte, og timen er blåst ut, ikke flat (C)
+assert (r35["palands"]["stars"], r35["palands"]["low_reason"], r35["palands"]["gap_floor"]) == (0, "blown_out", False), r35["palands"]
+# ukjent retning ved 9 m/s gir det samme som kjent pålands, ikke et poeng mer (før: 1 poeng med grensa)
+assert (r35["retning"]["stars"], r35["retning"]["low_reason"], r35["retning"]["gap_floor"]) == (0, "blown_out", False), r35["retning"]
+# ukjent styrke: grensa står, ett poeng under beste kjente, og ingen vindgrunn
+assert (r35["styrke"]["stars"], r35["styrke"]["low_reason"], r35["styrke"]["gap_floor"]) == (2, None, True), r35["styrke"]
+assert r35["styrke"]["stars"] <= r35["fralands"]["stars"] - 1 and r35["styrke"]["faded_wind"] == 1
+# 35.4: samme time med 2,5 m svell og ukjent vind: 1 poeng uten vindgrunn (før: blown_out)
+r35_25 = rate(t35(swell_offshore=2.5, **ukjent35), R)
+assert (r35_25["stars"], r35_25["low_reason"]) == (1, None), (r35_25["stars"], r35_25["low_reason"])
+# 35.5: en vanlig spot. Grøtfjord, svell 1,0 m, 10 s fra 300°, BarentsWatch 0,9 m med 9 s: kjent svak fralandsvind gir 2 poeng,
+# ukjent vind 1 poeng uten vindgrunn (før: blown_out).
+g35 = dict(swell_offshore=1.0, height_offshore=1.1, dir_offshore=300, bw_height=0.9, bw_dir=300.0, bw_period=9.0)
+r35_g, r35_gu = rate(t35(**g35, wind_dir=120.0), G), rate(t35(**g35, **ukjent35), G)
+assert r35_g["stars"] == 2 and (r35_gu["stars"], r35_gu["low_reason"]) == (1, None), (r35_g["stars"], r35_gu["stars"], r35_gu["low_reason"])
+# 35.7: målingen rører vi ikke. Mest vindsjø ved punktet (BarentsWatch 0,8 m, svellandel 0,3) er blåst ut også uten vindvarsel.
+from rating import is_blown_out
+assert is_blown_out(dict(bw_height=0.8, **ukjent35), G, "barentswatch", {"swell_share": 0.3}, True)
+assert not is_blown_out(dict(bw_height=0.8, **ukjent35), G, "barentswatch", {"swell_share": 0.9}, True)
+# Og gjennom rate(): kravet om kjent styrke gjelder bare vindstraffen (wind_dominant), ikke målingen. Uten vindvarsel er
+# timen fortsatt blown_out når BarentsWatch måler mest vindsjø (fysikk-kontrolløren 19.11.2026: uten denne ble den stormsjo).
+h35_sjo = dict(swell_offshore=0.4, height_offshore=1.5, swell_model="gfs", dir_offshore=300, period=8.0, bw_height=0.8,
+               bw_dir=300.0, bw_period=3.5, tide={"level": 0.5, "state": "middels", "rising": True}, turn=0, **ukjent35)
+assert (rate(h35_sjo, G)["low_reason"], rate(h35_sjo, G)["blown_out"]) == ("blown_out", True), (rate(h35_sjo, G)["low_reason"], rate(h35_sjo, G)["blown_out"])
+# 35.8: bokføringen ved ukjent styrke. Det faste poenget står under "cap" og ikke under "wind", så ordet ved 0 poeng blir
+# «Ikke surfbart nå» og ikke «Blåst ut». Stjernene er de samme som før.
+r35_0 = rate(t35(**dict(g35, swell_offshore=2.0, height_offshore=2.1, bw_height=1.8), **ukjent35), G)
+assert r35_0["stars"] == 0 and r35_0["low_reason"] is None and r35_0["faded_wind"] == 1, (r35_0["stars"], r35_0["low_reason"], r35_0["faded_wind"])
+assert r35_0["zero_losses"]["wind"] == 0 and r35_0["zero_losses"]["cap"] >= 1, r35_0["zero_losses"]
+# kjent vind bokføres som før
+assert r35["retning"]["zero_losses"]["cap"] == 0 and rate(t35(wind_speed=7.9, wind_dir=None), R)["zero_losses"]["wind"] == 2
+# 35.9: ordet når vinden tar grensa bort. Varselet for Russelv 22.11.2026 kl. 01Z (svell 1,16 m fra 352°, 9,6 s, 8,35 m/s fra
+# 304°): grensa ville vært 0,23 m, under flat-sperren, så timen er flat med og uten vinden. Ordet er fortsatt flat.
+h35_live = t35(swell_offshore=1.16, height_offshore=1.3, dir_offshore=352, period=9.6, wind_speed=8.35, wind_dir=304.0)
+assert gap_blocked_by_wind(h35_live, R) and 1.16 * R["gap_transfer"] < FLAT_HS_THRESHOLD
+assert (rate(h35_live, R)["stars"], rate(h35_live, R)["low_reason"]) == (0, "flat")
+assert rate(dict(h35_live, wind_speed=2.0, wind_dir=135.0), R)["low_reason"] == "flat"
+# med 2,5 m svell (grense 0,5 m) er samme vind «blåst ut»
+assert rate(dict(h35_live, swell_offshore=2.5, height_offshore=2.7), R)["low_reason"] == "blown_out"
+print("35: ukjent vind - ukjent retning fra 8 m/s regnes som pålands for gap-grensa, ukjent styrke beholder grensa og får aldri vinden som grunn, det faste poenget bokføres som usikkert varsel - OK")
 print("Alle tester ok")
