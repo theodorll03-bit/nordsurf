@@ -744,6 +744,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */
     .spw-time .maal{grid-template-columns:96px minmax(0,1fr)}
     .spw-time .maal .mu{grid-column:2}
+    .spw-time .maal .mv .ordv{white-space:normal}   /* «Surfing forbudt» er bredere enn kolonnen ved 1024 px (målt 135 mot 114 px) */
   }
   .spw-skive{grid-column:10/13}
   .skive-rad.stor{flex-direction:column;align-items:flex-start;margin-top:0}

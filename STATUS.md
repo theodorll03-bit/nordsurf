@@ -1,8 +1,8 @@
 # Nordsurf: status
 
-## Ukjent vind - forslag, venter på Theodors ja (S22), 19.11.2026
+## Ukjent vind - ja fra Theodor 20.11 (S22), 21.11.2026
 
-Gren `fiks/ukjent-vind` fra main (`bad495a`). **Ikke pushet og ikke live.** Endrer `fetcher/rating.py`, så dette er en ratingendring: den går ikke live før Theodor har sagt ja til S22. Regelen er fysikk-kontrollørens (19.11). Den erstatter feiljegerens variant fra 17.11 («ingen gap-grense når vindstyrken er ukjent»), som kontrolløren ikke godkjente: den ville gitt «Flatt 0,0 m» bare fordi vindvarselet manglet.
+Gren `fiks/ukjent-vind`, med main (`b515492`) flettet inn 21.11. Endrer `fetcher/rating.py`, så dette er en ratingendring. Ja til a–d i svar.md 20.11 (S22), som fysikk-kontrolløren godkjente dem. Egen PR. Regelen er fysikk-kontrollørens (19.11). Den erstatter feiljegerens variant fra 17.11 («ingen gap-grense når vindstyrken er ukjent»), som kontrolløren ikke godkjente: den ville gitt «Flatt 0,0 m» bare fordi vindvarselet manglet.
 
 **Regelen**
 - **Ukjent retning, kjent styrke fra 8 m/s:** gap-grensa på Russelv tas bort, som ved kjent pålandsvind (`gap_blocked_by_wind()`). Før løftet grensa høyden, og timen kunne få ett poeng mer enn samme time med kjent pålandsvind. Kilde: samme konvensjon som `wind_penalty()` og `bw_swell_dominates()`, der ukjent retning regnes som pålands.
@@ -18,6 +18,15 @@ Gren `fiks/ukjent-vind` fra main (`bad495a`). **Ikke pushet og ikke live.** Endr
 | Varselet som det er (ingen vind mangler) | 0 | 0 | 0 | 0 |
 | Tenkt: all vind mangler | 0 | 0 | 1 043 (`blown_out` til ingen grunn 991, til `treffer_ikke` 52) | 0 |
 | Tenkt: all vindretning mangler | 0 | 0 | 0 | 1 (Russelv 22.11 kl. 01Z, mørkt: 0,23 til 0,12 m, flatt før og etter) |
+
+Samme kjøring 21.11 på varselet fra kl. 11Z (27 spots, 5 454 timer), etter at main er flettet inn:
+| | Poeng endret | 2 poeng eller mer | Grunn endret | Høyde endret |
+|---|---|---|---|---|
+| Varselet som det er (ingen vind mangler) | 0 | 0 | 3 (Russelv 22.11 kl. 03–05Z, mørkt: 0 poeng, 8–10 m/s pålands, ingen grunn til `blown_out`) | 0 |
+| Tenkt: all vind mangler | 0 | 0 | 1 218 (`blown_out` til ingen grunn 1 171, til `treffer_ikke` 47) | 0 |
+| Tenkt: all vindretning mangler | 0 | 0 | 0 | 6 (Russelv, mørkt eller skumring, 0 poeng før og etter) |
+
+De tre timene på Russelv har kjent pålandsvind som tar gap-grensa bort. Det er ordet i regelen (test 35.3): timen er blåst ut, og sto uten grunn før. Timene rundt (kl. 02Z og 06Z) heter `blown_out` fra før.
 
 Oppdiktede timer på Russelv (svell 10 s fra 10°, BarentsWatch 0,3 m med 4 s ved punktet):
 | Time | Før | Etter |
@@ -38,6 +47,21 @@ Ingen time flytter seg 2 poeng eller mer. Ingen fast observasjon har ukjent vind
 **Ikke gjort**
 - Forklaringslinjene i henteren («Vind: ukjent» uten fradraget, og tom etikett ved ukjent retning) trenger nye setninger. De venter på Theodor.
 - Observasjonstimen på Russelv 16.11 kl. 11Z heter «Treffer ikke» (gap-unntaket mangler i `treffer_ikke`). Egen runde.
+## T3 design B 4.0 «Papir» - småting 2 etter go-live, 19.11.2026
+
+Gren `design/b4-etter-2` fra main `bad495a` (småting 1, live 19.11 kl. 15:25Z). Bare visning: ingen ratingfil og ikke spots.json er rørt.
+
+- **Siden blir stående når den tegnes på nytt av seg selv** (feiljegeren 19.11): spotsiden hoppet til toppen og lukket «Hvorfor» hver gang en ny time begynte, når appen kom tilbake fra bakgrunnen, og etter at en økt var logget eller synken var ferdig. Ny `redraw()` i ui.js tegner på nytt og setter rullingen og en åpen «Hvorfor» tilbake. Den brukes av `tickNow`, `refresh()` og ved endret størrelse.
+- **Ny time følger klokka** (fysikk-kontrolløren 19.11): `tickNow` brukte nå-timen til første spot som nøkkel. Mangler den spoten «nå» (hentingen feilet i regionen), ble siden aldri tegnet på nytt resten av økta. Nøkkelen er nå klokketimen.
+- **Innstillinger tegnes ikke på nytt ved ny time** (feiljegeren 19.11): tekst som ikke var lagret (repo, e-post, navn) ble borte, og fokus forsvant. Siden viser ingenting som følger klokka.
+- **Tekst, fokus og dagrekka står når siden tegnes på nytt** (tillegg 19.11 etter feiljegerens restfunn, egen commit): `redraw()` setter også tilbake tekst som ikke er lagret (bare skrivefelt, og bare når feltet ellers ville fått samme verdi som før, så lagring, inn- og utlogging vinner), fokus med markøren (bare når ikke et ark eller søket har tatt fokus i mellomtiden) og dagrekka på spotsiden (ikke når første dag har falt bort ved midnatt). Innstillinger mister dermed ikke teksten ved innlogging eller når synken er ferdig.
+- **Utforsk-kartet står der du la det ved ny time, innlogging og synk** (samme tillegg): `tickNow` og `refresh()` ber `Utforsk.render` beholde utsnittet. Før hoppet kartet tilbake til regionen hver hele time, og ut til hele kartet etter et trykk på en klynge. Regionknappene, navigasjon til Utforsk og ny størrelse setter utsnittet som før.
+- **Hjem tegnes bare på nytt når bredden endres:** på mobil endrer høyden seg hver gang adresselinja glir inn og ut, og da skal ingenting skje. Spotsiden og Utforsk tegnes bare på nytt når 1024 px krysses. Utforsk flytter kartet selv ved ny størrelse (utforsk.js), så knappene og lista ble før tegnet unødig (teknisk-leder 19.11).
+- **Streken over det beste vinduet i timestripa står bare mens vinduet er åpent** (feiljegeren 19.11): samme regel som «Best hh–hh» i dommen. «Beste vindu» leses heller ikke opp for timene etterpå.
+- **«Surfing forbudt» brytes i to linjer i tallkolonnen under 1360 px:** målt 19.11 ved 1024 px er ordet 135 px og kolonnen 114 px, så det sto 21 px ut i luften mot skiva. Høyder som «2,1–2,7 m» (112 px) får plass.
+- **Målt, ingen retting:** ingen av de publiserte spotnavnene stikker ut av navneplata ved 1024, 1100 eller 1280 px.
+- **Tester:** test_spotside_browser.py prøver ny time og `Front.refresh()` på spotsiden (mobil og PC), ny time når første spot mangler «nå», Innstillinger ved ny time, ved `authchange` og ved `Front.refresh()` (også at en lagret verdi vinner), fokus og dagrekka på spotsiden, zoomen på Utforsk ved ny time og `Front.refresh()` (også etter et klyngetrykk, og at regionknappen og navigasjon setter utsnittet), Hjem ved endret høyde og endret bredde, Utforsk ved ny størrelse og når oppsettet byttes, streken etter at vinduet er over og mens det er åpent, og «Surfing forbudt» ved 1024 px. Hver ny prøve er sett feile uten rettingen sin.
+- **Ikke gjort:** På iPhone åpner ikke tastaturet seg igjen når fokus settes tilbake i et felt (kan ikke prøves i testene). Fokus settes bare tilbake på felt og knapper med id og på dagknappene: favorittknappen, «Hvorfor», lenkene på spotsiden og region- og dagbrikkene på Utforsk mister fortsatt fokus når siden tegnes på nytt (fysikk-kontrolløren og feiljegeren 19.11). Kan ikke profilen hentes ved innlogging, tømmes navnefeltet selv om det sto ulagret tekst der (feiljegeren 19.11). Testene dekker ikke alt i tillegget: dagrekka når første eller valgte dag bytter, andre felt enn GitHub-repoet i Innstillinger, og at Utforsk får den nye timens tall, er prøvd for hånd av feiljegeren, men har ingen fast test. Lange navn kuttes fortsatt med «…» i regionradene på 375 px. Når vinduet er over, står dagens tall igjen uten å si at det gjelder en time som har vært (spørsmål til Theodor). Rullingen settes tilbake i piksler: blir innholdet over brukeren høyere eller lavere mens siden tegnes på nytt, havner de litt feil. Zoomen på Utforsk-kartet nullstilles ved ny størrelse, som før. Død kode (`surfAdjustmentLine`, `detailsGrid` og forklaringsskuffen i app.js) tas samlet i oppryddingen av gammel PC-kode (teknisk-leder 19.11).
 
 ## T3 design B 4.0 «Papir» - småting etter go-live (S15 a og b), 19.11.2026
 

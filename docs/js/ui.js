@@ -627,27 +627,57 @@
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
     Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent});
   }
-  function render(){
+  function render(behold){
     if(!DATA) return;
     show(S.view);
     document.title = S.view==="spot" && spotById(S.spotId) ? `${spotById(S.spotId).name} – Nordsurf` : "Nordsurf";
     if(S.view==="hjem") renderHome();
     else if(S.view==="sok") renderSok();
-    else if(S.view==="utforsk") Utforsk.render(S);
+    else if(S.view==="utforsk") Utforsk.render(S, behold);
     else if(S.view==="logger" || S.view==="innstillinger") renderSide();
     else if(S.view==="spot") renderSpotView();
   }
+  // felt brukeren skriver i: bare disse får teksten satt tilbake (glidebryteren i timestripa og tallfelt styrer siden selv)
+  const SKRIVEFELT = new Set(["text", "email", "search", "url", "tel", "password", "textarea"]);
+  const dagrekke = (dv)=> dv ? [".dagknapp[data-day]", '.dagknapp[aria-pressed="true"]'].map(q=> ($(q, dv) || {dataset: {}}).dataset.day).join("|") : "";
+  function redraw(behold){
+    // tegn det som står framme på nytt uten å flytte brukeren (ny time, ny bredde, økt logget): render() går til toppen
+    // som ved navigasjon, så rullingen settes tilbake, og en åpen «Hvorfor» på spotsiden står åpen.
+    // behold = kartet på Utforsk står der brukeren la det (ny time, innlogging, synk ferdig), se utforsk.js
+    const main = $("#main"), y = window.scrollY, hv = S.view==="spot" ? $("#viewSpot #hvorfor") : null, apen = !!(hv && hv.open);
+    // tekst som ikke er lagret, fokus og dagrekka på spotsiden står også (feiljegeren 19.11.2026). Teksten settes bare tilbake
+    // når feltet ellers ville fått samme verdi som før: etter lagring, inn- og utlogging vinner den nye verdien
+    const felt = $$("input[id], textarea[id]", main).filter(f=> SKRIVEFELT.has(f.type) && f.value!==f.defaultValue).map(f=>({id: f.id, v: f.value, d: f.defaultValue}));
+    const ae = document.activeElement, inne = ae && ae!==main && main.contains(ae);
+    const fokus = !inne ? null : ae.id ? "#" + CSS.escape(ae.id) : ae.matches(".dagknapp[data-day]") ? `.dagknapp[data-day="${ae.dataset.day}"]` : null;
+    let merket = null; if(fokus && SKRIVEFELT.has(ae.type)){ try{ merket = [ae.selectionStart, ae.selectionEnd]; }catch(e){} }
+    const dv = S.view==="spot" ? $("#viewSpot .dagvelger") : null, x = dv ? dv.scrollLeft : 0, rekke = dagrekke(dv);
+    render(behold);
+    if(apen){ const hv2 = $("#viewSpot #hvorfor"); if(hv2) hv2.open = true; }
+    felt.forEach(g=>{ const f = main.querySelector("#" + CSS.escape(g.id)); if(f && SKRIVEFELT.has(f.type) && f.defaultValue===g.d) f.value = g.v; });
+    // ved midnatt faller første dag bort: da ruller spotsiden til valgt dag som ved vanlig tegning
+    const dv2 = dv && $("#viewSpot .dagvelger"); if(dv2 && dagrekke(dv2)===rekke) dv2.scrollLeft = x;
+    // fokus settes ikke tilbake hvis noe utenfor siden har tatt det i mellomtiden (et ark, søket i topplinja)
+    const na = document.activeElement, f2 = fokus && (na===document.body || main.contains(na)) ? main.querySelector(fokus) : null;
+    if(f2 && f2!==na && !f2.closest("[hidden]")){ f2.focus({preventScroll: true}); if(merket && merket[0]!=null){ try{ f2.setSelectionRange(merket[0], merket[1]); }catch(e){} } }
+    window.scrollTo(0, y);
+  }
+  // nøkkelen for «ny time» er klokketimen, ikke nå-timen til første spot: mangler den spoten «nå» (hentingen feilet i regionen),
+  // ble siden ellers aldri tegnet på nytt (fysikk-kontrolløren 19.11.2026)
+  const klokketime = ()=> Math.floor(Date.now() / 36e5);
   function tickNow(){
     // ny time mens appen står åpen / kommer tilbake fra bakgrunnen: nå-timen flytter seg
     if(document.hidden || !DATA) return;
-    const h = naaOf(DATA.spots[0]); const n = h ? h.t : null; if(n===S.now) return; S.now = n;
-    if(S.view==="sok") return;
-    render();
+    const n = klokketime(); if(n===S.now) return; S.now = n;
+    // Søk og Innstillinger viser ingenting som følger klokka, og tegnes de på nytt, mister brukeren teksten de holder på
+    // å skrive (feiljegeren 19.11.2026)
+    if(S.view==="sok" || S.view==="innstillinger") return;
+    redraw(true);
   }
 
   /* ---------- oppstart (kalles fra app.js start()) ---------- */
   async function start(data){
-    const h = naaOf(data.spots[0]); S.now = h ? h.t : null;
+    S.now = klokketime();
     S.region = chosenRegion();
     $("#loading").hidden = true;
     wireTopSearch(); temaKnapp();
@@ -656,16 +686,12 @@
     window.addEventListener("hashchange", ()=>{ parseRoute(); render(); });
     // spotsiden velger mobil- eller PC-oppsett når den tegnes (spot.js render): tegn på nytt når bredden krysser 1024 px
     // (et nettbrett som snus), ellers står mobiloppsettet under PC-stilene (feiljegeren 19.11.2026)
-    let bred = isDesktop();
+    // Hjem tegnes bare når bredden endrer seg: på mobil endrer høyden seg hver gang adresselinja glir inn og ut.
+    // Utforsk flytter kartet selv ved ny størrelse (utforsk.js) og tegnes bare på nytt når oppsettet byttes
+    let bred = isDesktop(), bredde = window.innerWidth;
     window.addEventListener("resize", ()=>{
-      const b = isDesktop(), byttet = b!==bred; bred = b;
-      if(S.view==="hjem" || S.view==="utforsk") render();
-      else if(byttet && S.view==="spot"){   // uten show(): brukeren blir stående der de var, og en åpen «Hvorfor» står åpen
-        const y = window.scrollY, hv = $("#viewSpot #hvorfor"), apen = !!(hv && hv.open);
-        renderSpotView();
-        const hv2 = $("#viewSpot #hvorfor"); if(hv2 && apen) hv2.open = true;
-        window.scrollTo(0, y);
-      }
+      const b = isDesktop(), byttet = b!==bred, w = window.innerWidth, nyBredde = w!==bredde; bred = b; bredde = w;
+      if((nyBredde && S.view==="hjem") || (byttet && (S.view==="spot" || S.view==="utforsk"))) redraw();
     });
     document.addEventListener("visibilitychange", tickNow);
     setInterval(tickNow, 60e3);
@@ -673,7 +699,7 @@
     render();
     started = true;
   }
-  function refresh(){ if(DATA && started && S.view!=="sok") render(); }
+  function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
   window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();

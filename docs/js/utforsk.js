@@ -157,7 +157,8 @@
       return `<a class="srad r-${min5(v.st)}" href="#spot=${esc(s.id)}${v.t ? "&t=" + esc(v.t) : ""}" role="listitem" aria-label="${esc(v.aria)}">${ruteHtml(v.st, v.rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(H().stedText(s))}</small></span><span class="na">${esc(v.word)}${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}</span></a>`; }).join("")}</div>${shown.length < spots.length ? `<button type="button" class="knapp2 visflere" id="listeFlere">Vis alle ${spots.length}</button>` : ""}`;
     const more = $("#listeFlere", el); if(more) more.onclick = ()=>{ S.listeAlle = true; renderListe(); };
   }
-  function render(state){
+  let harUtsnitt = false;
+  function render(state, behold){
     S = state;
     const ub = $("#utforskBanner"); if(ub) ub.innerHTML = typeof staleBanner==="function" ? staleBanner() : "";   // punkt 1c
     if(!ensureInit()){ $("#utforskChips").innerHTML = `<span class="muted">Henter kartet …</span>`; return; }
@@ -168,7 +169,9 @@
     }
     renderChips();
     Kart.setArea(area());
-    const e = viewExtent(); if(e) Kart.setExtent(e, false);
+    // behold (ny time, innlogging, synk ferdig; ui.js redraw): kartet står der brukeren la det. Ellers hoppet det tilbake til
+    // regionen hver hele time (feiljegeren 19.11.2026). Første gang, og ved navigasjon hit, settes utsnittet som før
+    if(!(behold===true && harUtsnitt)){ const e = viewExtent(); if(e){ Kart.setExtent(e, false); harUtsnitt = Kart.zoom()!==null; } }
     Kart.setSelected(S.picked);
     renderKort(); renderListe(); lagene();
   }
