@@ -575,6 +575,27 @@ def gap_swell_in_window(hour, spot):
     return min(distance_to_sector(d, sec) for sec in sectors) <= GAP_EDGE_DEG
 
 
+def gap_blocked_by_wind(hour, spot):
+    """Sann når gap-grensa ellers ville gjeldt (svell i det tegnede vinduet,
+    perioden ute minst GAP_MIN_PERIOD_S), men vinden tar den bort: kjent
+    styrke fra BLOWN_OUT_WIND_MS, og retningen er pålands, skrått pålands
+    eller ukjent.
+
+    19.11.2026 (fysikk-kontrolløren, forslag til svar.md S22): ukjent
+    retning regnes som pålands, samme konvensjon som wind_penalty() og
+    bw_swell_dominates(). Før løftet grensa høyden ved 9 m/s og ukjent
+    retning, så timen kunne få et poeng mer enn den samme timen med kjent
+    pålandsvind. Ukjent styrke gir False (se gap_floor()). Brukes av
+    gap_floor() og av classify_low_rating(): en slik time er blåst ut,
+    ikke flat."""
+    period = hour.get("period")
+    if not gap_swell_in_window(hour, spot) or period is None or period < GAP_MIN_PERIOD_S:
+        return False
+    speed = hour.get("wind_speed")
+    return (speed is not None and speed >= BLOWN_OUT_WIND_MS
+            and wind_type(hour.get("wind_dir"), spot) in ("onshore", "sideonshore", None))
+
+
 def gap_floor(hour, spot):
     """Nedre grense for Hs ved spoten for en gap-spot, eller None.
 
@@ -597,15 +618,17 @@ def gap_floor(hour, spot):
       vipper en grad eller to fra time til time: 16.11.2026 lå den på
       19-20° mens Russelvs vindu slutter på 19°.
     - perioden ute er minst GAP_MIN_PERIOD_S
-    - vinden er ikke blåst ut (pålands eller skrått pålands fra
-      BLOWN_OUT_WIND_MS). Ukjent vind regnes ikke som blåst ut.
+    - vinden er ikke blåst ut, se gap_blocked_by_wind(): kjent styrke fra
+      BLOWN_OUT_WIND_MS, pålands, skrått pålands eller ukjent retning.
+      Ukjent STYRKE tar ikke grensa bort: høyden er et mål på svellet, og
+      vinden vi mangler koster allerede sitt faste ene poeng i
+      wind_penalty(). Uten grensa ville timen falt til 0,0 m og «flatt»
+      bare fordi vindvarselet mangler (manglende data er aldri 0).
     Grensa kan bare løfte høyden, aldri senke den (se spot_height())."""
     period = hour.get("period")
     if not gap_swell_in_window(hour, spot) or period is None or period < GAP_MIN_PERIOD_S:
         return None
-    speed = hour.get("wind_speed")
-    if (speed is not None and speed >= BLOWN_OUT_WIND_MS
-            and wind_type(hour.get("wind_dir"), spot) in ("onshore", "sideonshore")):
+    if gap_blocked_by_wind(hour, spot):
         return None
     return hour["swell_offshore"] * spot["gap_transfer"]
 
@@ -1380,6 +1403,13 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     observert helt flatt, og ordet forblir "Flatt")."""
     if solid > 1:
         return None
+    # 19.11.2026 (fysikk-kontrolløren, forslag S22): svellet kommer gjennom gapet, men gap-grensa er tatt bort av
+    # kraftig pålandsvind (eller vind fra ukjent retning). Timen er blåst ut, ikke flat: BarentsWatch-høyden ved
+    # punktet er lav fordi kystmodellen slipper for lite inn, ikke fordi svellet mangler (Russelv 16.11.2026).
+    # Bare når grensa ville løftet høyden over flat-sperren: er svellet ute så lite at timen er flat også uten
+    # vinden (grense under FLAT_HS_THRESHOLD), er ordet fortsatt flat.
+    if gap_blocked_by_wind(hour, spot) and hour["swell_offshore"] * spot["gap_transfer"] >= FLAT_HS_THRESHOLD:
+        return "blown_out"
     bw = hour.get("bw_height") if source == "barentswatch" else None
     little_total = bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT
     flat = little_total and (low_hs or (surf_height is not None and surf_height < LOW_RATING_FLAT_SURF_HEIGHT_MAX))
@@ -1389,7 +1419,10 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
                 and energy_swell >= (energy_thresholds_used(spot) or (None, LOW_ENERGY_WORD_KJ))[1]):
             return "treffer_ikke"
         return "flat"
-    wind_dominant = potential >= 1 and lost_wind > 0 and lost_wind >= lost_tide
+    # 19.11.2026 (fysikk-kontrolløren, forslag S22): ukjent vindstyrke koster det faste ene poenget i wind_penalty(),
+    # men vi vet ikke at det blåser. En time uten vindstyrke får aldri vinden som grunn.
+    wind_dominant = (hour.get("wind_speed") is not None
+                     and potential >= 1 and lost_wind > 0 and lost_wind >= lost_tide)
     if blown_out or wind_dominant:
         return "blown_out"
     if bw_detail is not None and not little_total and bw_detail["swell_share"] < STORMSJO_SHARE_MAX:
@@ -1776,12 +1809,16 @@ def rate(hour, spot):
     lost_tide = min(lost_total - lost_wind, tide_pen if five_lost != "tide" else max(1, tide_pen))
     local_extra_stars = lost_total - lost_wind - lost_tide
     solid_before_local = solid + local_extra_stars
+    # 19.11.2026 (fysikk-kontrolløren, forslag S22): mangler vindstyrken, er det faste poenget et fradrag for et
+    # usikkert varsel og ikke for vind vi har sett. Det bokføres under "cap", så ordet ved 0 poeng blir «Ikke surfbart
+    # nå» og ikke «Blåst ut». Stjernene og faded_wind er uendret.
+    wind_alone = min(potential_before_energy, math.floor(wp + 0.5))
     zero_losses = {
         "energy": faded_energy,
-        "wind": min(potential_before_energy, math.floor(wp + 0.5)),
+        "wind": 0 if wind_speed is None else wind_alone,
         "tide": min(potential_before_energy, tide_pen),
         "local": local_extra_stars,
-        "cap": faded_cap,
+        "cap": faded_cap + (wind_alone if wind_speed is None else 0),
     }
     local_rules_source = None
     if spot.get("local_rules"):

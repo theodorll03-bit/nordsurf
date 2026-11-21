@@ -1,5 +1,52 @@
 # Nordsurf: status
 
+## Ukjent vind - ja fra Theodor 20.11 (S22), 21.11.2026
+
+Gren `fiks/ukjent-vind`, med main (`b515492`) flettet inn 21.11. Endrer `fetcher/rating.py`, så dette er en ratingendring. Ja til a–d i svar.md 20.11 (S22), som fysikk-kontrolløren godkjente dem. Egen PR. Regelen er fysikk-kontrollørens (19.11). Den erstatter feiljegerens variant fra 17.11 («ingen gap-grense når vindstyrken er ukjent»), som kontrolløren ikke godkjente: den ville gitt «Flatt 0,0 m» bare fordi vindvarselet manglet.
+
+**Regelen**
+- **Ukjent retning, kjent styrke fra 8 m/s:** gap-grensa på Russelv tas bort, som ved kjent pålandsvind (`gap_blocked_by_wind()`). Før løftet grensa høyden, og timen kunne få ett poeng mer enn samme time med kjent pålandsvind. Kilde: samme konvensjon som `wind_penalty()` og `bw_swell_dominates()`, der ukjent retning regnes som pålands.
+- **Ukjent styrke:** gap-grensa står. Vinden vi mangler koster sitt faste ene poeng som før. Kilde: grunnregelen, manglende data er aldri 0.
+- **Ordet når vinden tar grensa bort:** `blown_out` og ikke `flat`, men bare når grensa ville løftet høyden over flat-sperren (svell ute ganger 0,2 minst 0,35 m). Er svellet mindre, er timen flat også uten vinden, og ordet står. Ordet går også foran `treffer_ikke`: svellet kommer gjennom gapet selv om det ligger like utenfor spotens vindu. I varselet 19.11 gjelder det 5 mørke timer hvis vinden settes til 8 m/s pålands, og ingen timer i varselet som det er (feiljegeren 21.11).
+- **En time uten vindstyrke får aldri vinden som grunn:** `classify_low_rating()` krever kjent styrke for `blown_out` fra vindstraffen. Målt vindsjø ved punktet (`is_blown_out()`) er uendret.
+- **Bokføringen:** det faste poenget for ukjent styrke står under `zero_losses.cap` og ikke `wind`. Appen viser da «Ikke surfbart nå» ved 0 poeng, uten endring i appen. Stjernene og `faded_wind` er uendret.
+- **Appen (`windLossWord`):** ukjent retning med kjent styrke heter «For mye vind» når vinden har tatt poeng eller er fra 8 m/s. Ordet finnes fra før.
+
+**Før og etter** (varselet 19.11 kl. 14Z, 27 spots, 5 427 timer, spilt gjennom `rate()` på main og på grenen)
+| | Poeng endret | 2 poeng eller mer | Grunn endret | Høyde endret |
+|---|---|---|---|---|
+| Varselet som det er (ingen vind mangler) | 0 | 0 | 0 | 0 |
+| Tenkt: all vind mangler | 0 | 0 | 1 043 (`blown_out` til ingen grunn 991, til `treffer_ikke` 52) | 0 |
+| Tenkt: all vindretning mangler | 0 | 0 | 0 | 1 (Russelv 22.11 kl. 01Z, mørkt: 0,23 til 0,12 m, flatt før og etter) |
+
+Samme kjøring 21.11 på varselet fra kl. 11Z (27 spots, 5 454 timer), etter at main er flettet inn:
+| | Poeng endret | 2 poeng eller mer | Grunn endret | Høyde endret |
+|---|---|---|---|---|
+| Varselet som det er (ingen vind mangler) | 0 | 0 | 3 (Russelv 22.11 kl. 03–05Z, mørkt: 0 poeng, 8–10 m/s pålands, ingen grunn til `blown_out`) | 0 |
+| Tenkt: all vind mangler | 0 | 0 | 1 218 (`blown_out` til ingen grunn 1 171, til `treffer_ikke` 47) | 0 |
+| Tenkt: all vindretning mangler | 0 | 0 | 0 | 6 (Russelv, mørkt eller skumring, 0 poeng før og etter) |
+
+De tre timene på Russelv har kjent pålandsvind som tar gap-grensa bort. Det er ordet i regelen (test 35.3): timen er blåst ut, og sto uten grunn før. Timene rundt (kl. 02Z og 06Z) heter `blown_out` fra før.
+
+Oppdiktede timer på Russelv (svell 10 s fra 10°, BarentsWatch 0,3 m med 4 s ved punktet):
+| Time | Før | Etter |
+|---|---|---|
+| Svell 4,0 m, 2 m/s fralands | 3 | 3 |
+| Svell 4,0 m, 9 m/s pålands | 0 (`flat`) | 0 (`blown_out`) |
+| Svell 4,0 m, 9 m/s, retning ukjent | 1 (`blown_out`) | 0 (`blown_out`) |
+| Svell 4,0 m, styrke ukjent | 2 | 2 |
+| Svell 2,5 m, styrke ukjent | 1 (`blown_out`) | 1 (ingen grunn) |
+| Grøtfjord, svell 1,0 m, vind ukjent | 1 (`blown_out`) | 1 (ingen grunn) |
+
+Tabellene teller grunnen fra henteren (`low_reason`). Bokføringen endrer i tillegg ordet i appen for timer på 0 poeng uten grunn og med surfehøyde fra 0,8 m: der blir «Blåst ut» til «Ikke surfbart nå» når vindstyrken mangler. I kontrollørens første gjennomgang gjaldt det 627 timer (153 lyse) i det tenkte tilfellet der all vind mangler, og ingen timer i varselet som det er.
+
+Ingen time flytter seg 2 poeng eller mer. Ingen fast observasjon har ukjent vindstyrke, og ingen blir dårligere (test_rating.py og test_backtest.py består).
+
+**Tester:** test 35 i `fetcher/test_rating.py` (hvert ledd er sett feile uten sin regel, ni mutasjoner) og ordene i `fetcher/test_spotside_browser.py`. Feiljegeren kjørte 21.11 og fant ingen stoppere. To testhull den fant er tettet: sidevind fra 8 m/s beholder gap-grensa, og svell akkurat på flat-sperren (0,35 m) er blåst ut.
+
+**Ikke gjort**
+- Forklaringslinjene i henteren («Vind: ukjent» uten fradraget, og tom etikett ved ukjent retning) trenger nye setninger. De venter på Theodor.
+- Observasjonstimen på Russelv 16.11 kl. 11Z heter «Treffer ikke» (gap-unntaket mangler i `treffer_ikke`). Egen runde.
 ## T3 design B 4.0 «Papir» - småting 2 etter go-live, 19.11.2026
 
 Gren `design/b4-etter-2` fra main `bad495a` (småting 1, live 19.11 kl. 15:25Z). Bare visning: ingen ratingfil og ikke spots.json er rørt.
