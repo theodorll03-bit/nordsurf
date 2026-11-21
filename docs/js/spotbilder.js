@@ -5,6 +5,7 @@ window.SPOTBILDER = {
   "berlevag-sandfjorden",
   "bleik",
   "bovaer",
+  "breivikeidet",
   "bunes",
   "ducks",
   "eggum",

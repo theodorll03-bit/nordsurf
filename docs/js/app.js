@@ -68,6 +68,8 @@ function heightMForDisplay(h){
   //   den til "flat" først, se classify_low_rating()).
   if(!h) return null;
   if(!h.low_reason) return h.surf_height;
+  // svak fralandsvind uten poengtap heter «Flatt» eller «Smått» (calmOffshoreWord) og får da heller ikke noe tall, som flat
+  if(h.low_reason==="blown_out" && !h.stars && calmOffshoreWord(h)!=null) return null;
   if(h.low_reason==="blown_out") return (h.surf_height!=null && h.surf_height>0) ? h.surf_height : h.bw_height;
   if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
   return null;
@@ -164,7 +166,7 @@ function localSourceLabel(src, sr){
 // 15 m/s fralands er ikke blåst ut). Det gjelder når fralandsvinden har tatt poeng, og når den er sterk nok til å ta
 // dem selv om det ikke var noen å ta: effektiv vind fra 12 m/s, der fralandskurven i fetcher/rating.py
 // (WIND_PENALTY_CURVES og effective_wind, samme tall her) runder til ett poeng (fysikk-kontrolløren 19.11.2026).
-// «Blåst ut» fordi det meste er vindsjø (rating.is_blown_out) i svakere fralandsvind beholder ordet. Bare visningsordet.
+// Svakere fralandsvind uten poengtap: se calmOffshoreWord() under. Bare visningsordet.
 const OFFSHORE_STRONG_MS = 12, GUST_FACTOR = 0.3, GUST_MAX_ADD_MS = 2;
 function effectiveWind(h){
   const v = h.wind_speed, g = h.gust;
@@ -180,6 +182,25 @@ function windLossWord(h){
   if(h.wind_type==null) return h.wind_speed!=null && (tapt > 0 || h.wind_speed >= UNKNOWN_DIR_STRONG_MS) ? STR.wordTooMuchWind : LOW_REASON_WORD.blown_out;
   if(h.wind_type!=="offshore") return LOW_REASON_WORD.blown_out;
   return tapt > 0 || (eff!=null && eff >= OFFSHORE_STRONG_MS) ? STR.wordTooMuchWind : LOW_REASON_WORD.blown_out;
+}
+// Svak fralandsvind uten poengtap (Theodor S21 a, 20.11.2026): timen er «blown_out» fordi det meste ved punktet er vindsjø
+// (rating.is_blown_out, som ikke ser på vindretningen), men appen skal ikke skylde på vinden når det ikke er svell
+// (fysikk-kontrolløren 19.11.2026: 32 slike timer, vind 1–9 m/s fralands, surfehøyde 0,0). Ordet følger surfehøyden som
+// ved 0 poeng ellers: «Flatt» under 0,3 m, «Smått» fra 0,3 m. null når regelen ikke gjelder: vinden har tatt poeng eller
+// er sterk (windLossWord), høyden er fra 0,8 m (da er det bølger, og de er vindsjø), eller høyden eller vindstyrken
+// mangler (manglende data er aldri 0). Bare visningsordet.
+function calmOffshoreWord(h){
+  if(!h || h.low_reason!=="blown_out" || h.wind_type!=="offshore" || h.surf_height==null || h.surf_height >= MUSHY_SURF_MIN_M) return null;
+  const z = h.zero_losses, tapt = Math.max((z && z.wind)||0, h.faded_wind||0), eff = effectiveWind(h);
+  if(tapt > 0 || eff==null || eff >= OFFSHORE_STRONG_MS) return null;
+  if(h.stars) return STAR_WORDS[Math.min(5, h.stars)];
+  return h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
+}
+// Setningen bak low_reason på forsiden og i dagslista (ui.js favSetning) når ordet ikke har egen forklaring. Svak fralandsvind
+// uten poengtap (calmOffshoreWord, S21 a) får ingen setning, som en flat time: «Sterk vind ødelegger bølgene» er ikke sant der.
+function lowReasonNotice(h){
+  if(!h || !h.low_reason || !STR.notice[h.low_reason] || calmOffshoreWord(h)!=null) return null;
+  return STR.notice[h.low_reason] + ".";
 }
 function zeroCause(h){
   const per = h.period;
@@ -235,7 +256,7 @@ function ratingWord(h){
   // (grunnregelen; fysikk-kontrollør 09.10.2026, 0 slike timer i dag)
   if(!(h.stars) && !h.low_reason && h.surf_height==null) return "–";
   const z = zeroWord(h); if(z!=null) return z;
-  if(h.low_reason==="blown_out") return windLossWord(h);
+  if(h.low_reason==="blown_out"){ const svak = calmOffshoreWord(h); return svak!=null ? svak : windLossWord(h); }
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
 }

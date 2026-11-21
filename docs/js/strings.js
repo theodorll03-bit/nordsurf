@@ -43,7 +43,8 @@
       "Grøtete": "Bølgene er der, men kort periode og lite energi gjør dem svake.",
       "Usikkert": "Kildene er uenige om svellet når inn til spoten.",
       "Blåst ut": "Bølgene er der, men vinden ødelegger dem.",
-      "For mye vind": "Bølgene er der, men vinden ødelegger dem.",
+      // egen forklaring (Theodor S21 b, 20.11.2026). Ikke «Fralandsvinden …»: ordet brukes også når retningen er ukjent
+      "For mye vind": "Vinden er for sterk.",
       "Feil tidevann": "Bølgene er der, men tidevannet passer ikke spoten nå.",
       "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.",
     },
@@ -144,7 +145,8 @@
       tilbake: "Tilbake", tilbakeTil: (sted) => `Tilbake til ${sted}`, fra: {hjem: "Hjem", utforsk: "Utforsk", logger: "Logger"},
       bildeAlt: (spot) => `Satellittbilde av ${spot} ovenfra, nord opp`,
       best: "Best", lys: "Lys", luft: "Luft", vann: "Vann", oppdatert: "Oppdatert",
-      kl: (hh) => `Kl. ${hh}`, svell: "Svell", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
+      // «Svell ute» og ikke «Svell»: tallet er svellet ute (swell_offshore), ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
+      kl: (hh) => `Kl. ${hh}`, svell: "Svell ute", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
       mangler: "mangler data", hoy: "høy", lav: "lav", snur: "snur",
       svellSub: (s, retning, grader) => `${s} s · fra ${retning} ${grader}°`,
       timeForTime: "Time for time", naa: "Nå", velgTime: "Velg time", velgDag: "Velg dag", tilbakeNa: "Tilbake til nå",
@@ -152,7 +154,7 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
@@ -163,7 +165,7 @@
       vinduTil: (a, b) => `${a} til ${b}`,
     },
 
-    /* Nettsiden fra 1024 px (design B 4.0 steg 6, SPEC §6C spotsiden og §6D forsiden «Beste nå»).
+    /* Nettsiden fra 1024 px (design B 4.0 steg 6, SPEC §6C spotsiden og §6D forsiden «Beste i dag»).
        FORELØPIG: ordene i denne blokka er tatt fra skissene eller foreslått av Claude, og venter på Theodors ja
        (lista står i privat/design-b4/steg-6/nettside-steg6.md, «Ord som mangler»). Ord som fantes fra før
        (Svell fra, Vind, Tidevann, Lys, Oppdatert, Best, Mørkt …) hentes fra STR.spot og STR.hjem. */
@@ -172,15 +174,16 @@
       lagreFav: "Lagre som favoritt", fjernFav: "Fjern fra favoritter",
       neste7: "Neste 7 dager", usikre: "Dag 4–7 er usikre",
       timeForTime: (dag) => `${dag} time for time`, holdMusa: "Hold musa over en time",
-      rader: {kl: "Kl.", vurdering: "Vurdering", svell: "Svell m", vind: "Vind m/s", tideSub: "over sjøkartnull"},
+      rader: {kl: "Kl.", vurdering: "Vurdering", svell: "Svell ute m", vind: "Vind m/s", tideSub: "over sjøkartnull"},
       spotten: "Spotten", omSpotten: "Om spotten",
       fig: (n, navn) => `Fig. ${n} · ${navn}, nord opp.`,
       kartOsm: "Kart: © OpenStreetMap-bidragsytere",
       om: {vender: "Vender mot", hoyde: "Best høyde", data: "Data"},
       varselFra: (dag, kl) => `Varsel fra ${dag} kl. ${kl}`,
       antall: (n) => `${n} ${n === 1 ? "spot" : "spots"}`,
-      besteNa: "Beste nå", tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
-      kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell", timer: "06–18", region: "Region"},
+      // overskriften over tabellen følger dagen som er valgt (Theodor S20 b, 20.11.2026): tallene er dagens beste, ikke nå-timen
+      besteIDag: "Beste i dag", besteIMorgen: "Beste i morgen", tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
+      kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell ute", timer: "06–18", region: "Region"},
       nr: (n) => String(n).padStart(2, "0"),
       bestDag: (dag) => `Best ${dag}`,
       visAlle: (n) => `Vis alle ${n}`, apneKart: "Åpne kartet",

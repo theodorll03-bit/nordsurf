@@ -248,7 +248,7 @@
     if(b.st < 1){
       const e = ratingWordExplain(h);
       if(e) return e.replace(/\s+[–-] se regnestykket under\.?$/, ".");
-      return h.low_reason && STR.notice[h.low_reason] ? STR.notice[h.low_reason] + "." : null;
+      return lowReasonNotice(h);
     }
     const hoyde = heightText(h);
     const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
@@ -327,9 +327,9 @@
     const g = groups().find(x=>x.region===r) || {region: r, spots: []};
     return `<section class="sek"><h2 class="h2">Spots i ${esc(r)}</h2></section>${regionChips(r, "region")}${g.spots.length ? gruppeHtml(g, days) : `<p class="muted">Ingen spots i ${esc(r)} ennå.</p>`}`;
   }
-  /* ---------- Nettsiden: forsiden «Beste nå» (design B 4.0 steg 6, SPEC §6D) ---------- */
+  /* ---------- Nettsiden: forsiden «Beste i dag» (design B 4.0 steg 6, SPEC §6D «Beste nå») ---------- */
   // Datolinje, overskrift av to setninger (samme overskrift() som mobil, på spotene og dagen filtrene viser - så den aldri
-  // sier noe annet enn tabellen), I DAG / I MORGEN og regionfaner, hovedbildet med dagens beste, «Beste nå» som tabell
+  // sier noe annet enn tabellen), I DAG / I MORGEN og regionfaner, hovedbildet med dagens beste, «Beste i dag» som tabell
   // med tidsstripa 06-18 (dagssammendragets «timer», publish.py) og «Neste 7 dager» som matrise uten bokser.
   // Samme dagstall (dayBest) overalt. Ren visning: «–» når tallet mangler, aldri 0.
   const FS_RADER = 10;   // surfbare rader før «Vis alle»
@@ -415,6 +415,9 @@
     const dato = [`${cap(fmtDay.format(now))} ${key.slice(8, 10)}.${key.slice(5, 7)}`, lys, K ? STR.hjem.fra(K.fra.navn) : null,
       `${STR.spot.oppdatert} ${dayKey(gen)===key ? "" : relDay(gen) + " "}${fmtTime.format(gen)}`, STR.web.antall(DATA.spots.length)].filter(Boolean).join(" · ");
     const dagNavn = (d)=> cap(relDay(new Date(d.key + "T11:00:00Z")));
+    // «Beste i dag» eller «Beste i morgen» etter dagen som er valgt (Theodor S20 b, 20.11.2026). En annen dag (gammelt varsel) får «Best <dag>».
+    const rd = dag ? relDay(new Date(dag.key + "T11:00:00Z")) : "i dag";
+    const besteTittel = rd==="i dag" ? STR.web.besteIDag : rd==="i morgen" ? STR.web.besteIMorgen : STR.web.bestDag(rd);
     const rader = dag ? fsRader(spots, dag.key) : [], helt = fsHelt(rader);
     const resten = rader.filter(r=> r!==helt), surf = resten.filter(r=> r.b.st!=null && r.b.st >= 1);
     const vis = S.fsAlle ? resten : surf.length ? surf.slice(0, FS_RADER) : resten.slice(0, 5);
@@ -427,7 +430,7 @@
         <div class="fs-faner" role="group" aria-label="${esc(STR.web.region)}"><button type="button" data-fsreg="" aria-pressed="${!reg}">${esc(STR.web.alle)} <span>${DATA.spots.length}</span></button>${regs.map(r=> `<button type="button" data-fsreg="${esc(r)}" aria-pressed="${r===reg}">${esc(r)} <span>${DATA.spots.filter(s=> regionOf(s)===r).length}</span></button>`).join("")}</div>
       </div>
       ${helt && dag ? fsHeltHtml(helt, relDay(new Date(dag.key + "T11:00:00Z"))) : ""}
-      <section class="sek"><h2 class="h2">${esc(STR.web.besteNa)}</h2><p class="sub">${esc(`${STR.web.tallFra} · ${STR.web.bareLyse}`)}</p></section>
+      <section class="sek"><h2 class="h2">${esc(besteTittel)}</h2><p class="sub">${esc(`${STR.web.tallFra} · ${STR.web.bareLyse}`)}</p></section>
       <table class="fs-tabell"><thead><tr><th scope="col" class="fs-nr">${esc(STR.web.kol.nr)}</th><th scope="col">${esc(STR.web.kol.spot)}</th><th scope="col">${esc(dag ? dagNavn(dag) : "")}</th><th scope="col">${esc(STR.web.kol.best)}</th><th scope="col">${esc(STR.web.kol.svell)}</th><th scope="col" class="fs-tim">${esc(STR.web.kol.timer)}</th></tr></thead>
         <tbody>${vis.map((r, i)=> fsRadHtml(r, i + (helt ? 2 : 1), dag.key)).join("")}</tbody></table>
       <div class="fs-bunn">${tegn}<div class="fs-knapper">${vis.length < resten.length ? `<button type="button" class="knapp2" id="fsAlle">${esc(STR.web.visAlle(spots.length))}</button>` : ""}<a class="knapp1" href="#utforsk">${esc(STR.web.apneKart)} <span aria-hidden="true">→</span></a></div></div>
