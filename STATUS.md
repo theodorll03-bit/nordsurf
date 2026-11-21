@@ -1,5 +1,13 @@
 # Nordsurf: status
 
+## Verktøy: Impeccable-skillen lagt inn i .claude/skills, 21.11.2026
+
+Gren `verktoy/impeccable`. Ja fra Theodor i chatten 21.11 («ja, gjør det»). Rører ingen kode, ingen data og ikke docs/: bare `.claude/skills/impeccable/` (Impeccable 4.10.0 fra github.com/pbakaus/impeccable, Apache 2.0, uendret kopi av repoets `.claude/skills/impeccable`) og nye linjer i `.gitignore`.
+
+- **Hva det er:** en designskill for Claude Code (kritikk, audit, polering, typografi, farger, animasjon og nye flater). Kalles med `/impeccable` eller trigges når oppgaven er design. Reglene i CLAUDE.md, designvalgene Theodor har tatt (B 4.0 «Papir», «Sjøkart», fargene) og de faste testene går foran det skillen foreslår.
+- **Motoren** (et lite program skillen bruker til skjermbilder og sjekker) lastes ned fra GitHub-utgivelsene til Impeccable første gang den kjøres på en maskin, og sjekkes mot `scripts/engine-checksums.txt`. Den ligger ikke i git (`scripts/bin/` er ignorert).
+- **Ikke gjort:** designkroken (hook som sjekker hver UI-endring) er ikke slått på. Den skrives per maskin i `.claude/settings.local.json` og slås på med `/impeccable hooks on` i Claude Code på Macen, hvis Theodor vil ha den. `/impeccable init` (PRODUCT.md) er heller ikke kjørt.
+
 ## T3 design B 4.0 «Papir» - ordene «Svell ute», «Beste i dag» og svak fralandsvind (S20 og S21), bilde til Breivikeidet, 21.11.2026
 
 Gren `design/b4-etter-3` fra main `70547f8` (ukjent vind, S22). Bare visning: ingen ratingfil og ikke spots.json er rørt. Ja fra Theodor i svar.md 20.11 (S20 a–c, S21 a og b, bildet).
