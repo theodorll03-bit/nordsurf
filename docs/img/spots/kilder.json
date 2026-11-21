@@ -41,6 +41,20 @@
   ],
   "hentet": "2026-11-16"
  },
+ "breivikeidet": {
+  "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
+  "aar": 2025,
+  "lisens": "CC BY 4.0",
+  "lisens_url": "https://creativecommons.org/licenses/by/4.0/",
+  "kreditering": "Laget av Sentinel-2 (2025) bilder fra Copernicus-programmet til EU, bearbeidet av Kartverket, basert på metoder utviklet fra CESBIO og CNES. CC BY 4.0. Farger og korn: Nordsurf.",
+  "utsnitt": [
+   19.58232,
+   69.64888,
+   19.72865,
+   69.68727
+  ],
+  "hentet": "2026-11-21"
+ },
  "bunes": {
   "kilde": "Satellittdata - Sentinel-2 - Skyfritt opptak Norge 2025 (Kartverket)",
   "aar": 2025,

@@ -63,6 +63,7 @@ DOCS = ROOT / "docs"
 SHOT_DIR = DOCS / "design" / "spotside" / "etter"
 SHOT_DIR.mkdir(parents=True, exist_ok=True)
 ELEMENT_TIMEOUT_MS = 15_000
+SF_ID = "farstadsanden"   # spoten som får svak fralandsvind uten svell i alle timer (S21 a)
 FILE_TIMEOUT_S = 300
 OSLO = ZoneInfo("Europe/Oslo")
 FIXTURE = ROOT / "fetcher" / "fixtures" / "forecast.json"
@@ -373,6 +374,35 @@ def main():
                 assert uv["svak"] == uv["ut"] and uv["maalt"] == uv["ut"], uv
                 # grensa er 8 m/s på vindstyrken uten kast, som BLOWN_OUT_WIND_MS i henteren: 8,0 er «For mye vind», 7,9 og 6 m/s med kast 14 er det ikke
                 assert uv["atte"] == uv["mye"] and uv["under"] == uv["ut"] and uv["kast"] == uv["ut"], f"grensa for ukjent retning skal være 8 m/s uten kast: {uv}"
+
+                # Svak fralandsvind uten poengtap (Theodor S21 a, 20.11.2026): appen skylder ikke på vinden når det ikke er svell.
+                # Ordet følger surfehøyden: «Flatt» under 0,3 m, «Smått» fra 0,3 m. Fra 0,8 m er det bølger (vindsjø), og «Blåst ut» står.
+                sf = page.evaluate("""() => { const b = {stars: 0, period: 4, low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 4, bw_height: 0.6, light: 'dag'}, z = (w) => ({energy: 0, wind: w, tide: 0, local: 0, cap: 0});
+                    const alt = (x) => { const h = {...b, zero_losses: z(0), ...x}; return [ratingWord(h), ratingWordExplain(h), heightMForDisplay(h), lowReasonNotice(h)]; };
+                    return {null_m: alt({surf_height: 0}), under: alt({surf_height: 0.29}), paa: alt({surf_height: 0.3}), smaa: alt({surf_height: 0.79}), stor: alt({surf_height: 0.8}),
+                        mangler: alt({surf_height: null}), tapt: alt({surf_height: 0.1, zero_losses: z(1)}), falmet: alt({surf_height: 0.1, faded_wind: 1}), sterk: alt({surf_height: 0.1, wind_speed: 12}),
+                        kast: alt({surf_height: 0.1, wind_speed: 10.5, gust: 17}), elleve: alt({surf_height: 0.1, wind_speed: 11.9}), styrke: alt({surf_height: 0.1, wind_speed: null}),
+                        paland: alt({surf_height: 0.1, wind_type: 'onshore'}), side: alt({surf_height: 0.1, wind_type: 'side'}), retning: alt({surf_height: 0.1, wind_type: null}),
+                        ett: alt({surf_height: 0.5, stars: 1}), flat: alt({surf_height: 0.1, low_reason: 'flat'}), stormsjo: alt({surf_height: 0.1, low_reason: 'stormsjo'}),
+                        flatt: STR.starWords[0], smatt: STR.wordSmall, smatt_fork: STR.wordExplain[STR.wordSmall], daarlig: STR.starWords[1], ut: STR.lowReason.blown_out, ut_fork: STR.wordExplain[STR.lowReason.blown_out],
+                        mye: STR.wordTooMuchWind, mye_fork: STR.wordExplain[STR.wordTooMuchWind], setn: STR.notice.blown_out + '.', setn_storm: STR.notice.stormsjo + '.'}; }""")
+                assert (sf["flatt"], sf["smatt"], sf["daarlig"], sf["ut"], sf["mye"]) == ("Flatt", "Smått", "Dårlig", "Blåst ut", "For mye vind"), sf
+                # ordet, forklaringen, høyden som vises og setningen på forsiden: en flat time har ingen av de tre siste
+                assert sf["null_m"] == [sf["flatt"], None, None, None] and sf["under"] == [sf["flatt"], None, None, None], f"svak fralandsvind uten svell skal hete «{sf['flatt']}» uten tall og uten setning om vinden: {sf}"
+                assert sf["paa"] == [sf["smatt"], sf["smatt_fork"], None, None] and sf["smaa"] == [sf["smatt"], sf["smatt_fork"], None, None], f"fra 0,3 m skal ordet være «{sf['smatt']}»: {sf}"
+                assert sf["elleve"][0] == sf["flatt"] and sf["elleve"][3] is None, f"under 12 m/s uten tapte poeng gjelder regelen: {sf}"
+                # fra 0,8 m, og når høyden eller vindstyrken mangler (manglende data er aldri 0), står «Blåst ut» med tallet og setningen som før
+                assert sf["stor"] == [sf["ut"], sf["ut_fork"], 0.8, sf["setn"]] and sf["mangler"] == [sf["ut"], sf["ut_fork"], 0.6, sf["setn"]] and sf["styrke"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]], sf
+                # vind som har tatt poeng eller er fra 12 m/s (med kast), heter «For mye vind» som før (S15 a), med den nye forklaringen (S21 b)
+                assert all(sf[k] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]] for k in ("tapt", "falmet", "sterk", "kast")), f"vind som tar poeng eller er sterk skal hete «{sf['mye']}»: {sf}"
+                assert sf["mye_fork"] == "Vinden er for sterk." and sf["mye_fork"] != sf["ut_fork"], sf
+                # bare fralandsvind: pålandsvind, sidevind og ukjent retning beholder «Blåst ut»
+                assert all(sf[k] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] for k in ("paland", "side", "retning")), sf
+                # en time med 1 poeng får poengordet og tallet sitt, og andre grunner er urørt
+                assert sf["ett"][0] == sf["daarlig"] and sf["ett"][2] == 0.5 and sf["ett"][3] is None, sf
+                assert sf["flat"][0] == sf["flatt"] and sf["flat"][2] is None and sf["stormsjo"][0] == "Stormsjø" and sf["stormsjo"][2] == 0.6, sf
+                # regelen gjelder bare `blown_out`: stormsjø i svak fralandsvind beholder setningen sin på forsiden
+                assert sf["stormsjo"][3] == sf["setn_storm"] == "Mest vindsjø, lite ekte svell.", sf
 
                 def media(scheme, contrast="no-preference"):
                     cdp.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if scheme == "mork" else "light"}, {"name": "prefers-contrast", "value": contrast}]})
@@ -686,6 +716,10 @@ def main():
                     assert dom["dag"].lower() == "i morgen" and (dom["vindu"] is not None) == (st >= 1), dom
                     # timen: svell stort, så surf, vind og tidevann - tallene er varselets
                     assert nf1(h["swell_offshore"]) in tekst("#spOver .t-svell"), (tekst("#spOver .t-svell"), h["swell_offshore"])
+                    assert tekst("#spOver .svell > .etikett") == "Svell ute", tekst("#spOver .svell > .etikett")   # svellet ute, ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
+                    # samme ord i det skjermleseren leser for hver time i timestripa
+                    sv_aria = page.evaluate("[...document.querySelectorAll('#tstripe [aria-label]')].map(e => e.getAttribute('aria-label')).filter(a => /svell/i.test(a))")
+                    assert page.evaluate("STR.spot.timeSvell('1,2')") == "Svell ute 1,2 m" and all("Svell ute " in a_ for a_ in sv_aria), sv_aria[:3]
                     sub = tekst("#spOver .svell > .svell-sub")
                     assert f"{r0(h['period'])} s" in sub and f"{r0(h['dir_offshore'])}°" in sub, (sub, h["period"], h["dir_offshore"])
                     maal = maalene()
@@ -725,7 +759,7 @@ def main():
                         # SPEC §6C: 7 store dagkolonner, tabellen time for time med etikettkolonnen, minikartet med kystlinje
                         assert page.locator(".dagvelger.sju .dagknapp.stor").count() == 7, page.locator(".dagvelger.sju .dagknapp").count()
                         etik = page.evaluate("[...document.querySelectorAll('#tstripe .tetik > *')].map(e => e.textContent.replace(/\\s+/g, ' ').trim())")
-                        assert etik[:5] == ["Kl.", "Vurdering", "Svell m", "Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
+                        assert etik[:5] == ["Kl.", "Vurdering", "Svell ute m", "Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
                         page.wait_for_selector("#miniKort .minikart path.land")
                     shot("unstad-na", scheme); audit("unstad-na")
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
@@ -887,8 +921,15 @@ def main():
                         page.click("#forside [data-fsreg='']"); page.wait_for_selector("#forside [data-fsreg=''][aria-pressed='true']")
                         fs = page.evaluate("""() => ({helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, tall: (document.querySelector('#forside .fs-helt .fs-tall') || {}).textContent || null,
                             rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, tall: (r.querySelector('.t-listetall') || {}).textContent || '', stripe: r.querySelectorAll('.fs-stripe i').length})),
-                            kol: [...document.querySelectorAll('#forside table.fs-tabell thead th')].map(t => t.textContent.trim()), dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim()})""")
-                        assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Svell", "06–18"], fs
+                            kol: [...document.querySelectorAll('#forside table.fs-tabell thead th')].map(t => t.textContent.trim()), dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim(),
+                            tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim()})""")
+                        # tallet i kolonnen er svellet ute, og overskriften følger dagen som er valgt (Theodor S20 a og b, 20.11.2026)
+                        assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Svell ute", "06–18"] and fs["tittel"] == "Beste i morgen", fs
+                        # etter lyset er knappene «I morgen» og ukedagen etter: en navngitt dag heter «Best fredag» som før
+                        page.click("#forside [data-fsdag='1']"); page.wait_for_selector("#forside [data-fsdag='1'][aria-pressed='true']")
+                        fs2 = page.evaluate("({dag: document.querySelector('#forside .fs-seg [aria-pressed=\"true\"]').textContent.trim(), tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim()})")
+                        assert fs2["dag"] not in ("I dag", "I morgen") and fs2["tittel"] == "Best " + fs2["dag"].lower(), fs2
+                        page.click("#forside [data-fsdag='0']"); page.wait_for_selector("#forside [data-fsdag='0'][aria-pressed='true']")
                         imorgen = (TODAY + dt.timedelta(days=1)).isoformat()
                         for r in fs["rader"]:
                             cls, st = day_cls(OV[r["id"]], imorgen)
@@ -908,11 +949,11 @@ def main():
                         sent, sdag = vinduer[0][0] + dt.timedelta(minutes=130), vinduer[0][1]
                         assert sent.astimezone(OSLO).date().isoformat() == sdag, (sent, sdag)
                         page.clock.set_fixed_time(sent); page.evaluate("Front.refresh()"); page.wait_for_selector("#forside table.fs-tabell")
-                        fs2 = page.evaluate("""() => ({dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim(),
+                        fs2 = page.evaluate("""() => ({dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim(), tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim(),
                             helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, best: (document.querySelector('#forside .fs-helt .fs-best') || {}).textContent || null,
                             ring: !!document.querySelector('#forside .fs-helt .fs-best svg'), aria: (document.querySelector('#forside .fs-helt') || {getAttribute(){ return ''; }}).getAttribute('aria-label') || '',
                             rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, bst: r.querySelector('.fs-bst').textContent.trim(), stripe: [...r.querySelectorAll('.fs-stripe i')].map(i => i.className)}))})""")
-                        assert fs2["dag"] == "I dag", fs2
+                        assert fs2["dag"] == "I dag" and fs2["tittel"] == "Beste i dag", fs2
                         def apent(sid):
                             d = next((x for x in OV[sid]["dager"] if x["d"] == sdag), None)
                             return bool(d and d.get("slutt") and d.get("h") and (d["h"].get("stars") or 0) >= 1 and t_(d["slutt"]) + dt.timedelta(hours=1) > sent)
@@ -1171,6 +1212,33 @@ def main():
                         bad = [deg for deg in range(360) if js[deg] != py[deg]]
                         assert not bad, f"{sid}: inSwellWindow ulik rating.in_sector for {bad[:10]} (vindu {d['swell_window']})"
                 ctx.close()
+            # ---- S21 a på skjermen: alle timene på én spot er svak fralandsvind uten svell og uten poengtap. Spotsiden sier «Flatt»
+            # for dagen og for timen, uten høydetall og uten setningen «Sterk vind ødelegger bølgene» (ui.js favSetning). ----
+            fc_sf = json.loads(json.dumps(FORECAST))
+            for s in fc_sf["spots"]:
+                if s["id"] == SF_ID:
+                    for h in s["hours"]:
+                        h.update(stars=0, faded=0, faded_wind=0, faded_tide=0, low_reason="blown_out", wind_type="offshore", wind_speed=3.0, gust=5.0, surf_height=0.0, surf_height_sets=0.0, bw_height=1.0,
+                                 zero_losses={"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0})
+            ov_sf, det_sf = publish.split(fc_sf)
+            ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo", device_scale_factor=2, is_mobile=True, has_touch=True)
+            page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
+            page.on("pageerror", lambda e: errors.append(f"svak fralandsvind: {e}"))
+            route(page)
+            def sf_route(rt, req):
+                path = req.url.split("?")[0]
+                if path.endswith("/data/oversikt.json"):
+                    return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_sf, ensure_ascii=False))
+                rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_sf[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
+            page.route("**/data/oversikt.json", sf_route)
+            page.route("**/data/spots/*.json", sf_route)
+            page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
+            page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
+            dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
+                vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
+            assert dom["ord"] == "Flatt" and dom["setn"] is None and dom["vindu"] is None, f"dagens beste time i svak fralandsvind uten svell skal hete «Flatt» uten setning om vinden: {dom['ord']!r}, {dom['setn']!r}, {dom['vindu']!r}"
+            assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak fralandsvind uten svell"
+            ctx.close()
             browser.close()
     finally:
         srv.shutdown()
