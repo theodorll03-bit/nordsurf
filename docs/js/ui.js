@@ -327,7 +327,7 @@
     const g = groups().find(x=>x.region===r) || {region: r, spots: []};
     return `<section class="sek"><h2 class="h2">Spots i ${esc(r)}</h2></section>${regionChips(r, "region")}${g.spots.length ? gruppeHtml(g, days) : `<p class="muted">Ingen spots i ${esc(r)} ennå.</p>`}`;
   }
-  /* ---------- Nettsiden: forsiden «Beste i dag» (design B 4.0 steg 6, SPEC §6D «Beste nå») ---------- */
+  /* ---------- Nettsiden: forsiden «Beste i dag» (design B 4.0 steg 6, SPEC §6D) ---------- */
   // Datolinje, overskrift av to setninger (samme overskrift() som mobil, på spotene og dagen filtrene viser - så den aldri
   // sier noe annet enn tabellen), I DAG / I MORGEN og regionfaner, hovedbildet med dagens beste, «Beste i dag» som tabell
   // med tidsstripa 06-18 (dagssammendragets «timer», publish.py) og «Neste 7 dager» som matrise uten bokser.
