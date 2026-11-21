@@ -1865,6 +1865,10 @@ assert BLOWN_OUT_WIND_MS == 8.0
 assert gap_floor(dict(rus_1611, wind_speed=8.0, wind_dir=None), R) is None and gap_blocked_by_wind(dict(rus_1611, wind_speed=8.0, wind_dir=None), R)
 assert abs(gap_floor(dict(rus_1611, wind_speed=7.9, wind_dir=None), R) - 0.484) < 1e-9
 assert not gap_blocked_by_wind(dict(rus_1611, wind_speed=7.9, wind_dir=None), R) and not gap_blocked_by_wind(dict(rus_1611, wind_speed=12.0, wind_dir=106.0), R)
+# sidevind tar ikke grensa bort, heller ikke ved 12 m/s (feiljegeren 21.11.2026): bare pålands, skrå pålands og ukjent retning
+from rating import wind_type as wind_type35
+h35_side = dict(rus_1611, wind_speed=12.0, wind_dir=240.0)
+assert wind_type35(240.0, R) == "side" and not gap_blocked_by_wind(h35_side, R) and abs(gap_floor(h35_side, R) - 0.484) < 1e-9
 # hjelperen følger de samme vilkårene som grensa: bare gap-spots, bare svell i vinduet, bare fra 7 s
 u35 = dict(rus_1611, wind_speed=9.0, wind_dir=None)
 assert gap_blocked_by_wind(u35, R) and not gap_blocked_by_wind(u35, R29) and not gap_blocked_by_wind(u35, G)
@@ -1926,5 +1930,10 @@ assert (rate(h35_live, R)["stars"], rate(h35_live, R)["low_reason"]) == (0, "fla
 assert rate(dict(h35_live, wind_speed=2.0, wind_dir=135.0), R)["low_reason"] == "flat"
 # med 2,5 m svell (grense 0,5 m) er samme vind «blåst ut»
 assert rate(dict(h35_live, swell_offshore=2.5, height_offshore=2.7), R)["low_reason"] == "blown_out"
+# akkurat på flat-sperren (svell 1,75 m ganger 0,2 = 0,35 m) er timen blåst ut, rett under (1,74 m) er den flat (feiljegeren 21.11.2026)
+sv35 = FLAT_HS_THRESHOLD / R["gap_transfer"]
+assert sv35 * R["gap_transfer"] == FLAT_HS_THRESHOLD > 1.74 * R["gap_transfer"]
+assert rate(t35(swell_offshore=sv35, height_offshore=1.95, wind_speed=9.0, wind_dir=350.0), R)["low_reason"] == "blown_out"
+assert rate(t35(swell_offshore=1.74, height_offshore=1.94, wind_speed=9.0, wind_dir=350.0), R)["low_reason"] == "flat"
 print("35: ukjent vind - ukjent retning fra 8 m/s regnes som pålands for gap-grensa, ukjent styrke beholder grensa og får aldri vinden som grunn, det faste poenget bokføres som usikkert varsel - OK")
 print("Alle tester ok")

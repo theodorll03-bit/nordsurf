@@ -7,7 +7,7 @@ Gren `fiks/ukjent-vind`, med main (`b515492`) flettet inn 21.11. Endrer `fetcher
 **Regelen**
 - **Ukjent retning, kjent styrke fra 8 m/s:** gap-grensa på Russelv tas bort, som ved kjent pålandsvind (`gap_blocked_by_wind()`). Før løftet grensa høyden, og timen kunne få ett poeng mer enn samme time med kjent pålandsvind. Kilde: samme konvensjon som `wind_penalty()` og `bw_swell_dominates()`, der ukjent retning regnes som pålands.
 - **Ukjent styrke:** gap-grensa står. Vinden vi mangler koster sitt faste ene poeng som før. Kilde: grunnregelen, manglende data er aldri 0.
-- **Ordet når vinden tar grensa bort:** `blown_out` og ikke `flat`, men bare når grensa ville løftet høyden over flat-sperren (svell ute ganger 0,2 minst 0,35 m). Er svellet mindre, er timen flat også uten vinden, og ordet står.
+- **Ordet når vinden tar grensa bort:** `blown_out` og ikke `flat`, men bare når grensa ville løftet høyden over flat-sperren (svell ute ganger 0,2 minst 0,35 m). Er svellet mindre, er timen flat også uten vinden, og ordet står. Ordet går også foran `treffer_ikke`: svellet kommer gjennom gapet selv om det ligger like utenfor spotens vindu. I varselet 19.11 gjelder det 5 mørke timer hvis vinden settes til 8 m/s pålands, og ingen timer i varselet som det er (feiljegeren 21.11).
 - **En time uten vindstyrke får aldri vinden som grunn:** `classify_low_rating()` krever kjent styrke for `blown_out` fra vindstraffen. Målt vindsjø ved punktet (`is_blown_out()`) er uendret.
 - **Bokføringen:** det faste poenget for ukjent styrke står under `zero_losses.cap` og ikke `wind`. Appen viser da «Ikke surfbart nå» ved 0 poeng, uten endring i appen. Stjernene og `faded_wind` er uendret.
 - **Appen (`windLossWord`):** ukjent retning med kjent styrke heter «For mye vind» når vinden har tatt poeng eller er fra 8 m/s. Ordet finnes fra før.
@@ -42,7 +42,7 @@ Tabellene teller grunnen fra henteren (`low_reason`). Bokføringen endrer i till
 
 Ingen time flytter seg 2 poeng eller mer. Ingen fast observasjon har ukjent vindstyrke, og ingen blir dårligere (test_rating.py og test_backtest.py består).
 
-**Tester:** test 35 i `fetcher/test_rating.py` (hvert ledd er sett feile uten sin regel, sju mutasjoner) og ordene i `fetcher/test_spotside_browser.py`.
+**Tester:** test 35 i `fetcher/test_rating.py` (hvert ledd er sett feile uten sin regel, ni mutasjoner) og ordene i `fetcher/test_spotside_browser.py`. Feiljegeren kjørte 21.11 og fant ingen stoppere. To testhull den fant er tettet: sidevind fra 8 m/s beholder gap-grensa, og svell akkurat på flat-sperren (0,35 m) er blåst ut.
 
 **Ikke gjort**
 - Forklaringslinjene i henteren («Vind: ukjent» uten fradraget, og tom etikett ved ukjent retning) trenger nye setninger. De venter på Theodor.
