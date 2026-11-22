@@ -1,5 +1,17 @@
 # Nordsurf: status
 
+## Regnestykket sier ikke «sterk vind» når vinden er svak (S24 b), 22.11.2026
+
+Gren `fiks/blast-ut-tekst` fra main `99d3cc5`. Endrer `fetcher/rating.py`, men bare én tekstlinje i regnestykket (`breakdown`): ingen poeng, høyder eller andre felt endres. Ja fra Theodor i svar.md 22.11 kl. 14.25 (S24 b). Egen PR, for en designgren får ikke røre ratingfilene.
+
+- **Før:** linja under «Hvorfor denne vurderingen?» sa «Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart» for alle timer der det meste ved punktet er vindsjø, også i 1 m/s (Seines 21.11 kl. 12–14, der ordet over var «Flatt» og linja under sa «Vind 1 m/s blankt: ingen effekt»).
+- **Nå:** «og sterk vind» står bare når vinden har tatt poeng eller er sterk: fra 8 m/s middelvind (`BLOWN_OUT_WIND_MS`), og for fralandsvind fra 12 m/s med kast (`BLOWN_OUT_TEXT_OFFSHORE_MS`). 12 m/s med kast er samme grense som ordet på skjermen bruker for fralandsvind (app.js, S21 a). Ellers står «Surfehøyde: blåst ut - mye vindsjø, ikke surfbart». Mangler vindstyrken, nevnes ikke vinden (manglende data er aldri 0, og aldri «sterk» heller).
+- **Avvik fra ordlyden i svaret, i forsiktig retning:** svaret sier «når vinden ikke har tatt poeng». I disse timene er potensialet 0, så vinden har ingenting å ta, også når den er 14 m/s. Derfor beholdes «og sterk vind» også når vinden er fra 8 m/s uten poengtap. Da er teksten som før i de timene.
+- **Telling på varselet 22.11 kl. 11Z** (27 spots, 5454 timer spilt gjennom `rate()` før og etter): 145 timer får den korte linja (7 lyse, 38 i skumring, 100 mørke), 14 timer beholder «og sterk vind», og ingen andre felt endres i noen time. 15 av de 145 er svak fralandsvind, der ordet på skjermen alt er «Flatt» (S21 a). I de 130 andre (side- og pålandsvind under 8 m/s) står ordet «Blåst ut» fortsatt på skjermen: S24 a er holdt tilbake og venter på S26, se under.
+- **Ordet og linja kan fortsatt sprike:** ordet på skjermen sier «Blåst ut» for alle disse timene unntatt svak fralandsvind, også når linja under nå sier bare «mye vindsjø». S24 a (ordet etter surfehøyden i svak vind fra alle retninger) er kodet og prøvd, men fysikk-kontrolløren stoppet den: grensa på 8 m/s middelvind tar med timer med 7–8 m/s pålands, kast opp mot 12 og 1–2 m vindsjø ved punktet. Spørsmålet står som S26. Velges en grense med kast, må denne linja følge etter i en liten PR.
+- **Vinden «har tatt poeng»:** en time er bare blåst ut når den er under flat-sperren (`is_blown_out()` krever `low_hs`), og da er potensialet 0 og vinden har ingenting å ta. Leddet slår derfor ikke til i dag (0 av 5454 timer, og 0 av 311 040 konstruerte timer på de åpne spotene). Det står som sikring hvis den regelen endres, og er prøvd for seg. I praksis er det vindstyrken som avgjør teksten.
+- **Tester:** test_rating.py 12.1b prøver linja i 1 m/s, rett under og på 8 m/s pålands, med kast, i fralandsvind rett under og på 12 m/s med kast, i sidevind og skrå pålandsvind rett under og på 8 m/s, med ukjent retning under og fra 8 m/s, uten vind og uten vindstyrke, med poengtap tvunget på, og at poeng, høyde og `low_reason` er like i alle tilfellene.
+
 ## Verktøy: Impeccable-skillen lagt inn i .claude/skills, 21.11.2026
 
 Gren `verktoy/impeccable`. Ja fra Theodor i chatten 21.11 («ja, gjør det»). Rører ingen kode, ingen data og ikke docs/: bare `.claude/skills/impeccable/` (Impeccable 4.10.0 fra github.com/pbakaus/impeccable, Apache 2.0, uendret kopi av repoets `.claude/skills/impeccable`) og nye linjer i `.gitignore`.
