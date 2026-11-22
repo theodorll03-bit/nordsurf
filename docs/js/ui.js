@@ -415,9 +415,9 @@
     const dato = [`${cap(fmtDay.format(now))} ${key.slice(8, 10)}.${key.slice(5, 7)}`, lys, K ? STR.hjem.fra(K.fra.navn) : null,
       `${STR.spot.oppdatert} ${dayKey(gen)===key ? "" : relDay(gen) + " "}${fmtTime.format(gen)}`, STR.web.antall(DATA.spots.length)].filter(Boolean).join(" · ");
     const dagNavn = (d)=> cap(relDay(new Date(d.key + "T11:00:00Z")));
-    // «Beste i dag» eller «Beste i morgen» etter dagen som er valgt (Theodor S20 b, 20.11.2026). En annen dag (gammelt varsel) får «Best <dag>».
+    // «Beste i dag», «Beste i morgen» eller «Beste fredag» etter dagen som er valgt (Theodor S20 b, 20.11.2026, og S25, 22.11.2026)
     const rd = dag ? relDay(new Date(dag.key + "T11:00:00Z")) : "i dag";
-    const besteTittel = rd==="i dag" ? STR.web.besteIDag : rd==="i morgen" ? STR.web.besteIMorgen : STR.web.bestDag(rd);
+    const besteTittel = STR.web.bestDag(rd);
     const rader = dag ? fsRader(spots, dag.key) : [], helt = fsHelt(rader);
     const resten = rader.filter(r=> r!==helt), surf = resten.filter(r=> r.b.st!=null && r.b.st >= 1);
     const vis = S.fsAlle ? resten : surf.length ? surf.slice(0, FS_RADER) : resten.slice(0, 5);

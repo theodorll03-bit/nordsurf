@@ -181,11 +181,12 @@
       om: {vender: "Vender mot", hoyde: "Best høyde", data: "Data"},
       varselFra: (dag, kl) => `Varsel fra ${dag} kl. ${kl}`,
       antall: (n) => `${n} ${n === 1 ? "spot" : "spots"}`,
-      // overskriften over tabellen følger dagen som er valgt (Theodor S20 b, 20.11.2026): tallene er dagens beste, ikke nå-timen
-      besteIDag: "Beste i dag", besteIMorgen: "Beste i morgen", tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
+      tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
       kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell ute", timer: "06–18", region: "Region"},
       nr: (n) => String(n).padStart(2, "0"),
-      bestDag: (dag) => `Best ${dag}`,
+      // overskriften over tabellen og linja på hovedbildet følger dagen som er valgt (Theodor S20 b, 20.11.2026): tallene er
+      // dagens beste, ikke nå-timen. «Beste» for alle dager, også «Beste fredag» (Theodor S25, 22.11.2026).
+      bestDag: (dag) => `Beste ${dag}`,
       visAlle: (n) => `Vis alle ${n}`, apneKart: "Åpne kartet",
       alle: "Alle", dag: "Dag", region: "Region",
       perRegion: "Beste tall per region og dag", perSpot: "Beste tall per spot og dag",

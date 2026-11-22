@@ -922,13 +922,17 @@ def main():
                         fs = page.evaluate("""() => ({helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, tall: (document.querySelector('#forside .fs-helt .fs-tall') || {}).textContent || null,
                             rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, tall: (r.querySelector('.t-listetall') || {}).textContent || '', stripe: r.querySelectorAll('.fs-stripe i').length})),
                             kol: [...document.querySelectorAll('#forside table.fs-tabell thead th')].map(t => t.textContent.trim()), dag: document.querySelector('#forside .fs-seg [aria-pressed="true"]').textContent.trim(),
-                            tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim()})""")
+                            tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim(),
+                            linje: (document.querySelector('#forside .fs-helt .fs-plate .etikett') || {}).textContent || ''})""")
                         # tallet i kolonnen er svellet ute, og overskriften følger dagen som er valgt (Theodor S20 a og b, 20.11.2026)
                         assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Svell ute", "06–18"] and fs["tittel"] == "Beste i morgen", fs
-                        # etter lyset er knappene «I morgen» og ukedagen etter: en navngitt dag heter «Best fredag» som før
+                        # etter lyset er knappene «I morgen» og ukedagen etter: en navngitt dag heter «Beste fredag» (Theodor S25, 22.11.2026),
+                        # og linja på hovedbildet sier det samme som overskriften over tabellen
+                        assert fs["linje"].split(" · ")[1] == fs["tittel"], fs
                         page.click("#forside [data-fsdag='1']"); page.wait_for_selector("#forside [data-fsdag='1'][aria-pressed='true']")
-                        fs2 = page.evaluate("({dag: document.querySelector('#forside .fs-seg [aria-pressed=\"true\"]').textContent.trim(), tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim()})")
-                        assert fs2["dag"] not in ("I dag", "I morgen") and fs2["tittel"] == "Best " + fs2["dag"].lower(), fs2
+                        fs2 = page.evaluate("({dag: document.querySelector('#forside .fs-seg [aria-pressed=\"true\"]').textContent.trim(), tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim(), linje: (document.querySelector('#forside .fs-helt .fs-plate .etikett') || {}).textContent || ''})")
+                        assert fs2["dag"] not in ("I dag", "I morgen") and fs2["tittel"] == "Beste " + fs2["dag"].lower(), fs2
+                        assert not fs2["linje"] or fs2["linje"].split(" · ")[1] == fs2["tittel"], fs2   # har dagen et hovedbilde, sier linja det samme
                         page.click("#forside [data-fsdag='0']"); page.wait_for_selector("#forside [data-fsdag='0'][aria-pressed='true']")
                         imorgen = (TODAY + dt.timedelta(days=1)).isoformat()
                         for r in fs["rader"]:
@@ -954,6 +958,7 @@ def main():
                             ring: !!document.querySelector('#forside .fs-helt .fs-best svg'), aria: (document.querySelector('#forside .fs-helt') || {getAttribute(){ return ''; }}).getAttribute('aria-label') || '',
                             rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, bst: r.querySelector('.fs-bst').textContent.trim(), stripe: [...r.querySelectorAll('.fs-stripe i')].map(i => i.className)}))})""")
                         assert fs2["dag"] == "I dag" and fs2["tittel"] == "Beste i dag", fs2
+                        assert not fs2["helt"] or fs2["aria"].split(" · ")[1] == "Beste i dag", fs2   # linja på hovedbildet leses først i aria-teksten
                         def apent(sid):
                             d = next((x for x in OV[sid]["dager"] if x["d"] == sdag), None)
                             return bool(d and d.get("slutt") and d.get("h") and (d["h"].get("stars") or 0) >= 1 and t_(d["slutt"]) + dt.timedelta(hours=1) > sent)

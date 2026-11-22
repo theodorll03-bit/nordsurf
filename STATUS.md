@@ -1,5 +1,15 @@
 # Nordsurf: status
 
+## T3 design B 4.0 «Papir» - «Beste» overalt (S25) og rydding etter «Beste nå», 22.11.2026
+
+Gren `design/b4-etter-4` fra main `99d3cc5`, med `rydd/beste-na` flettet inn. Bare ord: ingen ratingfil og ikke spots.json er rørt, og ingen poeng eller tall endres. Ja fra Theodor i svar.md 22.11 kl. 14.25 (S25).
+
+- **«Beste» overalt** (S25): «Beste fredag» over tabellen på PC-forsiden og «Beste i morgen» i linja på hovedbildet. Før sto «Best fredag» og «Best i morgen» ved siden av «Beste i dag». Strengene `besteIDag` og `besteIMorgen` er borte, `STR.web.bestDag` gir «Beste» for alle dager.
+- **Rydding** (`rydd/beste-na`): «Beste nå» er tatt ut av kommentarene, og to ubrukte strenger er slettet. Ingen tekst på skjermen endres av den.
+- **Tester:** test_spotside_browser.py prøver overskriften over tabellen for i dag, i morgen og en navngitt dag. Linja på hovedbildet prøves for i morgen og for i dag (i teksten skjermleseren får), og for den navngitte dagen når dagen har et hovedbilde.
+- **Svak vind fra alle retninger (S24 a) er ikke med.** Den er kodet og prøvd, men fysikk-kontrolløren stoppet den: grensa på 8 m/s middelvind tar med timer med 7–8 m/s pålands, kast opp mot 12 og 1–2 m vindsjø ved punktet (5 av de 7 lyse timene i varselet 22.11 kl. 11Z). Spørsmålet om grensa er sendt tilbake som S26. Feiljegeren fant i tillegg at dagens ord velges av den første lyse timen når poeng og høyde er like (`publish.py` best_hour og `bestOfDay` i spot.js), så en dag kan hete «Blåst ut» mens timen som vises heter «Flatt». Det avgjøres sammen med S26.
+- **Ikke gjort:** kolonnen «Best» i tabellen, «Best 09–12» i ringen, «Best kl. 09–12» i teksten og «Best høyde» er en annen bruk av ordet (beste tidsrom) og står som før. Den ubrukte strengen `best` (strings.js linje 114) står. Regnestykket under «Hvorfor denne vurderingen?» rettes i en egen PR (S24 b, gren `fiks/blast-ut-tekst`).
+
 ## Verktøy: Impeccable-skillen lagt inn i .claude/skills, 21.11.2026
 
 Gren `verktoy/impeccable`. Ja fra Theodor i chatten 21.11 («ja, gjør det»). Rører ingen kode, ingen data og ikke docs/: bare `.claude/skills/impeccable/` (Impeccable 4.10.0 fra github.com/pbakaus/impeccable, Apache 2.0, uendret kopi av repoets `.claude/skills/impeccable`) og nye linjer i `.gitignore`.
