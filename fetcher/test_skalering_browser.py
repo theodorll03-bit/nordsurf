@@ -9,7 +9,7 @@ publisert som oversikt-2 + detaljfiler (fetcher/publish.py), servert slik appen 
 4. Hjem laster bare oversikt.json (ingen spots/<id>.json før en spot åpnes); å åpne en spot laster
    nøyaktig én detaljfil;
 5. søk på «a» grupperer per region og viser maks 20 før «Vis flere»;
-6. forsiden på PC (B4 steg 6, «Beste nå») starter i valgt region (Innstillinger -> Område, standard Troms),
+6. forsiden på PC (B4 steg 6, «Beste i dag») starter i valgt region (Innstillinger -> Område, standard Troms),
    aldri alle 100 før man velger «Alle»;
 7. første visning av Hjem under 1,5 s på simulert 4G (CDP: 9 Mbit/s ned, 150 ms latens) - målt fra
    navigasjonsstart til #forside (PC) eller topplinja (mobil, B 4.0: «Beste økt» er borte der) er synlig;

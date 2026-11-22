@@ -161,7 +161,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
    - Ved siden av: OM SPOTTEN-liste.
 7. **Bunn:** seksjonsstrek, logo, kilder og lenker.
 
-### D. Web, forside «Beste nå» (`6-web-forside.png`, kilde `kilde/B4-hjem-web.dc.html`)
+### D. Web, forside «Beste i dag» (het «Beste nå» i skissa, `6-web-forside.png`, kilde `kilde/B4-hjem-web.dc.html`)
 
 1. **Datolinje og overskrift** (60/64), som må stemme med tabellen.
 2. **Filtre:** I DAG / I MORGEN (segmentert, aktiv er fylt ink) og regioner som tekstfaner med 3 px understrek.

@@ -200,7 +200,7 @@ def day_summary(hours):
     return out
 
 
-# B4 steg 6 (forsiden på PC, SPEC 6D «Beste nå»): tidsstripa 06-18 per spot trenger timene for de første
+# B4 steg 6 (forsiden på PC, SPEC 6D «Beste i dag»): tidsstripa 06-18 per spot trenger timene for de første
 # døgnene, men oversikten har ingen timer. «timer» er én tegnkode per klokketime kl. 06-18 (Oslo-tid):
 # «0»-«5» stjerner i en lys time med tall, «m» mørk time (ingen vurdering i mørket), «x» lys time uten
 # tall eller ukjent lys, eller en kommende time som ikke finnes i varselet (mangler - aldri 0, grunnregelen),

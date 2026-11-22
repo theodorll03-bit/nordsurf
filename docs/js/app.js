@@ -68,7 +68,7 @@ function heightMForDisplay(h){
   //   den til "flat" først, se classify_low_rating()).
   if(!h) return null;
   if(!h.low_reason) return h.surf_height;
-  // svak fralandsvind uten poengtap heter «Flatt» eller «Smått» (calmOffshoreWord) og får da heller ikke noe tall, som flat
+  // fralandsvind under 12 m/s (med kast) uten poengtap heter «Flatt» eller «Smått» (calmOffshoreWord) og får da heller ikke noe tall, som flat
   if(h.low_reason==="blown_out" && !h.stars && calmOffshoreWord(h)!=null) return null;
   if(h.low_reason==="blown_out") return (h.surf_height!=null && h.surf_height>0) ? h.surf_height : h.bw_height;
   if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
