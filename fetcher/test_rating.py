@@ -774,6 +774,56 @@ assert blown["blown_out"] is True
 assert any("blåst ut" in line for line in blown["breakdown"])
 assert blown["low_reason"] == "blown_out"  # 05.10.2026: samme sak via det nye, samlende feltet
 
+# 12.1b (Theodor S24 b, 22.11.2026): regnelinja sier «og sterk vind» bare når vinden har tatt poeng eller er sterk
+# (8 m/s, fralands 12 m/s med kast - samme grenser som ordet i docs/js/app.js). Før sto det også i 1 m/s
+# (Seines 21.11.2026 kl. 12-14). Bare tekst: poeng, høyde og low_reason er like i alle tilfellene.
+blown_base = {"bw_height": 1.2, "bw_period": 5.5, "bw_dir": G["facing"], "swell_offshore": 0.9,
+              "height_offshore": 5.9, "dir_offshore": G["facing"], "period": 7}
+fra_land = (G["facing"] + 180) % 360
+def blown_line(**wind):
+    r = rate(dict(blown_base, **wind), G)
+    assert (r["stars"], r["low_reason"], r["blown_out"], r["height"]) == (0, "blown_out", True, blown["height"]), r
+    lines = [line for line in r["breakdown"] if "blåst ut" in line]
+    assert len(lines) == 1, r["breakdown"]
+    return lines[0]
+STERK = "Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
+SVAK = "Surfehøyde: blåst ut - mye vindsjø, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
+assert blown_line(wind_speed=14, wind_dir=301, gust=21) == STERK      # den ekte timen: uendret tekst
+assert blown_line(wind_speed=1, wind_dir=301, gust=2) == SVAK         # 1 m/s er ikke sterk vind
+assert blown_line(wind_speed=7.9, wind_dir=301) == SVAK               # rett under grensa, pålands
+assert blown_line(wind_speed=8.0, wind_dir=301) == STERK              # på grensa
+assert blown_line(wind_speed=7.9, wind_dir=301, gust=20) == SVAK      # kastene flytter ikke grensa for pålandsvind
+assert blown_line(wind_speed=9.2, wind_dir=fra_land, gust=14) == SVAK   # fralands 9 m/s, teller som 10,6: under 12
+assert blown_line(wind_speed=11, wind_dir=fra_land, gust=20) == STERK   # fralands, teller som 13
+# grensa for fralandsvind er nøyaktig 12 m/s med kast (11 + min(2, 0,3 * kastene over middelvinden))
+assert blown_line(wind_speed=11, wind_dir=fra_land, gust=14) == SVAK    # teller som 11,9
+assert blown_line(wind_speed=11, wind_dir=fra_land, gust=14.4) == STERK  # teller som 12,0 (11 + 0,3 * 3,4 = 12,02)
+assert blown_line(wind_speed=10, wind_dir=fra_land, gust=30) == STERK   # tillegget for kast stopper på 2: teller som 12,0
+# sidevind og skrå pålandsvind følger 8 m/s middelvind, ikke fralandsgrensa
+from rating import wind_type as _wind_type_s24b
+for _off, _wt in ((90, "side"), (270, "side"), (135, "sideonshore"), (225, "sideonshore")):
+    _d = (G["facing"] + 180 + _off) % 360
+    assert _wind_type_s24b(_d, G) == _wt, (_d, _wind_type_s24b(_d, G))
+    assert blown_line(wind_speed=7.9, wind_dir=_d, gust=12) == SVAK, _wt
+    assert blown_line(wind_speed=8.0, wind_dir=_d) == STERK, _wt
+    assert blown_line(wind_speed=9.6, wind_dir=_d, gust=11) == STERK, _wt   # under 12 med kast, men ikke fralands
+assert blown_line(wind_speed=5.0) == SVAK                             # ukjent retning under 8 m/s
+assert blown_line(wind_speed=9.0) == STERK                            # ukjent retning fra 8 m/s
+assert blown_line() == SVAK                                           # mangler vinden, nevnes den ikke
+assert blown_line(wind_dir=301, gust=25) == SVAK                      # mangler styrken, nevnes den ikke
+# Har vinden tatt poeng, står «og sterk vind» også under 8 m/s. is_blown_out() krever low_hs, og da er potensialet 0,
+# så det skjer ikke gjennom rate() i dag: her tvinges flagget på, og linja prøves direkte.
+import rating as _rating_s24b
+_bb_s24b = _rating_s24b.build_breakdown
+_rating_s24b.build_breakdown = lambda *a, **k: _bb_s24b(*a, **dict(k, wind_took_points=True))
+try:
+    assert blown_line(wind_speed=1, wind_dir=301, gust=2) == STERK    # tatt poeng: teksten står
+    assert blown_line(wind_dir=301, gust=25) == SVAK                  # men aldri uten vindstyrke
+    assert blown_line() == SVAK
+finally:
+    _rating_s24b.build_breakdown = _bb_s24b
+assert blown_line(wind_speed=1, wind_dir=301, gust=2) == SVAK         # og flagget er av igjen
+
 # 12.2: Grøtfjord 24.09.2026 (linje 17 over) - ekte flatt, IKKE blåst ut,
 # selv om den også er "likely_flat". Ingen svell_offshore/vind oppgitt der,
 # men bw_height (0,3) er allerede under flat-sperren selv - ingen reell

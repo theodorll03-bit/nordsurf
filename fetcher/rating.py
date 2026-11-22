@@ -1168,7 +1168,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      sources_disagree, capped_from, disagree_cap,
                      energy_swell_kj=None, energy_factor_value=1.0,
                      energy_period_value=None, energy_period_source=None,
-                     five_open=False, five_fails=None, five_lost=None):
+                     five_open=False, five_fails=None, five_lost=None, wind_took_points=True):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -1246,7 +1246,17 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             else:
                 items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: over terskelen, ingen effekt")
         if blown_out:
-            items.append(f"Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart "
+            # 22.11.2026 (Theodor S24 b): linja sa «og sterk vind» også i 1 m/s (Seines 21.11 kl. 12-14, under ordet
+            # «Flatt»). Vinden nevnes bare når den har tatt poeng eller er sterk: fra 8 m/s middelvind
+            # (BLOWN_OUT_WIND_MS, samme tall som is_blown_out()), og for fralandsvind fra 12 m/s med kast (samme tall
+            # som OFFSHORE_STRONG_MS i docs/js/app.js). Mangler vindstyrken, nevnes den ikke. is_blown_out() krever
+            # low_hs, og da er potensialet 0 og vinden har ingenting å ta: i dag er det derfor styrken som avgjør, og
+            # wind_took_points står som sikring hvis den regelen endres. Bare tekst, ingen poeng eller høyder.
+            eff = effective_wind(wind_speed, gust)
+            strong_wind = wind_speed is not None and (
+                eff >= BLOWN_OUT_TEXT_OFFSHORE_MS if wt == "offshore" else wind_speed >= BLOWN_OUT_WIND_MS)
+            cause = "mye vindsjø og sterk vind" if (wind_took_points and wind_speed is not None) or strong_wind else "mye vindsjø"
+            items.append(f"Surfehøyde: blåst ut - {cause}, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
         elif low_hs:
             items.append(f"Surfehøyde: flatt (signifikant høyde under {_fmt_m(FLAT_HS_THRESHOLD)})")
@@ -1314,6 +1324,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
 
 BLOWN_OUT_WIND_MS = 8.0  # «kraftig» onshore/side-onshore (ordet følger zero_losses som før - Theodor 15.10.2026, regel 5)
 BLOWN_OUT_SHARE_MAX = 0.5  # samme "mest vindsjø"-grense som _share_word()
+BLOWN_OUT_TEXT_OFFSHORE_MS = 12.0  # bare teksten i regnestykket: fralandsvind er «sterk» fra 12 m/s med kast (OFFSHORE_STRONG_MS i docs/js/app.js)
 # 27.09.2026, fysikk-kontrollør sitt funn: samme grense som sources_disagree
 # (se rate(), "BarentsWatch viser en reell totalhøyde (0,5 m+)") - IKKE
 # FLAT_HS_THRESHOLD (0,35 m), som ville latt 0,36-0,49 m telle som "reell
@@ -1836,6 +1847,7 @@ def rate(hour, spot):
         sources_disagree, capped_from, disagree_cap, energy_swell, energy_factor_value,
         energy_period_value, energy_period_source,
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
+        wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
     )
 
     return {
