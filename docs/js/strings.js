@@ -59,6 +59,7 @@
       "Magnus, lokal surfer (Molde)": "Ifølge Magnus, lokal surfer",
       "Observasjoner 26.09-05.10.2026": "Grense satt ut fra observasjonene 26.09 til 05.10",
       "Lofoten Surfsenter, 09.11.2026": "Ifølge Lofoten Surfsenter",
+      "Observasjoner 17.11 og 22.11.2026": "Grense satt ut fra observasjonene 17.11 og 22.11",
     },
     // overskriften til «Lokale regler» når tidevannsregelen har egen kilde (local_rules.tide_source)
     localSourcesBoth: (src, tideSrc)=>`${src}; tidevann: ${tideSrc}`,

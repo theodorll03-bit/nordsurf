@@ -339,6 +339,10 @@ def main():
                     if sp_["id"] == "unstad":
                         assert energi_ == "Grense satt ut fra observasjonene 26.09 til 05.10" and tide_ == "Ifølge Lofoten Surfsenter", (energi_, tide_)
                         assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 26.09-05.10.2026; tidevann: Lofoten Surfsenter"
+                    if sp_["id"] == "breivikeidet":
+                        # 22.11.2026 (S19): tidevannsregelen på vannstanden har samme kilde som resten, og samme ordlyd som Unstads
+                        assert energi_ == tide_ == "Grense satt ut fra observasjonene 17.11 og 22.11", (energi_, tide_)
+                        assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 17.11 og 22.11.2026"
 
                 # «For mye vind» (Theodor S15 a, 17.11.2026): fralandsvind som har tatt poeng heter ikke «Blåst ut». «Blåst ut» står
                 # når vinden ikke er fralands, og når ingen poeng er tapt på vind (det meste er vindsjø i svak fralandsvind).

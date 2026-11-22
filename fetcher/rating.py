@@ -575,6 +575,28 @@ def gap_swell_in_window(hour, spot):
     return min(distance_to_sector(d, sec) for sec in sectors) <= GAP_EDGE_DEG
 
 
+def gap_edge_factor(hour, spot):
+    """Hvor mye av gap-andelen som gjelder for denne svellretningen. 1,0 for
+    gap-spots uten "gap_soft_edge" (Russelv: hele andelen i hele det tegnede
+    vinduet, uendret).
+
+    22.11.2026 (svar.md 22.11.2026 kl. 12.20, S19: «Vinduet blir ca. 345–30°
+    med myk kant»; kilder: observasjon 17.11.2026 og 22.11.2026, Theodor): for
+    en spot merket "gap_soft_edge" glir andelen fra 0,667 på kanten av det
+    tegnede vinduet til 1,0 fem grader innenfor, og faller videre utenfor.
+    Det er samme kurve som directness() bruker for svellvinduet, lest mot det
+    TEGNEDE vinduet. Kall bare når gap_swell_in_window() er sann."""
+    if not spot.get("gap_soft_edge"):
+        return 1.0
+    return directness(hour["dir_offshore"], {"swell_window": spot["swell_window_tegnet"]})
+
+
+def gap_floor_height(hour, spot):
+    """Høyden gap-grensa gir uten å se på vinden: svell ute × gap_transfer ×
+    gap_edge_factor(). Kall bare når gap_swell_in_window() er sann."""
+    return hour["swell_offshore"] * spot["gap_transfer"] * gap_edge_factor(hour, spot)
+
+
 def gap_blocked_by_wind(hour, spot):
     """Sann når gap-grensa ellers ville gjeldt (svell i det tegnede vinduet,
     perioden ute minst GAP_MIN_PERIOD_S), men vinden tar den bort: kjent
@@ -604,7 +626,8 @@ def gap_floor(hour, spot):
     rene sett rundt 1 m mens BarentsWatch-punktet viste 0,26 m. Svellet kom
     gjennom gapet Theodor har tegnet (swell_window_tegnet), og kystmodellen
     slapp for lite inn. For spots merket "gap_spot" i spots.json gjelder
-    derfor en nedre grense: svell ute ganger gap_transfer. Andelen må stå
+    derfor en nedre grense: svell ute ganger gap_transfer (og for spots med
+    "gap_soft_edge" ganger gap_edge_factor(), se den). Andelen må stå
     låst i spots.json. Spotens vanlige transfer brukes ALDRI her: fetch.py
     skriver den aktive (standard eller lærte) andelen inn i spot["transfer"],
     og den er som regel mye høyere (standard 0,6) og flytter seg når
@@ -630,7 +653,7 @@ def gap_floor(hour, spot):
         return None
     if gap_blocked_by_wind(hour, spot):
         return None
-    return hour["swell_offshore"] * spot["gap_transfer"]
+    return gap_floor_height(hour, spot)
 
 
 def gap_floor_applied(hour, spot, h, source):
@@ -1168,7 +1191,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      sources_disagree, capped_from, disagree_cap,
                      energy_swell_kj=None, energy_factor_value=1.0,
                      energy_period_value=None, energy_period_source=None,
-                     five_open=False, five_fails=None, five_lost=None, wind_took_points=True):
+                     five_open=False, five_fails=None, five_lost=None, wind_took_points=True, tide_level_line=None):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -1212,7 +1235,8 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                     reasons.append("retning ved punktet")
                 items.append(f"Etter justering {_fmt_m(h)} ({', '.join(reasons)})")
     if gap_used:
-        andel = spot["gap_transfer"]  # gap_used er bare sann når den finnes (se gap_floor())
+        # gap_used er bare sann når andelen finnes (se gap_floor())
+        andel = spot["gap_transfer"] * gap_edge_factor(hour, spot)
         items.append((f"Løftet til {_fmt_m(h)}: svell ute {_fmt_m(hour['swell_offshore'])} gjennom gapet, "
                       f"andel {andel:.2f}").replace(".", ",") + ". Anslag, ikke kystmodellens tall")
     if h is not None:
@@ -1295,7 +1319,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         if wp is not None and wpp["pen"] < wp - 1e-9:
             damptxt += ", lokal regel strengere"
         items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
-    if not spot.get("tide"):
+    if tide_level_line:
+        # 22.11.2026: spoten har en myk regel på vannstanden (tide_level_penalty()) - da er «tåler alt» feil
+        items.append(tide_level_line)
+    elif not spot.get("tide"):
         items.append("Tidevann: spoten tåler alt")
     elif not tide:
         items.append("Tidevann: ukjent")
@@ -1419,7 +1446,7 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     # punktet er lav fordi kystmodellen slipper for lite inn, ikke fordi svellet mangler (Russelv 16.11.2026).
     # Bare når grensa ville løftet høyden over flat-sperren: er svellet ute så lite at timen er flat også uten
     # vinden (grense under FLAT_HS_THRESHOLD), er ordet fortsatt flat.
-    if gap_blocked_by_wind(hour, spot) and hour["swell_offshore"] * spot["gap_transfer"] >= FLAT_HS_THRESHOLD:
+    if gap_blocked_by_wind(hour, spot) and gap_floor_height(hour, spot) >= FLAT_HS_THRESHOLD:
         return "blown_out"
     bw = hour.get("bw_height") if source == "barentswatch" else None
     little_total = bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT
@@ -1530,6 +1557,28 @@ def energy_thresholds_used(spot):
     return _energy_thresholds(spot)
 
 
+def tide_level_penalty(hour, spot):
+    """Myk lokal regel på vannstanden i cm over sjøkartnull (local_rules["tide_level"]), «jo lavere vann, jo bedre»:
+    (fradrag vektet med weight, linje). Ingen straff opp til "full_below_cm", så jevnt opp til "penalty" ved
+    "max_at_cm" og aldri mer. Mangler regelen: (0.0, None). Mangler vannstanden (uten cm, eller Kartverket feilet):
+    (0.0, linje som sier at vannstanden mangler) - manglende data er aldri 0, gir aldri straff, og er aldri «tåler alt». 22.11.2026 (svar.md 22.11.2026 kl. 12.20; kilder: observasjon 17.11.2026 og 22.11.2026, Theodor)."""
+    rules = spot.get("local_rules") or {}
+    level_rule = rules.get("tide_level")
+    cm = (hour.get("tide") or {}).get("cm")
+    if not level_rule:
+        return 0.0, None
+    if cm is None:
+        # manglende vannstand er aldri 0 cm og aldri «tåler alt»: ingen straff, og teksten sier at tallet mangler
+        return 0.0, "Tidevann: vannstanden mangler, ingen straff"
+    lo, hi = level_rule["full_below_cm"], level_rule["max_at_cm"]
+    share = min(1.0, max(0.0, (cm - lo) / (hi - lo)))
+    pen = rules.get("weight", 1.0) * level_rule["penalty"] * share
+    m = f"{cm / 100:.1f}".replace(".", ",").replace("-0,0", "0,0")
+    if pen > 0:
+        return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her " + f"(vektet −{pen:.2f})".replace(".", ",")
+    return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
+
+
 def local_rules_penalty(hour, spot, wind_type_, wind_speed):
     """Tidevann og en strengere offshore-sjekk, begge "koster stjerner".
     15.10.2026 (Theodors regel 4): returnerer (tidevann_rå, vind_rå, linjer),
@@ -1556,6 +1605,11 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
                              f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.1f})")
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
+
+    level_pen, level_line = tide_level_penalty(hour, spot)
+    if level_line:
+        raw_total += level_pen
+        lines.append(level_line)
 
     local_wind = 0.0
     if rules.get("offshore_strict"):
@@ -1848,6 +1902,7 @@ def rate(hour, spot):
         energy_period_value, energy_period_source,
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
         wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
+        tide_level_line=tide_level_penalty(hour, spot)[1],
     )
 
     return {

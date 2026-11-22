@@ -1765,7 +1765,9 @@ print("29: periodefaktoren ved BarentsWatch-punktet - svellandel fra 0,9 og svel
 # 31: gap-regelen (svar.md 16.11.2026 kl. 15.45, funn punkt 3; kilde: observasjon 16.11.2026 (bilde, Russelv)).
 # Nedre grense for Hs ved spoten = svell ute × gap_transfer, bare for spots merket gap_spot.
 from rating import gap_floor, GAP_MIN_PERIOD_S, GAP_EDGE_DEG
-assert [i for i, sp in spots.items() if sp.get("gap_spot")] == ["russelv"]      # ingen andre spots skal endres
+# 22.11.2026: Breivikeidet er også gap-spot (svar.md 22.11.2026 kl. 12.20, se test 36). Ingen andre.
+assert sorted(i for i, sp in spots.items() if sp.get("gap_spot")) == ["breivikeidet", "russelv"]
+assert "gap_soft_edge" not in R       # Russelv har hard kant som før: hele gap_transfer i hele det tegnede vinduet
 assert R["gap_transfer"] == 0.2 and R["swell_window_tegnet"] == [348, 19] and GAP_MIN_PERIOD_S == 7.0 and GAP_EDGE_DEG == 2
 assert abs(gap_floor(rus_1611, R) - 2.42 * 0.2) < 1e-9
 r31 = rate(dict(rus_1611), R)
@@ -1871,9 +1873,10 @@ print("33: Russelv - facing 350, byttet BarentsWatch-punkt, sjekksummen i exposu
 # 17.11 kl. 11Z (10Z).
 from rating import energy_factor, energy_thresholds_used
 B34 = spots["breivikeidet"]
-assert B34["spot"] == {"lat": 69.6680714, "lon": 19.6554882} and B34["swell_window"] == [15, 25] and B34["ideal_height"] == [0.5, 1.5]
+assert B34["spot"] == {"lat": 69.6680714, "lon": 19.6554882} and B34["swell_window"] == [345, 30] and B34["ideal_height"] == [0.5, 1.5]
 # unntatt energiregelen, og ingen andre spots er det
-assert [i for i, sp in spots.items() if sp.get("no_energy_rule")] == ["breivikeidet"] and "local_rules" not in B34
+# (22.11.2026: local_rules har bare den myke tidevannsregelen, ingen energigrense - se test 36)
+assert [i for i, sp in spots.items() if sp.get("no_energy_rule")] == ["breivikeidet"] and "min_energy_kj" not in B34["local_rules"]
 assert energy_thresholds_used(B34) is None and energy_factor(B34, 900) == 1.0 and energy_factor(B34, 0) == 1.0
 assert energy_thresholds_used(spots["grotfjord"])[:2] == (2000, 500) and energy_factor(spots["grotfjord"], 900) < 1.0      # standardgrensene gjelder alle andre
 bre_1711 = {
@@ -1903,9 +1906,15 @@ assert (r34[7]["stars"], r34[8]["stars"], r34[9]["stars"], r34[10]["stars"]) == 
 # uten modellvinden er alle timene 2 poeng: avviket ligger i vindvarselet og ikke i bølgehøyden
 for t in (7, 8, 9, 10):
     assert rate(dict(bre_1711[t], wind_speed=1.0, gust=2.0), B34)["stars"] == 2, t
-# kraftig pålandsvind (fra 6 m/s middelvind) setter ikke perioden ved punktet til side: flatt som før
+# kraftig pålandsvind (fra 6 m/s middelvind) setter ikke perioden ved punktet til side, og timen gir 0 poeng som før.
+# Fra 22.11.2026 holder gap-grensa høyden oppe (test 36), så det er vinden som tar poengene, ikke «flatt».
 r34_vind = rate(dict(bre_1711[8], wind_speed=6.0), B34)
 assert r34_vind["bw_period_basis"] == "bw" and r34_vind["stars"] == 0, (r34_vind["bw_period_basis"], r34_vind["stars"])
+assert r34_vind["gap_floor"] and r34_vind["low_reason"] == "blown_out", (r34_vind["gap_floor"], r34_vind["low_reason"])
+# 17.11-timene har ikke vannstand i cm (publisert før 22.11.2026): tidevannsregelen tar ingenting, og linja sier at
+# vannstanden mangler (aldri «tåler alt» for en spot med regelen, fysikk-kontrolløren 22.11.2026)
+assert all("Tidevann: vannstanden mangler, ingen straff" in r["breakdown"] and "Tidevann: spoten tåler alt" not in r["breakdown"]
+           and r["local_rules"]["lines"] == ["Tidevann: vannstanden mangler, ingen straff"] and r["local_rules"]["stars_lost"] == 0 for r in r34.values())
 print("34: Breivikeidet 17.11 - ikke flatt, hoftehøyt, uten energiregel; kl. 07-10Z gir 1, 1, 2, 2 poeng, og 2 uten modellvinden - OK")
 # 35: ukjent vind (19.11.2026, fysikk-kontrollørens regel, forslag til svar.md S22; kilder: samme konvensjon som
 # wind_penalty() og bw_swell_dominates() (ukjent retning regnes som pålands), og grunnregelen: manglende data er aldri 0).
@@ -1986,4 +1995,120 @@ assert sv35 * R["gap_transfer"] == FLAT_HS_THRESHOLD > 1.74 * R["gap_transfer"]
 assert rate(t35(swell_offshore=sv35, height_offshore=1.95, wind_speed=9.0, wind_dir=350.0), R)["low_reason"] == "blown_out"
 assert rate(t35(swell_offshore=1.74, height_offshore=1.94, wind_speed=9.0, wind_dir=350.0), R)["low_reason"] == "flat"
 print("35: ukjent vind - ukjent retning fra 8 m/s regnes som pålands for gap-grensa, ukjent styrke beholder grensa og får aldri vinden som grunn, det faste poenget bokføres som usikkert varsel - OK")
+
+# 36: Breivikeidet 22.11.2026 (fast observasjon; kilde: observasjon 22.11.2026, Theodor): rene, fine bølger, omtrent som
+# 17.11 og kanskje litt mindre, i vannet kl. 09.00-11.30 norsk tid (08.00-10.30Z), «definitivt best på laveste vann».
+# Appen sa 0 poeng og 0,0 m hele dagen: svellet ute kom fra 349-2°, utenfor det gamle vinduet 15-25, og svellandelen
+# (0,74-0,76) var for lav til at den korte perioden ved punktet ble satt til side. Timene er fra varselet 21.11 kl. 11Z,
+# vannstanden fra Kartverkets flo og fjære samme dag. Svar og krav: svar.md 22.11.2026 kl. 12.20 (S19).
+import datetime as _dt36
+import tide as _tide36
+from rating import gap_edge_factor, gap_floor_height, gap_swell_in_window, tide_level_penalty
+B36 = spots["breivikeidet"]
+assert B36["swell_window"] == B36["swell_window_tegnet"] == [345, 30] and B36["gap_spot"] and B36["gap_transfer"] == 0.165
+assert [i for i, sp in spots.items() if sp.get("gap_soft_edge")] == ["breivikeidet"]
+assert [i for i, sp in spots.items() if (sp.get("local_rules") or {}).get("tide_level")] == ["breivikeidet"]
+assert B36["local_rules"]["tide_level"] == {"full_below_cm": 200, "max_at_cm": 280, "penalty": 0.7} and B36["local_rules"]["weight"] == 0.7
+assert B36["transfer"] == 0.15 and "tide" not in B36 and "exposure_override" not in B36
+# skyggepunktet er bare til logging (S19 a): ratingen leser fortsatt hovedpunktet
+assert B36["barentswatch_point_shadow"] == {"lat": 69.671471, "lon": 19.659025} and B36["barentswatch_point"] != B36["barentswatch_point_shadow"]
+ev36 = [{"time": "2026-11-22T03:54:00+00:00", "type": "fjære", "cm": 81}, {"time": "2026-11-22T10:10:00+00:00", "type": "flo", "cm": 280},
+        {"time": "2026-11-22T16:18:00+00:00", "type": "fjære", "cm": 98}]
+def tide36(t):
+    return _tide36.state_at(ev36, _dt36.datetime(2026, 11, 22, t, 30, tzinfo=_dt36.timezone.utc))
+# 36.1: vannstanden i cm følger samme kurve som nivået (cosinus mellom flo og fjære). Uten cm i hendelsene: ingen cm.
+assert tide36(8) == {"level": 0.84, "state": "høy", "rising": True, "cm": 247} and tide36(10)["cm"] == 279 and tide36(13)["cm"] == 177
+assert "cm" not in _tide36.state_at([{k: v for k, v in e.items() if k != "cm"} for e in ev36], _dt36.datetime(2026, 11, 22, 8, 30, tzinfo=_dt36.timezone.utc))
+# (t, total ute, svell ute, retning, periode, BarentsWatch-høyde, vind, kast, vindretning)
+rad36 = [(7, 3.9, 2.90, 349, 7.65, 0.36, 4.6, 8.1, 332), (8, 3.8, 2.88, 350, 7.60, 0.36, 5.1, 8.9, 317), (9, 3.8, 2.86, 351, 7.55, 0.35, 5.2, 9.7, 314),
+         (10, 3.7, 2.60, 355, 7.50, 0.35, 5.3, 9.5, 319), (11, 3.6, 2.32, 358, 7.50, 0.34, 4.0, 9.1, 329), (12, 3.4, 2.06, 2, 7.45, 0.34, 4.0, 7.8, 330),
+         (13, 3.3, 2.02, 2, 7.35, 0.34, 1.7, 6.6, 165)]
+bre_2211 = {t: {"height_offshore": tot, "swell_offshore": sv, "swell_model": "standard", "bw_height": bw, "bw_dir": 347.0, "bw_period": 1.6,
+                "dir_offshore": d, "period": p, "wind_speed": ws, "wind_dir": float(wd), "gust": g, "tide": tide36(t)}
+            for (t, tot, sv, d, p, bw, ws, g, wd) in rad36}
+r36 = {t: rate(dict(h), B36) for t, h in bre_2211.items()}
+for t in sorted(r36):
+    show(f"36: Breivikeidet 22.11 kl. {t:02d}Z", r36[t])
+# 36.2: fast observasjon. Kl. 08Z minst 1 poeng (målet 2), og surfehøyde ca. 0,4-0,8 m i timene Theodor var i vannet.
+assert r36[8]["stars"] >= 1 and r36[8]["stars"] == 2, r36[8]["stars"]
+for t in (8, 9, 10):
+    assert r36[t]["stars"] >= 1 and 0.4 <= r36[t]["surf_height"] <= 0.8 and not r36[t]["likely_flat"], (t, r36[t]["stars"], r36[t]["surf_height"])
+    # høyden er et anslag (gap-grensa), merket usikkert og derfor aldri over 3
+    assert r36[t]["gap_floor"] and r36[t]["uncertain"] and r36[t]["bw_period_basis"] == "bw", (t, r36[t]["gap_floor"], r36[t]["bw_period_basis"])
+    # uten modellvinden (5 m/s på skrå inn, kast 9-10) er timene 2 poeng: tidevannsregelen alene tar aldri et poeng
+    assert rate(dict(bre_2211[t], wind_speed=1.0, gust=2.0), B36)["stars"] == 2, t
+assert [r36[t]["stars"] for t in sorted(r36)] == [2, 2, 1, 1, 2, 0, 0], [r36[t]["stars"] for t in sorted(r36)]
+# kl. 12-13Z er grensa under flat-sperren (svell 2,0 m ganger 0,165 = 0,33-0,34 m): flatt, ikke blåst ut
+assert all(r36[t]["likely_flat"] and r36[t]["low_reason"] == "flat" for t in (12, 13)), [(r36[t]["likely_flat"], r36[t]["low_reason"]) for t in (12, 13)]
+# 36.3: myk kant. Fem grader innenfor kanten er hele andelen, på kanten to tredeler, og to grader utenfor er siste time
+# som regnes med. Lenger ut gjelder ikke grensa, og timen er flat som før.
+h36 = bre_2211[8]
+assert gap_edge_factor(h36, B36) == 1.0 and abs(gap_floor_height(h36, B36) - 2.88 * 0.165) < 1e-9
+assert abs(gap_edge_factor(dict(h36, dir_offshore=345), B36) - 2 / 3) < 0.01 and abs(gap_edge_factor(dict(h36, dir_offshore=30), B36) - 2 / 3) < 0.01
+assert gap_edge_factor(dict(h36, dir_offshore=343), B36) < gap_edge_factor(dict(h36, dir_offshore=345), B36) < gap_edge_factor(dict(h36, dir_offshore=347), B36) < 1.0
+assert gap_swell_in_window(dict(h36, dir_offshore=343), B36) and not gap_swell_in_window(dict(h36, dir_offshore=342), B36)
+assert not gap_swell_in_window(dict(h36, dir_offshore=33), B36)
+# vinduet krysser nord: 359, 0, 0,4 og 360 grader er alle midt i, med hele andelen
+for d36 in (359.0, 359.6, 0, 0.4, 360.0):
+    assert gap_swell_in_window(dict(h36, dir_offshore=d36), B36) and gap_edge_factor(dict(h36, dir_offshore=d36), B36) == 1.0, d36
+r36_ute = rate(dict(h36, dir_offshore=340), B36)
+assert not r36_ute["gap_floor"] and r36_ute["stars"] == 0 and r36_ute["likely_flat"], (r36_ute["gap_floor"], r36_ute["stars"])
+# Russelv har ikke myk kant: hele andelen også på kanten av det tegnede vinduet (348-19)
+assert gap_edge_factor(dict(rus_1611, dir_offshore=348), R) == 1.0 and abs(gap_floor_height(dict(rus_1611, dir_offshore=348), R) - 2.42 * 0.2) < 1e-9
+# 36.4: de vanlige vilkårene for gap-grensa gjelder. Kort periode (under 7 s) og pålandsvind fra 8 m/s tar den bort.
+assert not rate(dict(h36, period=6.9), B36)["gap_floor"] and rate(dict(h36, period=6.9), B36)["stars"] == 0
+assert not rate(dict(h36, wind_speed=8.0, wind_dir=20.0), B36)["gap_floor"]
+# 36.5: tidevannsregelen. Full uttelling til 2,0 m, jevnt opp til 0,7 × 0,7 = 0,49 ved 2,8 m, og aldri mer.
+def lvl36(cm):
+    return tide_level_penalty({"tide": {"level": 0.5, "state": "middels", "rising": True, "cm": cm}}, B36)
+assert lvl36(150)[0] == 0.0 and lvl36(200)[0] == 0.0 and "ingen straff" in lvl36(200)[1]
+assert abs(lvl36(240)[0] - 0.245) < 1e-9 and abs(lvl36(280)[0] - 0.49) < 1e-9 and abs(lvl36(330)[0] - 0.49) < 1e-9
+# formen på regelen (feiljegeren 22.11.2026): grensene må stå i rekkefølge, weight må finnes, regelen alene tar aldri et
+# helt poeng (aldri sperre), og den kombineres ikke med en vanlig tidevannspreferanse - da ville linja i regnestykket
+# skjult det andre fradraget. Negativ vannstand gir ingen straff og skrives ikke som «-0,0 m».
+for i36, sp36 in spots.items():
+    tl36 = (sp36.get("local_rules") or {}).get("tide_level")
+    if tl36:
+        assert 0 <= tl36["full_below_cm"] < tl36["max_at_cm"] and 0 < sp36["local_rules"]["weight"] * tl36["penalty"] < 0.5, i36
+        assert "tide" not in sp36 and "tide_prefer" not in sp36["local_rules"], i36
+assert lvl36(-4) == (0.0, "Tidevann (0,0 m over sjøkartnull): lavt nok, ingen straff"), lvl36(-4)
+assert lvl36(280)[0] < 0.5       # under et halvt poeng: regelen alene runder aldri et poeng bort
+assert "jo lavere vann, jo bedre" in lvl36(247)[1] and "2,5 m over sjøkartnull" in lvl36(247)[1] and "−0,29" in lvl36(247)[1]
+# manglende vannstand er aldri 0 og gir aldri straff: uten cm, uten tidevann i det hele tatt, og for spots uten regelen
+mangler36 = (0.0, "Tidevann: vannstanden mangler, ingen straff")
+assert tide_level_penalty({"tide": {"level": 0.99, "state": "høy", "rising": True}}, B36) == mangler36
+assert tide_level_penalty({"tide": None}, B36) == mangler36 and tide_level_penalty({}, B36) == mangler36
+assert tide_level_penalty({"tide": tide36(10)}, spots["unstad"]) == (0.0, None) and tide_level_penalty({"tide": tide36(10)}, R) == (0.0, None)
+r36_ucm = rate(dict(bre_2211[9], tide={"level": 0.97, "state": "høy", "rising": True}), B36)
+assert r36_ucm["stars"] == 2 and r36_ucm["local_rules"]["lines"] == [mangler36[1]] and mangler36[1] in r36_ucm["breakdown"], r36_ucm["stars"]
+assert "Tidevann: spoten tåler alt" not in r36_ucm["breakdown"]
+r36_utide = rate(dict(bre_2211[9], tide=None), B36)      # Kartverket svarte ikke: samme tekst, ingen straff
+assert r36_utide["stars"] == 2 and mangler36[1] in r36_utide["breakdown"] and "Tidevann: spoten tåler alt" not in r36_utide["breakdown"]
+# kl. 09Z (2,7 m, straff 0,45) er timen der regelen vipper: vinden tar 0,2, og sammen blir det ett poeng. Bokføringen er
+# som ellers (vind først): poenget står som tapt til vinden («2 uten vind»), og linja om vannstanden står i forklaringen
+# i stedet for «tåler alt».
+assert r36[9]["stars"] == 1 and r36[9]["faded_wind"] == 1 and r36[9]["faded_tide"] == 0 and r36[9]["local_rules"]["stars_lost"] == 0, r36[9]["local_rules"]
+assert r36[9]["breakdown"][-1] == "Totalt: 1 av 5 stjerner (2 uten vind)", r36[9]["breakdown"][-1]
+assert any("jo lavere vann, jo bedre" in l for l in r36[9]["breakdown"]) and "Tidevann: spoten tåler alt" not in r36[9]["breakdown"]
+assert r36[9]["local_rules"]["source"] == "Observasjoner 17.11 og 22.11.2026"       # appen viser kilden uten navn
+# på lavt vann (1,8 m) står linja uten straff
+r36_lav = rate(dict(bre_2211[9], tide={"level": 0.5, "state": "middels", "rising": False, "cm": 180}), B36)
+assert r36_lav["stars"] == 2 and "Tidevann (1,8 m over sjøkartnull): lavt nok, ingen straff" in r36_lav["breakdown"], r36_lav["stars"]
+# 36.6: reserven bortenfor BarentsWatch-horisonten (svell ute × transfer 0,15 × retningstreff). swell_window og
+# swell_window_tegnet er like (345-30), så et nordsvell varsles likt tre døgn fram og når BarentsWatch-timene kommer.
+# Med Russelvs oppsett (swell_window 15-25, bare det tegnede vinduet 345-30) demper reserven brytehøyden utenfor
+# swell_window, og samme svell ville stått som 0 poeng til det kom innenfor horisonten (prøvd 22.11.2026).
+# Reserven har ikke gap-grensas krav om 7 s (fysikk-kontrolløren 22.11.2026, vilkår 4): under 7 s gjelder den vanlige
+# reserveregningen som for alle andre spots, uten løft og uten «usikker». Fra 7 s løfter gap-grensa (0,165), og
+# timen merkes usikker. 0 av 5454 timer i varselet 22.11 kl. 11Z var i dette hjørnet.
+res36 = lambda **kw: rate({**h36, "bw_height": None, "bw_dir": None, "bw_period": None, "swell_offshore": 3.0, "height_offshore": 3.1,
+                           "dir_offshore": 350.0, "wind_speed": 1.0, "gust": 2.0, **kw}, B36)
+r36_res, r36_kort = res36(period=7.6), res36(period=6.5)
+assert r36_res["height_source"] == "svell_ute" and r36_res["gap_floor"] and r36_res["uncertain"] and r36_res["stars"] == 2, (r36_res["stars"], r36_res["gap_floor"])
+assert abs(r36_res["height"] - 0.49) < 0.01 and 0.4 <= r36_res["surf_height"] <= 0.8, (r36_res["height"], r36_res["surf_height"])
+assert r36_kort["height_source"] == "svell_ute" and not r36_kort["gap_floor"] and abs(r36_kort["height"] - 0.45) < 0.01, (r36_kort["gap_floor"], r36_kort["height"])
+assert r36_kort["stars"] == 2 and not r36_kort["uncertain"] and r36_kort["surf_height"] <= r36_res["surf_height"], (r36_kort["stars"], r36_kort["surf_height"])
+# to grader utenfor kanten og lenger ut gir reserven ingenting (0 poeng), også med langt svell
+assert res36(period=7.6, dir_offshore=343.0)["stars"] == 0 and res36(period=7.6, dir_offshore=335.0)["stars"] == 0
+print("36: Breivikeidet 22.11 - gap-grensa med myk kant gir 2, 2, 1, 1, 2 poeng kl. 07-11Z og 0,7-0,8 m surfehøyde, Russelv som før; myk tidevannsregel på vannstanden, høyst 0,49 og aldri uten cm - OK")
 print("Alle tester ok")
