@@ -1435,10 +1435,18 @@
       "facing": 20,
       "_facing": "17.11.2026: 20°, midten av den frie sektoren mot åpent hav fra den nye pinnen (OSM: 14-26° fri minst 35 km, 21-26° fri 150 km) og av vinduet 15-25. Fabrikkens kystnormal fra den nye pinnen (148,4°, 149 m til kysten) peker på siden av odden og er ikke brukt. Før 17.11: 17,3 (kystnormal fra den gamle pinnen). Ikke kontrollert mot flyfoto.",
       "swell_window": [
-        15,
-        25
+        345,
+        30
       ],
-      "_vindu": "17.11.2026, Theodor: vinduet er 15-25. Svell ute fra 17° ga surf (observasjon 17.11.2026, Theodor). Fra den nye pinnen (OSM, uten kysttoleranse): fritt 150 km 21-26°, 14-20° treffer land 35-51 km ut, 11-13° 5-6 km ut, 27-31° 53-61 km ut. FØR 17.11 (vindu 20-25, gammel pinne): Spotfabrikken 2026-11-12: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[20, 25]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet. Spotansvarlig 12.11.2026 (OSM, uten kysttoleranse, fra posisjonen): fritt 150 km 20-25°; 10-17° treffer land 31-39 km ut, 18-19° 50-51 km ut, 26-29° Arnøya 55-64 km ut, 30° og over under 15 km, 9° og under under 8 km. Theodors 15-30° (12.11) er fri linje ut Ullsfjorden, ikke til åpent hav. Samme type gap som russelv/lenangsoyra (15°-regelen gjelder ikke).",
+      "swell_window_tegnet": [
+        345,
+        30
+      ],
+      "gap_spot": true,
+      "gap_soft_edge": true,
+      "gap_transfer": 0.165,
+      "_gap_spot": "22.11.2026 (svar.md 22.11.2026 kl. 12.20, S19 b og c; kilder: observasjon 17.11.2026, Theodor, og observasjon 22.11.2026, Theodor): svellet når Breivikeidet inn Ullsfjorden fra nord, og BarentsWatch-punktet svarer ikke på det (0,33-0,37 m med 1,6 s ved punktet 22.11 med 2,6-2,9 m svell ute fra 350-355°, og rene, fine bølger på stranda). Vinduet er 345-30 (swell_window og swell_window_tegnet er like her; ingen har tegnet det på kart, tallet er svaret i svar.md og bygger på de to observasjonene og på regelen fra en lokal surfer om nordsvell inn fjorden). Myk kant (gap_soft_edge): andelen glir fra 0,667 på kanten til 1,0 fem grader innenfor, se rating.gap_edge_factor(). gap_transfer 0,165 (foreløpig), regnet fra begge dagene: 17.11 kl. 08-09Z (svell ute 2,22-2,24 m fra 17°, hoftehøyt, surfehøyde 0,5-0,9 m) tåler 0,16-0,26, og 22.11 kl. 08Z (2,88 m fra 350°, «litt mindre kanskje», surfehøyde 0,4-0,8 m) tåler 0,12-0,17. 0,165 ligger i begge. 17.11 kl. 07, 08 og 10Z står BarentsWatch-tallet fortsatt over grensa, og kl. 09Z bærer gap-grensa timen (0,37 m mot 0,36 m ved punktet, merket usikker); poengene den dagen er uendret (1, 1, 2, 2). Den geometriske eksponeringstabellen langs fjordaksen (0,48-0,56 i vinduet, fysikk-kontrollør 19.11.2026) er ikke lagt inn: observasjonene bestemmer bare produktet av andel og eksponering, og 0,39 × 0,49 er samme tall som 0,19. Låst her, justeres bare etter nye observasjoner. swell_window og swell_window_tegnet er like med vilje (fysikk-kontrolløren 22.11.2026 foreslo Russelvs oppsett med swell_window 15-25): reserven bortenfor BarentsWatch-horisonten demper brytehøyden utenfor swell_window, så med 15-25 ville nordsvell stått som 0 poeng tre døgn fram og hoppet til 2 når BarentsWatch-timene kom. Følgen er at reserven ikke har kravet om 7 s for nordsvell (test 36.6), og at nordsvell-timer blir kalibreringspar for lært transfer - se STATUS.md.",
+      "_vindu": "22.11.2026: vinduet er 345-30, se _gap_spot. FØR 22.11 (17.11.2026, Theodor): vinduet er 15-25. Svell ute fra 17° ga surf (observasjon 17.11.2026, Theodor). Fra den nye pinnen (OSM, uten kysttoleranse): fritt 150 km 21-26°, 14-20° treffer land 35-51 km ut, 11-13° 5-6 km ut, 27-31° 53-61 km ut. FØR 17.11 (vindu 20-25, gammel pinne): Spotfabrikken 2026-11-12: fri linje til åpent hav (150 km) over GSHHS f med 300 m kysttoleranse, alle sektorer [[20, 25]]; største brukt. Små øyer/skjær kan mangle i GSHHS - ubekreftet. Spotansvarlig 12.11.2026 (OSM, uten kysttoleranse, fra posisjonen): fritt 150 km 20-25°; 10-17° treffer land 31-39 km ut, 18-19° 50-51 km ut, 26-29° Arnøya 55-64 km ut, 30° og over under 15 km, 9° og under under 8 km. Theodors 15-30° (12.11) er fri linje ut Ullsfjorden, ikke til åpent hav. Samme type gap som russelv/lenangsoyra (15°-regelen gjelder ikke).",
       "offshore_wind": [
         155,
         245
@@ -1458,6 +1466,11 @@
         "lat": 69.660855,
         "lon": 19.665743
       },
+      "barentswatch_point_shadow": {
+        "lat": 69.671471,
+        "lon": 19.659025
+      },
+      "_skyggepunkt": "22.11.2026 (svar.md 22.11.2026 kl. 12.20, S19 a: ja til skyggepunktet for logging; spotansvarlig 19.11.2026, fysikk-kontrollør 19.11.2026): SKYGGEMODUS - snittregelens punkt fra den nye pinnen (data/bw_point_search/result_2026-11-18T1948.json, snitt 400m@20, 400 m ut langs facing 20, EMODnet-dybde 28,5 m; regelen fra 15.10 valgte det i 3 av 4 timer med svell ute fra vinduet, 300 m (12,9 m) i den fjerde). Hentes og logges bare (bw_height_shadow, surf_height_shadow, stars_shadow i forecast.json/arkivet - tools/skygge_rapport.py), ALDRI i ratingen eller kalibreringen. Punktet byttes ikke før Theodor har sagt ja for akkurat denne spoten.",
       "_barentswatch": "Snitt langs facing (data/bw_point_search/result_2026-11-12T1827_kandidater.json), første punkt med dybde ≥ 8 m og BarentsWatch-data (retting fra gjennomgangen): snitt 100m@17.3, 100 m ut, dybde 8,8 m. Lavere sikkerhet (spotansvarlig 12.11.2026): 15.10-regelen fant ikke noe punkt: velgeren prøver bare timer med svell ute fra innenfor vinduet (12 av 19), og i alle de 12 var retningen ved 100 m 69-88° (46-66° fra svellet ute). BarentsWatch viste kort krapp sjø fra øst i 17 av 19 timer (100 m: 0,12-0,28 m, Tp 2,0-2,9 s) mens svellet ute var 0,8-1,4 m fra 11-27°. I de to roligste timene (12.11 kl. 18Z og 13.11 kl. 00Z) sto det igjen 0,09 m fra 9° med Tp 7,5 s ved 100 m - ca. 7 % av svellet ute (1,2-1,26 m fra 12-18°, like utenfor vinduet). Hs øker fra 0,19 m (100 m) til 0,30 m (800 m) og flater ut der; økningen er le bak Breivikneset for østlig krappsjø, ikke brytesone (8,8 m er dypt vann for 3 s bølger). 100 m er derfor beholdt som punktet som best ligner stranda. 17.11.2026: punktet er BEHOLDT etter at pinnen ble flyttet, og ligger nå ca. 900 m SSØ for pinnen. Det er det eneste punktet med en observasjon å holde mot: 0,41-0,44 m ved punktet da det var hoftehøyt på sandbanken (observasjon 17.11.2026, Theodor). Nytt snitt fra den nye pinnen hentes i Actions (find_bw_point.yml) når pinnen er på main.",
       "ideal_height": [
         0.5,
@@ -1467,6 +1480,12 @@
       "max_height": 3.5,
       "transfer": 0.15,
       "_transfer": "16.11.2026, FORELØPIG (ja til S6 i privat/kontor/svar.md 16.11 kl. 15.45, i stedet for taket på 0,25 som fysikk-kontrolløren ikke godkjente): andelen av svellet ute som når stranda ved direkte treff, brukt i reservesonen (svell ute × transfer × eksponering) til BarentsWatch har lært en egen. Grunnlag: BarentsWatch-snittet 12.11.2026 (data/bw_point_search/result_2026-11-12T1827_kandidater.json, 19 timer, svell ute 0,8-1,4 m): totalhøyden ved punktet var 7-26 % av svellet ute (median 22 %), men nesten alt var krapp sjø fra øst på 2-3 s. Den rene svelldelen (7,5 s fra 9°, svell ute fra 12-18°) var ca. 7 %. Med eksponering 0,23-0,53 ved 12-18° slipper 0,15 inn 3,5-8 %, og 12 % midt i vinduet (22°, eksponering 0,8). Ingen observasjon ennå. Justeres etter første observasjon.",
+      "local_rules": {
+        "source": "Observasjoner 17.11 og 22.11.2026",
+        "tide_level": {"full_below_cm": 200, "max_at_cm": 280, "penalty": 0.7},
+        "weight": 0.7
+      },
+      "_local_rules": "22.11.2026 (svar.md 22.11.2026 kl. 12.20): myk tidevannsregel, «jo lavere vann, jo bedre». Full uttelling til 2,0 m over sjøkartnull, så en liten, jevn straff opp til 0,7 × weight 0,7 = 0,49 poeng ved 2,8 m og aldri mer. Under et halvt poeng, så regelen alene tar aldri et poeng og er aldri en sperre: den vipper bare en time som vinden allerede har tatt noe fra. Kilder: observasjon 17.11.2026, Theodor (best på 1,95-1,6 m, fallende sjø) og observasjon 22.11.2026, Theodor (i vannet kl. 09.00-11.30 norsk tid på 2,27-2,80 m, «definitivt best på laveste vann», men rene, fine bølger også nær flo). Ingen observasjon under 1,6 m ennå. Vannstanden per time er tide.state_at() sin 'cm'. Energiregelen gjelder fortsatt ikke (no_energy_rule).",
       "no_energy_rule": true,
       "_no_energy_rule": "17.11.2026 (svar på S17 i privat/kontor/svar.md): Breivikeidet er unntatt energiregelen (rating.energy_factor()). Kilde: observasjon 17.11.2026, Theodor: hoftehøyt og rent på sandbanken med ca. 900 kJ svellenergi ute. Standardgrensene (2000/500 kJ) tok 1 poeng. Unntaket gjelder bare denne spoten og står som eget felt, ikke i local_rules, fordi det ikke er en lokal regel som skal vises per time. Å fjerne standardgrensene for alle spots ble regnet på samme dag og ga 7-8 % av lyse timer opp 2 poeng eller mer, så det venter på flere logger.",
       "kilde": "observasjon 17.11.2026, Theodor",
