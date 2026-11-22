@@ -13,7 +13,7 @@ mobil (390x844) og PC (1440x900), lys og mørk (prefers-color-scheme), og sjekke
     44x44 (søylene i timegrafen unntatt - hele kolonnen er trykkflaten), alle knapper har navn;
 5.  «grotfjord» (uten ø) finner Grøtfjord først; ingen treff gir «Ingen spots heter «x». …»;
 6.  Hjem: topplinja/datolinja med lyset og startstedet, ukerutene; PC (B4 steg 6, SPEC §6D): forsiden med
-    hovedbildet (dagens beste), «Beste nå» med samme dagstall som ukerutene og «Neste 7 dager» per spot;
+    hovedbildet (dagens beste), «Beste i dag» med samme dagstall som ukerutene og «Neste 7 dager» per spot;
 7.  Utforsk: markørene nå har stjernene nå (ratingklasse r-N), en annen dag har dagens beste
     dagslystime (speil av dayBest i ui.js), valgt markør beholder navnet, kortet nederst sier
     spot og dag;
@@ -917,7 +917,7 @@ def main():
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     if not mobile:
-                        # forsiden (SPEC §6D): hovedbildet er dagens beste, tabellen «Beste nå» har samme dagstall som matrisen
+                        # forsiden (SPEC §6D): hovedbildet er dagens beste, tabellen «Beste i dag» har samme dagstall som matrisen
                         page.click("#forside [data-fsreg='']"); page.wait_for_selector("#forside [data-fsreg=''][aria-pressed='true']")
                         fs = page.evaluate("""() => ({helt: (document.querySelector('#forside .fs-helt .fs-navn') || {}).textContent || null, tall: (document.querySelector('#forside .fs-helt .fs-tall') || {}).textContent || null,
                             rader: [...document.querySelectorAll('#forside table.fs-tabell tr.s')].map(r => ({id: r.dataset.spot, tall: (r.querySelector('.t-listetall') || {}).textContent || '', stripe: r.querySelectorAll('.fs-stripe i').length})),

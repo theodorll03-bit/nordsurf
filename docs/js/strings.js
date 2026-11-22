@@ -174,7 +174,7 @@
       lagreFav: "Lagre som favoritt", fjernFav: "Fjern fra favoritter",
       neste7: "Neste 7 dager", usikre: "Dag 4–7 er usikre",
       timeForTime: (dag) => `${dag} time for time`, holdMusa: "Hold musa over en time",
-      rader: {kl: "Kl.", vurdering: "Vurdering", svell: "Svell ute m", vind: "Vind m/s", tideSub: "over sjøkartnull"},
+      rader: {kl: "Kl.", vurdering: "Vurdering", tideSub: "over sjøkartnull"},
       spotten: "Spotten", omSpotten: "Om spotten",
       fig: (n, navn) => `Fig. ${n} · ${navn}, nord opp.`,
       kartOsm: "Kart: © OpenStreetMap-bidragsytere",

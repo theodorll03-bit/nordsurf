@@ -637,7 +637,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .utforsk-liste .srad .na .num{font-weight:500;text-transform:none;color:var(--muted)}
   .utforsk-liste .visflere{margin-top:16px}
 
-  /* ---------- Forsiden «Beste nå» (SPEC §6D) ---------- */
+  /* ---------- Forsiden «Beste i dag» (SPEC §6D) ---------- */
   #viewHjem{padding-top:var(--s6)}
   #forside{max-width:var(--web-w);margin:0 auto}
   .fs-dato{margin:0}
@@ -671,7 +671,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-helt + .kredit{margin-top:36px}
   .fs-helt:focus-visible{outline:2px solid var(--focus);outline-offset:4px}
   #forside .sek{margin-top:var(--s7)}
-  /* «Beste nå»: tabell med 1 px hair mellom radene */
+  /* «Beste i dag»: tabell med 1 px hair mellom radene */
   .fs-tabell,.fs-matrise{width:100%;border-collapse:collapse}
   .fs-tabell th,.fs-matrise thead th{padding:0 12px 10px 0;text-align:left;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--hair)}
   /* overskriftsraden står fast under toppen når «Vis alle» gir en lang tabell (skalering, punkt 8) */
