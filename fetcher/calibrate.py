@@ -129,10 +129,19 @@ def effective_transfer(spot, learned, bw_pairs):
     """Rekkefølge: 1) lært fra BarentsWatch, 2) transfer satt i spots.json,
     3) DEFAULT_TRANSFER. 26.09.2026: learn() setter ikke lenger "transfer"
     (se modul-docstringen) - "logs"-grenen under er bare igjen for at
-    rekkefølgen fortsatt virker om noe skulle sette den eksternt."""
+    rekkefølgen fortsatt virker om noe skulle sette den eksternt.
+
+    23.11.2026 (svar.md 23.11.2026 kl. 11.20, S27): en spot med
+    "transfer_locked" i spots.json bruker transfer derfra, og BarentsWatch-
+    medianen tar aldri over, uansett antall par. Bare Breivikeidet: punktet
+    måler krapp sjø og ikke svellet (observasjon 17.11.2026 og 22.11.2026,
+    Theodor), og andelen er satt fra observasjonene. Parene samles og vises
+    fortsatt. Loggene (observasjoner) står fortsatt først."""
     from rating import DEFAULT_TRANSFER
     if learned.get("transfer"):
         return learned["transfer"], "logs"
+    if spot.get("transfer_locked") and spot.get("transfer") is not None:
+        return spot["transfer"], "spots.json"
     bw_t = bw_transfer(bw_pairs)
     if bw_t is not None:
         return bw_t, "barentswatch"

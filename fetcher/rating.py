@@ -585,10 +585,26 @@ def gap_edge_factor(hour, spot):
     en spot merket "gap_soft_edge" glir andelen fra 0,667 på kanten av det
     tegnede vinduet til 1,0 fem grader innenfor, og faller videre utenfor.
     Det er samme kurve som directness() bruker for svellvinduet, lest mot det
-    TEGNEDE vinduet. Kall bare når gap_swell_in_window() er sann."""
+    TEGNEDE vinduet. Kall bare når gap_swell_in_window() er sann.
+
+    23.11.2026 (svar.md 23.11.2026 kl. 11.20, S27; kilder: observasjon
+    17.11.2026 og 22.11.2026, Theodor): en spot kan sette "gap_edge_taper"
+    [fra første kant, fra andre kant] i grader. Inne i vinduet går andelen da
+    fra 0,667 på hver kant opp til 1,0 så mange grader inn, hver side for seg.
+    Uten feltet er begge 5 grader (EDGE_TAPER), og tallet er det samme som
+    før. Utenfor vinduet (høyst GAP_EDGE_DEG) gjelder skyggekurven som før.
+    Breivikeidet: [20, 5]. Svell fra 17° (langs fjordaksen) ga hoftehøyt
+    17.11, mens større svell fra 350° ga litt mindre 22.11."""
     if not spot.get("gap_soft_edge"):
         return 1.0
-    return directness(hour["dir_offshore"], {"swell_window": spot["swell_window_tegnet"]})
+    d, tegnet = hour["dir_offshore"], {"swell_window": spot["swell_window_tegnet"]}
+    taper = spot.get("gap_edge_taper")
+    if not taper or degrees_outside(d, tegnet) > 0:
+        return directness(d, tegnet)
+    start, end = next(sec for sec in window_sectors(tegnet) if in_sector(d, sec))
+    edge = SHADOW_CURVE[0][1]
+    return min(1.0, *(edge + (1.0 - edge) * angle_diff(d, kant) / bredde
+                      for kant, bredde in ((start, taper[0]), (end, taper[1]))))
 
 
 def gap_floor_height(hour, spot):
@@ -614,7 +630,7 @@ def gap_blocked_by_wind(hour, spot):
     if not gap_swell_in_window(hour, spot) or period is None or period < GAP_MIN_PERIOD_S:
         return False
     speed = hour.get("wind_speed")
-    return (speed is not None and speed >= BLOWN_OUT_WIND_MS
+    return (speed is not None and speed >= blown_out_wind_ms(spot)
             and wind_type(hour.get("wind_dir"), spot) in ("onshore", "sideonshore", None))
 
 
@@ -692,7 +708,13 @@ def spot_height(hour, spot=None):
         return h, "barentswatch", detail
     transfer = (spot or {}).get("transfer", DEFAULT_TRANSFER)
     if hour.get("swell_offshore") is not None:
-        h = hour["swell_offshore"] * transfer * exposure(hour.get("dir_offshore"), spot, hour.get("period"))
+        # 23.11.2026 (S27): for en gap-spot med myk kant (bare Breivikeidet) bruker reserven samme retningsfaktor som
+        # gap-grensa i det tegnede vinduet, så svell ute × transfer er det samme tallet som grensa når andelene er like
+        if spot and spot.get("gap_soft_edge") and gap_swell_in_window(hour, spot):
+            retning = gap_edge_factor(hour, spot)
+        else:
+            retning = exposure(hour.get("dir_offshore"), spot, hour.get("period"))
+        h = hour["swell_offshore"] * transfer * retning
         if floor is not None and floor > h:
             h = floor
         return h, "svell_ute", None
@@ -1022,9 +1044,44 @@ SWELL_DAMP_KJ_HIGH = 15000.0
 SWELL_DAMP_MIN = 0.6
 
 
-def wind_curve_penalty(eff, kind):
-    """Rå vindstraff (float) fra kurven for vindtypen."""
-    pts = WIND_PENALTY_CURVES.get(kind) or WIND_PENALTY_CURVES["onshore"]
+def local_wind(spot):
+    """Spotens egen, slakere vindkurve fra spots.json ("wind_local"), eller None.
+
+    23.11.2026 (svar.md 23.11.2026 kl. 11.20, S27; kilde: observasjon 17.11.2026, Theodor: vindstille på stranda
+    mens varselet sa 4-5,5 m/s pålands med kast 9-10,5). Bare Breivikeidet har feltet. Under "calm_below_ms"
+    MIDDELVIND tar vinden ingen poeng, og vinden alene gir aldri «Blåst ut» (lav svellandel ved BarentsWatch-punktet
+    gjør det fortsatt, som for alle spots). Fra grensa brukes spotens egne kurver ("curves") på
+    MIDDELVINDEN, uten kasttillegget (effective_wind()): da avgjør ikke kastene om grensa er nådd, og observasjonen
+    gjaldt vinden på stranda, ikke kastene i varselet. Dempingen fra svellenergien gjelder som før. Ukjent
+    vindstyrke er fortsatt ukjent (1 poeng, se wind_penalty()), aldri «svak vind»."""
+    return (spot or {}).get("wind_local")
+
+
+def blown_out_wind_ms(spot):
+    """Middelvinden der pålands og skrått pålands vind regnes som «kraftig» (blåst ut) for spoten."""
+    lw = local_wind(spot)
+    return float(lw["calm_below_ms"]) if lw else BLOWN_OUT_WIND_MS
+
+
+def _wind_eff(speed, gust, spot):
+    """Vinden kurven leses på: effektiv vind med kast, eller middelvinden for en spot med egen kurve (local_wind())."""
+    return speed if local_wind(spot) is not None else effective_wind(speed, gust)
+
+
+def _wind_raw(eff, kind, spot):
+    """Rå vindstraff for spoten: de vanlige kurvene, eller spotens egne (local_wind())."""
+    lw = local_wind(spot)
+    if lw is None:
+        return wind_curve_penalty(eff, kind)
+    if eff < float(lw["calm_below_ms"]):
+        return 0.0
+    curves = lw["curves"]
+    return wind_curve_penalty(eff, kind, curves.get(kind) or curves["onshore"])
+
+
+def wind_curve_penalty(eff, kind, pts=None):
+    """Rå vindstraff (float) fra kurven for vindtypen (eller fra pts, se _wind_raw())."""
+    pts = pts or WIND_PENALTY_CURVES.get(kind) or WIND_PENALTY_CURVES["onshore"]
     if eff <= pts[0][0]:
         return 0.0
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
@@ -1048,9 +1105,9 @@ def wind_penalty(speed, wind_dir, spot, gust=None, energy_swell_kj=None):
     (ikke full pott). Ukjent retning: verste fall (onshore)."""
     if speed is None:
         return 1.0
-    eff = effective_wind(speed, gust)
+    eff = _wind_eff(speed, gust, spot)
     kind = wind_type(wind_dir, spot) or "onshore"
-    pen = wind_curve_penalty(eff, kind)
+    pen = _wind_raw(eff, kind, spot)
     if kind != "offshore":
         pen *= swell_damping(energy_swell_kj)
     return pen
@@ -1061,9 +1118,9 @@ def wind_penalty_parts(speed, wind_dir, spot, gust=None, energy_swell_kj=None):
     {eff, kind, raw, damp, pen}."""
     if speed is None:
         return {"eff": None, "kind": wind_type(wind_dir, spot), "raw": 1.0, "damp": 1.0, "pen": 1.0}
-    eff = effective_wind(speed, gust)
+    eff = _wind_eff(speed, gust, spot)
     kind = wind_type(wind_dir, spot) or "onshore"
-    raw = wind_curve_penalty(eff, kind)
+    raw = _wind_raw(eff, kind, spot)
     damp = swell_damping(energy_swell_kj) if kind != "offshore" else 1.0
     return {"eff": eff, "kind": kind, "raw": raw, "damp": damp, "pen": raw * damp}
 
@@ -1278,7 +1335,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             # wind_took_points står som sikring hvis den regelen endres. Bare tekst, ingen poeng eller høyder.
             eff = effective_wind(wind_speed, gust)
             strong_wind = wind_speed is not None and (
-                eff >= BLOWN_OUT_TEXT_OFFSHORE_MS if wt == "offshore" else wind_speed >= BLOWN_OUT_WIND_MS)
+                eff >= BLOWN_OUT_TEXT_OFFSHORE_MS if wt == "offshore" else wind_speed >= blown_out_wind_ms(spot))
             cause = "mye vindsjø og sterk vind" if (wind_took_points and wind_speed is not None) or strong_wind else "mye vindsjø"
             items.append(f"Surfehøyde: blåst ut - {cause}, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
@@ -1313,6 +1370,11 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         gusttxt = ""
         if gust is not None and gust > wind_speed and wpp["eff"] is not None and wpp["eff"] > wind_speed + 0.05:
             gusttxt = f", kast {gust:.0f} (teller som {wpp['eff']:.1f})".replace(".", ",")
+        elif gust is not None and gust > wind_speed and local_wind(spot) is not None:
+            gusttxt = f", kast {gust:.0f}"
+        lw = local_wind(spot)
+        if lw is not None and wind_speed < float(lw["calm_below_ms"]):
+            gusttxt += f" (vinden teller først fra {float(lw['calm_below_ms']):.0f} m/s middelvind her)"
         damptxt = ""
         if wpp["damp"] < 0.999:
             damptxt = ", dempet av " + ("svært kraftig" if (energy_swell_kj or 0) >= 10000 else "kraftig") + " svell"
@@ -1378,7 +1440,10 @@ def is_blown_out(hour, spot, source, bw_detail, low_hs):
     share_low = bw_detail["swell_share"] < BLOWN_OUT_SHARE_MAX
     wt = wind_type(hour.get("wind_dir"), spot)
     speed = hour.get("wind_speed")
-    strong_onshore = wt in ("onshore", "sideonshore") and speed is not None and speed >= BLOWN_OUT_WIND_MS
+    # 23.11.2026 (S27, se local_wind()): en spot med egen vindkurve er ikke blåst ut AV VINDEN under grensa
+    # (blown_out_wind_ms()). Lav svellandel (share_low) gjelder som før - den måler sjøen ved punktet, ikke vinden.
+    # Ukjent vindstyrke er ikke sterk vind (S22).
+    strong_onshore = wt in ("onshore", "sideonshore") and speed is not None and speed >= blown_out_wind_ms(spot)
     return share_low or strong_onshore
 
 
@@ -1696,8 +1761,14 @@ def rate(hour, spot):
     # 1 - (1 - dir_hit) × p(T): ved 8 s som før (dir_hit), ved 14 s mildere.
     if source == "svell_ute":
         dir_off = hour.get("dir_offshore")
+        # 23.11.2026 (S27, feiljegeren): for en gap-spot med myk kant har spot_height() allerede brukt
+        # gap_edge_factor() i hele kantsonen (også de 2 gradene utenfor det tegnede vinduet). Ekstra demping her
+        # ville dempet samme retning to ganger, og reserven ville gitt lavere surfehøyde enn BarentsWatch-sonen
+        # for samme svell (0 mot 2 poeng ved 343-344 og 31-32 grader). Samme tanke som override-unntaket over.
+        gap_soft = bool(spot.get("gap_soft_edge")) and gap_swell_in_window(hour, spot)
         needs_extra_damping = (raw_exposure_zero(dir_off, spot)
-                                and exposure_override_cap(dir_off, spot) is None)
+                                and exposure_override_cap(dir_off, spot) is None
+                                and not gap_soft)
         hb_damping = diffraction_damping(dir_hit, period) if needs_extra_damping else 1.0
     elif source == "barentswatch":
         hb_damping = 1.0

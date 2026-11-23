@@ -714,7 +714,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
     bw_pairs_existing = bw_calib.get(spot["id"], [])
     if learned.get("transfer"):
         transfer_value, transfer_source = learned["transfer"], "logs"
-    elif transfer_lang is not None:
+    elif transfer_lang is not None and not spot.get("transfer_locked"):   # S27: låst andel (calibrate.effective_transfer())
         transfer_value, transfer_source = round(min(1.2, max(0.05, transfer_lang)), 2), "eksponering"
     else:
         transfer_value, transfer_source = calibrate.effective_transfer(spot, learned, bw_pairs_existing)
