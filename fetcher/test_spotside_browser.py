@@ -403,6 +403,12 @@ def main():
                         pa_tapt: alt({surf_height: 0.1, wind_type: 'onshore', zero_losses: z(1)}), side_falmet: alt({surf_height: 0.1, wind_type: 'side', faded_wind: 1}), retn_tapt: alt({surf_height: 0.1, wind_type: null, zero_losses: z(1)}),
                         pa_styrke: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: null}), pa_mangler: alt({surf_height: null, wind_type: 'onshore'}), pa_stor: alt({surf_height: 0.8, wind_type: 'onshore'}),
                         side_ett: alt({surf_height: 0.5, stars: 1, wind_type: 'side'}),
+                        egen_skra: alt({surf_height: 0.1, wind_type: 'sideonshore', wind_speed: 8.2, gust: 14, wind_calm_ms: 14}), egen_under: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 13.9, gust: 22, wind_calm_ms: 14}),
+                        egen_paa: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 14, wind_calm_ms: 14}), egen_bre: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 6.5, gust: 11.5, wind_calm_ms: 8}),
+                        egen_bre_paa: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 8, wind_calm_ms: 8}), egen_fra: alt({surf_height: 0.1, wind_speed: 11.9, gust: 20, wind_calm_ms: 8}),
+                        egen_fra_paa: alt({surf_height: 0.1, wind_speed: 12, wind_calm_ms: 8}), egen_fra14: alt({surf_height: 0.1, wind_speed: 13.9, gust: 20, wind_calm_ms: 14}),
+                        egen_retn: alt({surf_height: 0.1, wind_type: null, wind_speed: 9, wind_calm_ms: 14}), egen_retn_paa: alt({surf_height: 0.1, wind_type: null, wind_speed: 14, wind_calm_ms: 14}),
+                        egen_stor: alt({surf_height: 0.8, wind_type: 'onshore', wind_speed: 5, wind_calm_ms: 14}),
                         ett: alt({surf_height: 0.5, stars: 1}), flat: alt({surf_height: 0.1, low_reason: 'flat'}), stormsjo: alt({surf_height: 0.1, low_reason: 'stormsjo'}),
                         flatt: STR.starWords[0], smatt: STR.wordSmall, smatt_fork: STR.wordExplain[STR.wordSmall], daarlig: STR.starWords[1], ut: STR.lowReason.blown_out, ut_fork: STR.wordExplain[STR.lowReason.blown_out],
                         mye: STR.wordTooMuchWind, mye_fork: STR.wordExplain[STR.wordTooMuchWind], setn: STR.notice.blown_out + '.', setn_storm: STR.notice.stormsjo + '.'}; }""")
@@ -435,13 +441,21 @@ def main():
                 # manglende vindstyrke eller surfehøyde er aldri 0, og fra 0,8 m er det bølger: «Blåst ut» som før
                 assert sf["pa_styrke"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["pa_mangler"] == [sf["ut"], sf["ut_fork"], 0.6, sf["setn"]] and sf["pa_stor"] == [sf["ut"], sf["ut_fork"], 0.8, sf["setn"]], sf
                 assert sf["side_ett"][0] == sf["daarlig"] and sf["side_ett"][2] == 0.5 and sf["side_ett"][3] is None, sf
+                # Spots med egen vindkurve (Unstad 14 m/s, Breivikeidet 8) har grensa si med i timen (wind_calm_ms, fysikk-kontrolløren og
+                # feiljegeren 23.11.2026): ordet skylder på vinden først fra spotens grense, målt på middelvinden uansett kast, og fralands fra
+                # den høyeste av grensa og 12 m/s. Unstad 22.11 kl. 11Z (8,2 m/s skrått pålands, kast 14) heter «Flatt», ikke «Blåst ut».
+                egne_svake = ("egen_skra", "egen_under", "egen_bre", "egen_fra", "egen_fra14", "egen_retn")
+                assert all(sf[k] == [sf["flatt"], None, None, None] for k in egne_svake), f"under spotens egen vindgrense skal ordet følge surfehøyden: { {k: sf[k] for k in egne_svake} }"
+                assert sf["egen_paa"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["egen_bre_paa"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["egen_stor"] == [sf["ut"], sf["ut_fork"], 0.8, sf["setn"]], sf
+                assert sf["egen_fra_paa"] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]] and sf["egen_retn_paa"] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]], sf
                 # Samme grense i henteren (S26): windBlamed i appen og publish.wind_blamed() (dagens time, best_hour) er like for
-                # alle kombinasjoner av retning, vind, kast, høyde, poengtap og poeng. Og ordet og windBlamed sier det samme.
+                # alle kombinasjoner av retning, vind, kast, høyde, poengtap, poeng og spotens egen vindgrense (ingen, 8 og 14 m/s).
+                # Og ordet og windBlamed sier det samme.
                 import publish as _pub_s26
                 _z = lambda w: {"energy": 0, "wind": w, "tide": 0, "local": 0, "cap": 0}
-                grid = [dict(low_reason=lr, stars=st, wind_type=wt, wind_speed=ws, gust=gu, surf_height=sh, zero_losses=_z(zw), faded_wind=fw, bw_height=1.0, period=8, light="dag")
+                grid = [dict(low_reason=lr, stars=st, wind_type=wt, wind_speed=ws, gust=gu, surf_height=sh, zero_losses=_z(zw), faded_wind=fw, bw_height=1.0, period=8, light="dag", wind_calm_ms=cm)
                         for lr in ("blown_out", "flat") for st in (0, 1) for wt in ("offshore", "side", "sideonshore", "onshore", None)
-                        for ws in (None, 0, 5, 6.5, 7, 7.9, 8, 9, 11, 11.9, 12, 14) for gu in (None, 5, 10.3, 11.4, 11.5, 12, 14, 14.4, 20)
+                        for ws in (None, 0, 5, 6.5, 7, 7.9, 8, 9, 11, 11.9, 12, 13.9, 14) for gu in (None, 5, 10.3, 11.4, 11.5, 12, 14, 14.4, 20) for cm in (None, 8, 14)
                         for sh in (None, 0, 0.29, 0.5, 0.79, 0.8) for zw, fw in ((0, 0), (1, 0), (0, 1)) if lr == "blown_out" or (wt == "side" and zw == fw == 0)]
                 js_wb = page.evaluate("(g) => g.map(h => [windBlamed(h), ratingWord(h)])", grid)
                 avvik = [(h, j) for h, j in zip(grid, js_wb) if j[0] != _pub_s26.wind_blamed(h)]

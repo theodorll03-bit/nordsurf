@@ -824,6 +824,14 @@ assert blown_line(wind_speed=6.0, gust=14) == STERK                   # teller s
 from rating import blown_out_wind_strong as _bows
 assert _bows(None, 25, "onshore") is None and _bows(7.9, None, "onshore") is False and _bows(7.9, 12, "side") is True
 assert _bows(7.9, 12, None) is True and _bows(9.9, None, "offshore") is False and _bows(11.9, None, "offshore") is False and _bows(12.0, None, "offshore") is True
+# spots med egen vindkurve (fysikk-kontrolløren og feiljegeren 23.11.2026): middelvinden mot spotens grense, uansett kast,
+# og fralands fra den høyeste av grensa og 12 m/s. Se også 37.7 (Breivikeidet) og 38.3 (Unstad).
+assert _bows(13.9, 22, "onshore", 14.0) is False and _bows(14.0, None, "onshore", 14.0) is True and _bows(None, 25, "onshore", 14.0) is None
+assert _bows(13.9, 22, "offshore", 14.0) is False and _bows(14.0, 14, "offshore", 14.0) is True     # Unstad fralands: 14 (høyere enn 12)
+assert _bows(6.5, 11.5, "onshore", 8.0) is False and _bows(8.0, None, "onshore", 8.0) is True         # Breivikeidet: 8 på middelvinden
+assert _bows(11.9, 20, "offshore", 8.0) is False and _bows(12.0, None, "offshore", 8.0) is True       # Breivikeidet fralands: 12
+assert _bows(13.9, 22, None, 14.0) is False and _bows(14.0, None, None, 14.0) is True                 # ukjent retning
+assert "wind_calm_ms" not in rate(dict(blown_base, wind_speed=5, wind_dir=301), G)                    # bare spots med egen kurve har feltet
 assert blown_line() == SVAK                                           # mangler vinden, nevnes den ikke
 assert blown_line(wind_dir=301, gust=25) == SVAK                      # mangler styrken, nevnes den ikke
 # Har vinden tatt poeng, står «og sterk vind» også under 8 m/s. is_blown_out() krever low_hs, og da er potensialet 0,
@@ -2152,9 +2160,10 @@ print("36: Breivikeidet 22.11 - gap-grensa med myk kant gir 2 poeng kl. 07-13Z (
 # retningsfaktor som gap-grensa, og vinden tar ingen poeng under 8 m/s middelvind. Gjelder bare Breivikeidet.
 from rating import _wind_raw, _wind_eff, wind_curve_penalty, blown_out_wind_ms, local_wind, effective_wind, wind_penalty_parts
 B37 = spots["breivikeidet"]
-# 37.1: bare Breivikeidet har feltene
-for felt37 in ("transfer_locked", "gap_edge_taper", "wind_local"):
+# 37.1: bare Breivikeidet har låst andel og myk kant. Egen vindkurve har bare Breivikeidet og Unstad (S29 a, test 38).
+for felt37 in ("transfer_locked", "gap_edge_taper"):
     assert [i for i, sp in spots.items() if sp.get(felt37)] == ["breivikeidet"], felt37
+assert sorted(i for i, sp in spots.items() if sp.get("wind_local")) == ["breivikeidet", "unstad"]
 assert B37["transfer"] == B37["gap_transfer"] == 0.22 and B37["wind_local"]["source"] == "Observasjon 17.11.2026"
 # formen på feltene (feiljegeren 23.11.2026: en skrivefeil her ville gitt KeyError eller deling på null i rate())
 assert len(B37["gap_edge_taper"]) == 2 and all(isinstance(g, (int, float)) and g > 0 for g in B37["gap_edge_taper"])
@@ -2212,7 +2221,7 @@ assert r37_019["stars"] == 0 and r37_019["likely_flat"], (r37_019["stars"], r37_
 # 37.5: 22.11 kl. 09-10Z med vindkurven og tidevannsregelen sammen: 2 poeng, og regelen tar ikke et helt poeng
 for t in (9, 10):
     assert r36[t]["stars"] == 2 and r36[t]["faded_wind"] == 0 and r36[t]["local_rules"]["stars_lost"] == 0, (t, r36[t]["stars"], r36[t]["local_rules"])
-# 37.6 (feiljegeren 23.11.2026): lav svellandel ved BarentsWatch-punktet gir «blåst ut» som før, også under 8 m/s -
+# 37.6 (feiljegeren 23.11.2026): lav svellandel ute (GFS sin deling i svell og vindsjø) gir «blåst ut» som før, også under 8 m/s -
 # vindkurven tar bare bort den vinddrevne delen. Ordet er det samme med og uten kurven.
 for v37 in (3.0, 7.9, 8.0):
     for sv37 in (0.6, 0.8, 1.2):
@@ -2221,5 +2230,85 @@ for v37 in (3.0, 7.9, 8.0):
         med37, uten37 = rate(dict(lav37), B37), rate(dict(lav37), {k: v for k, v in B37.items() if k != "wind_local"})
         assert med37["low_reason"] == uten37["low_reason"] and med37["stars"] == uten37["stars"] == 0, (v37, sv37, med37["low_reason"], uten37["low_reason"])
 assert rate(dict(lav37, wind_speed=3.0, swell_offshore=0.6), B37)["low_reason"] == "blown_out"
-print("37: Breivikeidet S27 - låst andel og egen vindkurve bare her, reserven lik gap-grensa 343-32°, ingen vindstraff under 8 m/s, torsdag 26.11 gir 2 poeng som anslag - OK")
+# 37.7 (fysikk-kontrolløren og feiljegeren 23.11.2026): «og sterk vind» i regnestykket følger spotens egen grense, 8 m/s
+# MIDDELVIND uansett kast (12 fralands). Før sa linja «og sterk vind» ved 6 m/s med kast 14, mens vindlinja under sa
+# «ingen effekt». Timen har grensa med seg (wind_calm_ms), så dagens time i henteren og ordet i appen bruker den samme.
+def linje37(v, g, vdir=20.0):
+    r = rate(dict(lav37, swell_offshore=0.6, wind_speed=v, gust=g, wind_dir=vdir), B37)
+    assert r["low_reason"] == "blown_out" and r["stars"] == 0 and r["wind_calm_ms"] == 8.0, (v, g, r["low_reason"])
+    linjer = [x for x in r["breakdown"] if "blåst ut" in x]
+    assert len(linjer) == 1, r["breakdown"]
+    return "og sterk vind" in linjer[0]
+assert _wind_type_s24b(20.0, B37) == "onshore" and _wind_type_s24b(200.0, B37) == "offshore"
+assert not linje37(6.5, 11.5) and not linje37(6.0, 14.0) and not linje37(7.9, 12.0)   # kastene teller ikke her
+assert linje37(8.0, 8.0) and linje37(9.0, None)
+assert not linje37(11.9, 20.0, 200.0) and linje37(12.0, 12.0, 200.0)                   # fralands: 12 m/s middelvind
+assert "wind_calm_ms" not in rate(dict(lav37, swell_offshore=0.6, wind_speed=3.0), {k: v for k, v in B37.items() if k != "wind_local"})
+print("37: Breivikeidet S27 - låst andel bare her, reserven lik gap-grensa 343-32°, ingen vindstraff under 8 m/s, torsdag 26.11 gir 2 poeng som anslag - OK")
+
+# 38: S29 a (Theodor 22.11.2026 og ja i svar.md 23.11.2026; forslag fra fysikk-kontrolløren 22.11.2026). Unstad har egen
+# vindkurve: under 14 m/s middelvind tar vinden ingen poeng, uansett retning og kast. Fra 14 m/s en mildere kurve
+# enn den vanlige, lest på middelvinden. Gjelder bare Unstad (og Breivikeidet med sin egen kurve, test 37).
+U38 = spots["unstad"]
+U38_uten = {k: v for k, v in U38.items() if k != "wind_local"}
+KINDS38 = ("onshore", "sideonshore", "side", "offshore")
+# 38.1: formen på feltet og kilden
+assert U38["wind_local"]["calm_below_ms"] == 14.0 == blown_out_wind_ms(U38) and U38["wind_local"]["source"] == "Theodor 22.11.2026"
+assert set(U38["wind_local"]["curves"]) == set(KINDS38) and all(len(pkt) == 2 for kurve in U38["wind_local"]["curves"].values() for pkt in kurve)
+assert blown_out_wind_ms(U38_uten) == 8.0
+# 38.2: under 14 m/s middelvind ingen straff for noen vindtype, uansett kast. Fra 14 m/s aldri strengere enn de
+# vanlige kurvene (verken lest på middelvinden eller med kast), og aldri fallende med økende vind.
+for kind38 in KINDS38:
+    for v10 in range(0, 140):
+        for g38 in (None, v10 / 10 + 8, 30.0):
+            assert _wind_eff(v10 / 10, g38, U38) == v10 / 10 and _wind_raw(v10 / 10, kind38, U38) == 0.0, (kind38, v10, g38)
+    forrige38 = 0.0
+    for v10 in range(140, 320):
+        raw38 = _wind_raw(v10 / 10, kind38, U38)
+        assert raw38 <= wind_curve_penalty(v10 / 10, kind38) + 1e-9, (kind38, v10, raw38)
+        assert raw38 <= wind_curve_penalty(effective_wind(v10 / 10, v10 / 10 * 1.5), kind38) + 1e-9, (kind38, v10, raw38)
+        assert raw38 >= forrige38 - 1e-9, (kind38, v10, raw38, forrige38)
+        forrige38 = raw38
+# tallene i kurven: 14, 16, 18, 22 og 26 m/s (pålands, skrått pålands, side, fralands)
+for v38, venter38 in ((14.0, (0.0, 0.0, 0.0, 0.0)), (16.0, (1.0, 0.75, 0.5, 0.5)), (18.0, (2.0, 1.5, 1.0, 1.0)),
+                      (22.0, (3.0, 2.5, 2.0, 2.0)), (26.0, (4.0, 3.0, 3.0, 2.0))):
+    assert tuple(round(_wind_raw(v38, k, U38), 6) for k in KINDS38) == venter38, (v38, [_wind_raw(v38, k, U38) for k in KINDS38])
+# gjennom wind_penalty_parts(): 13,9 m/s rett inn (295°) med kast 22 tar ingenting på Unstad, men 4 poeng uten kurven
+assert wind_penalty_parts(13.9, 295.0, U38, 22.0)["pen"] == 0 and wind_penalty_parts(13.9, 295.0, U38_uten, 22.0)["pen"] == 4
+assert wind_penalty_parts(None, 295.0, U38)["pen"] == wind_penalty_parts(None, 295.0, U38_uten)["pen"] == 1    # ukjent styrke som før
+# 38.3: «blåst ut». Lav svellandel ute (GFS sin deling i svell og vindsjø) gir «blåst ut» som før, også under 14 m/s (samme ord med og
+# uten kurven). Vinden alene gir ikke «blåst ut» under 14 m/s pålands, men gjør det fra 14 m/s.
+def lav38(sv, v):
+    return {"height_offshore": 1.8, "swell_offshore": sv, "swell_model": "standard", "dir_offshore": 200.0, "period": 6.0,
+            "bw_height": 0.6, "bw_dir": 200.0, "bw_period": 3.0, "wind_speed": v, "wind_dir": 295.0, "gust": v + 3}
+for v38 in (7.0, 10.0, 13.9, 14.0):
+    med38, uten38 = rate(lav38(0.5, v38), U38), rate(lav38(0.5, v38), U38_uten)
+    assert med38["low_reason"] == uten38["low_reason"] == "blown_out" and med38["stars"] == uten38["stars"] == 0, (v38, med38["low_reason"])
+assert rate(lav38(1.6, 7.0), U38)["low_reason"] == rate(lav38(1.6, 7.0), U38_uten)["low_reason"] == "treffer_ikke"
+for v38 in (10.0, 13.9):
+    assert rate(lav38(1.6, v38), U38)["low_reason"] == "treffer_ikke" and rate(lav38(1.6, v38), U38_uten)["low_reason"] == "blown_out", v38
+assert rate(lav38(1.6, 14.0), U38)["low_reason"] == rate(lav38(1.6, 14.0), U38_uten)["low_reason"] == "blown_out"
+# «og sterk vind» i regnestykket følger Unstads egen grense (fysikk-kontrolløren og feiljegeren 23.11.2026): 14 m/s
+# middelvind, uansett kast. Under den sier linja bare «mye vindsjø», og timen har grensa med seg (wind_calm_ms).
+def linje38(v, g, vdir=295.0, sv=0.5):
+    r = rate(dict(lav38(sv, v), gust=g, wind_dir=vdir), U38)
+    assert r["low_reason"] == "blown_out" and r["stars"] == 0 and r["wind_calm_ms"] == 14.0, (v, g, r["low_reason"])
+    linjer = [x for x in r["breakdown"] if "blåst ut" in x]
+    assert len(linjer) == 1, r["breakdown"]
+    return "og sterk vind" in linjer[0]
+assert not linje38(7.0, 10.0) and not linje38(10.0, 13.0) and not linje38(13.9, 22.0) and linje38(14.0, 14.0)
+# Unstad 22.11.2026 kl. 11Z (kontrollørens tilfelle): 8,2 m/s skrått pålands, kast 14, svellandel 0,13
+skra38 = next(float(d) for d in range(0, 360, 5) if _wind_type_s24b(float(d), U38) == "sideonshore")
+assert not linje38(8.2, 14.0, skra38, sv=0.24)
+assert "wind_calm_ms" not in rate(lav38(0.5, 7.0), U38_uten)
+# 38.4: kurven gjør aldri en time dårligere. Samme time med og uten kurven, for alle vindtyper og styrker 0-30 m/s.
+for vdir38 in (295.0, 355.0, 20.0, 120.0):
+    for v38 in range(0, 31, 2):
+        t38 = {"height_offshore": 2.2, "swell_offshore": 2.0, "swell_model": "standard", "dir_offshore": 300.0, "period": 11.0,
+               "bw_height": 1.6, "bw_dir": 300.0, "bw_period": 10.0, "wind_speed": float(v38), "wind_dir": vdir38, "gust": v38 * 1.4}
+        assert rate(dict(t38), U38)["stars"] >= rate(dict(t38), U38_uten)["stars"], (vdir38, v38)
+# de faste observasjonene for Unstad 26.-28.09 er testet over med spots.json slik den står nå, altså med kurven
+# (05.10 finnes bare som vindretninger i test 21.2). Det femte poenget krever fortsatt ren vind (five_star_losses(),
+# fralands eller under 3 m/s) også på Unstad og Breivikeidet: kurven endrer ikke den sperra (feiljegeren 23.11.2026).
+print("38: Unstad S29 a - egen vindkurve: ingen vindstraff under 14 m/s middelvind, mildere kurve fra 14 m/s, lav svellandel gir «blåst ut» som før, aldri dårligere enn uten kurven - OK")
 print("Alle tester ok")

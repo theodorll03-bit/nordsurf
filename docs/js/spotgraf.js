@@ -53,11 +53,13 @@
     // ingen spenn - ordet vises i stedet (Theodor 15.10, punkt 2). Aldri «0,0–x».
     // Ordet er ordet for dagens time, valgt med samme regel som bestOfDay (betterDayHour, Theodor S26 23.11.2026). Før
     // var det den første timen med høyest tall, uten å se på høyden, så fanen kunne si noe annet enn timen dagen åpnes på.
+    // Ordet velges blant alle lyse, kjente timer, også de uten surfehøyde, akkurat som bestOfDay (feiljegeren 23.11.2026).
     let lo = null, hi = null, word = null, wh = null;
-    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h) || h.surf_height==null) continue;
+    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h)) continue;
+      if(betterDayHour(h, wh)){ wh = h; word = ratingWord(h); }
+      if(h.surf_height==null) continue;
       if(h.surf_height > 0){ lo = lo==null ? h.surf_height : Math.min(lo, h.surf_height);
-        const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top); }
-      if(betterDayHour(h, wh)){ wh = h; word = ratingWord(h); } }
+        const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top); } }
     if(lo==null || !(hi > 0)) return {txt: null, word};
     const a = nf1.format(lo), b = nf1.format(hi);
     return {txt: a===b ? `${a} m` : `${a}–${b} m`, word};

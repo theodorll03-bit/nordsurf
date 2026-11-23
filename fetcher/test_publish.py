@@ -108,6 +108,16 @@ def main():
     assert publish.wind_blamed(BO("x", None)) and publish.wind_blamed(BO("x", 3, surf=None)) and publish.wind_blamed(BO("x", 3, surf=0.8))
     assert publish.wind_blamed(BO("x", 3, zero_losses=dict(z0, wind=1))) and publish.wind_blamed(BO("x", 3, faded_wind=1))
     assert not publish.wind_blamed(BO("x", 3, surf=0.79)) and not publish.wind_blamed(H("x", 0, 0.0)) and not publish.wind_blamed(H("x", 0, 0.0, low_reason="flat"))
+    # spots med egen vindkurve har grensa si med i timen (wind_calm_ms, fysikk-kontrolløren og feiljegeren 23.11.2026): middelvinden
+    # mot spotens grense, uansett kast. Unstad 22.11 kl. 11Z (8,2 m/s skrått pålands, kast 14) får ikke skylda; uten feltet gjør den det.
+    assert not publish.wind_blamed(BO("x", 8.2, "sideonshore", gust=14, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 8.2, "sideonshore", gust=14))
+    assert not publish.wind_blamed(BO("x", 13.9, gust=22, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 14.0, wind_calm_ms=14.0))
+    assert not publish.wind_blamed(BO("x", 6.5, gust=11.5, wind_calm_ms=8.0)) and publish.wind_blamed(BO("x", 8.0, wind_calm_ms=8.0))   # Breivikeidet
+    assert not publish.wind_blamed(BO("x", 11.9, "offshore", gust=20, wind_calm_ms=8.0)) and publish.wind_blamed(BO("x", 12.0, "offshore", wind_calm_ms=8.0))
+    assert not publish.wind_blamed(BO("x", 13.9, "offshore", gust=20, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 14.0, "offshore", wind_calm_ms=14.0))
+    assert not publish.wind_blamed(BO("x", 13.9, None, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", None, wind_calm_ms=14.0))
+    assert publish.wind_blamed(BO("x", 5, surf=0.8, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 5, faded_wind=1, wind_calm_ms=14.0))
+    assert publish._naa_hour(BO("x", 5, wind_calm_ms=14.0)).get("wind_calm_ms") == 14.0 and "wind_calm_ms" not in publish._naa_hour(BO("x", 5))
     # Horseid-typen: 8,2 m/s, så 7,9 og 7,4 uten kast. Dagens time er den blåste, uansett rekkefølge.
     for rekke in (["a", "b", "c"], ["c", "b", "a"], ["b", "a", "c"]):
         hs = {"a": BO("a", 8.2, "sideonshore"), "b": BO("b", 7.9, "sideonshore"), "c": BO("c", 7.4, "onshore")}
