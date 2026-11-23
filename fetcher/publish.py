@@ -59,6 +59,7 @@ HOME_HOUR_FIELDS = (
     # Spotside/søk (Theodor 15.10.2026): Hjem og Utforsk viser høydespennet, vinden
     # (m/s og type) og svellet ute med retning uten å åpne spoten.
     "surf_height_sets", "bw_height", "wind_speed", "wind_type", "dir_offshore",
+    "wind_calm_ms",   # spotens egen vindgrense for ordet (bare spots med egen vindkurve), se wind_blamed()
 )
 
 # Detaljfila: ALLE timefelt unntatt de som aldri leses av docs/js (målt
@@ -84,7 +85,8 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "zero_losses", "faded_wind", "faded_tide", "sources_disagree", "period", "energy_swell_kj",
               "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone",
-              "directness", "bw_confirms")   # Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
+              "directness", "bw_confirms",
+              "wind_calm_ms")   # spotens egen vindgrense for ordet (calmWindWord i app.js); Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
 NAA_HOURS = 4   # nå-timen + de tre neste (henteren kjører hver 3. time om dagen - klokkas time finnes alltid)
@@ -142,10 +144,36 @@ def known(h):
     return bool(h) and not (not (h.get("stars") or 0) and not h.get("low_reason") and h.get("surf_height") is None)
 
 
+MUSHY_SURF_MIN_M = 0.8   # samme tall som i docs/js/app.js: fra 0,8 m er det bølger, og en blåst ut-time heter «Blåst ut»
+
+
+def wind_blamed(h):
+    """23.11.2026 (Theodor S26, feiljegeren 22.11): får vinden skylda i ordet for timen («Blåst ut» eller «For mye
+    vind»)? Samme regel som appen: low_reason «blown_out» og IKKE svak vind uten poengtap (calmWindWord() i
+    docs/js/app.js). Svak er effektiv vind med kast under 12 m/s fralands og under 8 m/s ellers
+    (rating.blown_out_wind_strong). En spot med egen vindkurve har grensa si med i timen (wind_calm_ms):
+    der er svak middelvind under grensa, uansett kast (Unstad 14 m/s, Breivikeidet 8, og 12 fralands). Mangler surfehøyden eller vindstyrken, får vinden skylda som før
+    (manglende data er aldri 0), og fra 0,8 m surfehøyde også. Bare til å velge dagens time i best_hour()."""
+    import rating
+    if not h or h.get("low_reason") != "blown_out":
+        return False
+    sh = h.get("surf_height")
+    if sh is None or sh >= MUSHY_SURF_MIN_M:
+        return True
+    z = h.get("zero_losses") or {}
+    if max(z.get("wind") or 0, h.get("faded_wind") or 0) > 0:
+        return True
+    return rating.blown_out_wind_strong(h.get("wind_speed"), h.get("gust"), h.get("wind_type"), h.get("wind_calm_ms")) is not False
+
+
 def best_hour(hours):
     """Den beste timen blant de gitte (én dag): flest stjerner, ved likhet høyest surf_height, bare
     timer der lyset ikke er «mørkt» (ukjent lys teller ikke) og tallet finnes. Samme regel som
     appen bruker (dayBest/bestOfDay i ui.js/spotgraf.js) - flyttet hit og testet her (Tillegg 2).
+    Ved likt poeng og lik surf_height (Theodor S26, 23.11.2026, etter feiljegeren 22.11): en time der vinden får
+    skylda i ordet (wind_blamed) går foran en der den ikke gjør det, ellers den første. Da kan dagen ikke hete
+    «Flatt» når en like god time samme dag heter «Blåst ut»: dagens ord lover aldri mer enn den verste av de
+    like timene, og timen appen viser for dagen (bestOfDay i spotgraf.js) er den samme.
     Returnerer (time, status): status «ok», «miss» (en lys time mangler tall) eller «dark»."""
     best, miss, light, unk = None, False, False, False
     for h in hours:
@@ -161,8 +189,9 @@ def best_hour(hours):
         if not known(h):
             miss = True
             continue
-        st = h.get("stars") or 0
-        if best is None or st > (best.get("stars") or 0) or (st == (best.get("stars") or 0) and (h.get("surf_height") or 0) > (best.get("surf_height") or 0)):
+        st, bst = h.get("stars") or 0, (best.get("stars") or 0) if best is not None else None
+        hh, bhh = h.get("surf_height") or 0, (best.get("surf_height") or 0) if best is not None else None
+        if best is None or st > bst or (st == bst and hh > bhh) or (st == bst and hh == bhh and wind_blamed(h) and not wind_blamed(best)):
             best = h
     if best is not None and (best.get("stars") or 0) >= 1:
         return best, "ok"

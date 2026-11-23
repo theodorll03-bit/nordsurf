@@ -39,10 +39,11 @@
     return (ds.find(d=> d.key > today) || ds[0]).key;
   }
   function bestOfDay(s, d){
-    // beste time i dagslys: høyest tall, ved likt høyest surf_height; ellers kl. 12 (nærmeste), ellers første
+    // beste time i dagslys: høyest tall, ved likt høyest surf_height, ved likt igjen en time der vinden får skylda
+    // (betterDayHour i app.js, Theodor S26 23.11.2026, samme regel som publish.best_hour); ellers kl. 12 (nærmeste), ellers første
     let best = null;
-    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h)) continue; const c = {i, st: H.stars(h), hh: h.surf_height||0}; if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c; }
-    if(best) return best.i;
+    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h)) continue; if(best==null || betterDayHour(h, s.hours[best])) best = i; }
+    if(best!=null) return best;
     let noon = d.idxs[0], bd = 99;
     for(const i of d.idxs){ const dd = Math.abs(osloHour(new Date(s.hours[i].t)) - 12); if(dd < bd){ bd = dd; noon = i; } }
     return noon;
@@ -50,11 +51,15 @@
   function spanOfDay(s, d){
     // surfespennet i dagslys: laveste surf_height blant timer med surf OVER 0, til høyeste sets. Er alle timene 0:
     // ingen spenn - ordet vises i stedet (Theodor 15.10, punkt 2). Aldri «0,0–x».
-    let lo = null, hi = null, word = null, wst = -1;
-    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h) || h.surf_height==null) continue;
+    // Ordet er ordet for dagens time, valgt med samme regel som bestOfDay (betterDayHour, Theodor S26 23.11.2026). Før
+    // var det den første timen med høyest tall, uten å se på høyden, så fanen kunne si noe annet enn timen dagen åpnes på.
+    // Ordet velges blant alle lyse, kjente timer, også de uten surfehøyde, akkurat som bestOfDay (feiljegeren 23.11.2026).
+    let lo = null, hi = null, word = null, wh = null;
+    for(const i of d.idxs){ const h = s.hours[i]; if(!H.usable(h) || !H.known(h)) continue;
+      if(betterDayHour(h, wh)){ wh = h; word = ratingWord(h); }
+      if(h.surf_height==null) continue;
       if(h.surf_height > 0){ lo = lo==null ? h.surf_height : Math.min(lo, h.surf_height);
-        const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top); }
-      const st = H.stars(h); if(st > wst || (st===wst && word==null)){ wst = st; word = ratingWord(h); } }
+        const top = h.surf_height_sets!=null ? h.surf_height_sets : h.surf_height; hi = hi==null ? top : Math.max(hi, top); } }
     if(lo==null || !(hi > 0)) return {txt: null, word};
     const a = nf1.format(lo), b = nf1.format(hi);
     return {txt: a===b ? `${a} m` : `${a}–${b} m`, word};
