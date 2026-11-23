@@ -185,6 +185,14 @@ assert r1 == (0.77, "logs")
 assert r2 == (0.55, "barentswatch")
 assert r3 == (0.33, "spots.json")
 assert r4 == (DEFAULT_TRANSFER, "standard")
+# S27 (23.11.2026): en låst andel i spots.json ("transfer_locked", bare Breivikeidet) går foran BarentsWatch-medianen,
+# men ikke foran loggene. En lås uten verdi låser ingenting.
+spot_locked = {"transfer": 0.22, "transfer_locked": True}
+assert calibrate.effective_transfer(spot_locked, learned_none, enough) == (0.22, "spots.json")
+assert calibrate.effective_transfer(spot_locked, learned_with, enough) == (0.77, "logs")
+assert calibrate.effective_transfer({"transfer_locked": True}, learned_none, enough) == (0.55, "barentswatch")
+assert calibrate.effective_transfer({"transfer": 0.22}, learned_none, enough) == (0.55, "barentswatch")
+print("6g: låst andel (transfer_locked) går foran BarentsWatch, loggene går foran låsen")
 
 # ---------- 6h: varsel skal bare bruke ekte BarentsWatch-timer ----------
 now3 = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
@@ -755,6 +763,11 @@ try:
     sp_in = _applied[0]   # build_spot() sin interne spot - den rate() leser
     assert "exposure_smoothed_lang" in sp_in and abs(sp_in["exposure_smoothed_lang"][315] - (6 / 16 * 0.5 + 10 / 16 * sp_in["exposure_smoothed"][315])) < 1e-6
     assert fetch.EXPOSURE_REPORT[-1]["mode"] == "aktiv"
+    # S27 (23.11.2026): en låst andel går foran del B sin transfer også med bryteren på
+    spot9las = json.loads(json.dumps(unstad_spot))
+    spot9las.update(transfer=0.31, transfer_locked=True)
+    cal9las = fetch.build_spot(spot9las, now9, {}, {}, "test-run-9d-las", exposure_baseline_real, exposure_learned_fixture)["calibration"]
+    assert cal9las["transfer_source"] == "spots.json" and cal9las["transfer_used"] == 0.31, (cal9las["transfer_source"], cal9las["transfer_used"])
 finally:
     fetch.EXPOSURE_LEARNED_IN_RATING = False
     fetch.apply_learned_exposure = _orig_apply
