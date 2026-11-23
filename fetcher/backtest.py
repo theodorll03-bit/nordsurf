@@ -138,7 +138,7 @@ def prepare_spot(spot_id, spots, exposure_data, bw_calib, learned=None, use_prio
     spot["_learned_buckets"] = {"lang": len(le["learned_lang"]), "kort": len(le["learned_kort"]), "par": len(pairs)}
     if learned.get("transfer"):
         transfer, transfer_source = learned["transfer"], "logs"
-    elif transfer_lang is not None:
+    elif transfer_lang is not None and not spot.get("transfer_locked"):   # S27: låst andel (calibrate.effective_transfer())
         transfer, transfer_source = round(min(1.2, max(0.05, transfer_lang)), 2), "eksponering"
     else:
         transfer, transfer_source = calibrate.effective_transfer(spot, learned, bw_calib.get(spot_id, []))

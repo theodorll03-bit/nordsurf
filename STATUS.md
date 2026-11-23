@@ -17,6 +17,60 @@ Gren `fiks/flatt-s26` fra main `e1b8181`. Ja fra Theodor i svar.md 23.11 kl. 11.
 - **Skjermbilder:** `privat/design-b4/s26-2026-11-23/` (før og etter, mobil 390 og PC 1440, lys og mørk): Bunes (bytter ord), Grøtfjord 24.11 kl. 11 (skrå pålandsvind 7,7 m/s, kast 11,8: bytter ikke, og dagen heter nå «Blåst ut»), Tromvik (dagsregelen), Hjem og PC-forsiden for i morgen med «Vis alle».
 - **Ikke gjort:** vindlinja viser 7,5 til 7,9 m/s som «8 m/s». Oversikten runder vind og kast til to desimaler, så en time rett under 8 kan bli 8,0 på forsiden (feiljegerens punkt 4, 0 slike timer i dag). Fysikk-kontrolløren og feiljegeren har ikke gått gjennom denne grenen ennå.
 
+## Breivikeidet: låst andel, andel etter retning og egen vindkurve (S27), 23.11.2026
+
+Gren `fiks/breivikeidet-s27` fra main `e1b8181`. Endrer `fetcher/rating.py`, `fetcher/calibrate.py`, `fetcher/fetch.py`, `fetcher/backtest.py` og `spots.json`, så dette er en ratingendring, men bare for Breivikeidet. Ja fra Theodor i svar.md 23.11 kl. 11.20 (S27 med nye krav: 17.11 og 22.11 «minst 2», og torsdag 26.11 skal ikke stå på 0). Egen PR. Kilder: Theodors observasjoner 17.11.2026 og 22.11.2026, og Theodor 23.11.2026.
+
+- **Før:** `transfer` 0,15 og `gap_transfer` 0,165. Gap-grensa gjaldt bare der BarentsWatch finnes (ca. 2,5 døgn fram), så torsdag 26.11 sto på 0 poeng og 0,26–0,31 m, enda svellet ute er nesten likt tirsdag 17.11 (2,0–2,2 m fra 19–24°, 7,4–7,7 s, fralandsvind). 17.11 kl. 07–10Z ga 1, 1, 2, 2 og 22.11 kl. 07–13Z ga 2, 2, 1, 1, 2, 0, 0, fordi varselets vind (4–5,5 m/s med kast 8–10,5) tok poeng. Det var vindstille på stranda 17.11.
+- **Nå, andelen:** `transfer` og `gap_transfer` er 0,22 langs fjordaksen (5–25°). Med `gap_edge_taper` [20, 5] faller den jevnt mot vestkanten: 0,209 ved 2°, 0,183 ved 355°, 0,165 ved 350° (S19-tallet, uendret) og 0,147 på kantene (345° og 30°). Én andel kan ikke gi begge dagene: svellet ute var 29 % større 22.11 enn 17.11, men bølgene var litt mindre. Svell fra nord må dreie inn Ullsfjorden og mister mer enn svell langs aksen.
+- **Hvorfor 0,22 og ikke 0,19:** «hoftehøyt» 17.11 kan leses to måter. Var det settene (0,9 m), blir andelen 0,19. Var det bølgene (0,9 m surfehøyde, slik koden leser «Hoftehøy»), blir den 0,26. Kontrolløren tok midten (geometrisk middel 0,221). Det gir surfehøyde 0,79–0,80 m og sett ca. 1,0 m 17.11.
+- **Nå, låsen:** `transfer_locked` (bare Breivikeidet). `calibrate.effective_transfer()` bruker da tallet i spots.json foran BarentsWatch-medianen, og svarer «spots.json» som kilde. Loggene står fortsatt først. Den lærte eksponeringsandelen (av i dag) går heller ikke forbi låsen (`fetch.py`, `backtest.py`). Parene mot BarentsWatch samles og vises som før, men brukes ikke.
+- **Nå, reserven:** bortenfor BarentsWatch-horisonten bruker Breivikeidet samme andel som gap-grensa (`gap_edge_factor()`), grad for grad i vinduet og i kantsonen to grader utenfor (343–32°). Surfehøyden dempes ikke en gang til der, så høyde, surfehøyde og poeng er like i de to sonene når perioden er minst 7 s og vinden er svak.
+- **Nå, vinden:** `wind_local` (bare Breivikeidet). Under 8 m/s middelvind tar vinden ingen poeng, uansett retning og kast, og vinden alene gir aldri «Blåst ut». Lav svellandel ved BarentsWatch-punktet gir «Blåst ut» som før (`is_blown_out()` er lik main for Breivikeidet). Fra 8 m/s gjelder de vanlige kurvene tall for tall, lest på middelvinden. Regnestykket sier «(vinden teller først fra 8 m/s middelvind her)». Uten vindkurven, med ny andel, gir 17.11 fortsatt 1, 1, 2, 2 og 22.11 gir 2, 2, 1, 1, 2, 2, 2, så kravene nås ikke uten den. Ingen observasjon med 8 m/s eller mer ennå.
+
+**17.11** (test 34, vinden fra varselet):
+
+| Time | Vind (kast) | Før: poeng, høyde, surf | Etter: poeng, høyde, surf |
+|---|---|---|---|
+| 07Z | 5,5 (10,5) pålands | 1, 0,47 m, 0,76 m | 2, 0,50 m, 0,80 m |
+| 08Z | 5,4 (10,5) pålands | 1, 0,40 m, 0,67 m | 2, 0,49 m, 0,79 m |
+| 09Z | 4,3 (9,1) pålands | 2, 0,37 m, 0,63 m | 2, 0,49 m, 0,79 m |
+| 10Z | 4,3 (8,1) pålands | 2, 0,42 m, 0,70 m | 2, 0,48 m, 0,78 m |
+
+**22.11** (test 36, vannstand fra Kartverket):
+
+| Time | Retning | Vind (kast) | Før: poeng, høyde, surf | Etter: poeng, høyde, surf, tap |
+|---|---|---|---|---|
+| 07Z | 349° | 4,6 (8,1) | 2, 0,45 m, 0,73 m | 2, 0,47 m, 0,76 m, tidevann 0,03 |
+| 08Z | 350° | 5,1 (8,9) | 2, 0,48 m, 0,76 m | 2, 0,48 m, 0,76 m, tidevann 0,29 |
+| 09Z | 351° | 5,2 (9,7) | 1, 0,47 m, 0,76 m | 2, 0,48 m, 0,77 m, tidevann 0,45 |
+| 10Z | 355° | 5,3 (9,5) | 1, 0,43 m, 0,70 m | 2, 0,48 m, 0,76 m, tidevann 0,48 |
+| 11Z | 358° | 4,0 (9,1) | 2, 0,38 m, 0,64 m | 2, 0,45 m, 0,73 m, tidevann 0,37 |
+| 12Z | 2° | 4,0 (7,8) | 0, 0,34 m, flatt | 2, 0,43 m, 0,70 m, tidevann 0,13 |
+| 13Z | 2° | 1,7 (6,6) fralands | 0, 0,33 m, flatt | 2, 0,42 m, 0,69 m |
+
+**Torsdag 26.11** (kjøringen 23.11 kl. 01Z, reservesonen; svell 1,78–1,84 m fra 23–24°, 7,35–7,45 s, vind 1,5 m/s fralands):
+
+| Time | Lys | Svell, periode | Før: poeng, høyde | Etter: poeng, høyde, surf |
+|---|---|---|---|---|
+| 01Z | mørkt | 1,64 m fra 15°, 6,6 s | 0, 0,25 m | 1, 0,36 m, 0,58 m |
+| 02Z | mørkt | 1,70 m fra 17°, 6,9 s | 0, 0,26 m | 2, 0,37 m, 0,61 m |
+| 03–06Z | mørkt | 1,78–1,84 m, 7,1–7,3 s | 0, 0,29–0,30 m | 2, 0,39–0,40 m, 0,64–0,66 m |
+| 07–12Z | skumring | 1,78–1,84 m, 7,35–7,45 s | 0, 0,29–0,30 m | 2, 0,39–0,40 m, 0,65–0,66 m (sett 0,82–0,84 m) |
+| 13–14Z | mørkt | 1,72–1,76 m, 7,4 s | 0 | 2, 0,38–0,39 m |
+| 15Z og utover | mørkt | 1,70 m og mindre | 0 | 0 (under flat-sperra) |
+
+- **De faste observasjonene:** 17.11 kl. 07–10Z gir 2, 2, 2, 2 (kravet: minst 2 kl. 08Z og 09Z, surfehøyde 0,5–0,9 m). 22.11 kl. 07–13Z gir 2, 2, 2, 2, 2, 2, 2 (kravet: minst 2 kl. 08Z og 09Z, surfehøyde 0,4–0,8 m kl. 08–10Z). «Litt mindre» holder: 0,76–0,77 m 22.11 mot 0,79 m 17.11. Alle andre faste observasjoner er uendret. CLAUDE.md er oppdatert (kravene og «Lokalkunnskap»).
+- **Torsdag får 2 bare fordi andelen langs aksen er minst 0,19–0,20.** Grensa går ved 0,190 (kl. 07Z) til 0,197 (kl. 12Z). Med 0,19 eller 0,165 står dagen på 0. Det er enten 0 eller 2: flat-sperra hopper fra 0 til ca. 0,6 m surfehøyde, og potensialet er 2. Med 0,22 går grensa ved ca. 1,59 m svell ute (test 37.4), så dagen kan falle til 0 igjen hvis varselet krymper. Kontrolløren valgte ikke tallet ut fra torsdag, men en observasjon torsdag er det som avgjør om 0,22 stemmer.
+- **Reserven under 7 s gir nå poeng uten «usikker».** Gap-grensa krever minst 7 s, men reserven har ikke det kravet (valget i S19, test 36.6). Med ny andel gir det 1 og 2 poeng i to mørke timer 26.11 kl. 01–02Z (6,6 og 6,9 s). Ingen lyse timer eller skumringstimer er berørt i dette varselet. Det samme gjelder kantsonen (343–344° og 31–32°): under 7 s kan reserven gi 1–2 poeng der, merket «usikker», mens BarentsWatch-sonen ikke har noen gap-grense under 7 s. Fra 7 s er sonene like. Ingen timer i 14-dagersvarselet er berørt.
+- **22.11 kl. 12–13Z går fra 0 til 2 uten observasjon.** Theodor var ute av vannet kl. 10.30Z. Andelen der (0,209 ved 2°) følger av regelen.
+- **Tidevannsregelen er ikke svekket.** Kl. 09–10Z 22.11 tar den 0,45–0,48, og timene står på 2 (2 − 0,48 = 1,52). Marginen kl. 10Z er 0,02 poeng.
+- **14 dager før og etter** (kjøringen 23.11 kl. 01Z, 27 åpne spots, 203 timer hver, spilt gjennom `rate()` før og etter): 26 av 27 spots er like i alle felt, regnestykket medregnet (5278 timer). Russelv (10 timer med gap-grense) og Lenangsøyra er like time for time. Mekanismen alene (uten Breivikeidets tall) gir 27 av 27 like. På Breivikeidet endres noe i 80 av 203 timer (13 i skumring), og 123 timer til har bare ny tekst i regnestykket. 14 timer går opp (6 i skumring), ingen går ned, og ingen høyde går ned. 13 timer går opp 2 poeng, alle 26.11 kl. 02–14Z, 49–61 timer fram. Ingen poeng endres de første 48 timene.
+- **Fysikk-kontrolløren (23.11): godkjent med vilkår**, alle oppfylt her: mekanismen før tallene, testene 34 og 36 oppdatert, CLAUDE.md oppdatert, og de to punktene over om torsdag og om reserven under 7 s i klartekst. Vindkurven er prøvd på 432 000 kombinasjoner av retning, styrke, kast og energi: aldri strengere enn de vanlige kurvene, og 0 under 8 m/s. Etterkontroll av rettelsene etter feiljegeren (23.11): godkjent med ett vilkår, presiseringen om kantsonen under 7 s i punktet over. Lav svellandel-regelen er lik main i 100 000 kall, og 93 000 tilfeldige timer på de andre spotene ga ingen avvik.
+- **Feiljegeren (23.11): feil, men ingen stoppere.** Rettet her: (1) i kantsonen (343–344° og 31–32°) ga reserven 0 poeng der BarentsWatch-sonen ga 2 for samme svell (3,2 m, 7,6 s), fordi surfehøyden ble dempet en gang til. Nå er sonene like (test 37.2). (2) Under 8 m/s med lav svellandel ble ordet «stormsjø» eller tomt mens regnestykket sa flatt. Nå er `is_blown_out()` som i main for Breivikeidet (test 37.6). (3) En test prøver formen på feltene (37.1). 14-dagerstabellen er lik etter rettelsene (27 av 27 spots like mot versjonen kontrolløren godkjente). Kjent og ikke rettet: med skrått pålands vind på 8–9 m/s kan reserven gi 1 poeng der BarentsWatch-sonen gir 0 (reserven har ingen vindsperre på høyden; ingen slike timer i varselet 23.11, tas med i oppgaven om tillit til BarentsWatch per spot). Regnestykket viser «Vind 8 m/s … ingen effekt» for 7,5–7,99 m/s (avrunding), og i reserven sier det «Løftet til …» og «Retning: treffer vinduet» selv om høyden bruker kantfaktoren (tekst, rettes i S28-PR-en). Ukjent svellretning i reserven gir poeng uten «usikker». En lås uten `transfer` i spots.json låser ingenting i `calibrate`, men hopper likevel over den lærte eksponeringsandelen i `fetch.py` og `backtest.py` (ingen spot er slik i dag).
+- **Tester:** test_rating.py 34 og 36 krever nå minst 2 kl. 08Z og 09Z. Test 37 er ny: bare Breivikeidet har lås, `gap_edge_taper` og `wind_local`; reserven er lik gap-grensa grad for grad 343–32°, og gir samme surfehøyde og poeng som BarentsWatch-sonen for samme svell (37.2); formen på feltene (37.1); vindkurven; lav svellandel gir samme ord med og uten kurven (37.6); torsdag (2 poeng med 1,84 og 1,76 m, flatt med 1,55 m, og flatt med andel 0,19). test_pipeline.py 6g og 9d og test_backtest.py 3b prøver låsen.
+- **Ikke gjort:** appen sier fortsatt «Transfer 22 %: … modell mot modell» for en låst andel, og «tåler alt tidevann» i tidevannskortet (rettes i S28-PR-en). «For mye vind» ved fralandsvind fra 12 m/s effektivt ser ikke på spotens egen kurve (tas med S26 og S29 a). Reserven under 7 s kunne vært merket «usikker». Unstads vindkurve (S29 a) kommer i neste PR og bruker samme mekanisme.
+
 ## Breivikeidet: vindu langs fjorden, egen gap-grense og myk tidevannsregel (S19), 22.11.2026
 
 Gren `fiks/breivikeidet-s19` fra main `f1bb19e`. Endrer `fetcher/rating.py`, `fetcher/tide.py` og `spots.json`, så dette er en ratingendring, men bare for Breivikeidet. Ja fra Theodor i svar.md 22.11 kl. 12.20 (S19 a, b og c, og tidevannet). Egen PR. Kilder: Theodors observasjoner 17.11.2026 og 22.11.2026 (begge er faste observasjoner i CLAUDE.md), og regelen fra kompisen om nordlig svell.

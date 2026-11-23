@@ -70,6 +70,11 @@ sp_off = backtest.prepare_spot("unstad", spots3b, expo3b, {}, {}, exposure_learn
 assert sp_on["transfer_source"] == "eksponering" and sp_on["transfer"] == 0.6 and "exposure_smoothed_lang" in sp_on
 assert sp_off["transfer_source"] != "eksponering" and "exposure_smoothed_lang" not in sp_off
 assert sp_on["_learned_buckets"] == {"lang": 4, "kort": 0, "par": 24} == sp_off["_learned_buckets"]
+# S27 (23.11.2026): en låst andel ("transfer_locked", bare Breivikeidet) går foran del B også i varianten
+spots3b_las = json.loads(json.dumps(spots3b))
+spots3b_las["unstad"].update(transfer=0.31, transfer_locked=True)
+sp_las = backtest.prepare_spot("unstad", spots3b_las, expo3b, {}, {}, exposure_learned=fx3b, learned_exposure_active=True)
+assert (sp_las["transfer"], sp_las["transfer_source"]) == (0.31, "spots.json") and "exposure_smoothed_lang" in sp_las
 rep3b = backtest.report(cases, res3b, ctx3b)
 assert "laert_eksponering: del B kjører i SKYGGEMODUS" in rep3b and "Lærte bøtter lang/kort (par) per spot: " in rep3b
 print("3b: laert_eksponering = grunnlinja uten lærte bøtter; med syntetiske par kobles del B inn bare i varianten, rapporten sier hva som er lært")
