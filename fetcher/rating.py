@@ -718,8 +718,9 @@ def fjord_share_height(hour, spot):
 def fjord_chop(hour, spot):
     """Krapp sjø ved BarentsWatch-punktet for en fjord-spot: svellet ute er i det tegnede vinduet, og punktet
     viser minst FJORD_CHOP_MIN_HEIGHT_M med toppperiode under FJORD_CHOP_MAX_PERIOD_S. Mangler høyden eller
-    perioden: False (manglende data er aldri et tegn). rate() kapper da timen til 1 poeng og gjør den usikker,
-    som «kildene uenige». Regelen kan bare senke.
+    perioden: False (manglende data er aldri et tegn). rate() gjør da timen usikker (høyst 3 poeng), ikke mer:
+    perioden ved punktet er ikke til å stole på i en fjord (S32 e, svar.md 23.11.2026 kl. 14.00: Breivikeidet
+    viste 1,6 s mens 8 s svell kom inn, Russelv 16.11 viste 4,4 s på en god dag). Regelen kan bare senke.
     Grensene (fysikk-kontrolløren 23.11.2026): Breivikeidet 17.11 og 22.11 var rent og surfbart med 0,33-0,49 m
     og 1,6-2,7 s ved punktet. 0,6 m med under 4 s er vindsjø fra ca. 7 m/s over 30 km i JONSWAP. Svakhet: den
     krappe sjøen ved punktet er laget av den samme modellvinden som tok feil 17.11."""
@@ -1292,17 +1293,16 @@ def _fmt_penalty(n):
     return f"−{n:.1f}".replace(".", ",")
 
 
-def disagree_reason(hour, dir_hit, bw_detail, chop=False, fjord=False):
+def disagree_reason(hour, dir_hit, bw_detail, fjord=False):
     """Kort norsk forklaring på HVA av 4a-betingelsene som slo inn, til
     varselbanneret på detaljsiden (5c). Bygget her, ikke i appen - appen
     skal bare vise det henteren faktisk regnet ut.
-    23.11.2026 (bw_tillit): krapp sjø ved punktet for en fjord-spot (chop, se fjord_chop()) gir samme ord som
-    vindsjø-leddet, og for en fjord-spot med svellet i det tegnede vinduet nevnes ikke eksponeringen ute (den
-    teller ikke der, se sources_disagree i rate())."""
+    23.11.2026 (bw_tillit): for en fjord-spot med svellet i det tegnede vinduet nevnes ikke eksponeringen ute
+    (den teller ikke der, se sources_disagree i rate())."""
     reasons = []
     if dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE and not fjord:
         reasons.append("svellet ute er dårlig eksponert mot spoten")
-    if bw_detail["swell_share"] < 0.5 or chop:
+    if bw_detail["swell_share"] < 0.5:
         reasons.append("det er mest vindsjø")
     if bw_detail["spot_direction_factor"] < 0.5:
         reasons.append("bølgene ved spoten går ikke inn mot stranda")
@@ -1460,7 +1460,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             damptxt = ", dempet av " + ("svært kraftig" if (energy_swell_kj or 0) >= 10000 else "kraftig") + " svell"
         if fjord_wind_block:
             # bw_tillit (23.11.2026): vinden tar gap-grensa bort for en fjord-spot, og timen får 0 (se rate())
-            damptxt += f", tar alt fra {blown_out_wind_ms(spot):.0f} m/s her"
+            damptxt += f", vinden teller først fra {blown_out_wind_ms(spot):.0f} m/s her"
         elif wp is not None and wpp["pen"] < wp - 1e-9:
             damptxt += ", lokal regel strengere"
         items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
@@ -1956,10 +1956,10 @@ def rate(hour, spot):
              or bw_detail["swell_share"] < 0.5
              or (bw_detail["spot_direction_factor"] < 0.5 and not bw_detail["spot_direction_offshore"]))
     )
-    # 23.11.2026 (bw_tillit): for en fjord-spot er BarentsWatch bare et tegn på krapp sjø ved punktet (fjord_chop())
-    chop = source == "barentswatch" and fjord_chop(hour, spot)
-    if chop:
-        sources_disagree = True
+    # 23.11.2026 (bw_tillit): for en fjord-spot er BarentsWatch bare et tegn på krapp sjø ved punktet (fjord_chop()).
+    # Tegnet gjør bare timen usikker (S32 e), det er ikke «kildene uenige».
+    if source == "barentswatch" and fjord_chop(hour, spot):
+        uncertain = True
     if sources_disagree:
         uncertain = True
 
@@ -2132,7 +2132,7 @@ def rate(hour, spot):
         # spoten) er uenige - trolig ikke surfbart selv om høyden ser grei
         # ut. Se disagree_reason() for hvorfor. Varsles ALDRI (notify.py).
         "sources_disagree": sources_disagree,
-        "sources_disagree_reason": disagree_reason(hour, dir_hit, bw_detail, chop=chop,
+        "sources_disagree_reason": disagree_reason(hour, dir_hit, bw_detail,
                                                    fjord=fjord_in_window(hour, spot)) if sources_disagree else None,
         "swell_share": round(bw_detail["swell_share"], 3) if bw_detail else None,
         # Periodefaktoren slik ratingen brukte den, og hva den bygger på ("bw",

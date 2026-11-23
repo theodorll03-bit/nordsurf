@@ -2315,7 +2315,7 @@ print("38: Unstad S29 a - egen vindkurve: ingen vindstraff under 14 m/s middelvi
 # 39: tillit til BarentsWatch per spot, bw_tillit (svar.md 23.11.2026 kl. 11.25, Theodor; fysikk-kontrolløren 23.11.2026;
 # kilder: observasjon 17.11.2026 og 22.11.2026, Theodor). "kyst" (alle spots uten feltet) er uendret. For "fjord" er
 # høyden svell ute × andelen i begge soner når svellet kommer fra det tegnede vinduet og perioden ute er minst 7 s, og
-# BarentsWatch er bare et tegn på krapp sjø ved punktet (minst 0,6 m med toppperiode under 4 s gir høyst 1 og usikker).
+# BarentsWatch er bare et tegn på krapp sjø ved punktet (minst 0,6 m med toppperiode under 4 s gjør timen usikker, S32 e).
 from rating import (is_fjord, fjord_in_window, fjord_share_height, fjord_chop, FJORD_CHOP_MIN_HEIGHT_M,
                     FJORD_CHOP_MAX_PERIOD_S, gap_blocked_by_wind, wind_type as _wt39)
 FJORD39 = ["breivikeidet"]          # godkjente fjord-spots (PR A: bare Breivikeidet)
@@ -2372,14 +2372,29 @@ for ws39 in (8.0, 9.0):
     assert rate(dict(h39), B39)["height"] == round(3.2 * 0.22, 2) and rate(dict(h39), B39)["low_reason"] == "blown_out"
 # BarentsWatch løfter ikke over andelen: 1,2 m med 8,5 s ved punktet gir samme høyde som et stille punkt
 assert rate(dict(bre_2211[8], bw_height=1.2, bw_period=8.5, bw_dir=20.0), B39)["height"] == r36[8]["height"]
-# 39.4: krapp sjø ved punktet. 0,6 m og under 4 s gir høyst 1, usikker og «kildene uenige» med «mest vindsjø» (ikke
-# eksponeringen ute). 0,59 m, 4,0 s og manglende tall gir ingenting. Regelen hever aldri, og lang periode senker aldri.
+# 39.4: krapp sjø ved punktet. 0,6 m og under 4 s gjør timen usikker (høyst 3), ikke «kildene uenige» og ikke et tak
+# på 1 poeng (S32 e, svar.md 23.11.2026 kl. 14.00). 0,59 m, 4,0 s og manglende tall gir ingenting. Regelen hever
+# aldri, og lang periode senker aldri.
 k39 = lambda **kw: rate(dict(bre_2211[8], **kw), B39)
 assert fjord_chop(dict(bre_2211[8], bw_height=0.6, bw_period=3.99), B39) and not fjord_chop(dict(bre_2211[8], bw_height=0.59, bw_period=3.99), B39)
 assert not fjord_chop(dict(bre_2211[8], bw_height=0.6, bw_period=4.0), B39) and not fjord_chop(dict(bre_2211[8], bw_height=0.6, bw_period=None), B39)
 r39k = k39(bw_height=0.6, bw_period=3.99)
-assert r39k["stars"] <= 1 and r39k["uncertain"] and r39k["sources_disagree"], (r39k["stars"], r39k["sources_disagree"])
-assert "mest vindsjø" in r39k["sources_disagree_reason"] and "dårlig eksponert" not in r39k["sources_disagree_reason"], r39k["sources_disagree_reason"]
+assert r39k["stars"] == r36[8]["stars"] == 2 and r39k["uncertain"] and not r39k["sources_disagree"], (r39k["stars"], r39k["sources_disagree"])
+assert r39k["sources_disagree_reason"] is None and r39k["height"] == r36[8]["height"]
+# under 7 s gjelder BarentsWatch som for en kyst-spot, og der er krapp sjø det eneste som gjør timen usikker:
+# samme poeng og høyde med og uten tegnet, også når punktet viser 1,5 m med 3 s (2 poeng, ikke kappet til 1)
+u39 = {"height_offshore": 2.6, "swell_offshore": 2.5, "swell_model": "standard", "dir_offshore": 17.0, "period": 6.5,
+       "wind_speed": 1.0, "wind_dir": 203.0, "gust": 2.0, "bw_dir": 347.0}
+for bwh39, bwp39, bwp39b, st39 in ((0.6, 3.99, 4.0, 0), (1.5, 3.0, 6.0, 2)):
+    ra39, rb39 = rate(dict(u39, bw_height=bwh39, bw_period=bwp39), B39), rate(dict(u39, bw_height=bwh39, bw_period=bwp39b), B39)
+    assert ra39["uncertain"] and not rb39["uncertain"] and not ra39["sources_disagree"], (bwh39, ra39["uncertain"], rb39["uncertain"])
+    assert ra39["stars"] == rb39["stars"] == st39 and ra39["height"] == rb39["height"], (bwh39, ra39["stars"], rb39["stars"])
+# feiljegeren 23.11.2026 (etterkontrollen): en time med 3 poeng får 3 også med tegnet, så et tak på 2 ikke slipper gjennom
+t39 = {"height_offshore": 2.1, "swell_offshore": 2.0, "swell_model": "standard", "dir_offshore": 17.0, "period": 9.0,
+       "wind_speed": 1.0, "wind_dir": 203.0, "gust": 2.0, "bw_dir": 347.0}
+ra39, rb39 = rate(dict(t39, bw_height=0.7, bw_period=3.0), B39), rate(dict(t39, bw_height=0.7, bw_period=4.0), B39)
+assert fjord_chop(dict(t39, bw_height=0.7, bw_period=3.0), B39) and ra39["stars"] == rb39["stars"] == 3, (ra39["stars"], rb39["stars"])
+assert ra39["uncertain"] and rb39["uncertain"] and ra39["height"] == rb39["height"] and not ra39["sources_disagree"]
 for kw39 in ({"bw_height": 0.59, "bw_period": 3.99}, {"bw_height": 0.6, "bw_period": 4.0}, {"bw_height": 0.6, "bw_period": None}):
     assert k39(**kw39)["stars"] == 2 and not k39(**kw39)["sources_disagree"], kw39
 for bwh39 in (0.0, 0.3, 0.59, 0.6, 0.9, 1.5, 2.5):
@@ -2423,7 +2438,7 @@ for d39 in (40.0, 60.0, 300.0):
 # reserven er usikker også når perioden ute mangler
 assert rate(dict(res39, period=None), B39)["uncertain"]
 # ordene i regnestykket: «Løftet til» bare når andelen er over BarentsWatch-tallet etter justering. Er punktet høyere
-# (1,2 m med 8,5 s), eller tar vinden gap-grensa bort, står høyden uten «Løftet til». «tar alt fra 8 m/s her» står bare
+# (1,2 m med 8,5 s), eller tar vinden gap-grensa bort, står høyden uten «Løftet til». «vinden teller først fra 8 m/s her» står bare
 # i vindlinja når vindsperra slår til (ikke ved 7,9 m/s pålands eller 13 m/s fralands).
 gap39 = lambda r: [x for x in r["breakdown"] if "gjennom gapet, andel" in x]
 vind39 = lambda r: [x for x in r["breakdown"] if x.startswith("Vind ")]
@@ -2436,9 +2451,9 @@ assert gap39(rate(dict(l39, bw_height=1.2, bw_dir=20.0, bw_period=8.5), B39)) ==
 for kw39 in ({}, {"bw_height": None, "bw_dir": None, "bw_period": None}):
     r39 = rate(dict(l39, wind_speed=9.0, wind_dir=20.0, gust=12.0, **kw39), B39)
     assert r39["stars"] == 0 and gap39(r39) == ["0,6" + SLUTT39], (kw39, gap39(r39))
-    assert len(vind39(r39)) == 1 and ", tar alt fra 8 m/s her: " in vind39(r39)[0], vind39(r39)
+    assert len(vind39(r39)) == 1 and ", vinden teller først fra 8 m/s her: " in vind39(r39)[0], vind39(r39)
 for kw39 in ({"wind_speed": 7.9, "wind_dir": 20.0, "gust": 12.0}, {"wind_speed": 13.0, "wind_dir": 200.0, "gust": 18.0}, {}):
     r39 = rate(dict(l39, **kw39), B39)
-    assert gap39(r39) == ["Løftet til 0,6" + SLUTT39] and not any("tar alt" in x for x in r39["breakdown"]), (kw39, r39["breakdown"])
-print(f"39: bw_tillit - kyst uendret, fjord bare {FJORD39}; like soner i {n39} timer, vindsperre gir 0 i begge, krapp sjø fra 0,6 m og under 4 s gir høyst 1, reserven usikker under 7 s og uten retning, Russelv låst til main - OK")
+    assert gap39(r39) == ["Løftet til 0,6" + SLUTT39] and not any(", vinden teller først fra 8 m/s her: " in x for x in r39["breakdown"]), (kw39, r39["breakdown"])
+print(f"39: bw_tillit - kyst uendret, fjord bare {FJORD39}; like soner i {n39} timer, vindsperre gir 0 i begge, krapp sjø fra 0,6 m og under 4 s gjør timen usikker, reserven usikker under 7 s og uten retning, Russelv låst til main - OK")
 print("Alle tester ok")
