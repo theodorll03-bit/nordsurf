@@ -63,7 +63,7 @@ DOCS = ROOT / "docs"
 SHOT_DIR = DOCS / "design" / "spotside" / "etter"
 SHOT_DIR.mkdir(parents=True, exist_ok=True)
 ELEMENT_TIMEOUT_MS = 15_000
-SF_ID = "farstadsanden"   # spoten som får svak fralandsvind uten svell i alle timer (S21 a)
+SF_ID = "farstadsanden"   # spoten som får svak vind uten svell i alle timer, med ny retning hver time (S21 a, S24 a og S26)
 FILE_TIMEOUT_S = 300
 OSLO = ZoneInfo("Europe/Oslo")
 FIXTURE = ROOT / "fetcher" / "fixtures" / "forecast.json"
@@ -375,18 +375,34 @@ def main():
                 assert uv["styrke"] == [uv["ikke"], uv["cap"]] and uv["ikke"] == "Ikke surfbart nå", f"ukjent vindstyrke ved 0 poeng skal hete «{uv['ikke']}»: {uv}"
                 assert uv["retning"] == uv["mye"] and uv["tapt"] == uv["mye"] and uv["null_retning"] == uv["mye"], f"ukjent retning med kjent styrke skal hete «{uv['mye']}»: {uv}"
                 # svak vind fra ukjent retning som ikke har tatt poeng, og målt vindsjø uten vindvarsel (rating.is_blown_out), beholder «Blåst ut»
+                # når surfehøyden er fra 0,8 m (her 1,0 m). Under 0,8 m følger ordet surfehøyden, se «svak vind uten poengtap» under (S24 a, S26 b).
                 assert uv["svak"] == uv["ut"] and uv["maalt"] == uv["ut"], uv
                 # grensa er 8 m/s på vindstyrken uten kast, som BLOWN_OUT_WIND_MS i henteren: 8,0 er «For mye vind», 7,9 og 6 m/s med kast 14 er det ikke
                 assert uv["atte"] == uv["mye"] and uv["under"] == uv["ut"] and uv["kast"] == uv["ut"], f"grensa for ukjent retning skal være 8 m/s uten kast: {uv}"
 
-                # Svak fralandsvind uten poengtap (Theodor S21 a, 20.11.2026): appen skylder ikke på vinden når det ikke er svell.
-                # Ordet følger surfehøyden: «Flatt» under 0,3 m, «Smått» fra 0,3 m. Fra 0,8 m er det bølger (vindsjø), og «Blåst ut» står.
+                # Svak vind uten poengtap (Theodor S21 a, 20.11.2026, S24 a, 22.11.2026, og S26 b, 23.11.2026): appen skylder ikke på vinden
+                # når det ikke er svell. Ordet følger surfehøyden: «Flatt» under 0,3 m, «Smått» fra 0,3 m. Fra 0,8 m er det bølger (vindsjø),
+                # og «Blåst ut» står. Svak er effektiv vind med kast (effectiveWind, samme mål som vindkurven) under 12 m/s fralands og under
+                # 8 m/s fra alle andre retninger, også ukjent.
                 sf = page.evaluate("""() => { const b = {stars: 0, period: 4, low_reason: 'blown_out', wind_type: 'offshore', wind_speed: 4, bw_height: 0.6, light: 'dag'}, z = (w) => ({energy: 0, wind: w, tide: 0, local: 0, cap: 0});
                     const alt = (x) => { const h = {...b, zero_losses: z(0), ...x}; return [ratingWord(h), ratingWordExplain(h), heightMForDisplay(h), lowReasonNotice(h)]; };
                     return {null_m: alt({surf_height: 0}), under: alt({surf_height: 0.29}), paa: alt({surf_height: 0.3}), smaa: alt({surf_height: 0.79}), stor: alt({surf_height: 0.8}),
                         mangler: alt({surf_height: null}), tapt: alt({surf_height: 0.1, zero_losses: z(1)}), falmet: alt({surf_height: 0.1, faded_wind: 1}), sterk: alt({surf_height: 0.1, wind_speed: 12}),
                         kast: alt({surf_height: 0.1, wind_speed: 10.5, gust: 17}), elleve: alt({surf_height: 0.1, wind_speed: 11.9}), styrke: alt({surf_height: 0.1, wind_speed: null}),
                         paland: alt({surf_height: 0.1, wind_type: 'onshore'}), side: alt({surf_height: 0.1, wind_type: 'side'}), retning: alt({surf_height: 0.1, wind_type: null}),
+                        skra: alt({surf_height: 0, wind_type: 'sideonshore'}), side_smaa: alt({surf_height: 0.5, wind_type: 'side'}), pa_smaa: alt({surf_height: 0.79, wind_type: 'onshore'}),
+                        pa_under: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 7.9}), side_under: alt({surf_height: 0.1, wind_type: 'side', wind_speed: 7.9}), retn_under: alt({surf_height: 0.1, wind_type: null, wind_speed: 7.9}),
+                        skra_under: alt({surf_height: 0.1, wind_type: 'sideonshore', wind_speed: 7.9}), pa_lavkast: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 7.9, gust: 5}),
+                        pa_kast_under: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 6, gust: 12}), side_kast_under: alt({surf_height: 0.1, wind_type: 'side', wind_speed: 6.5, gust: 11.4}),
+                        retn_kast_under: alt({surf_height: 0.1, wind_type: null, wind_speed: 6, gust: 12}), skra_kast_under: alt({surf_height: 0.1, wind_type: 'sideonshore', wind_speed: 7, gust: 10.3}),
+                        pa_kast: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 6, gust: 14}), pa_kast12: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 7.9, gust: 12}),
+                        side_kast: alt({surf_height: 0.1, wind_type: 'side', wind_speed: 6.5, gust: 11.5}), skra_kast12: alt({surf_height: 0, wind_type: 'sideonshore', wind_speed: 7.9, gust: 12}),
+                        retn_kast: alt({surf_height: 0.1, wind_type: null, wind_speed: 6, gust: 14}),
+                        pa_atte: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: 8}), side_atte: alt({surf_height: 0.1, wind_type: 'side', wind_speed: 8}), skra_atte: alt({surf_height: 0.1, wind_type: 'sideonshore', wind_speed: 8}),
+                        retn_atte: alt({surf_height: 0.1, wind_type: null, wind_speed: 8}), fra_atte: alt({surf_height: 0.1, wind_speed: 8}), fra_kast: alt({surf_height: 0.1, wind_speed: 8, gust: 14}),
+                        pa_tapt: alt({surf_height: 0.1, wind_type: 'onshore', zero_losses: z(1)}), side_falmet: alt({surf_height: 0.1, wind_type: 'side', faded_wind: 1}), retn_tapt: alt({surf_height: 0.1, wind_type: null, zero_losses: z(1)}),
+                        pa_styrke: alt({surf_height: 0.1, wind_type: 'onshore', wind_speed: null}), pa_mangler: alt({surf_height: null, wind_type: 'onshore'}), pa_stor: alt({surf_height: 0.8, wind_type: 'onshore'}),
+                        side_ett: alt({surf_height: 0.5, stars: 1, wind_type: 'side'}),
                         ett: alt({surf_height: 0.5, stars: 1}), flat: alt({surf_height: 0.1, low_reason: 'flat'}), stormsjo: alt({surf_height: 0.1, low_reason: 'stormsjo'}),
                         flatt: STR.starWords[0], smatt: STR.wordSmall, smatt_fork: STR.wordExplain[STR.wordSmall], daarlig: STR.starWords[1], ut: STR.lowReason.blown_out, ut_fork: STR.wordExplain[STR.lowReason.blown_out],
                         mye: STR.wordTooMuchWind, mye_fork: STR.wordExplain[STR.wordTooMuchWind], setn: STR.notice.blown_out + '.', setn_storm: STR.notice.stormsjo + '.'}; }""")
@@ -400,8 +416,64 @@ def main():
                 # vind som har tatt poeng eller er fra 12 m/s (med kast), heter «For mye vind» som før (S15 a), med den nye forklaringen (S21 b)
                 assert all(sf[k] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]] for k in ("tapt", "falmet", "sterk", "kast")), f"vind som tar poeng eller er sterk skal hete «{sf['mye']}»: {sf}"
                 assert sf["mye_fork"] == "Vinden er for sterk." and sf["mye_fork"] != sf["ut_fork"], sf
-                # bare fralandsvind: pålandsvind, sidevind og ukjent retning beholder «Blåst ut»
-                assert all(sf[k] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] for k in ("paland", "side", "retning")), sf
+                # alle retninger (S24 a): svak pålandsvind, sidevind, skrå pålandsvind og vind fra ukjent retning får ordet etter surfehøyden.
+                # Rett under grensa: 7,9 m/s uten kast, kast under middelvinden, og kast som teller til 7,8-7,99 (S26 b).
+                svake = ("paland", "side", "retning", "skra", "pa_under", "side_under", "retn_under", "skra_under", "pa_lavkast", "pa_kast_under", "side_kast_under", "retn_kast_under", "skra_kast_under")
+                assert all(sf[k] == [sf["flatt"], None, None, None] for k in svake), f"svak vind uten poengtap skal hete «{sf['flatt']}» fra alle retninger: { {k: sf[k] for k in svake} }"
+                assert sf["side_smaa"] == [sf["smatt"], sf["smatt_fork"], None, None] and sf["pa_smaa"] == [sf["smatt"], sf["smatt_fork"], None, None], f"fra 0,3 m skal ordet være «{sf['smatt']}» også i side- og pålandsvind: {sf}"
+                # grensa er 8 m/s effektiv vind med kast (S26 b, som fysikk-kontrolløren): 8,0 m/s, 6 m/s med kast 14 (teller som 8,0),
+                # 6,5 med kast 11,5 (8,0) og 7,9 med kast 12 (9,1, Horseid- og Bunes-typen 22.11) er ikke svak. Da står «Blåst ut» med tallet
+                # og setningen. Fralandsvind på 8 m/s, også med kast 14, er fortsatt svak (grensa der er 12 m/s med kast).
+                sterke = ("pa_atte", "side_atte", "skra_atte", "pa_kast", "pa_kast12", "side_kast")
+                assert all(sf[k] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] for k in sterke), f"fra 8 m/s med kast skal side- og pålandsvind hete «{sf['ut']}»: { {k: sf[k] for k in sterke} }"
+                assert sf["skra_kast12"] == [sf["ut"], sf["ut_fork"], 0.6, sf["setn"]], sf   # 0,0 m: tallet er BarentsWatch-høyden som før
+                assert sf["fra_atte"] == [sf["flatt"], None, None, None] and sf["fra_kast"] == [sf["flatt"], None, None, None], sf
+                # ukjent retning: «For mye vind» fra 8 m/s middelvind (windLossWord, som før). Under det, men fra 8 m/s med kast, «Blåst ut».
+                assert sf["retn_atte"] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]] and sf["retn_kast"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]], sf
+                # vind som har tatt poeng, er ikke svak: «Blåst ut» fra siden og fra havet, «For mye vind» når retningen er ukjent
+                assert sf["pa_tapt"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["side_falmet"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["retn_tapt"] == [sf["mye"], sf["mye_fork"], 0.1, sf["setn"]], sf
+                # manglende vindstyrke eller surfehøyde er aldri 0, og fra 0,8 m er det bølger: «Blåst ut» som før
+                assert sf["pa_styrke"] == [sf["ut"], sf["ut_fork"], 0.1, sf["setn"]] and sf["pa_mangler"] == [sf["ut"], sf["ut_fork"], 0.6, sf["setn"]] and sf["pa_stor"] == [sf["ut"], sf["ut_fork"], 0.8, sf["setn"]], sf
+                assert sf["side_ett"][0] == sf["daarlig"] and sf["side_ett"][2] == 0.5 and sf["side_ett"][3] is None, sf
+                # Samme grense i henteren (S26): windBlamed i appen og publish.wind_blamed() (dagens time, best_hour) er like for
+                # alle kombinasjoner av retning, vind, kast, høyde, poengtap og poeng. Og ordet og windBlamed sier det samme.
+                import publish as _pub_s26
+                _z = lambda w: {"energy": 0, "wind": w, "tide": 0, "local": 0, "cap": 0}
+                grid = [dict(low_reason=lr, stars=st, wind_type=wt, wind_speed=ws, gust=gu, surf_height=sh, zero_losses=_z(zw), faded_wind=fw, bw_height=1.0, period=8, light="dag")
+                        for lr in ("blown_out", "flat") for st in (0, 1) for wt in ("offshore", "side", "sideonshore", "onshore", None)
+                        for ws in (None, 0, 5, 6.5, 7, 7.9, 8, 9, 11, 11.9, 12, 14) for gu in (None, 5, 10.3, 11.4, 11.5, 12, 14, 14.4, 20)
+                        for sh in (None, 0, 0.29, 0.5, 0.79, 0.8) for zw, fw in ((0, 0), (1, 0), (0, 1)) if lr == "blown_out" or (wt == "side" and zw == fw == 0)]
+                js_wb = page.evaluate("(g) => g.map(h => [windBlamed(h), ratingWord(h)])", grid)
+                avvik = [(h, j) for h, j in zip(grid, js_wb) if j[0] != _pub_s26.wind_blamed(h)]
+                assert not avvik, f"windBlamed (app.js) og publish.wind_blamed ulike i {len(avvik)} av {len(grid)} timer, f.eks. {avvik[:3]}"
+                assert all(j[0] == (j[1] in (sf["ut"], sf["mye"])) for h, j in zip(grid, js_wb) if h["low_reason"] == "blown_out"), "windBlamed skal være sann nøyaktig når ordet skylder på vinden"
+                # Dagens time ved likt poeng og lik høyde (S26, feiljegeren 22.11): en time der vinden får skylda går foran, ellers den
+                # første. betterDayHour i appen, bestOfDay og spanOfDay i spotgraf.js og publish.best_hour gir samme time og samme ord.
+                dr = page.evaluate("""() => { SpotGraf.defaultDay({hours: []}, 0, Front.helpers);   // hjelperne bestOfDay bruker (settes ellers av spotsiden)
+                    const z = {energy: 0, wind: 0, tide: 0, local: 0, cap: 0};
+                    const bo = (t, ws, wt, x) => ({t, stars: 0, low_reason: 'blown_out', wind_type: wt, wind_speed: ws, surf_height: 0, surf_height_sets: 0, bw_height: 1.2, zero_losses: z, light: 'dag', ...(x || {})});
+                    const velg = (hours) => { const s = {id: 'x', hours}, d = {key: '2026-11-22', idxs: hours.map((_, i) => i), step: 1}; const i = SpotGraf.bestOfDay(s, d);
+                        return [hours[i].t, ratingWord(hours[i]), SpotGraf.spanOfDay(s, d).word]; };
+                    return {horseid: velg([bo('11', 8.2, 'sideonshore'), bo('12', 7.9, 'sideonshore'), bo('13', 7.4, 'onshore')]),
+                        snudd: velg([bo('13', 7.4, 'onshore'), bo('12', 7.9, 'sideonshore'), bo('11', 8.2, 'sideonshore')]),
+                        kast: velg([bo('11', 3, 'onshore'), bo('12', 7.9, 'onshore', {gust: 12}), bo('13', 9, 'side')]),
+                        svake: velg([bo('11', 3, 'onshore'), bo('12', 5, 'side'), bo('13', 2, 'offshore')]),
+                        hoyde: velg([bo('11', 9, 'onshore'), bo('12', 3, 'side', {surf_height: 0.5, surf_height_sets: 0.6})]),
+                        poeng: velg([bo('11', 9, 'onshore'), bo('12', 3, 'side', {stars: 1, low_reason: null, surf_height: 0.3}), bo('13', 3, 'side', {surf_height: 0.5})]),
+                        mork: velg([bo('11', 9, 'onshore', {light: 'mørkt'}), bo('12', 3, 'side'), bo('13', 7.9, 'onshore')])}; }""")
+                assert dr["horseid"][:2] == ["11", sf["ut"]] and dr["snudd"][:2] == ["11", sf["ut"]], f"Horseid-typen: dagen skal hete «{sf['ut']}» uansett rekkefølge: {dr}"
+                assert dr["kast"][:2] == ["12", sf["ut"]] and dr["svake"][:2] == ["11", sf["flatt"]], dr
+                assert dr["hoyde"][:2] == ["12", sf["smatt"]] and dr["poeng"][:2] == ["12", sf["daarlig"]] and dr["mork"][:2] == ["12", sf["flatt"]], dr
+                assert all(v[2] == v[1] for v in dr.values()), f"ordet i dagfanen (spanOfDay) skal være ordet for dagens time: {dr}"
+                # og publish.best_hour velger samme time for de samme dagene
+                _bo = lambda t, ws, wt, **x: dict({"t": t, "stars": 0, "low_reason": "blown_out", "wind_type": wt, "wind_speed": ws, "surf_height": 0, "zero_losses": _z(0), "light": "dag"}, **x)
+                for navn, hs in (("horseid", [_bo("11", 8.2, "sideonshore"), _bo("12", 7.9, "sideonshore"), _bo("13", 7.4, "onshore")]),
+                                 ("snudd", [_bo("13", 7.4, "onshore"), _bo("12", 7.9, "sideonshore"), _bo("11", 8.2, "sideonshore")]),
+                                 ("kast", [_bo("11", 3, "onshore"), _bo("12", 7.9, "onshore", gust=12), _bo("13", 9, "side")]),
+                                 ("svake", [_bo("11", 3, "onshore"), _bo("12", 5, "side"), _bo("13", 2, "offshore")]),
+                                 ("hoyde", [_bo("11", 9, "onshore"), _bo("12", 3, "side", surf_height=0.5)]),
+                                 ("mork", [_bo("11", 9, "onshore", light="mørkt"), _bo("12", 3, "side"), _bo("13", 7.9, "onshore")])):
+                    assert _pub_s26.best_hour(hs)[0]["t"] == dr[navn][0], (navn, dr[navn])
                 # en time med 1 poeng får poengordet og tallet sitt, og andre grunner er urørt
                 assert sf["ett"][0] == sf["daarlig"] and sf["ett"][2] == 0.5 and sf["ett"][3] is None, sf
                 assert sf["flat"][0] == sf["flatt"] and sf["flat"][2] is None and sf["stormsjo"][0] == "Stormsjø" and sf["stormsjo"][2] == 0.6, sf
@@ -1221,33 +1293,54 @@ def main():
                         bad = [deg for deg in range(360) if js[deg] != py[deg]]
                         assert not bad, f"{sid}: inSwellWindow ulik rating.in_sector for {bad[:10]} (vindu {d['swell_window']})"
                 ctx.close()
-            # ---- S21 a på skjermen: alle timene på én spot er svak fralandsvind uten svell og uten poengtap. Spotsiden sier «Flatt»
-            # for dagen og for timen, uten høydetall og uten setningen «Sterk vind ødelegger bølgene» (ui.js favSetning). ----
-            fc_sf = json.loads(json.dumps(FORECAST))
-            for s in fc_sf["spots"]:
-                if s["id"] == SF_ID:
-                    for h in s["hours"]:
-                        h.update(stars=0, faded=0, faded_wind=0, faded_tide=0, low_reason="blown_out", wind_type="offshore", wind_speed=3.0, gust=5.0, surf_height=0.0, surf_height_sets=0.0, bw_height=1.0,
-                                 zero_losses={"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0})
-            ov_sf, det_sf = publish.split(fc_sf)
-            ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo", device_scale_factor=2, is_mobile=True, has_touch=True)
-            page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
-            page.on("pageerror", lambda e: errors.append(f"svak fralandsvind: {e}"))
-            route(page)
-            def sf_route(rt, req):
-                path = req.url.split("?")[0]
-                if path.endswith("/data/oversikt.json"):
-                    return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_sf, ensure_ascii=False))
-                rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_sf[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
-            page.route("**/data/oversikt.json", sf_route)
-            page.route("**/data/spots/*.json", sf_route)
-            page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
-            page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
-            dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
-                vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
-            assert dom["ord"] == "Flatt" and dom["setn"] is None and dom["vindu"] is None, f"dagens beste time i svak fralandsvind uten svell skal hete «Flatt» uten setning om vinden: {dom['ord']!r}, {dom['setn']!r}, {dom['vindu']!r}"
-            assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak fralandsvind uten svell"
-            ctx.close()
+            # ---- S21 a, S24 a og S26 på skjermen: alle timene på én spot er svak vind uten svell og uten poengtap, og vinden dreier fra
+            # time til time (fralands, side, pålands, skrått pålands, 3 m/s med kast 5). Spotsiden sier «Flatt» for dagen og for timen,
+            # uten høydetall og uten setningen «Sterk vind ødelegger bølgene» (ui.js favSetning). Runde 2 (S26, dagens time): hver tredje
+            # time er 7,9 m/s pålands med kast 12 (teller som 9,1, ikke svak). Da heter hver dag med en slik lys time «Blåst ut», og
+            # dagens ord (dayBest fra publish.best_hour), timen dagen åpnes på (bestOfDay) og ordet i dagfanen (spanOfDay) er samme time. ----
+            for runde in ("svak", "dagsregel"):
+                fc_sf = json.loads(json.dumps(FORECAST))
+                for s in fc_sf["spots"]:
+                    if s["id"] == SF_ID:
+                        for i, h in enumerate(s["hours"]):
+                            h.update(stars=0, faded=0, faded_wind=0, faded_tide=0, low_reason="blown_out", wind_type=("offshore", "side", "onshore", "sideonshore")[i % 4], wind_speed=3.0, gust=5.0, surf_height=0.0, surf_height_sets=0.0, bw_height=1.0,
+                                     zero_losses={"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0})
+                            if runde == "dagsregel" and i % 3 == 2:
+                                h.update(wind_type="onshore", wind_speed=7.9, gust=12.0)
+                ov_sf, det_sf = publish.split(fc_sf)
+                ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo", device_scale_factor=2, is_mobile=True, has_touch=True)
+                page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
+                page.on("pageerror", lambda e, r=runde: errors.append(f"svak vind ({r}): {e}"))
+                route(page)
+                def sf_route(rt, req, ov_sf=ov_sf, det_sf=det_sf):
+                    path = req.url.split("?")[0]
+                    if path.endswith("/data/oversikt.json"):
+                        return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_sf, ensure_ascii=False))
+                    rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_sf[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
+                page.route("**/data/oversikt.json", sf_route)
+                page.route("**/data/spots/*.json", sf_route)
+                page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
+                page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
+                dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
+                    vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
+                # dag for dag: dagens time fra oversikten (publish.best_hour), timen dagen åpnes på og ordet i dagfanen
+                dager = page.evaluate("""([det, ov]) => { const s = {...det, ...ov, hours: det.hours}, Hh = Front.helpers; SpotGraf.defaultDay(s, Hh.nowIdx(s), Hh);
+                    return SpotGraf.days(s).map(d => { const b = Hh.dayBest(s, d.key), i = SpotGraf.bestOfDay(s, d), lys = d.idxs.map(j => s.hours[j]).filter(h => Hh.usable(h) && Hh.known(h));
+                        return {key: d.key, b: b.h ? b.h.t : null, b_ord: b.h ? ratingWord(b.h) : null, vist: s.hours[i].t, vist_ord: ratingWord(s.hours[i]), fane: SpotGraf.spanOfDay(s, d).word,
+                            blaast: lys.some(h => windBlamed(h)), lys: lys.length}; }); }""", [det_sf[SF_ID], next(x for x in ov_sf["spots"] if x["id"] == SF_ID)])
+                med_tall = [d for d in dager if d["b"] is not None]
+                assert med_tall, dager
+                for d in med_tall:
+                    assert d["b"] == d["vist"] and d["b_ord"] == d["vist_ord"] == d["fane"], f"{runde}: dagens ord, timen som vises og dagfanen skal være samme time: {d}"
+                    assert d["b_ord"] == ("Blåst ut" if d["blaast"] else "Flatt"), f"{runde}: {d}"
+                if runde == "svak":
+                    assert not any(d["blaast"] for d in dager), dager
+                    assert dom["ord"] == "Flatt" and dom["setn"] is None and dom["vindu"] is None, f"dagens beste time i svak vind uten svell skal hete «Flatt» uten setning om vinden: {dom['ord']!r}, {dom['setn']!r}, {dom['vindu']!r}"
+                    assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak vind uten svell, uansett retning"
+                else:
+                    assert sum(d["blaast"] for d in med_tall) >= 2, f"testdataene skal ha minst to dager med en blåst lys time: {dager}"
+                    assert dom["ord"].lower() == "blåst ut", f"dagens ord skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}"
+                ctx.close()
             browser.close()
     finally:
         srv.shutdown()

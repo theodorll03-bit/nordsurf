@@ -1271,14 +1271,12 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                 items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: over terskelen, ingen effekt")
         if blown_out:
             # 22.11.2026 (Theodor S24 b): linja sa «og sterk vind» også i 1 m/s (Seines 21.11 kl. 12-14, under ordet
-            # «Flatt»). Vinden nevnes bare når den har tatt poeng eller er sterk: fra 8 m/s middelvind
-            # (BLOWN_OUT_WIND_MS, samme tall som is_blown_out()), og for fralandsvind fra 12 m/s med kast (samme tall
-            # som OFFSHORE_STRONG_MS i docs/js/app.js). Mangler vindstyrken, nevnes den ikke. is_blown_out() krever
-            # low_hs, og da er potensialet 0 og vinden har ingenting å ta: i dag er det derfor styrken som avgjør, og
-            # wind_took_points står som sikring hvis den regelen endres. Bare tekst, ingen poeng eller høyder.
-            eff = effective_wind(wind_speed, gust)
-            strong_wind = wind_speed is not None and (
-                eff >= BLOWN_OUT_TEXT_OFFSHORE_MS if wt == "offshore" else wind_speed >= BLOWN_OUT_WIND_MS)
+            # «Flatt»). Vinden nevnes bare når den har tatt poeng eller er sterk (blown_out_wind_strong(): effektiv vind
+            # med kast, samme mål som vindkurven og som ordet i docs/js/app.js, Theodor S26 b 23.11.2026). Mangler
+            # vindstyrken, nevnes den ikke. is_blown_out() krever low_hs, og da er potensialet 0 og vinden har ingenting
+            # å ta: i dag er det derfor styrken som avgjør, og wind_took_points står som sikring hvis den regelen endres.
+            # Bare tekst, ingen poeng eller høyder.
+            strong_wind = blown_out_wind_strong(wind_speed, gust, wt) is True
             cause = "mye vindsjø og sterk vind" if (wind_took_points and wind_speed is not None) or strong_wind else "mye vindsjø"
             items.append(f"Surfehøyde: blåst ut - {cause}, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
@@ -1352,6 +1350,21 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
 BLOWN_OUT_WIND_MS = 8.0  # «kraftig» onshore/side-onshore (ordet følger zero_losses som før - Theodor 15.10.2026, regel 5)
 BLOWN_OUT_SHARE_MAX = 0.5  # samme "mest vindsjø"-grense som _share_word()
 BLOWN_OUT_TEXT_OFFSHORE_MS = 12.0  # bare teksten i regnestykket: fralandsvind er «sterk» fra 12 m/s med kast (OFFSHORE_STRONG_MS i docs/js/app.js)
+BLOWN_OUT_TEXT_WIND_MS = 8.0  # bare teksten: vind fra andre og ukjente retninger er «sterk» fra 8 m/s med kast (CALM_WIND_MS i docs/js/app.js, S26 b)
+
+
+def blown_out_wind_strong(wind_speed, gust, wt):
+    """23.11.2026 (Theodor S26 b, som fysikk-kontrolløren): er vinden i en blåst ut-time sterk nok til å få
+    skylda? Målt som effektiv vind med kast (effective_wind(), samme mål som vindkurven i ratingen):
+    fralandsvind fra 12 m/s, vind fra siden, fra havet, skrått fra havet og fra ukjent retning fra 8 m/s.
+    Mangler kastet, er det middelvinden alene (som effective_wind()). Mangler vindstyrken: None, aldri 0.
+    Samme grenser som ordet på skjermen (calmWindWord() i docs/js/app.js) og som dagens time ved likt
+    poeng og lik høyde (publish.best_hour()). Bare tekst og visning: is_blown_out() og poengene er
+    uendret (den grensa er fortsatt 8 m/s middelvind uten kast, BLOWN_OUT_WIND_MS)."""
+    eff = effective_wind(wind_speed, gust)
+    if eff is None:
+        return None
+    return eff >= (BLOWN_OUT_TEXT_OFFSHORE_MS if wt == "offshore" else BLOWN_OUT_TEXT_WIND_MS)
 # 27.09.2026, fysikk-kontrollør sitt funn: samme grense som sources_disagree
 # (se rate(), "BarentsWatch viser en reell totalhøyde (0,5 m+)") - IKKE
 # FLAT_HS_THRESHOLD (0,35 m), som ville latt 0,36-0,49 m telle som "reell

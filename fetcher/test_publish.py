@@ -93,6 +93,41 @@ def main():
     assert b is None and st == "dark"
     b, st = publish.best_hour([H("a", 0, 0.1, light=None), H("b", 0, 0.2, light=None)])
     assert b is None and st == "miss", "bare ukjent lys hele dagen er «mangler», ikke «mørkt»"
+    # 2d. likt poeng og lik høyde (Theodor S26, 23.11.2026, etter feiljegeren 22.11: Horseid 22.11 kl. 12 «Blåst ut» og
+    # kl. 13-14 «Flatt», alle 0 poeng og 0,0 m, og den første timen ga dagen ordet): en time der vinden får skylda i ordet
+    # går foran en der den ikke gjør det, ellers den første. Samme regel som betterDayHour i docs/js/app.js.
+    z0 = {"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0}
+    BO = lambda t, ws, wt="onshore", surf=0.0, **k: H(t, 0, surf, **dict({"low_reason": "blown_out", "wind_speed": ws, "wind_type": wt, "zero_losses": z0}, **k))
+    # vindordet: pålands og side fra 8 m/s med kast (rating.blown_out_wind_strong), fralands fra 12, ukjent retning fra 8
+    assert not publish.wind_blamed(BO("x", 7.9)) and publish.wind_blamed(BO("x", 8.0)) and publish.wind_blamed(BO("x", 7.9, gust=12))
+    assert not publish.wind_blamed(BO("x", 7.9, "side")) and publish.wind_blamed(BO("x", 7.9, "sideonshore", gust=12))
+    assert not publish.wind_blamed(BO("x", 6.5, "side", gust=11.4)) and publish.wind_blamed(BO("x", 6.5, "side", gust=11.5))   # 7,97 og 8,0
+    assert not publish.wind_blamed(BO("x", 11, "offshore", gust=14)) and publish.wind_blamed(BO("x", 11, "offshore", gust=14.4))   # 11,9 og 12,0
+    assert not publish.wind_blamed(BO("x", 7.9, None)) and publish.wind_blamed(BO("x", 6, None, gust=14))
+    # manglende vindstyrke eller surfehøyde er aldri 0: vinden får skylda som før, og fra 0,8 m og ved poengtap også
+    assert publish.wind_blamed(BO("x", None)) and publish.wind_blamed(BO("x", 3, surf=None)) and publish.wind_blamed(BO("x", 3, surf=0.8))
+    assert publish.wind_blamed(BO("x", 3, zero_losses=dict(z0, wind=1))) and publish.wind_blamed(BO("x", 3, faded_wind=1))
+    assert not publish.wind_blamed(BO("x", 3, surf=0.79)) and not publish.wind_blamed(H("x", 0, 0.0)) and not publish.wind_blamed(H("x", 0, 0.0, low_reason="flat"))
+    # Horseid-typen: 8,2 m/s, så 7,9 og 7,4 uten kast. Dagens time er den blåste, uansett rekkefølge.
+    for rekke in (["a", "b", "c"], ["c", "b", "a"], ["b", "a", "c"]):
+        hs = {"a": BO("a", 8.2, "sideonshore"), "b": BO("b", 7.9, "sideonshore"), "c": BO("c", 7.4, "onshore")}
+        b, st = publish.best_hour([hs[k] for k in rekke])
+        assert b["t"] == "a" and st == "ok", (rekke, b["t"])
+    # med S26 b teller kastene: 7,9 m/s med kast 12 er også blåst ut, og da er den første av de blåste dagens time
+    b, _ = publish.best_hour([BO("a", 3), BO("b", 7.9, gust=12), BO("c", 8.5)])
+    assert b["t"] == "b", b["t"]
+    # ingen av de like timene er blåst ut av vinden: den første, som før
+    b, _ = publish.best_hour([BO("a", 3), BO("b", 5, "side"), H("c", 0, 0.0)])
+    assert b["t"] == "a", b["t"]
+    # poeng og høyde går fortsatt foran: «Smått» på 0,5 m slår «Blåst ut» på 0,0 m, og 1 poeng slår begge
+    b, _ = publish.best_hour([BO("a", 9), BO("b", 3, surf=0.5)])
+    assert b["t"] == "b", b["t"]
+    b, _ = publish.best_hour([BO("a", 9), H("b", 1, 0.3), BO("c", 3, surf=0.5)])
+    assert b["t"] == "b", b["t"]
+    # en mørk blåst time teller ikke
+    b, _ = publish.best_hour([BO("a", 9, light="mørkt"), BO("b", 3)])
+    assert b["t"] == "b", b["t"]
+    print("2d: likt poeng og lik høyde - en time der vinden får skylda går foran (S26), ellers den første - OK")
     d2 = publish.day_summary([H("a", 3, 1.0), H("b", 3, 1.2), H("c", 3, 1.1), H("d", 2, 0.9)])
     assert d2["h"]["t"] == "b" and d2["start"] == "a" and d2["slutt"] == "c", "vinduet går både bakover og fremover fra beste time"
     d = publish.day_summary([H("a", 1, 0.0), H("b", 2, 1.0, surf_height_sets=1.3), H("c", 2, 0.9, surf_height_sets=1.1), H("d", 1, 1.4, surf_height_sets=1.8), H("e", 3, 0.5, light="mørkt")])

@@ -149,8 +149,8 @@
       if(!H.usable(h)){ ukjent = true; if(!H.known(h) || H.stars(h) >= 1) miss = true; continue; }
       lys = true;
       if(!H.known(h)){ miss = true; continue; }
-      const c = {i, st: H.stars(h), hh: h.surf_height || 0};
-      if(!best || c.st > best.st || (c.st===best.st && c.hh > best.hh)) best = c;
+      // samme regel som publish.best_hour() og bestOfDay: ved likt tall og lik høyde går en time der vinden får skylda først (S26)
+      if(!best || betterDayHour(h, s.hours[best.i])) best = {i, st: H.stars(h)};
     }
     if(!(best && best.st >= 1)){
       if(miss || (!lys && ukjent)) return tom("miss");
