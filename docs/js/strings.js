@@ -252,6 +252,10 @@
     breakdownTitle: "Hvorfor denne ratingen?",
     explainClose: "Lukk",
     thisHour: "Denne timen", howComputed: "Slik regnes det ut",
+    // S37 (svar.md 24.11.2026 kl. 10.25): timer der høyden er svell ute × andelen gjennom gapet (fjord-spots, share_height).
+    // gapHow er «Slik regnes det ut» for høyden (ordrett fra svaret), gapAndel står etter andelen under «Eksponering denne timen»
+    gapHow: "Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.",
+    gapAndel: "andel gjennom gapet",
   };
   window.STR = STR;
 })();

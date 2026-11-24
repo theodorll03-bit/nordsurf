@@ -479,7 +479,7 @@ function detailsGrid(s, h, t){
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
     ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch" && !andelsHoyde(h)?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}
-    ${tapCell("confidence", STR.cell.confidence, h.confidence!=null?`${h.confidence} %`:"–", confN)}
+    ${tapCell("confidence", STR.cell.confidence, sikkerhetProsent(h, "–"), confN)}
     ${s.shelter_label ? tapCell("shelter", STR.cell.shelter, esc(cap(s.shelter_label)), "") : ""}
     ${tapCell("exposure", STR.cell.calibration, calV, calN)}
     ${localRulesHtml(h)}
@@ -538,6 +538,20 @@ function bwPeriodFactor(period){
 // samme ord som appen alt bruker («anslag», «reservemodell», «havmodell», «Usikkert varsel»). Bare visning.
 const GAP_KILDE = "svell ute gjennom gapet (anslag)";
 function andelsHoyde(h){ return !!(h && (h.share_height || h.gap_floor)); }
+// S37 a (svar.md 24.11.2026 kl. 10.25): prosenttallet for sikkerhet vises ikke når høyden er et anslag («–»).
+// Et prosenttall der lover mer sikkerhet enn vi har. Andre timer er uendret: tallet, eller reserveordet når det mangler.
+function sikkerhetProsent(h, mangler){ return andelsHoyde(h) ? "–" : h.confidence!=null ? `${h.confidence} %` : mangler; }
+// S37 c: andelen som er brukt i timen, slik den står i regnestykket («andel 0,22»). Den er ikke et eget felt i de
+// publiserte dataene, så den leses fra linja i regnestykket. Mangler linja, regnes den fra høyden på spoten delt på
+// svellet ute (begge er avrundet, så siste siffer kan avvike). Mangler de også: null (aldri 0).
+function andelBrukt(h){
+  if(!andelsHoyde(h)) return null;
+  const linje = (h.breakdown || []).find(x=> typeof x==="string" && x.includes("gjennom gapet, andel"));
+  const m = linje && linje.match(/andel (\d+,\d+)/);
+  if(m) return m[1];
+  if(h.height!=null && h.swell_offshore) return (h.height / h.swell_offshore).toFixed(2).replace(".", ",");
+  return null;
+}
 function surfAdjustmentLine(h){
   // 27.09.2026 (Theodors rettelse): egen linje for selve justeringen fra
   // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som

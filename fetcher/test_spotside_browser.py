@@ -1354,6 +1354,26 @@ def main():
                 assert hv_["loft"]["etikett"] == "Løftet til" and hv_["loft"]["verdi"] == "0,4 m", hv_["loft"]
                 assert hv_["energi"]["virkning"] == "faktor 0,65 (potensial ganget ned)" and hv_["energi"]["verdi"] == "243 kJ (periode omregnet til 7,6 s, ×1,25)", hv_["energi"]
                 assert hv_["komma"] == ["faktor 0,65", "−0,5 stjerne (vektet −0,3)", "faktor 1,00", "kl. 08.02", "17.11.2026", "observasjonene 17.11 og 22.11", "kl. 09.30-09.50Z", "5.10", "0,65"], hv_["komma"]
+                # S37 a, b og c (svar.md 24.11.2026 kl. 10.25): når høyden er andelshøyden (share_height eller gap_floor), står «–» i stedet
+                # for prosenttallet under Sikkerhet, «Slik regnes det ut» for høyden er teksten fra svaret, og «Eksponering denne timen»
+                # viser andelen fra regnestykket. Timer uten feltene (alle kyst-spots) er uendret.
+                s37 = page.evaluate("""() => { const kyst = {confidence: 99, confidence_source: 'målt', height: 0.39, swell_offshore: 1.76, height_source: 'barentswatch', directness: 0.167, transfer: 0.22, day: 3, zone: 'barentswatch', stars: 1, breakdown: ['Totalt: 1 av 5 stjerner']};
+                    const andel = {...kyst, share_height: true, breakdown: ['Løftet til 0,4 m: svell ute 1,8 m gjennom gapet, andel 0,21. Anslag, ikke kystmodellens tall']}, uten = {...andel, breakdown: []}, gulv = {...kyst, gap_floor: true, breakdown: andel.breakdown};
+                    const les = (h) => ({sikkerhet: EXPLAIN.confidence.numbers(h)[0], hs: EXPLAIN.hs.how(h), eksp: EXPLAIN.exposure.numbers(h)[0], transfer: EXPLAIN.exposure.numbers(h)[1], celle: sikkerhetProsent(h, '–'), andel: andelBrukt(h)});
+                    const alle = Object.values(EXPLAIN).flatMap(e => e.numbers ? e.numbers(andel, {}).filter(r => r[0] === 'Sikkerhet').map(r => r[1]) : []);
+                    return {kyst: les(kyst), andel: les(andel), uten: les(uten), gulv: les(gulv), tom: les({...andel, breakdown: [], height: null}), mangler: les({...kyst, confidence: null}), alle, gapHow: STR.gapHow}; }""")
+                assert s37["gapHow"] == "Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.", s37["gapHow"]
+                for navn_ in ("andel", "gulv"):
+                    x_ = s37[navn_]
+                    assert x_["sikkerhet"] == ["Sikkerhet", "–"] and x_["celle"] == "–" and x_["hs"] == [s37["gapHow"]], f"S37 a og b ({navn_}): {x_}"
+                    assert x_["eksp"] == ["Eksponering denne timen", "0,21 · andel gjennom gapet"] and x_["andel"] == "0,21", f"S37 c ({navn_}): andelen skal være tallet i regnestykket: {x_}"
+                assert s37["alle"] and set(s37["alle"]) == {"–"}, f"S37 a: ingen forklaring skal vise prosenttallet for en andelstime: {s37['alle']}"
+                assert s37["uten"]["andel"] == "0,22" and s37["uten"]["eksp"][1] == "0,22 · andel gjennom gapet", f"S37 c uten linja i regnestykket: høyden delt på svellet ute: {s37['uten']}"
+                assert s37["tom"]["andel"] is None and s37["tom"]["eksp"][1] == "mangler", f"S37 c: andel som ikke finnes, vises som «mangler», aldri 0: {s37['tom']}"
+                k_ = s37["kyst"]
+                assert k_["sikkerhet"] == ["Sikkerhet", "99 %"] and k_["celle"] == "99 %" and k_["eksp"] == ["Eksponering denne timen", "17 %"] and k_["andel"] is None, f"timer uten andelshøyde skal være uendret: {k_}"
+                assert len(k_["hs"]) == 2 and k_["hs"][0].startswith("BarentsWatch sin totalhøyde ved punktet") and k_["transfer"] == s37["andel"]["transfer"] == ["Transfer (direkte treff)", "22 %"], k_
+                assert s37["mangler"]["sikkerhet"] == ["Sikkerhet", "mangler"] and s37["mangler"]["celle"] == "–", s37["mangler"]
                 # en fane (nytt steg fram) går til toppen som før
                 go("#logger", "#viewSide:not([hidden])"); go("#hjem", HJEM_KLAR)
                 assert page.evaluate("scrollY") == 0, f"Hjem skal stå øverst når man går dit med fanen ({label})"

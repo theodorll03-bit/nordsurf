@@ -56,6 +56,20 @@ Oppå de to lokale commitene (`ae646c3` fase 1 og `715466c` flettingen av `fiks/
 - **Tester:** `test_spotside_browser.py` har fått dobbelttrykket (`dblclick` på 390: ett steg tilbake, Hjem der den sto, og knappen virker igjen etterpå), og de to tekstreglene med klokkeslett og datoer.
 - **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/hvorfor_russelv-26-11-kl08Z_*` (linja «Løftet til») og `hvorfor_russelv-hoyde-paa-spoten_*` (24.11 kl. 23Z, linja som starter med tallet), 390 og 1440.
 - **Ikke rørt:** `fetcher/test_display_only.py` er rød på grenen til Lyngen ligger i main (feiljegerens funn 1). Funn 5, 6 og 7 er ikke rettet.
+
+### Runde 3: S37 a, b og c (anslag gjennom gapet), 24.11.2026
+
+Ja i svar.md 24.11.2026 kl. 10.25. Oppå tre lokale commits (siste `ed627dd`). Ikke committet. Gjelder timer der høyden er svell ute × andelen gjennom gapet (`share_height` eller `gap_floor`: Breivikeidet, Russelv og Lenangsøyra). Bare visning, `fetcher/` er ikke rørt utenom testen.
+
+- **Viktig:** de tre stedene ligger i forklaringsarkene (`docs/js/explain.js`) og i den gamle detaljruta (`detailsGrid()` i app.js). Ingen av dem kan åpnes i design B 4.0 i dag: ingenting på siden har `data-explain`, og `detailsGrid()` kalles ikke. Endringen er gjort og testet, men brukeren ser den ikke før arkene kobles til igjen. Spotsiden viser sikkerheten som ord («Usikkert varsel · havmodell»), uten prosenttall, fra før.
+- **a) Sikkerhet:** «–» i stedet for prosenttallet i slike timer (`sikkerhetProsent()` i app.js), i arket «Sikkerhet», i arket om usikre timer og i detaljruta. Grunnlag og sone sto alt som «anslag» og «reservemodell».
+- **b) «Slik regnes det ut» for høyden:** «Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.» (`STR.gapHow`).
+- **c) «Eksponering denne timen»:** viser andelen som er brukt i timen, «0,22 · andel gjennom gapet». Andelen er ikke et eget felt i de publiserte dataene. Den leses fra linja i regnestykket («andel 0,22»). Mangler linja, regnes den fra høyden på spoten delt på svellet ute. Mangler de også, står det «mangler».
+- **«poeng»:** «Totalt 0 av 5 poeng» på Russelv 26.11 kl. 08Z, sett på bilde. Byttet kom i runde 1.
+- **Uendret:** timer uten `share_height` og `gap_floor`, og alle kyst-spots. Prosenttallet, eksponeringen i prosent og teksten om BarentsWatch står som før (testet).
+- **Tester:** ny del i bolken i `test_spotside_browser.py`: andelstime, time med bare `gap_floor`, time uten linja i regnestykket, time uten høyde, kyst-time og time uten sikkerhet.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/s37/`, 28 bilder: Russelv 26.11 kl. 08Z og Breivikeidet 26.11 kl. 07Z, 390 og 1440, dag og mørketid, arkene «Sikkerhet», «Signifikant høyde» og «Eksponering», og «Hvorfor» på Russelv. Arkene er åpnet med `openExplain()` i skriptet. Dataene er varselet 24.11 kl. 05Z med de tre fjord-spotene regnet på nytt med grenens `rating.py`.
+- **Gjenstår:** å koble arkene til noe brukeren kan trykke på, hvis S37 skal synes. Et eget felt for andelen i de publiserte dataene ville vært tryggere enn å lese tallet fra teksten.
 ## Russelv som Breivikeidet: vindu 345-30, myk kant og andel 0,22 (S34 a), 24.11.2026
 
 Samme gren (`fiks/fjord-lyngen`), main `237c533` flettet inn (bare datacommits). Ja i svar.md 23.11.2026 kl. 21.00, S34 a og S35 a. Endrer `spots.json` (Russelv, og én setning i Lenangsøyras `_transfer_locked`), `fetcher/test_rating.py`, CLAUDE.md og STATUS.md, og etter kontrollen (runde 2, se under) også `fetcher/rating.py`, `fetcher/publish.py`, `fetcher/vakthund.py`, testene deres og `docs/js/`. Dette erstatter det seksjonen under sier om Russelvs vindu (348-19), harde kant og andel 0,20, og de to funnene der («Russelv er lavere enn Breivikeidet 17.11» og «torsdag 26.11 henger ikke Russelv sammen»).
