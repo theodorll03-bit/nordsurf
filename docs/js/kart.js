@@ -304,7 +304,7 @@
   let kile = null;   // {lat, lon, id}
   function setWedge(spot, h){
     const g = kileSvg && kileSvg.querySelector("#kileG"); if(!g) return;
-    const win = spot && spot.swell_window;
+    const win = visVindu(spot);
     if(!spot || !win || !h || !spot.spot){ kile = null; g.innerHTML = ""; g.removeAttribute("data-spot"); return; }
     const st = Math.min(5, h.stars||0), cls = hitClass(h, spot);
     // periode mangler: fronter tegnes likevel bare når retning og treff er kjent - farten er da en nøytral 10 s
@@ -346,7 +346,7 @@
   /* ---------- merker og klynger ---------- */
   function init(el, coastJson, list, o){
     Lag.init(el, coastJson);
-    spots = list.map(s=>({s, id: s.id, name: s.name, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon, gap: midtVindu(s.swell_window)}))
+    spots = list.map(s=>({s, id: s.id, name: s.name, lat: s.spot && s.spot.lat, lon: s.spot && s.spot.lon, gap: midtVindu(visVindu(s))}))
       .map(p=>({...p, offMap: !(p.lat!=null && p.lon!=null && Lag.covers(p.lat, p.lon))}));
     valueOf = o.valueOf || valueOf; onPick = o.onPick || onPick; onCluster = o.onCluster || onCluster; onMoveEnd = o.onMoveEnd || onMoveEnd;
   }
