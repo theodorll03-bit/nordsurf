@@ -439,10 +439,22 @@ LONG_SEA_WINDOW_MARGIN_DEG = 30
 # like store, og toppen velger det ene. 4,3 s betyr ikke at den lange sjøen mangler. A bruker øyeblikksverdien,
 # også interpolerte 7,7 s som ikke finnes i noe spekter, og slår av og på (3, 0, 3 poeng). B ser helt bort fra
 # det eneste beviset fra selve spoten, og løfter timer der punktet bare ser 4-5 s krapp sjø hele døgnet.
-# Svakhet som står igjen i alle tre: H i surfehøyde-formelen er HELE BarentsWatch-høyden ved punktet, også den
-# lokale sjøen, koblet med den lange sjøens periode. I timer der toppen ved punktet er kort, blir Hb for høy.
+# Svakheten i alle tre (H i surfehøyde-formelen var HELE BarentsWatch-høyden ved punktet, også den lokale sjøen,
+# koblet med den lange sjøens periode) er rettet for timer med kort topp, se LONG_SEA_SHORT_PEAK_ENERGY_SHARE.
+# I timer med lang topp ved punktet er høyden fortsatt hele Hs der, og den kan inneholde noe lokal sjø.
 LONG_SEA_BW_CONFIRM = "vindu"
 LONG_SEA_BW_PERIOD_MIN_S = 7.0
+# M4 (fysikk-kontrolløren 24.11.2026, rettet etter svar.md 24.11.2026 kl. 22.25, S40): i en time der toppperioden ved
+# punktet I SELVE TIMEN er under LONG_SEA_BW_PERIOD_MIN_S (eller mangler), er den lange sjøen ikke det største
+# systemet ved punktet. Toppen i et tosidig spekter står på systemet med høyest energitetthet, og vindsjø er
+# bredere i frekvens enn dønning, så med kort topp har den korte sjøen minst like mye energi som den lange. Den
+# lange sjøen er da HØYST halve energien ved punktet: H = Hs / √2. Det er en øvre grense, ikke et anslag på
+# midten. Faktoren brukes på høyden ved punktet (plassen til periodefaktoren i barentswatch_height()), så
+# surfehøyde-formelen får den lange sjøens andel av høyden sammen med den lange sjøens periode, ikke hele høyden.
+# Perioden i formelen er fortsatt sjøens periode ute (CLAUDE.md «Konvensjoner»). Flat-sperren (0,35 m) gjelder
+# den reduserte høyden: under ca. 0,50 m ved punktet med kort topp gir regelen ingenting.
+# Timer der toppen ved punktet er minst 7 s i selve timen (også interpolert), får hele høyden som før.
+LONG_SEA_SHORT_PEAK_ENERGY_SHARE = 0.5
 
 
 def long_sea(hour, spot):
@@ -465,18 +477,31 @@ def long_sea(hour, spot):
        ved punktet er minst LONG_SEA_BW_PERIOD_MIN_S - i en ekte modelltime innen ±3 timer (A', grunnvalget), i
        selve timen (A) eller uten periodekrav (B), se LONG_SEA_BW_CONFIRM. Mangler perioden: None.
 
+    8. (M3, S40) Svellet i timen er GFS sitt eget tall for timen: en time der despike_swell() har byttet svellet
+       mot snittet av nabotimene (swell_despiked) er aldri med. Der har GFS flyttet sjøen mellom svell og vindsjø
+       i én time, og nabosnittet lagt sammen med timens rå vindsjø-del ville telt den samme sjøen to ganger.
+       Og totalhøyden ute må være GFS sin egen (total_model «gfs»), ellers None.
+
     Regelen retter svellandelen, ikke svellvinduet: geometrien og vinduet er uendret.
 
-    Når regelen slår til, brukes BarentsWatch-høyden uten periodefaktoren (bw_period_factor_for()).
+    Når regelen slår til, brukes BarentsWatch-høyden uten periodefaktoren når toppen ved punktet er lang i selve
+    timen, og med LONG_SEA_SHORT_PEAK_ENERGY_SHARE når den er kort (M4, se bw_period_factor_for()).
 
-    Omregningen: høyden er svell og lang sjø lagt sammen som energi (kvadratrot av kvadratsummen). Periode og
-    retning er fra den største av de to (samme modell, CLAUDE.md «Konvensjoner»). Totalhøyden er GFS sin egen
-    (samme modell som delene), ellers den som sto. Toppperioden mangler (GFS har den aldri)."""
+    Omregningen: høyden er svell og lang sjø lagt sammen som energi (kvadratrot av kvadratsummen), men aldri
+    mer enn GFS sin egen totalhøyde i timen (M3: delene kan ikke være mer enn helheten). Periode og retning er
+    fra den største av de to (samme modell, CLAUDE.md «Konvensjoner»). Totalhøyden er GFS sin egen (samme modell
+    som delene). Toppperioden mangler (GFS har den aldri)."""
     if not LONG_SEA_AS_SWELL or spot is None:
         return None
     if LONG_SEA_SPOTS is not None and spot.get("id") not in LONG_SEA_SPOTS:
         return None
     if is_fjord(spot) or hour.get("bw_height") is None or hour.get("swell_model") != "gfs":
+        return None
+    # M3: svellet i timen er glattet (nabosnitt), vindsjø-delen er timens rå tall - de hører ikke sammen
+    if hour.get("swell_despiked"):
+        return None
+    total = hour.get("total_height_offshore")
+    if total is None or total <= 0 or hour.get("total_model") != "gfs":
         return None
     ww_h, ww_t, ww_d = (hour.get("wind_wave_height_offshore"), hour.get("wind_wave_period_offshore"),
                         hour.get("wind_wave_dir_offshore"))
@@ -500,12 +525,11 @@ def long_sea(hour, spot):
         confirm_p = hour.get("bw_period_real_max_3h") if LONG_SEA_BW_CONFIRM == "vindu" else bw_p
         if confirm_p is None or confirm_p < LONG_SEA_BW_PERIOD_MIN_S:
             return None
-    combined = math.sqrt(sw_h ** 2 + ww_h ** 2)
+    combined = min(math.sqrt(sw_h ** 2 + ww_h ** 2), total)   # M3: aldri mer enn GFS sin egen totalhøyde
     main_is_long_sea = ww_h >= sw_h or sw_t is None or sw_d is None
-    total = hour.get("total_height_offshore")
     return {
         "swell_offshore": combined,
-        "height_offshore": max(total, combined) if total is not None else hour.get("height_offshore"),
+        "height_offshore": total,
         "period": ww_t if main_is_long_sea else sw_t,
         "dir_offshore": ww_d if main_is_long_sea else sw_d,
         "swell_peak_period": None if main_is_long_sea else hour.get("swell_peak_period"),
@@ -523,7 +547,12 @@ def bw_period_factor_for(hour, spot):
     # S29 c del 2 (forslag, av): lang sjø fra havsiden (long_sea()). Kurven under er laget for å ta ned vindsjø
     # (0,3 under 6 s, 0,45-0,6 for 7-8 s), og her er sjøen ute 9 s eller mer. Står foran «mangler periode»: i
     # variant A' og B kan regelen slå til uten toppperiode ved punktet i selve timen.
+    # M4 (S40): er toppen ved punktet kort i selve timen (eller mangler den), er den lange sjøen høyst halve
+    # energien der - se LONG_SEA_SHORT_PEAK_ENERGY_SHARE.
     if hour.get("_long_sea"):
+        bw_p = hour.get("bw_period")
+        if bw_p is None or bw_p < LONG_SEA_BW_PERIOD_MIN_S:
+            return math.sqrt(LONG_SEA_SHORT_PEAK_ENERGY_SHARE), "lang_sjo_kort_topp"
         return 1.0, "lang_sjo"
     bw_period = hour.get("bw_period")
     pf = bw_period_factor(bw_period)
@@ -2004,8 +2033,8 @@ def rate(hour, spot, _long_sea=True):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
     # S29 c del 2 (forslag, AV - LONG_SEA_AS_SWELL): lang sjø fra havsiden som GFS kaller vindsjø, regnes som svell
     # i ALLE ledd under (svellandel, energi, periode, retning). Timen selv (det som lagres og vises) røres ikke.
-    # Regelen kan bare løfte: gir omregningen færre poeng enn den vanlige regningen (taket på 3 for en usikker time,
-    # eller surfehøyde over ideal_height), gjelder den vanlige (long_sea_base under, brukt helt til slutt).
+    # Regelen kan bare løfte: gir omregningen ikke FLERE poeng enn den vanlige regningen (taket på 3 for en usikker
+    # time, flat-sperren, eller surfehøyde over ideal_height), gjelder den vanlige (long_sea_base under, brukt helt til slutt).
     long_sea_hour = long_sea(hour, spot) if _long_sea else None
     long_sea_base = None
     if long_sea_hour is not None:
@@ -2438,6 +2467,9 @@ def rate(hour, spot, _long_sea=True):
             "lines": local_rules_lines,
         },
     }
-    if long_sea_base is not None and result["stars"] < long_sea_base["stars"]:
+    # S40: regelen gjelder bare når den gir FLERE poeng enn den vanlige regningen. Gir den like mange eller færre
+    # (taket på 3, flat-sperren etter M4, surfehøyde over ideal_height), står timen akkurat som uten regelen: ingen
+    # time skifter bare ord eller høyde, og ingen går ned.
+    if long_sea_base is not None and result["stars"] <= long_sea_base["stars"]:
         return long_sea_base
     return result
