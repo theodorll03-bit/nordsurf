@@ -199,3 +199,19 @@ Theodor liker kornet godt, og det skal beholdes som det er. Behandlingen er besk
 - Vinden beskrives som fralands, pålands eller sidevind.
 - Ingen pseudo-presise ord («MODELL 00Z» bare under Data/Kilder).
 - Overskrifter og setninger lages av dataene og skal aldri si noe som lista motsier.
+
+## 9. Endringer etter designrevisjonen 21.11.2026
+
+Fase 1 (24.11.2026, plan i `privat/designrevisjon-2026-11-21/PLAN.md`). Der dette avsnittet og resten av fila spriker, gjelder dette.
+
+- **Toppbildet er kortere.** Mobil 160 px (§6B sa 220). Web 260 px (§6C sa 420), og spotnavnet på web er 96/84 (§3 sa 144/124). Dommen skal stå i første skjermbilde.
+- **Under toppbildet står én linje:** «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0», med lisensen som lenke (44 px trykkflate). Hele krediteringen står under Kilder nederst.
+- **Fyllet for 1 og 2** er et eget token, `--lav`: #8A8478 om dagen (3,24:1 mot papiret) og #8FA0A8 i mørketid (5,57:1). Før var det outline-fargen (1,83:1). Tallet oppå fyllet er `--paa-lav`.
+- **Nullene** står i muted med vekt 500 og tynn ramme (hair). Aldri strek, for strek betyr «mangler».
+- **Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers ren tekst.
+- **Etiketter** er 12/16 også på mobil (§3 sa 11/14), med sperring 0,02 em (§3 sa 0,04). 11 px brukes bare til kreditt.
+- **Faktalinja** (LYS, LUFT, VANN) og datoene i dagvelgeren står i ink.
+- **«Hvorfor»** er en tabell med etikett, verdi og virkning, og sier «poeng», ikke «stjerner».
+- **Dag 8 og utover** på web-spotsiden har etiketten «UKE 2 · USIKKER» og stiplede ruter.
+- **I mørketid** har toppbildene en 1 px kant i hair.
+- **Desimalkommaet** i store mono-tall står i `.des`, som trekker sifrene sammen.

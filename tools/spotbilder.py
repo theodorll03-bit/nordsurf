@@ -60,8 +60,14 @@ def kredit(aar):
 
 
 def kredit_kort(aar):
-    """Kortformen ved skiva og på Hjem (Theodor 16.11.2026). Den fulle henvisningen står under toppbildet på spotsiden."""
+    """Kortformen ved skiva (Theodor 16.11.2026). Den fulle henvisningen står under Kilder nederst (designrevisjonen 21.11.2026)."""
     return f"Sentinel-2 ({aar}), Copernicus/Kartverket · {LISENS}"
+
+
+def kredit_linje():
+    """Den ene linja rett under toppbildet på spotsiden og forsiden (designrevisjonen 21.11.2026, fase 1): kort nok til
+    én linje på 390 px. Året og hele henvisningen står i kredit(), som appen viser under Kilder nederst."""
+    return f"Sentinel-2 · Copernicus/Kartverket · {LISENS}"
 
 
 # Rått utsnitt: 800 x 600 px, 7,075 m per piksel (som skissene), spoten i midten.
@@ -206,7 +212,7 @@ def skriv_js(ut, js, hemmelige=()):
     aar = sorted({kilder[i]["aar"] for i in ids})
     if len(aar) != 1:
         raise SystemExit(f"kilder.json har bilder fra {aar or 'ingen år'} - appen viser én kreditering, lag alle fra samme år")
-    data = {"aar": aar[0], "ids": ids, "kredit": kredit(aar[0]), "kort": kredit_kort(aar[0]),
+    data = {"aar": aar[0], "ids": ids, "kredit": kredit(aar[0]), "kort": kredit_kort(aar[0]), "linje": kredit_linje(),
             "lisens": LISENS, "lisens_url": LISENS_URL}   # appen lenker lisensnavnet i krediteringen (CC BY 4.0 punkt 3a)
     js.write_text("// Skrevet av tools/spotbilder.py - ikke rediger for hånd. Hvilke spots som har kornfoto i img/spots/, og krediteringen.\n"
                   f"window.SPOTBILDER = {json.dumps(data, ensure_ascii=False, indent=1)};\n", encoding="utf-8")

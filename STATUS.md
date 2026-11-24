@@ -41,6 +41,76 @@ Gren `fiks/unstad-s29c` fra main `11c5df2`. Ja i svar.md 23.11.2026 kl. 11.20 (S
 - **Før regelen kan slås på:** Theodors ja. Appen må vise den lange sjøen («svell 0,6 m fra 250°» ville stått ved siden av 3 poeng). Regelen bør stå i `spots.json` for Unstad og i CLAUDE.md med kilde. Spør Theodor om han har sett Unstad flat med lang nordsjø. Kontrolløren på nytt.
 - **Rapport og tabeller:** `privat/kontor/observasjoner/utvikler-s29c-2026-11-24.md` og mappa `s29c-2026-11-24/` (ikke i git).
 
+## Designrevisjonen fase 1: raske rettinger, 24.11.2026
+
+Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).
+
+- **1. Lisensteksten:** under toppbildet står én linje, «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0». Linja er 44 px høy, og lisensen er lenke i hele høyden. Hele teksten står nederst: i siste avsnitt på mobil-spotsiden («Bildet: …») og under Kilder i bunnen på PC. Gjelder spotsiden på mobil og PC og hovedbildet på forsiden. `tools/spotbilder.py` skriver den nye linja (`linje`) i `docs/js/spotbilder.js`. Under skiva står kortformen med årstall som før.
+- **2. Kortere toppbilde:** mobil 160 px (før 220). PC 260 px (før 420), og spotnavnet på PC er 96 px (før 144).
+- **3. Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers står «Best 11–13» som ren tekst.
+- **4. Nullene:** i ukeruter, dagvelger og matrise står 0 i muted med vekt 500 (før 800) og tynn ramme i hair (før outline). Tallet 0 står fortsatt, aldri strek.
+- **5. 1 og 2:** fyllet har eget token `--lav`, #8A8478 om dagen og #8FA0A8 i mørketid. `tools/kontrast.py` krever nå 3:1 for fyllet til 1 og 2 også (før var de unntatt). Mørke timer hadde alt bare skygge uten omriss, så der er ingenting endret.
+- **6. «Hvorfor»:** linjene er en tabell med etikett, verdi og virkning («Periode | 11 s (ute) | god uttelling»). «stjerner» byttes til «poeng» i visningen. Teksten kommer fortsatt fra henteren, og tallene røres ikke. Prøvd på alle 105 linjetypene i varselet 24.11.
+- **7. Desimalkommaet** i det store svelltallet og i tidevannskortet står i `.des`, som trekker sifrene sammen.
+- **8. Tilbake og rulling:** tilbakeknappen på spotsiden går ett steg tilbake i historikken når forrige steg er siden knappen lover. Ellers byttes steget ut (`replaceState`). Hjem og de andre visningene står der de sto når man kommer tilbake, også med tilbake i nettleseren. En fane går til toppen som før.
+- **9. Etiketter** er 12 px på mobil (før 11), med sperring 0,02 em (før 0,04) overalt. Faktalinja og datoene i dagvelgeren står i ink. Klokketikk, vindtall og dagnavn under ukerutene er 12 px. 11 px er igjen bare i kreditt.
+- **10. Dag 8 og utover** på PC-spotsiden har etiketten «UKE 2 · USIKKER» og stiplede ruter.
+- **11. Mørketid:** toppbildene (spotsiden på mobil og PC, hovedbildet på forsiden) har en 1 px kant i hair.
+
+Målt (Playwright, `getBoundingClientRect`, Unstad):
+
+| Mål | Før | Etter |
+|---|---|---|
+| Mobil 390 × 663: dagens tall, topp til bunn | 366–430 px | 270–334 px |
+| Mobil 390 × 663: ordet, bunn | 413 px | 315 px |
+| Mobil 390 × 663: kreditten under navnet | 62 px (4 linjer) | 44 px (1 linje, trykkflate) |
+| PC 1200 × 660: dagens tall, topp til bunn | 675–779 px (under kanten) | 504–608 px |
+| PC 1200 × 660: ordet, bunn | 760 px | 589 px |
+| PC 1200 × 660: setningen, bunn | 826 px | 655 px |
+| PC 1440 × 900: dagens tall, topp til bunn | 659–763 px | 504–608 px |
+| Fyll 1–2 mot flaten, dag | 1,83:1 | 3,24:1 |
+| Fyll 1–2 mot flaten, mørketid | 2,88:1 | 5,57:1 |
+| Tall oppå fyllet 1–2 (`--paa-lav`), dag og mørketid | 7,15:1 og 4,56:1 | 5,08:1 og 5,57:1 |
+| Tekster under 12 px på spotsiden, mobil og PC | 80 og 8 | 3 og 4 |
+
+På mobil sto dommen over fanelinja (599 px) også før. Den står nå 96 px høyere. På 1200 × 660 er tall, ord og setning synlige uten rulling. Setningen har 5 px klaring.
+
+- **Tester:** `test_spotside_browser.py` har en ny bolk til slutt for begge bredder: tilbake med knappen og med nettleseren (samme steg i historikken, samme rulling), fane til toppen, lenke rett til spoten, én kredittlinje med 44 px lenke, bildehøyde og navn, kant i mørketid, dommen innenfor 663 og 660 px, etiketter 12 px, tabellen i «Hvorfor» med «poeng», «Uke 2», ringen ved 3 og 4 poeng, nullene og fyllet for 1–2. `test_spotbilder.py` låser den nye linja. `tools/kontrast.py` er strammet inn (punkt 5). Ingen test er svekket.
+- **Fasiten:** `docs/design/b4/SPEC.md` har fått §9 med det som nå avviker fra resten av fila.
+- **Impeccable:** kjørt før og etter (`impeccable-for.md` og `impeccable-etter.md` i bildemappa). Detektoren har de samme 3 funnene før og etter, alle valg i SPEC. Spriket mot planen står i notatene.
+- **Ikke gjort, og verdt å vite:**
+  - Forsiden på PC: hovedbildet er fortsatt 440 px, så tallet i hovedbildet står på 812–876 px. Det synes på 1440 × 900, men ikke på 1200 × 660. Planens punkt 2 nevner bare spotsiden, og fase 5 regner med 1296 × 440.
+  - `.kort4 .v` (punkt 7) tegnes ikke av noen kode lenger, så der er ingenting pakket inn.
+  - Den gamle dagsgrafen (`SpotGraf.html`, `.plot`) tegnes heller ikke. `--paa-lav` finnes for at tallet oppå fyllet der skal holde 4,5:1 om den tas i bruk igjen.
+  - Regnestykket har punktum som desimaltegn enkelte steder («faktor 0.51»). Det skrives av henteren og er ikke rørt.
+  - Favorittstjerna (fylt) bruker fyllet for 2 og er derfor litt mørkere grå enn før.
+  - Kontrolløren og feiljegeren har ikke sett endringen ennå.
+
+### Runde 2: tre funn fra feiljegeren, 24.11.2026
+
+Oppå de to lokale commitene (`ae646c3` fase 1 og `715466c` flettingen av `fiks/fjord-lyngen`). Ikke committet. Rapporten: `privat/kontor/observasjoner/feiljeger-design-fase1-2026-11-24.md`. Bare visning, `fetcher/` er ikke rørt.
+
+- **Funn 2, tall som etikett i «Hvorfor»:** linja «0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall» starter med tallet og fikk «0,1 M» som etikett. Nå er etiketten «Høyde på spoten» (ordet fantes fra før, `STR.cell.hs`), tallet er verdien og resten forklaringen. «Løftet til 0,4 m: …» deles som før.
+- **Funn 3, punktum som desimaltegn:** «faktor 0.65» vises som «faktor 0,65». Regelen (`breakdownKomma()` i app.js) lar klokkeslett og datoer stå: «kl. 08.02», «09.30-09.50Z», «17.11», «5.10» og «17.11.2026». Et tall som kan leses som dag.måned, blir stående med punktum («1.05»). Regelen endrer heller for lite enn å endre en dato.
+- **Funn 4, to raske trykk på «Tilbake»:** `closeSpot()` ser bort fra nye trykk til hashendringen er kommet, med 1 s reservefrist.
+- **Prøvd på hele varselet** (24.11 kl. 05Z, med Russelv og Lenangsøyra regnet på nytt av feiljegeren): 54 809 linjer, 106 linjetyper. 4702 linjer får komma. 0 linjer har tall som etikett, 0 har tom etikett, og 0 har punktum mellom sifre igjen.
+- **Tester:** `test_spotside_browser.py` har fått dobbelttrykket (`dblclick` på 390: ett steg tilbake, Hjem der den sto, og knappen virker igjen etterpå), og de to tekstreglene med klokkeslett og datoer.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/hvorfor_russelv-26-11-kl08Z_*` (linja «Løftet til») og `hvorfor_russelv-hoyde-paa-spoten_*` (24.11 kl. 23Z, linja som starter med tallet), 390 og 1440.
+- **Ikke rørt:** `fetcher/test_display_only.py` er rød på grenen til Lyngen ligger i main (feiljegerens funn 1). Funn 5, 6 og 7 er ikke rettet.
+
+### Runde 3: S37 a, b og c (anslag gjennom gapet), 24.11.2026
+
+Ja i svar.md 24.11.2026 kl. 10.25. Oppå tre lokale commits (siste `ed627dd`). Ikke committet. Gjelder timer der høyden er svell ute × andelen gjennom gapet (`share_height` eller `gap_floor`: Breivikeidet, Russelv og Lenangsøyra). Bare visning, `fetcher/` er ikke rørt utenom testen.
+
+- **Viktig:** de tre stedene ligger i forklaringsarkene (`docs/js/explain.js`) og i den gamle detaljruta (`detailsGrid()` i app.js). Ingen av dem kan åpnes i design B 4.0 i dag: ingenting på siden har `data-explain`, og `detailsGrid()` kalles ikke. Endringen er gjort og testet, men brukeren ser den ikke før arkene kobles til igjen. Spotsiden viser sikkerheten som ord («Usikkert varsel · havmodell»), uten prosenttall, fra før.
+- **a) Sikkerhet:** «–» i stedet for prosenttallet i slike timer (`sikkerhetProsent()` i app.js), i arket «Sikkerhet», i arket om usikre timer og i detaljruta. Grunnlag og sone sto alt som «anslag» og «reservemodell».
+- **b) «Slik regnes det ut» for høyden:** «Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.» (`STR.gapHow`).
+- **c) «Eksponering denne timen»:** viser andelen som er brukt i timen, «0,22 · andel gjennom gapet». Andelen er ikke et eget felt i de publiserte dataene. Den leses fra linja i regnestykket («andel 0,22»). Mangler linja, regnes den fra høyden på spoten delt på svellet ute. Mangler de også, står det «mangler».
+- **«poeng»:** «Totalt 0 av 5 poeng» på Russelv 26.11 kl. 08Z, sett på bilde. Byttet kom i runde 1.
+- **Uendret:** timer uten `share_height` og `gap_floor`, og alle kyst-spots. Prosenttallet, eksponeringen i prosent og teksten om BarentsWatch står som før (testet).
+- **Tester:** ny del i bolken i `test_spotside_browser.py`: andelstime, time med bare `gap_floor`, time uten linja i regnestykket, time uten høyde, kyst-time og time uten sikkerhet.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/s37/`, 28 bilder: Russelv 26.11 kl. 08Z og Breivikeidet 26.11 kl. 07Z, 390 og 1440, dag og mørketid, arkene «Sikkerhet», «Signifikant høyde» og «Eksponering», og «Hvorfor» på Russelv. Arkene er åpnet med `openExplain()` i skriptet. Dataene er varselet 24.11 kl. 05Z med de tre fjord-spotene regnet på nytt med grenens `rating.py`.
+- **Gjenstår:** å koble arkene til noe brukeren kan trykke på, hvis S37 skal synes. Et eget felt for andelen i de publiserte dataene ville vært tryggere enn å lese tallet fra teksten.
 ## Russelv: andelen aldri under 0,20 i 346-21 grader (S36 b), 24.11.2026
 
 Samme gren (`fiks/fjord-lyngen`), oppå commit `79e7fa8`. Ja i svar.md 24.11.2026 kl. 10.25: «**S36: b.** Russelv får det største av Breivikeidets kurve og den gamle 0,20 med hard kant i 348–19°.» S36 er ikke lenger åpen. Endrer `spots.json` (bare Russelv), `fetcher/rating.py`, `fetcher/test_rating.py`, CLAUDE.md og STATUS.md. Ikke `docs/`.

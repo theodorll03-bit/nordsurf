@@ -105,6 +105,16 @@ function relDayShort(d){
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+// Store mono-tall («0,7»): desimalkommaet pakkes i .des, som trekker sifrene sammen (ui.css). Bare visning.
+function desTall(txt){ return esc(txt).replace(",", '<span class="des">,</span>'); }
+// Krediteringen for kornfotoene (docs/js/spotbilder.js): under bildet står bare kortformen på én linje, hele
+// henvisningen står under Kilder nederst. Lisensnavnet er lenke begge steder (CC BY 4.0 punkt 3a).
+function fotoKreditHtml(hele){
+  const B = window.SPOTBILDER; if(!B) return "";
+  const t = hele ? B.kredit : (B.linje || B.kort), i = B.lisens && B.lisens_url ? t.indexOf(B.lisens) : -1;
+  if(i < 0) return esc(t);
+  return `${esc(t.slice(0, i))}<a href="${esc(B.lisens_url)}" target="_blank" rel="noopener license">${esc(B.lisens)}</a>${esc(t.slice(i + B.lisens.length))}`;
+}
 
 
 /* ---------- Rating: tallet 0-5 og ordet (punkt 2; tall i stedet for stjerneikoner fra design B 4.0) ---------- */
@@ -469,7 +479,7 @@ function detailsGrid(s, h, t){
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
     ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch" && !andelsHoyde(h)?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}
-    ${tapCell("confidence", STR.cell.confidence, h.confidence!=null?`${h.confidence} %`:"–", confN)}
+    ${tapCell("confidence", STR.cell.confidence, sikkerhetProsent(h, "–"), confN)}
     ${s.shelter_label ? tapCell("shelter", STR.cell.shelter, esc(cap(s.shelter_label)), "") : ""}
     ${tapCell("exposure", STR.cell.calibration, calV, calN)}
     ${localRulesHtml(h)}
@@ -528,6 +538,20 @@ function bwPeriodFactor(period){
 // samme ord som appen alt bruker («anslag», «reservemodell», «havmodell», «Usikkert varsel»). Bare visning.
 const GAP_KILDE = "svell ute gjennom gapet (anslag)";
 function andelsHoyde(h){ return !!(h && (h.share_height || h.gap_floor)); }
+// S37 a (svar.md 24.11.2026 kl. 10.25): prosenttallet for sikkerhet vises ikke når høyden er et anslag («–»).
+// Et prosenttall der lover mer sikkerhet enn vi har. Andre timer er uendret: tallet, eller reserveordet når det mangler.
+function sikkerhetProsent(h, mangler){ return andelsHoyde(h) ? "–" : h.confidence!=null ? `${h.confidence} %` : mangler; }
+// S37 c: andelen som er brukt i timen, slik den står i regnestykket («andel 0,22»). Den er ikke et eget felt i de
+// publiserte dataene, så den leses fra linja i regnestykket. Mangler linja, regnes den fra høyden på spoten delt på
+// svellet ute (begge er avrundet, så siste siffer kan avvike). Mangler de også: null (aldri 0).
+function andelBrukt(h){
+  if(!andelsHoyde(h)) return null;
+  const linje = (h.breakdown || []).find(x=> typeof x==="string" && x.includes("gjennom gapet, andel"));
+  const m = linje && linje.match(/andel (\d+,\d+)/);
+  if(m) return m[1];
+  if(h.height!=null && h.swell_offshore) return (h.height / h.swell_offshore).toFixed(2).replace(".", ",");
+  return null;
+}
 function surfAdjustmentLine(h){
   // 27.09.2026 (Theodors rettelse): egen linje for selve justeringen fra
   // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som
@@ -1421,7 +1445,56 @@ $("#logPhotoInput").onchange = async ()=>{
 };
 
 /* ---------- Forklaring av ratingen ---------- */
+// Regnestykket skrives av henteren (rating.py) med «stjerner». Appen sier poeng (design B 4.0), så ordet byttes her
+// i visningen. Tallene røres ikke.
+// Desimaltall med punktum («faktor 0.65») vises med komma. Klokkeslett og datoer røres ikke: et tall som kan leses som
+// dag.måned («17.11», «5.10») eller står etter «kl.» eller i et tidsrom («kl. 08.02», «09.30-09.50Z»), og alt med flere punktum («17.11.2026»), står som det er.
+// Regelen lar heller et desimaltall stå med punktum enn å endre en dato.
+function breakdownKomma(tekst){
+  // (?<!\d[-–]) og (?!Z): andre halvdel av et tidsrom («kl. 09.30-09.50Z») er også et klokkeslett
+  return String(tekst).replace(/(kl\.\s*)?(?<![\d.,])(?<!\d[-–])(\d+)\.(\d+)(?![\d.]|Z)/g, (alt, kl, a, b)=>{
+    const dato = b.length===2 && +b >= 1 && +b <= 12 && a.length <= 2 && +a >= 1 && +a <= 31;
+    return kl || dato ? alt : `${a},${b}`;
+  });
+}
+function breakdownOrd(line){ return breakdownKomma(String(line).replace(/stjerner?/g, STR.poeng).replace(/Stjerner?/g, cap(STR.poeng))); }
+// «Hvorfor» som en liten tabell: etikett, verdi og virkning. Linja deles ved «: » (virkningen står etter) og ved det
+// første tallet utenfor parentes (verdien starter der). En lang parentes i etiketten («Bruddhøyde (Hb, Komar og
+// Gaughan 1972) 0,7 m») flyttes bak verdien, så etiketten blir kort. Uten verdi står resten i verdikolonnen.
+function breakdownDeler(line){
+  const l = breakdownOrd(line), k = l.indexOf(": "), lead = k < 0 ? l : l.slice(0, k), eff = k < 0 ? "" : l.slice(k + 2);
+  let m = -1, dybde = 0;
+  for(let i = 0; i < lead.length; i++){
+    const c = lead[i];
+    if(c==="(") dybde++; else if(c===")") dybde = Math.max(0, dybde - 1);
+    else if(!dybde && /\d/.test(c)){ m = i > 0 && /[−-]/.test(lead[i - 1]) && (i < 2 || lead[i - 2]===" ") ? i - 1 : i; break; }
+  }
+  if(m===0 && k >= 0){
+    // linja starter med tallet («0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall»):
+    // det er høyden på spoten, så den får det ordet som etikett (STR.cell.hs), tallet er verdien og resten forklaringen
+    return {etikett: STR.cell.hs, verdi: lead.trim(), virkning: eff};
+  }
+  if(m <= 0){
+    // ingen tallverdi foran kolon: «Tidevann (høy): …» har verdien i parentesen, ellers står resten i verdikolonnen.
+    // En hel setning uten kolon («Bølgene ved spoten går ut fra land. …») er ikke en etikett: den får hele bredden
+    const p0 = k < 0 ? null : lead.trim().match(/^(.*?)\s*\(([^()]+)\)$/);
+    if(p0) return {etikett: p0[1], verdi: p0[2], virkning: eff};
+    return k < 0 ? {etikett: "", verdi: lead.trim(), virkning: "", hel: true} : {etikett: lead.trim(), verdi: eff, virkning: ""};
+  }
+  let etikett = lead.slice(0, m).trim(), verdi = lead.slice(m).trim();
+  const par = etikett.match(/^(.*?)\s*(\([^()]{13,}\))$/);
+  if(par){ etikett = par[1]; verdi = `${verdi} ${par[2]}`; }
+  return {etikett, verdi, virkning: eff};
+}
+function breakdownTabellHtml(lines){
+  return `<dl class="hv-tab">${lines.map((line, i)=>{
+    const d = breakdownDeler(line);
+    if(d.hel) return `<div class="hel"><dt>${esc(d.verdi)}</dt></div>`;
+    return `<div${i===lines.length-1 ? ' class="total"' : ""}><dt class="etikett">${esc(d.etikett)}</dt><dd class="hv-v${d.virkning ? "" : " bred"}">${esc(d.verdi)}</dd>${d.virkning ? `<dd class="hv-e">${esc(d.virkning)}</dd>` : ""}</div>`;
+  }).join("")}</dl>`;
+}
 function breakdownRowHtml(line, isTotal){
+  line = breakdownOrd(line);
   const idx = line.indexOf(": ");
   if(idx<0) return `<div class="row${isTotal?" total":""}"><span class="lead">${esc(line)}</span></div>`;
   return `<div class="row${isTotal?" total":""}"><span class="lead">${esc(line.slice(0,idx))}</span><span class="eff">${esc(line.slice(idx+2))}</span></div>`;
