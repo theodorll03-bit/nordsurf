@@ -389,7 +389,7 @@ def bw_swell_dominates(hour, spot):
 
 # ---------- Lang sjø som GFS kaller vindsjø (S29 c del 2, 24.11.2026) - FORSLAG, STÅR AV ----------
 # Krever Theodors ja før den slås på (nytt S-spørsmål, se STATUS.md 24.11.2026). Med LONG_SEA_AS_SWELL = False er
-# rate() uendret for alle timer (test 42 i test_rating.py).
+# rate() uendret for alle timer (test 44 i test_rating.py).
 #
 # Observasjon 21.11.2026, Theodor (story fra Lofoten Surfsenter): Unstad «litt under hodehøyt og rent». Appen viste
 # 0 poeng og 0,0 m i alle lyse timer. GFS Wave la nordsjøen i VINDSJØ-delen: 2,5-2,9 m fra 357-1 grader med
