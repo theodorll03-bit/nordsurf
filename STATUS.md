@@ -2,7 +2,7 @@
 
 ## «Best på lavt vann», tidevannet får poenget det tar, og tapet i blekk (S28 og S33 c), 24.11.2026
 
-Gren `fiks/tidevann-s28`, med `fiks/fjord-lyngen` (`79e7fa8`) flettet inn. Ikke pushet, og kontrolløren og feiljegeren har ikke sett den ennå. Ja i svar.md 23.11.2026 kl. 11.20 (S28) og kl. 14.00 (S33 a og c). Endrer `fetcher/rating.py` (bare bokføring og tekst), `docs/js/`, `docs/css/ui.css`, `docs/sw.js` og testene. `spots.json` er urørt.
+Gren `fiks/tidevann-s28`, med `fiks/fjord-lyngen` (`79e7fa8`) flettet inn. Kontrolløren og feiljegeren har sett den flettede grenen 24.11 (ingen stoppere). Ja i svar.md 23.11.2026 kl. 11.20 (S28) og kl. 14.00 (S33 a og c). Endrer `fetcher/rating.py` (bare bokføring og tekst), `docs/js/`, `docs/css/ui.css`, `docs/sw.js` og testene. `spots.json` er urørt.
 
 - **Hva (S28):**
   - Tidevannskortet (`Tidevann.prefTekst`, som står i «Om spotten» på PC), tidevannscella og forklaringen sier «Best på lavt vann» for en spot med regel på vannstanden (`local_rules.tide_level`, bare Breivikeidet). Før: «Spoten tåler alt tidevann». Alle andre spots viser det samme som før.
