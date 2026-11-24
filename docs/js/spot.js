@@ -71,7 +71,8 @@
     // 24.11.2026 (feiljegeren, funn 4): høyden er svell ute × andelen gjennom gapet (andelsHoyde() i app.js), ikke
     // kystmodellens tall. Da står «Usikkert varsel» (når rating.py har merket timen usikker) og «havmodell».
     const andel = andelsHoyde(h);
-    const ord = andel && h.uncertain ? STR.notice.uncertain : c==null ? null : c >= 80 ? "Høy sikkerhet" : c >= 55 ? "Middels sikkerhet" : "Lav sikkerhet";
+    // S40: en time regnet med lang sjø er et anslag (rating.py merker den usikker). Da står «Usikkert varsel», aldri «Høy sikkerhet».
+    const ord = (andel || h.long_sea) && h.uncertain ? STR.notice.uncertain : c==null ? null : c >= 80 ? "Høy sikkerhet" : c >= 55 ? "Middels sikkerhet" : "Lav sikkerhet";
     const sone = andel && h.zone!=="langtid" ? "havmodell" : h.zone==="barentswatch" ? "kystmodell 100 m" : h.zone==="reserve" ? "havmodell" : h.zone==="langtid" ? "langtidsmodell" : null;
     return [ord, sone].filter(Boolean).join(" · ") || "–";
   }
@@ -220,9 +221,9 @@
     const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
     const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
       : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
-    const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(STR.spot.svell)}</div>
+    const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(h && h.long_sea ? STR.spot.langSjo : STR.spot.svell)}</div>
         ${h && h.swell_offshore!=null ? `<div class="t-svell">${desTall(nf1.format(h.swell_offshore))}<small>m</small></div>` : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`}
-        ${sub ? `<div class="svell-sub">${esc(sub)}</div>` : ""}</div>`;
+        ${sub ? `<div class="svell-sub">${esc(sub)}</div>` : ""}${h && h.long_sea ? `<div class="svell-sub lang-sjo">${esc(STR.spot.langSjoNote)}</div>` : ""}</div>`;
     const rader = [];
     // surf: høyden som vises og settene (regel (c), visHoyde); ordet når tallet er kjent, men ikke pålitelig
     const hoyde = H.heightText(h), vh = visHoyde(h);

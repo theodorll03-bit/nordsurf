@@ -62,7 +62,7 @@
     const vs = h ? vinduStatus(h, s) : null;
     const linje = (k, v, sub)=> `<span><span class="etikett">${esc(k)}</span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
     const forkl = [
-      linje(STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
+      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
       linje(STR.spot.vindFra, vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
       vinduer.length ? linje(STR.spot.vindu, esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");

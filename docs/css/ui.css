@@ -758,6 +758,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-time{grid-column:7/10}
   .spw-time > .sek-spot{margin-top:0}
   .spw-time .svell{margin-top:12px}
+  .spw-time .svell > .svell-sub.lang-sjo{margin-top:4px}   /* S40: merknaden står rett under periodelinja */
   .spw-time .svell > .svell-sub{margin-top:16px}   /* kommaet i 96 px går under linja */
   .spw-time .maal{grid-template-columns:96px auto 1fr}
   @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */

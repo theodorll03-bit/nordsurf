@@ -1462,6 +1462,14 @@ def _share_word(share):
     return "mest vindsjø"
 
 
+_COMPASS16 = ("N", "NNØ", "NØ", "ØNØ", "Ø", "ØSØ", "SØ", "SSØ", "S", "SSV", "SV", "VSV", "V", "VNV", "NV", "NNV")
+
+
+def _compass16(deg):
+    """Himmelretningen for en fra-retning, samme 16 ord som compass() i docs/js/app.js."""
+    return _COMPASS16[int((deg % 360) / 22.5 + 0.5) % 16]
+
+
 def _bw_period_word(pf):
     if pf >= 1.0:
         return "lang nok til å være ekte svell"
@@ -1535,6 +1543,12 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     fjord_not_lifted = fjord_h is not None and h is not None and (not gap_used or (
         bw_h is not None and bw_detail is not None
         and bw_h * min(bw_detail["swell_share"], bw_detail["bw_period_factor"]) * bw_detail["spot_direction_factor"] > h + 1e-9))
+    long_sea_used = bool(hour.get("_long_sea"))
+    if long_sea_used and period is not None and hour.get("dir_offshore") is not None:
+        # S40 (svar.md 24.11.2026): timen er regnet med den lange sjøen værmodellen kaller vindsjø (long_sea()).
+        # Linja står øverst, så «Hvorfor» sier det først. Tallene er de regelen brukte (svell og lang sjø samlet).
+        items.append(f"Lang sjø ute {_fmt_m(hour['swell_offshore'])} fra {_compass16(hour['dir_offshore'])}, {period:.0f} s: "
+                     "regnet som svell, usikkert")
     if h is None:
         items.append("Signifikant høyde: ingen data")
     elif bw_h is not None:
@@ -1543,10 +1557,14 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         items.append(f"Signifikant høyde {_fmt_m(h)} ute ved spoten")
     if source == "barentswatch" and bw_detail is not None:
         share_pct = round(bw_detail["swell_share"] * 100)
-        items.append(f"Svellandel: {share_pct} % ({_share_word(bw_detail['swell_share'])})")
+        items.append(f"Svellandel: {share_pct} % ({'lang sjø regnet som svell' if long_sea_used else _share_word(bw_detail['swell_share'])})")
         if hour.get("bw_period") is not None and bw_detail.get("bw_period_basis") == "ute":
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: ikke brukt. "
                          + f"Nesten alt ute er svell med periode {period:.1f} s".replace(".", ","))
+        elif long_sea_used and bw_detail.get("bw_period_basis") == "lang_sjo_kort_topp":
+            # M4: kort topp ved punktet i selve timen (eller ukjent) - høyst halve energien der er den lange sjøen
+            kort = f"{hour['bw_period']:.0f} s" if hour.get("bw_period") is not None else "ukjent"
+            items.append(f"BarentsWatch-periode {kort}: kort, høyst halve energien regnes som lang sjø")
         elif hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         if bw_detail["spot_direction_offshore"]:
@@ -2039,6 +2057,7 @@ def rate(hour, spot, _long_sea=True):
     long_sea_base = None
     if long_sea_hour is not None:
         long_sea_base = rate(hour, spot, _long_sea=False)
+        long_sea_gfs = {"swell_offshore": hour.get("swell_offshore"), "period": hour.get("period"), "dir_offshore": hour.get("dir_offshore")}
         hour = {**hour, **long_sea_hour}
     h, source, bw_detail = spot_height(hour, spot)
     period = hour.get("period")  # Open-Meteo, svellet UTE - uendret av grunning
@@ -2387,8 +2406,14 @@ def rate(hour, spot, _long_sea=True):
         "gap_floor": gap_used,
         # S29 c del 2 (forslag, av): feltet finnes bare når regelen har regnet om timen (long_sea()) - det
         # svellet ratingen faktisk brukte, så appen og læringen (exposure_learn) kan se det. Aldri med bryteren av.
+        # S40: height_offshore er GFS sin totalhøyde (nevneren i svellandelen), short_peak sier at toppen ved punktet
+        # var kort i timen (M4), og gfs_swell er svell-delen slik GFS skilte den ut (det timen selv har lagret).
+        # publish.vis_lang_sjo() bruker dette til å vise den lange sjøen i appen i stedet for svell-delen.
         **({"long_sea": {"swell_offshore": round(long_sea_hour["swell_offshore"], 2), "period": long_sea_hour["period"],
-                         "dir_offshore": long_sea_hour["dir_offshore"]}} if long_sea_hour is not None else {}),
+                         "dir_offshore": long_sea_hour["dir_offshore"],
+                         "height_offshore": round(long_sea_hour["height_offshore"], 2),
+                         "short_peak": bw_detail is not None and bw_detail.get("bw_period_basis") == "lang_sjo_kort_topp",
+                         "gfs_swell": long_sea_gfs}} if long_sea_hour is not None else {}),
         # 23.11.2026 (svar.md 23.11.2026 kl. 14.05): sann når høyden ER andelshøyden for en fjord-spot (svell ute ×
         # andel × kantfaktor, se fjord_share_applied()). Feltet finnes bare da, så kyst-spots har det aldri. Det er
         # et eget felt fordi "gap_floor" over er usann når vinden har tatt gap-grensa bort og i reserven under 7 s:

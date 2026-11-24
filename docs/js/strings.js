@@ -152,6 +152,10 @@
       bildet: "Bildet",   // foran hele krediteringen for kornfotoet, nederst under Kilder
       // «Svell ute» og ikke «Svell»: tallet er svellet ute (swell_offshore), ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
       kl: (hh) => `Kl. ${hh}`, svell: "Svell ute", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
+      // S40 (svar.md 24.11.2026): timer der ratingen har regnet lang sjø som svell (feltet long_sea, i dag bare Unstad).
+      // Tallet er da den lange sjøen værmodellen kaller vindsjø, ikke svell-delen. Timen er usikker (høyst 3 poeng).
+      langSjo: "Lang sjø ute", langSjoFra: "Lang sjø fra", langSjoNote: "Regnet som svell. Usikkert varsel.",
+      timeLangSjo: (m) => `Lang sjø ute ${m} m, regnet som svell, usikkert`,
       mangler: "mangler data", hoy: "høy", lav: "lav", snur: "snur",
       svellSub: (s, retning, grader) => `${s} s · fra ${retning} ${grader}°`,
       timeForTime: "Time for time", naa: "Nå", velgTime: "Velg time", velgDag: "Velg dag", tilbakeNa: "Tilbake til nå",

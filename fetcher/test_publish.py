@@ -307,6 +307,36 @@ def main():
         got = "lav" if lv < tr["lav_maks"] - 1e-4 else "høy" if lv > tr["hoy_min"] + 1e-4 else "middels" if tr["lav_maks"] + 1e-4 < lv < tr["hoy_min"] - 1e-4 else want
         assert got == want, (k, lv, got, want, tr)
     print(f"11: tide_regel i detaljfila (Farstadsanden lav+middels, Unstad ingen) med tersklene fra tide.state_at {tr} - OK")
+    # ---------- 12: S40 (svar.md 24.11.2026) - timer regnet med lang sjø vises med den lange sjøen, ikke svell-delen ----------
+    # Unstad 21.11.2026 kl. 11Z: GFS sin svell-del er 0,58 m fra 250° med 12 s, den lange sjøen ratingen brukte er 2,76 m fra 359°
+    # med 10,15 s (feltet long_sea fra rating.rate()). Appens filer skal vise den siste. Varselet selv (forecast.json) røres ikke.
+    ls = {"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359, "height_offshore": 2.76, "short_peak": False,
+          "gfs_swell": {"swell_offshore": 0.58, "period": 12.0, "dir_offshore": 250}}
+    fc12 = copy.deepcopy(fc)
+    u12 = next(x for x in fc12["spots"] if x["id"] == "unstad")
+    i12 = next(i for i, h in enumerate(u12["hours"]) if t_of(h) + dt.timedelta(hours=1) > now and h.get("light") != "mørkt" and h.get("swell_offshore") is not None)
+    u12["hours"][i12] = dict(u12["hours"][i12], swell_offshore=0.58, period=12.0, dir_offshore=250, height_offshore=3.2, stars=3, uncertain=True, long_sea=ls)
+    for h in u12["hours"][:i12]:
+        h["stars"] = 0   # timen over skal være dagens beste, så den også står i oversikten
+    for h in u12["hours"][i12 + 1:]:
+        h["stars"] = min(h.get("stars") or 0, 2)
+    før12 = copy.deepcopy(fc12)
+    ov12, det12 = publish.split(fc12)
+    assert fc12 == før12, "split() skal ikke endre varselet (forecast.json, inndata-arkivet og læringen har timen urørt)"
+    d12 = det12["unstad"]["hours"][i12]
+    assert (d12["swell_offshore"], d12["period"], d12["dir_offshore"], d12["height_offshore"]) == (2.76, 10.15, 359, 2.76), d12
+    assert d12["long_sea"]["gfs_swell"] == {"swell_offshore": 0.58, "period": 12.0, "dir_offshore": 250} and d12["uncertain"] is True
+    # alle andre timer og spots er byte-like det de var uten merket
+    ov0, det0 = publish.split(fc)
+    assert all(det12[k]["hours"] == det0[k]["hours"] for k in det0 if k != "unstad")
+    o12 = next(x for x in ov12["spots"] if x["id"] == "unstad")
+    b12 = [d["h"] for d in o12["dager"] if d.get("h") and d["h"]["t"] == d12["t"]]
+    assert b12 and b12[0]["swell_offshore"] == 2.76 and b12[0]["dir_offshore"] == 359 and b12[0]["long_sea"] is True, b12
+    assert publish.vis_lang_sjo(u12["hours"][i12 + 1]) is u12["hours"][i12 + 1], "en time uten long_sea returneres urørt"
+    # mangler et tall i long_sea, byttes det ikke (aldri None eller 0 inn over et tall som finnes)
+    h12 = publish.vis_lang_sjo(dict(u12["hours"][i12], long_sea=dict(ls, period=None, height_offshore=None)))
+    assert (h12["swell_offshore"], h12["period"], h12["height_offshore"]) == (2.76, 12.0, 3.2)
+    print("12: timer regnet med lang sjø (S40) vises med den lange sjøen i oversikten og detaljfila, svell-delen ligger i long_sea.gfs_swell, varselet selv er urørt - OK")
     print("Alle tester ok")
 
 

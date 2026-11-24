@@ -2866,7 +2866,12 @@ for _t in (11, 12, 13, 36):
 assert [r44[t]["stars"] for t in (11, 12, 13)] == [3, 2, 3], [r44[t]["stars"] for t in (11, 12, 13)]
 assert [r44[t]["surf_height"] for t in (11, 12, 13)] == [1.15, 1.02, 1.14], [r44[t]["surf_height"] for t in (11, 12, 13)]
 assert all(r44[t]["uncertain"] and not r44[t]["sources_disagree"] and r44[t]["low_reason"] is None for t in (11, 12, 13))
-assert r44[11]["long_sea"] == {"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359} and r44[11]["bw_period_basis"] == "lang_sjo"
+assert r44[11]["long_sea"] == {"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359, "height_offshore": 2.76, "short_peak": False,
+                               "gfs_swell": {"swell_offshore": 0.58, "period": 12.0, "dir_offshore": 250}} and r44[11]["bw_period_basis"] == "lang_sjo"
+# S40: «Hvorfor» sier det først - den lange sjøen med høyde, retning og periode, at den er regnet som svell, og at det er usikkert
+assert r44[11]["breakdown"][0] == "Lang sjø ute 2,8 m fra N, 10 s: regnet som svell, usikkert", r44[11]["breakdown"][0]
+assert "Svellandel: 100 % (lang sjø regnet som svell)" in r44[11]["breakdown"]
+assert not any("Lang sjø" in l or "lang sjø" in l for l in rate(dict(H44[11]), U44)["breakdown"])   # av: ingen slike linjer
 assert r44[11]["energy_swell_kj"] > 2000 and r44[11]["swell_share"] == 1.0 and r44[11]["bw_confirms"]
 # 22.11 kl. 12Z i varselet fra 21.11 (4,3 s i de ekte modelltimene kl. 09, 12 og 15Z): A' og A rører den ikke,
 # B (ingen periodegrense ved punktet, svaret på S40: nei) løfter den. Etter M4 (44.7) til 2 poeng og 1,01 m, før 3 og 1,34 m
@@ -2955,6 +2960,8 @@ assert len(_e44([dict(_par44)], "x", U44)) == 1 and _e44([dict(_par44, long_sea=
 _h44l = {**H44[12], **r44[12]}
 assert _h44l["height_source"] == "barentswatch"
 assert "long_sea" in _h44l and _calibrate44.bw_pairs_for_run([_h44l], "x", U44) == [] and _e44([_h44l], "x", U44) == []
+from rating import _compass16
+assert [_compass16(d) for d in (0, 11, 12, 250, 348.7, 348.8, 359, 360)] == ["N", "N", "NNØ", "VSV", "NNV", "N", "N", "N"]
 # 44.6 M3 (fysikk-kontrolløren 24.11.2026, S40): svellet i en time kan være byttet mot snittet av nabotimene
 # (sources.despike_swell(), originalen i swell_despiked). Vindsjø-delen og totalen er timens rå GFS-tall. Lagt sammen
 # ville de telt den samme sjøen to ganger. Eksempel: GFS la sjøen i svell-delen i nabotimene (2,5 m) og i vindsjø-delen
@@ -2989,6 +2996,9 @@ assert _rk44["bw_period_basis"] == "lang_sjo_kort_topp" and abs(_rk44["height"] 
 _rk44l = _med_regel44(dict(_h44k, bw_period=7.0), U44)     # samme time med 7,0 s i timen: hele høyden
 assert _rk44l["bw_period_basis"] == "lang_sjo" and _rk44l["height"] == 0.55
 assert 0 < _rk44["surf_height"] < _rk44l["surf_height"] and _rk44["stars"] <= _rk44l["stars"] <= 3 and _rk44["uncertain"]
+assert _rk44["long_sea"]["short_peak"] is True and _rk44l["long_sea"]["short_peak"] is False
+assert "BarentsWatch-periode 4 s: kort, høyst halve energien regnes som lang sjø" in _rk44["breakdown"], _rk44["breakdown"]
+assert "Etter justering 0,4 m (kort BarentsWatch-periode)" in _rk44["breakdown"]
 # surfehøyden følger H^0,8 (Komar og Gaughan): (1/√2)^0,8 = 0,758
 assert abs(_rk44["surf_height"] / _rk44l["surf_height"] - 0.5 ** 0.4) < 0.01, (_rk44["surf_height"], _rk44l["surf_height"])
 # mangler perioden i timen (A' kan slå til på modelltimen ved siden av): som kort topp, aldri som lang

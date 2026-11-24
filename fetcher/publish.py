@@ -89,6 +89,7 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone",
               "directness", "bw_confirms",
+              "long_sea",       # S40: timen er regnet med lang sjø (etiketten «Lang sjø ute» i appen)
               "wind_calm_ms")   # spotens egen vindgrense for ordet (calmWindWord i app.js); Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
@@ -131,6 +132,8 @@ def _naa_hour(h):
             continue
         if k in ("sources_disagree", "faded_wind", "faded_tide") and not v:
             continue
+        if k == "long_sea":
+            v = True   # forsiden trenger bare merket (etiketten «Lang sjø ute»); tallene står alt i swell_offshore/period/dir_offshore
         out[k] = v
     if h.get("low_reason") in BW_WHEN and h.get("bw_height") is not None:
         out["bw_height"] = round(h["bw_height"], 2)
@@ -359,6 +362,22 @@ def _pick(h, fields):
     return {k: h[k] for k in fields if k in h}
 
 
+LONG_SEA_SHOWN = ("swell_offshore", "period", "dir_offshore", "height_offshore")
+
+
+def vis_lang_sjo(h):
+    """S40 (svar.md 24.11.2026 kl. 22.25): «Appen viser den lange sjøen fra nord i stedet for «svell 0,6 m fra VSV».»
+    I en time der ratingen har regnet lang sjø som svell (feltet long_sea fra rating.rate(), i dag bare Unstad),
+    viser appens filer den sjøen ratingen brukte: høyde, periode og retning (og GFS sin totalhøyde, som er nevneren
+    i svellandelen). Ellers ville 3 poeng stått ved siden av et lite svell fra feil kant. Svell-delen slik GFS
+    skilte den ut, ligger igjen i long_sea.gfs_swell. Bare visning: forecast.json, inndata-arkivet og læringen
+    har timen urørt. Andre timer returneres som de er (samme objekt). Mangler et tall i long_sea, byttes det ikke."""
+    ls = h.get("long_sea")
+    if not isinstance(ls, dict):
+        return h
+    return dict(h, **{k: ls[k] for k in LONG_SEA_SHOWN if ls.get(k) is not None})
+
+
 def public_forecast(forecast):
     """Varselet uten «hemmelig»-spots (samme objekt hvis det ikke finnes noen)."""
     spots = forecast.get("spots", [])
@@ -423,7 +442,7 @@ def split(forecast, exclude=DETAIL_EXCLUDE, now=None, regions_cfg=None, days=SUM
     overview = dict(top, format="oversikt-2", run=run, summary_days=days, regions=[], spots=[])
     details = {}
     for s in spots:
-        hours = s.get("hours", [])
+        hours = [vis_lang_sjo(h) for h in s.get("hours", [])]   # S40: timer med lang sjø vises med den sjøen ratingen brukte
         meta_all = {k: v for k, v in s.items() if k != "hours"}
         cfg = cfg_spots.get(s["id"], {})
         for k in ("region", "aliases"):
