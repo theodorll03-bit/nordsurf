@@ -231,3 +231,5 @@ Fase 2 (24.11.2026, «B 4.0 ferdig på mobil»). Der dette avsnittet og resten a
 - **Skjemafelt** (Innstillinger, loggarket) har 2 px blekkstrek under, som søkefeltet, og ingen boks.
 - **Tidevannsregelen på mobil-spotsiden:** en kort setning på egen linje under TIDEVANN-raden i KL.-blokka («Best på lav til middels vannstand»). Spots uten regel har ingen linje.
 - **Ikonet** (`docs/icon.svg` og PNG-ene i `docs/icons/`) bruker tokenene #F2EFE8 og #002941.
+- **Lave skjermer (under 700 px i høyden) på mobil-spotsiden:** luften mellom dom, faktalinje og KL.-blokk er 4, 8 og 16 px, og setningen under dommen er 16/22 (§3 sier 16–18/22–26). Da får dag, dom og time plass over fanelinja etter dagbytte på 360 × 640 og 390 × 663. Høyere skjermer har luften fra §6B.
+- **Nedtrekkslister** tegnes av appen (44 px, 2 px strek under, vinkel i blekk), ikke med nettleserens egen form.

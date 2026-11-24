@@ -41,6 +41,36 @@ Gjenstår:
 - Breivikeidets setning («Best på lavt vann») kommer med `fiks/tidevann-s28` og faller inn i samme rad når `Tidevann.prefTekst()` gir den.
 - Død CSS fra de gamle kortene står til fase 4. Bare prøvd i Chromium.
 
+### Runde 2 etter feiljegeren, 24.11.2026
+
+Oppå den lokale commiten `0d527c6`. Ucommittet, ikke pushet. Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase2-2026-11-24.md`.
+
+- **Punkt 4 på lave skjermer (viktig 1):** på skjermer under 700 px i høyden er luften mellom dom, faktalinje og KL.-blokk strammet til trinnene 4, 8 og 16 px, setningen under dommen er 16/22 (før 18/26), og etikettkolonnen i radene er 92 px under 380 px bredde (før 110). Dommen kan stå 4 px under dagvelgeren når det bare mangler noen piksler. Skjermer fra 700 px og opp er som før.
+- **Områdevelgeren (viktig 3):** nedtrekkslistene tegnes av appen (`appearance:none`, 44 px, 2 px strek under, vinkel i blekk). Det var 23 px i WebKit på main også.
+- **«Mørkt nå …»** leses mot klokka: etter midnatt, før nattas første varsel, er radene «i dag», og da står ikke linja (før sto den feil da).
+- **Ikke nytt i fase 2, ikke rørt:** siden ruller bak det åpne loggarket (900 til 500 px med musehjul, likt på main), og fokus står på `body` etter fanebytte til Hjem, Utforsk, Logger og Innstillinger (likt på main).
+
+Målt etter dagbytte fra toppen av siden, alle dager i varselet 24.11 kl. 13Z (px fra bunnen av KL.-blokka til fanelinja, minus betyr over):
+
+| Skjerm | Unstad, før runde 2 | Unstad, nå | Farstadsanden, før | Farstadsanden, nå |
+|---|---|---|---|---|
+| 360 × 640 | under på 14 av 15, verst 63 | over på alle, 8 | under på 4 av 16, verst 89 | over på alle, 8 |
+| 375 × 548 | under på alle, verst 133 | under på 13 av 15, verst 59 | under på alle, verst 133 | under på 7 av 16, verst 37 |
+| 390 × 663 | under på 1, 18 | over på alle, 8 | under på 1, 18 | over på alle, 8 |
+| 430 × 932 | over på alle | over på alle, 17–86 | over på alle | over på alle, 19–86 |
+
+WebKit gir samme tall innen 2 px. På 375 × 548 synes dagvelgeren (0–72 px), dommens tall og ord (76–140), «Kl. hh» (230–269) og det store tallet (297–349) på alle dager, 135 px over fanelinja. Det som ligger under fanelinja der, er TIDEVANN-raden med tidevannsregelen, og på de verste dagene nederste linje av VIND-raden.
+
+Tester: `test_spotside_browser.py` låser nå alle dager på 360 × 640 og 390 × 663 for Unstad og Farstadsanden, hele sorteringen (tall, kjøretid, navn) med krav om at testdataene faktisk prøver kjøretid og navn, «Mørkt nå …» der den skal stå og der den ikke skal stå (i lys og etter midnatt), og formen på feltene i Innstillinger. En egen del kjører Innstillinger i WebKit når WebKit er installert (ikke i CI, der hoppes den over med en linje i utskriften). `test_skalering_browser.py`: vakten mot «0,0» leser setningen i favorittradene, som har høyder, og krever at minst én høyde finnes.
+
+Gjenstår etter runde 2:
+- S15 b («Nå» foran ordet i regionradene) legges fram for Theodor. Bilder: `privat/design-b4/revisjon-2026-11-21/fase-2/etter/s15b/`. Om morgenen før det lysner viser grenen dagens tall og ord uten noe om at det er mørkt nå (main: «Nå Mørkt» på hver rad).
+- 375 × 548: KL.-blokka får ikke plass (se tabellen).
+- «FRA TROMSØ» er fast tekst, også for en bruker med et annet område, og startstedet kan ikke byttes.
+- Innstillinger sier «Hjem viser «Beste økt» …». «Beste økt» finnes ikke på mobil.
+- Siden ruller bak det åpne loggarket, og fokus står på `body` etter fanebytte. Begge var slik på main.
+- Maskable-ikonet: motivet når 0,85 av halve bredden (trygg sone 0,80). Formen er som på main.
+
 ## Designrevisjonen fase 1: raske rettinger, 24.11.2026
 
 Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).

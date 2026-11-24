@@ -147,9 +147,17 @@ def main():
                 # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag».
                 # B4 steg 2: rutene viser tallet 0-5, så «0» er en ekte vurdering der (aldri en høyde)
                 if mobile:
-                    # fase 2: regionradene har tallet, metalinja og ukerutene (ingen høyde lenger). Vakten ser på tallet og på hvert
-                    # ledd i metalinja, så en høyde på 0,0 fortsatt ville blitt fanget
-                    txt = page.evaluate("[...document.querySelectorAll('#viewHjem .regionliste a.favlinje')].flatMap(e => e.querySelector('.etikett').textContent.split(' · ').map(t => t.trim()))")
+                    # Runde 2 (feiljegeren 24.11.2026): regionradene har ingen høyde lenger, så vakten mot «0,0» ser på feltet som har
+                    # en: setningen i favorittradene («1,1–1,5 m, 11 s fra VSV …»). De 30 første spotene gjøres til favoritter mens
+                    # det leses, og minst én setning må ha en høyde, ellers kan ikke vakten slå til.
+                    page.evaluate("() => { window.__authV = window.Auth; window.Auth = {state: {ready: true, user: {id: 't'}, profile: null, favorites: new Set(DATA.spots.slice(0, 30).map(s => s.id))}, toggleFavorite: async () => {}}; Front.refresh(); }")
+                    page.wait_for_selector("#viewHjem .favliste:not(.regionliste) a.favlinje")
+                    setn = page.evaluate("[...document.querySelectorAll('#viewHjem .favliste:not(.regionliste) a.favlinje .setn')].map(e => e.textContent.trim())")
+                    hoyder = [m for t in setn for m in re.findall(r"\d+(?:,\d)?(?:–\d+(?:,\d)?)? m(?![/\w])", t)]
+                    assert hoyder, f"ingen av favorittsetningene har en høyde, så vakten mot «0,0» prøver ingenting: {setn[:5]}"
+                    txt = hoyder + [d for t in setn for d in t.replace(".", "").split(", ")]
+                    page.evaluate("() => { window.Auth = window.__authV; delete window.__authV; Front.refresh(); }")
+                    page.wait_for_function("!document.querySelector('#viewHjem .favliste:not(.regionliste)')")
                     uke = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i')].map(e => e.textContent.trim())")
                     tomme = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i.miss, #viewHjem .uke i.dark, #viewHjem .uke i.forbud, #viewHjem .uke i.over')].map(e => e.textContent.trim())")
                     heads = page.evaluate("[...document.querySelectorAll('#viewHjem .regionliste .uke b')].map(e => e.textContent.trim())")

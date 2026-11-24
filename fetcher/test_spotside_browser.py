@@ -1009,11 +1009,34 @@ def main():
                         for r in reg_r:
                             assert r["tall"] == ("" if r["st"] is None else str(min(5, r["st"]))), f"regionraden skal vise dagens tall (dayBest): {r}"
                             assert "Nå" not in r["meta"].split() and "Mørkt nå" not in r["meta"] and not r["setn"] and r["uke"] == 7, f"regionraden: {r}"
-                        tall = [(-1 if r["st"] is None else r["st"]) for r in reg_r]
-                        assert tall == sorted(tall, reverse=True), f"regionradene skal stå etter dagens tall: {[(r['navn'], r['st']) for r in reg_r]}"
+                        SORT_JS = """(q) => { const H = Front.helpers, key = Front.state.hjemDag, er = [...document.querySelectorAll(q)].map(r => DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id));
+                            const n = (s) => { const st = H.dayBest(s, key).st; return {navn: s.name, st: st == null ? -1 : st, kj: (window.KJORETID && KJORETID.min[s.id]) || Infinity}; };
+                            const skal = er.map(n).sort((a, b) => b.st - a.st || a.kj - b.kj || a.navn.localeCompare(b.navn, 'nb'));
+                            return {er: er.map(s => s.name), skal: skal.map(x => x.navn), kjAvgjor: skal.some((x, i) => i && skal[i - 1].st === x.st && skal[i - 1].kj !== x.kj), navnAvgjor: skal.some((x, i) => i && skal[i - 1].st === x.st && skal[i - 1].kj === x.kj)}; }"""
+                        srt = page.evaluate(SORT_JS, "#viewHjem .regionliste a.favlinje")
+                        assert srt["er"] == srt["skal"], f"regionradene skal stå etter dagens tall, så kjøretid, så navn: {srt}"
+                        assert srt["kjAvgjor"], f"testdataene skal ha minst to regionrader med samme tall og ulik kjøretid, ellers prøver ikke testen den andre nøkkelen: {srt}"
                         merk = page.text_content("#viewHjem #hjemMerk") if page.query_selector("#viewHjem #hjemMerk") else None
                         assert merk == "Mørkt nå. Tallene gjelder i morgen.", f"T0 er kl. 22:10 - linja over lista mangler: {merk}"
                         assert not page.query_selector("#viewHjem .rad, #viewHjem .chip, #viewHjem .hjem-bunn"), "gamle rader, brikker eller Innstillinger-pille på mobil-Hjem"
+                        assert not any(r["meta"].startswith("I morgen:") or " · I morgen:" in r["meta"] for r in reg_r), f"«I morgen:» skal ikke stå på hver rad når linja står over lista: {reg_r[:2]}"
+                        # ... og der den IKKE skal stå: midt på dagen (lyst), og etter midnatt før nattas første varsel (da er radene «i dag»)
+                        # (varselet i testfila er laget kl. 21, så dag 1 er «over» i dataene selv: for «i lys» lånes sammendraget fra dag 2)
+                        for nar_, tid_, vent_ in (("i lys", T0 - dt.timedelta(hours=10), ""), ("etter midnatt", T0 + dt.timedelta(hours=3), "I dag: ")):
+                            page.clock.set_fixed_time(tid_)
+                            if nar_ == "i lys":
+                                page.evaluate("""() => { window.__dag0 = DATA.spots.map(s => s.dager[0]); for(const s of DATA.spots){ const d0 = s.dager[0], d1 = s.dager[1];
+                                    s.dager[0] = {...d1, d: d0.d, lys_til: d0.d + 'T16:00Z', h: d1.h ? {...d1.h, t: d0.d + 'T10:00Z'} : d1.h, start: d0.d + 'T10:00Z', slutt: d0.d + 'T10:00Z'}; } }""")
+                            page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
+                            lys_ = page.evaluate("""() => ({merk: !!document.querySelector('#viewHjem #hjemMerk'), dag: Front.state.hjemDag, tekst: document.querySelector('#viewHjem').textContent.includes('Tallene gjelder i morgen'),
+                                meta: [...document.querySelectorAll('#viewHjem .regionliste a.favlinje .etikett')].map(e => e.textContent)})""")
+                            assert not lys_["merk"] and not lys_["tekst"], f"«Mørkt nå. Tallene gjelder i morgen.» skal ikke stå {nar_}: {lys_}"
+                            assert lys_["dag"] == tid_.astimezone(OSLO).date().isoformat(), f"radene skal vise dagen i dag {nar_}: {lys_['dag']}"
+                            assert lys_["meta"] and all((vent_ in m) if vent_ else ("I dag:" not in m and "I morgen:" not in m) for m in lys_["meta"]), f"metalinja {nar_}: {lys_['meta'][:3]}"
+                            if nar_ == "i lys":
+                                page.evaluate("() => { DATA.spots.forEach((s, i) => { s.dager[0] = window.__dag0[i]; }); delete window.__dag0; }")
+                        page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
+                        assert page.query_selector("#viewHjem #hjemMerk"), "linja skal stå igjen når klokka er tilbake på 22:10"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     if not mobile:
@@ -1500,8 +1523,9 @@ def main():
                     page.wait_for_selector("#viewHjem .favliste:not(.regionliste) a.favlinje")
                     fv = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag; return [...document.querySelectorAll('#viewHjem .favliste:not(.regionliste) a.favlinje')].map(r => { const s = DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id), b = H.dayBest(s, key);
                         return [b.st == null ? -1 : b.st, (window.KJORETID && KJORETID.min[s.id]) || 1e9, s.name, !!r.querySelector('.setn'), getComputedStyle(r.querySelector('.t-listetall')).fontSize, getComputedStyle(r.querySelector('.t-navn')).textTransform]; }); }""")
-                    nokler = [(-a, b_, c) for a, b_, c, *_ in fv]
-                    assert len(fv) == len(OV) and nokler == sorted(nokler, key=lambda t: (t[0], t[1])) , f"favorittene skal stå etter dagens tall, så kjøretid: {[(a, b_, c) for a, b_, c, *_ in fv]}"
+                    srt = page.evaluate(SORT_JS, "#viewHjem .favliste:not(.regionliste) a.favlinje")
+                    assert len(fv) == len(OV) and srt["er"] == srt["skal"], f"favorittene skal stå etter dagens tall, så kjøretid, så navn: {srt}"
+                    assert srt["kjAvgjor"] and srt["navnAvgjor"], f"testdataene skal prøve både kjøretid og navn som nøkkel: {srt}"
                     assert all(px == "44px" and tt == "uppercase" for *_, px, tt in fv), f"favorittraden: tallet 44 px og navnet i versaler: {fv[:2]}"
                     # punkt 5 med tastatur: Tab fra toppen når «Fra Tromsø», Enter åpner Innstillinger, og kontoen (innloggingen) nås med Tab
                     page.evaluate("() => { window.scrollTo(0, 0); document.activeElement && document.activeElement.blur(); }")
@@ -1525,6 +1549,11 @@ def main():
                     assert inn["pBg"] == INK and inn["pTekst"] == PAPIR and "Martian" in inn["pFont"] and inn["pR"] == "0px" and inn["pH"] >= 44, f"primærknappen (.primary) skal ha formen til .knapp1: {inn}"
                     assert inn["gBg"] == "rgba(0, 0, 0, 0)" and "2px inset" in inn["gKant"] and INK in inn["gKant"] and inn["gR"] == "0px" and inn["gH"] >= 44, f"sekundærknappen (.ghost) skal ha formen til .knapp2: {inn}"
                     assert inn["epost"][0] >= 300 and inn["epost"][1] >= 44, f"e-postfeltet skal fylle bredden og være 44 px høyt: {inn['epost']}"
+                    FELT_JS = """() => Object.fromEntries([...document.querySelectorAll('#detailPane select, #detailPane input')].map(e => { const b = e.getBoundingClientRect(), c = getComputedStyle(e);
+                        return [e.id, {w: Math.round(b.width), h: Math.round(b.height), strek: c.boxShadow.includes('inset') && c.boxShadow.includes('-2px'), form: c.appearance || c.webkitAppearance, radius: c.borderTopLeftRadius}]; }))"""
+                    felt = page.evaluate(FELT_JS)
+                    assert set(felt) >= {"authEmail", "omrade", "syncRepo", "syncToken"} and all(v["w"] >= 300 and v["h"] >= 44 and v["strek"] and v["radius"] == "0px" for v in felt.values()), f"feltene i Innstillinger skal ha samme form (hele bredden, 44 px, 2 px strek under): {felt}"
+                    assert felt["omrade"]["form"] == "none" and felt["omrade"]["h"] == felt["authEmail"]["h"], f"områdevelgeren skal tegnes av appen (ellers 23 px i Safari) og være like høy som e-postfeltet: {felt['omrade']}"
                     audit("fase2-innstillinger")
                     page.evaluate("() => { window.Auth = window.__auth2; delete window.__auth2; Front.refresh(); }")
                     # punkt 3: Søk og Logger har seksjonsstreken og samme listerad. Tom tilstand i Logger: én linje per seksjon
@@ -1562,6 +1591,27 @@ def main():
                         assert m4["pos"] == "sticky" and m4["foran"] and m4["strek"] == "3px" and m4["rull"] <= 0, f"dagvelgeren skal stå over dommen, følge med og ha 3 px strek under valgt dag: {m4}"
                         assert 0 <= m4["dag"][0] and m4["dag"][1] <= m4["tall"][0] and m4["tall"][1] <= m4["kl"][0] and m4["time"][1] <= m4["fane"], f"etter dagbytte ({hvor} på siden) skal dag, dom og time stå synlig sammen over fanelinja ({m4['fane']} px): {m4}"
                     ring(["#viewSpot .dagknapp", "#spotBack", "#viewSpot .fav-btn", "#viewSpot #hvorfor summary", "#loggHer"], "spotsiden")
+                    # Runde 2 (feiljegeren 24.11.2026): også på lave skjermer, og for alle dagene i varselet. Trykk fra toppen av siden.
+                    ALLE4 = """() => { const r = (q) => { const e = document.querySelector('#viewSpot ' + q); if(!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; };
+                        const alle = [...document.querySelectorAll('#viewSpot .dagknapp')].map(k => k.dataset.day), ut = [];
+                        const trykk = (d) => { window.scrollTo(0, 0); document.querySelector(`#viewSpot .dagknapp[data-day="${d}"]`).click(); };
+                        const valgt = document.querySelector('#viewSpot .dagknapp[aria-pressed="true"]').dataset.day, andre = alle.filter(d => d !== valgt);
+                        trykk(andre[0]);
+                        for(const d of [...andre.slice(1), valgt, andre[0]]){ trykk(d);
+                            ut.push({dag: d, valgt: document.querySelector('#viewSpot .dagknapp[aria-pressed="true"]').dataset.day, fane: Math.round(document.querySelector('.tabbar').getBoundingClientRect().top), dv: r('.dagvelger'),
+                                     tall: r('.dom .t-tall') || r('.dom-ord b'), ord: r('.dom-ord b'), kl: r('#spOver .sek-spot'), stort: r('#spOver .t-svell') || r('#spOver .svell'), blokk: r('#spOver'), y: Math.round(scrollY)}); }
+                        return ut; }"""
+                    for bw_, bh_ in ((360, 640), (390, 663)):
+                        page.set_viewport_size({"width": bw_, "height": bh_})
+                        for sid_ in ("unstad", "farstadsanden"):
+                            go("#hjem", HJEM_KLAR); go(f"#spot={sid_}", SPOT_KLAR)
+                            d4 = page.evaluate(ALLE4)
+                            assert len(d4) >= 8 and all(m_["valgt"] == m_["dag"] for m_ in d4), f"dagbytte ({sid_}, {bw_} x {bh_}): {[(m_['dag'], m_['valgt']) for m_ in d4][:4]}"
+                            for m_ in d4:
+                                assert m_["dv"][0] >= 0 and m_["dv"][1] <= m_["tall"][0] and m_["ord"][1] <= m_["kl"][0] and m_["kl"][1] <= m_["stort"][0], f"etter dagbytte skal dagvelgeren stå over dommen og dommen over «Kl.» ({sid_}, {bw_} x {bh_}): {m_}"
+                                assert m_["blokk"][1] <= m_["fane"], f"etter dagbytte skal hele KL.-blokka stå over fanelinja ({sid_}, {bw_} x {bh_}, {m_['dag']}): {m_}"
+                            print(f"fase 2 punkt 4 ({sid_}, {bw_} x {bh_}): {len(d4)} dager, KL.-blokka slutter {min(m_['fane'] - m_['blokk'][1] for m_ in d4)}-{max(m_['fane'] - m_['blokk'][1] for m_ in d4)} px over fanelinja - OK")
+                    page.set_viewport_size({"width": 390, "height": 663})
                     print(f"fase 2 punkt 4 (mobil 390 x 663): etter dagbytte nederst på siden står valgt dag {m4['dag']}, tallet {m4['tall']}, «Kl.» {m4['kl']} og timens rader til {m4['time'][1]} px, fanelinja starter på {m4['fane']} px - OK")
                     # tidevannsregelen på mobil (S33 a): en kort setning på egen linje under TIDEVANN-raden, på én linje på 390 px
                     for sid_ in ("farstadsanden", "grotfjord"):
@@ -1649,6 +1699,30 @@ def main():
                     assert dom["ord"].lower() == "blåst ut", f"dagens ord skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}"
                 ctx.close()
             browser.close()
+            # ---- Designrevisjonen fase 2, runde 2: skjemafeltene i WebKit (Safari). Nedtrekkslista var 23 px høy der med
+            # nettleserens egen form (feiljegeren 24.11.2026). WebKit er ikke installert i CI (bare Chromium): da hoppes delen
+            # over med en linje i utskriften, og formen er uansett låst i Chromium-delen over (appearance: none, 44 px).
+            try:
+                wk = p.webkit.launch()
+            except Exception as e:   # noqa: BLE001
+                wk = None
+                print(f"fase 2 runde 2: WebKit er ikke installert her ({str(e).splitlines()[0][:80]}) - WebKit-delen er hoppet over")
+            if wk:
+                try:
+                    ctx = wk.new_context(viewport={"width": 390, "height": 663}, has_touch=True, locale="nb-NO", timezone_id="Europe/Oslo")
+                    page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
+                    route(page)
+                    page.route("**/data/oversikt.json", lambda rt, req: rt.fulfill(status=200, content_type="application/json", body=OV_BODY))
+                    page.goto(f"http://127.0.0.1:{port}/index.html#innstillinger"); page.wait_for_selector("#viewSide:not([hidden]) #omrade")
+                    page.evaluate("() => { window.Auth = {state: {ready: true, user: null, profile: null, favorites: new Set()}, toggleFavorite: async () => {}}; Front.refresh(); }"); page.wait_for_selector("#authEmail")
+                    wf = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#detailPane select, #detailPane input')].map(e => { const b = e.getBoundingClientRect(), c = getComputedStyle(e);
+                        return [e.id, {w: Math.round(b.width), h: Math.round(b.height), strek: c.boxShadow.includes('inset') && c.boxShadow.includes('-2px')}]; }))""")
+                    assert set(wf) >= {"authEmail", "omrade", "syncRepo", "syncToken"} and all(v["w"] >= 300 and v["h"] >= 44 and v["strek"] for v in wf.values()), f"WebKit: feltene i Innstillinger skal være 44 px høye med strek under: {wf}"
+                    assert wf["omrade"]["h"] == wf["authEmail"]["h"], f"WebKit: områdevelgeren skal være like høy som e-postfeltet: {wf}"
+                    print(f"fase 2 runde 2 (WebKit 390 x 663): områdevelgeren {wf['omrade']['w']} x {wf['omrade']['h']} px med strek under, som e-postfeltet - OK")
+                    ctx.close()
+                finally:
+                    wk.close()
     finally:
         srv.shutdown()
         watchdog.cancel()

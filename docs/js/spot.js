@@ -309,7 +309,8 @@
         const ledig = dom.getBoundingClientRect().top - (feste + hoyde + 8);   // så mye kan siden rulles før dommen når dagvelgeren
         const synlig = fane && fane.getBoundingClientRect().height ? fane.getBoundingClientRect().top : window.innerHeight;
         const under = time ? time.getBoundingClientRect().bottom + 8 - synlig : 0;
-        if(ledig < 0) window.scrollBy(0, ledig); else if(under > 0) window.scrollBy(0, Math.min(under, ledig));
+        // mangler det bare noen piksler, får dommen stå 4 px under dagvelgeren i stedet for 8
+        if(ledig < 0) window.scrollBy(0, ledig); else if(under > 0) window.scrollBy(0, Math.min(under, ledig + 4));
       }
       if(etter) etter();
     };

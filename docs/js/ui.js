@@ -462,7 +462,9 @@
     const rr = S.region || chosenRegion(), vist = [...new Set([...favs, ...DATA.spots.filter(s=> regionOf(s)===rr)])];
     const days = weekDays(vist);
     S.hjemDag = days.length ? days[0].key : null;   // dagen radene viser (også lest av nettlesertesten)
-    S.hjemMorgen = !!(days.length && !days[0].idag && days[0].key===(((DATA.spots[0] || {}).dager || [])[1] || {}).d);
+    // «i morgen» leses mot klokka (relDay), ikke mot plassen i varselet: etter midnatt, før nattas første varsel, er dag 2 i
+    // varselet «i dag», og da står ikke linja (radene sier «I dag:» som før)
+    S.hjemMorgen = !!(days.length && !days[0].idag && dagOrd(days[0])==="i morgen");
     const kart = window.Utforsk && Utforsk.hjemKart && days.length ? Utforsk.hjemKart(favs.length ? favs : sc.spots, days[0].key, document.documentElement.clientWidth || 390) : "";
     root.innerHTML = `
       ${typeof staleBanner==="function" ? staleBanner() : ""}

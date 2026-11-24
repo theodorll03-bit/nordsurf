@@ -923,6 +923,18 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* mobil: rett under metalinja og over dommen, og den blir stående øverst når siden rulles - dag, dom og time står sammen */
 .sp-inn > .dagvelger{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;margin-top:var(--s1);padding-top:2px;background:var(--bg);border-bottom:.75px solid var(--ink)}
 .sp-inn > .dagvelger + .dom{margin-top:var(--s3)}
+/* Lave skjermer (under 700 px, f.eks. 360 x 640 og iPhone SE): luften mellom dom, faktalinje og KL.-blokk strammes til
+   trinnene 4, 8 og 16, så dag, dom og timen (KL.-blokka) får plass over fanelinja etter dagbytte. På smale skjermer er
+   etikettkolonnen i radene smalere, så forklaringen til høyre sjeldnere går over to linjer. */
+@media (max-width: 1023px) and (max-height: 700px){
+  .sp-inn .dom-setn{margin-top:var(--s2);font-size:1rem;line-height:1.375}   /* 16/22, nedre ende av SPEC §3 «16–18/22–26» */
+  .sp-inn .fakta-linje{margin-top:var(--s2)}
+  .sp-inn #spOver .sek-spot{margin:var(--s3) 0 var(--s2)}
+  .sp-inn #spOver .svell{margin-top:var(--s2)}
+  .sp-inn #spOver .svell .t-svell{margin-top:var(--s1)}
+  .sp-inn #spOver .maalene{gap:var(--s2);margin-top:var(--s2)}
+}
+@media (max-width: 379px){ .sp-inn .maal{grid-template-columns:92px auto 1fr} }
 .dagvelger::-webkit-scrollbar{display:none}
 .dagknapp{all:unset;box-sizing:border-box;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;min-height:44px;padding:4px 4px 6px;border-bottom:3px solid transparent;cursor:pointer}
 .dagknapp .ud,.dagknapp .dt{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
