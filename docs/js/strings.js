@@ -105,6 +105,8 @@
     chartHelp: "Slik leser du grafen",
     chartHelpText: "Hver søyle er én time. Høyden er surfehøyden (ved blåst ut eller stormsjø: totalhøyden ved spoten), tallet over søylen er vurderingen fra 0 til 5 (korall fra 4). Mørke timer er skygget og får ikke tall. Den tynne streken over søylen er settene. En lav grå strek er en flat time, en stiplet strek betyr at tallet mangler. Bakgrunnen viser dag, skumring og mørke. Lyse søyler lenger ut er anslag fra reservemodellen og langtidsvarselet. Trykk på en søyle for tallene for den timen. Piltastene flytter mellom timer.",
     transferSub: "andel av svellhøyden ute som når spoten ved direkte treff",
+    // merkelappen ved navnet: ny spot (status «forelopig») eller en andel som er satt uten observasjon (andel_forelopig)
+    forelopig: "Foreløpig",
     kjUnderOne: "under 1 kJ",
     flat:   { allDay: "Flatt hele døgnet", next: (n)=>`Flatt de neste ${n} timene`, rest: "Flatt resten av varselet" },
     small:  { allDay: "Smått hele døgnet", next: (n)=>`Smått de neste ${n} timene`, rest: "Smått resten av varselet" },

@@ -68,8 +68,11 @@
   function sikkerhet(h){
     if(!h) return "–";
     const c = h.confidence;
-    const ord = c==null ? null : c >= 80 ? "Høy sikkerhet" : c >= 55 ? "Middels sikkerhet" : "Lav sikkerhet";
-    const sone = h.zone==="barentswatch" ? "kystmodell 100 m" : h.zone==="reserve" ? "havmodell" : h.zone==="langtid" ? "langtidsmodell" : null;
+    // 24.11.2026 (feiljegeren, funn 4): høyden er svell ute × andelen gjennom gapet (andelsHoyde() i app.js), ikke
+    // kystmodellens tall. Da står «Usikkert varsel» (når rating.py har merket timen usikker) og «havmodell».
+    const andel = andelsHoyde(h);
+    const ord = andel && h.uncertain ? STR.notice.uncertain : c==null ? null : c >= 80 ? "Høy sikkerhet" : c >= 55 ? "Middels sikkerhet" : "Lav sikkerhet";
+    const sone = andel && h.zone!=="langtid" ? "havmodell" : h.zone==="barentswatch" ? "kystmodell 100 m" : h.zone==="reserve" ? "havmodell" : h.zone==="langtid" ? "langtidsmodell" : null;
     return [ord, sone].filter(Boolean).join(" · ") || "–";
   }
 
@@ -214,7 +217,7 @@
     const hh = fmtHour.format(t);
     const maal = (ikon, k, v, enhet, sub)=> `<div class="maal"><span class="etikett">${ikon}${esc(k)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span></div>`;
     const dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
-    const inne = dir!=null && s.swell_window ? inSwellWindow(dir, s) : false;
+    const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
     const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
       : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
     const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(STR.spot.svell)}</div>
@@ -345,7 +348,7 @@
     const rad = (k, v)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${esc(v)}</dd></div>` : "";
     const sikk = h ? sikkerhet(h) : "–";
     return `<dl class="spw-om">
-        ${rad(STR.spot.vindu, sek(s.swell_window).map(([a, b])=> `${a}–${b}°`).join(", "))}
+        ${rad(STR.spot.vindu, sek(visVindu(s)).map(([a, b])=> `${a}–${b}°`).join(", "))}
         ${rad(cap(STR.wind.offshore), sek(s.offshore_wind).map(([a, b])=> `${a}–${b}°`).join(", "))}
         ${rad(STR.web.om.vender, s.facing!=null ? `${compass(s.facing)} ${Math.round(s.facing)}°` : "")}
         ${rad(STR.spot.tidevann, window.Tidevann ? Tidevann.prefTekst(s) : "")}

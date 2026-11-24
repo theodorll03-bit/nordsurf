@@ -177,6 +177,35 @@ def main():
                 if lbl:   # radene vises (mobil: 5 beste; PC: tabellen etter «Vis alle»)
                     assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Surfing forbudt" in t) for n, t in lbl.items()), lbl
                 assert mobile or len(lbl) == 2, f"Testspot 078/079 mangler i forsidetabellen etter «Vis alle»: {sorted(lbl)}"
+                # 23.11.2026 (bw_tillit): en andel satt uten observasjon (andel_forelopig) gir samme merkelapp, én gang,
+                # og holder ikke spoten ute av «Beste økt» (det gjør bare en ny spot)
+                fm = page.evaluate("""() => { const H = Front.helpers, a = {area: 'Lyngen', region: 'Troms', andel_forelopig: true};
+                    return [H.stedText(a), H.stedText({...a, status: 'forelopig'}), H.stedText({area: 'Lyngen', region: 'Troms'}), H.iBesteOkt(a, Date.now()), STR.forelopig]; }""")
+                assert fm == ["Lyngen · Troms · Foreløpig", "Lyngen · Troms · Foreløpig", "Lyngen · Troms", True, "Foreløpig"], fm
+                # 24.11.2026 (feiljegeren, funn 2-4): fjord-spots viser det tegnede vinduet, og andelshøyden står som anslag.
+                # Tallene er Russelv og Breivikeidet i varselet 24.11 kl. 05Z (26.11 kl. 08Z, svell fra 25°).
+                fj = page.evaluate("""() => {
+                    const rus = {bw_tillit: 'fjord', swell_window: [[5, 15], [349, 356]], swell_window_tegnet: [345, 30]};
+                    const bre = {bw_tillit: 'fjord', swell_window: [345, 30], swell_window_tegnet: [345, 30]};
+                    const kyst = {swell_window: [[5, 15], [349, 356]], swell_window_tegnet: [345, 30]};
+                    const h = (d, dn) => ({dir_offshore: d, directness: dn});
+                    const lin = (o) => surfAdjustmentLine({height: 0.39, bw_height: 0.2, height_source: 'barentswatch', ...o});
+                    return [windowText(rus), windowText(kyst), inSwellWindow(25, rus), inSwellWindow(25, kyst), inSwellWindow(33, rus),
+                            vinduStatus(h(25, 0.417), rus).txt, vinduStatus(h(25, 1.0), bre).txt, vinduStatus(h(25, 0.417), kyst).txt,
+                            vinduStatus(h(28, 0.352), rus).txt, vinduStatus(h(28, 0.8), bre).txt, vinduTreff(h(28, 0.352), rus) === vinduTreff(h(28, 0.8), bre),
+                            [343, 345, 347, 350, 0, 26, 28, 30, 31].every(d => { const dn = {343: 0.533, 345: 0.667, 347: 0.8, 350: 1, 0: 1, 26: 0.933, 28: 0.8, 30: 0.667, 31: 0.6}[d];
+                                return vinduStatus(h(d, 0.3), rus).txt === vinduStatus(h(d, dn), bre).txt; }),
+                            vinduStatus(h(40, 0.127), rus).txt,
+                            lin({gap_floor: true, share_height: true, breakdown: ['Løftet til 0,4 m: svell ute 1,8 m gjennom gapet, andel 0,22. Anslag, ikke kystmodellens tall']}),
+                            lin({gap_floor: true, share_height: true, height: 0.1, bw_height: 0.9, breakdown: ['0,1 m: svell ute 0,5 m gjennom gapet, andel 0,22. Anslag, ikke kystmodellens tall']}),
+                            lin({share_height: true, height_source: 'svell_ute', bw_height: null}), lin({gap_floor: true}), lin({}),
+                            andelsHoyde({share_height: true}), andelsHoyde({gap_floor: true}), andelsHoyde({}), andelsHoyde(null)]; }""")
+                assert fj == ["Vindu 345–30°", "Vindu 5–15°, 349–356°", True, False, False,
+                              "Innenfor vinduet", "Innenfor vinduet", "Utenfor vinduet",
+                              "I kanten av vinduet", "I kanten av vinduet", True, True, "Utenfor vinduet",
+                              "Løftet til 0,4 m: svell ute gjennom gapet (anslag)", "0,1 m: svell ute gjennom gapet (anslag)",
+                              "0,4 m: svell ute gjennom gapet (anslag)", "Løftet til 0,4 m: svell ute gjennom gapet (anslag)", "",
+                              True, True, False, False], fj
                 f79 = page.evaluate("""() => { const H = Front.helpers, s = DATA.spots.find(x => x.id === 'test079'), n = DATA.spots.find(x => x.id === 'test000');
                     const fi = H.forbudInfo(s), v = H.naaVisning(s, H.naaOf(s));
                     return [H.forbudNa(s), H.stedText(s), H.forbudNa(s, Date.parse('2026-05-01T12:00:00Z')), H.forbudNa(n), H.iBesteOkt(s, Date.parse('2026-05-01T12:00:00Z')),
