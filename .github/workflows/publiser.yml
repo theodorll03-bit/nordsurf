@@ -78,6 +78,26 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
+      # 24.11.2026 (driftsrettelse, se STATUS.md): deploy-pages lister kjøringens
+      # artifacts rett etter opplastingen. 24.11 kl. 02:19Z og 05:04Z så den 8 av 9
+      # («No artifacts named "github-pages"») 0,3 s etter at opplastingen var ferdig,
+      # og siden ble ikke oppdatert. Vent til artifacten er synlig i API-et (høyst
+      # 60 s), og gi lista noen sekunder til. Finner vi den ikke, prøver vi likevel.
+      - name: Vent til artifacten er synlig
+        if: steps.klar.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for i in $(seq 1 12); do
+            n=$(gh api "repos/$RUN/artifacts?name=github-pages" --jq '.total_count' 2>/dev/null || echo 0)
+            if [ "${n:-0}" -ge 1 ]; then
+              echo "github-pages er synlig etter $i forsøk"
+              break
+            fi
+            sleep 5
+          done
+          sleep 10
       - id: deployment
         if: steps.klar.outcome == 'success'
         uses: actions/deploy-pages@v4

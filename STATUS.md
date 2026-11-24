@@ -1,5 +1,16 @@
 # Nordsurf: status
 
+## Driftsrettelse: publiseringen ventet ikke på artifacten, 24.11.2026
+
+Gren `drift/publiser-vent`. Endrer bare `.github/workflows/publiser.yml` og STATUS.md. Driftsrettelse etter regelen i CLAUDE.md (publiseringen sto stille), og stedfortrederen ba om det i svar.md 24.11 kl. 06.15.
+
+- **Hva som skjedde:** «Hent varsel» hentet som den skulle 24.11 kl. 02:14Z og 05:01Z, men jobben `publiser / deploy` feilet begge gangene med «No artifacts named "github-pages" were found». Siden ble sist oppdatert 23.11 kl. 12:50Z.
+- **Hvorfor:** `actions/deploy-pages@v4` lister kjøringens artifacts rett etter opplastingen. I de to feilede kjøringene spurte den 0,3 s etter at `github-pages` var lastet opp, og fikk 8 artifacts tilbake i stedet for 9. Artifacten fantes (82,5 MB, sjekket i API-et etterpå). I den siste vellykkede kjøringen (23.11 kl. 12:50Z) var tidsrommet like kort, men lista hadde 9. Ingen workflow-fil er endret siden 10.11, og githubstatus.com meldte ingen feil, så det er forsinkelsen hos GitHub som har endret seg.
+- **Rettelsen:** et nytt steg mellom opplasting og publisering spør API-et om `github-pages` er synlig for kjøringen (hvert 5. sekund, høyst 60 s) og venter så 10 s til. Finner den ikke artifacten, prøver publiseringen likevel, som før. Ingen nye rettigheter (`actions: read` fantes fra før).
+- **Ikke rørt:** `rating.py`, `spots.json`, `docs/` og `data/`.
+- **Usikkert:** det nye steget spør det åpne API-et, mens deploy-pages kan bruke en annen liste internt. De 10 sekundene er lagt til for det. Feiler publiseringen igjen etter dette, er neste steg å kjøre deploy-steget på nytt i samme jobb.
+- **Kontroll:** fysikk-kontrolløren er ikke kjørt, for endringen rører ingen tall og ingen kode i `fetcher/` eller `docs/`.
+
 ## Tillit til BarentsWatch per spot: `bw_tillit`, mekanismen og Breivikeidet, 23.11.2026
 
 Gren `fiks/bw-tillit` fra main `ef9c828`. Endrer `fetcher/rating.py`, `fetcher/test_rating.py`, `spots.json`, CLAUDE.md og STATUS.md. Ikke `docs/`, appen eller `publish.py`. Ja fra Theodor i svar.md 23.11 kl. 11.25 («Fiks det»). Kilder: Theodors observasjoner 17.11.2026 og 22.11.2026 på Breivikeidet. Dette er den første av to PR-er. Russelv og Lenangsøyra flyttes ikke her. Svaret på S32 (svar.md 23.11 kl. 14.00) er med: krapp sjø gjør bare timen usikker (e), og vindlinja har fått ordene fra svaret på S32.
