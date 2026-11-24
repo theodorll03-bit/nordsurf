@@ -911,9 +911,10 @@ def main():
                     # det den lokale tidevannsregelen tar (local_rules.stars_lost, Breivikeidet når tidevannet er størst) vises som tidevann
                     s33 = page.evaluate("""() => { const lok = {stars: 1, faded: 0, faded_wind: 0, faded_tide: 0, local_rules: {stars_lost: 1}}, begge = {stars: 2, faded: 2, faded_wind: 1, faded_tide: 1, local_rules: {stars_lost: 1}};
                         return {lok: [tideLost(lok), lostAll(lok), lostParts(lok).map(p => p.tekst)], begge: [tideLost(begge), lostAll(begge), lostParts(begge).map(p => p.tekst)],
-                          ingen: [tideLost({stars: 2}), lostAll({stars: 2}), lostParts({stars: 2}).length, tideLost(null), lostAll(null)], gammel: lostParts({stars: 1, faded: 1}).map(p => p.tekst), aria: STR.starsAria(1, lostAll(lok))}; }""")
+                          ingen: [tideLost({stars: 2}), lostAll({stars: 2}), lostParts({stars: 2}).length, tideLost(null), lostAll(null)], gammel: lostParts({stars: 1, faded: 1}).map(p => p.tekst), aria: [starsAriaLost(1, lok), starsAriaLost(2, begge), starsAriaLost(1, {stars: 1, faded: 1}), starsAriaLost(2, {stars: 2}), starsAriaLost(3, null)]}; }""")
                     assert s33["lok"] == [1, 1, ["−1 tidevann"]] and s33["begge"] == [2, 3, ["−1 vind", "−2 tidevann"]] and s33["ingen"] == [0, 0, 0, 0, 0] and s33["gammel"] == ["−1"], s33
-                    assert s33["aria"] == "1 av 5, 1 tapt på vind eller tidevann", s33
+                    # M3 (feiljegeren 24.11.2026): tallet leses opp med samme oppdeling som timestripa. Eldre varsel uten delingen som før.
+                    assert s33["aria"] == ["1 av 5, 1 tapt på tidevann", "2 av 5, 1 tapt på vind, 2 tapt på tidevann", "1 av 5, 1 tapt på vind eller tidevann", "2 av 5", "3 av 5"], s33
                     # vilkår 1 (fysikk-kontrolløren 24.11.2026): når tidevannet får poenget, er low_reason tom og ordet poengets ord, også i
                     # fralandsvind 10,2-12 m/s med surfehøyde fra 0,8 m på Breivikeidet (wind_calm_ms 8). Aldri «Blåst ut» der.
                     ord33 = page.evaluate("""() => [10.2, 11, 11.99].map(v => ratingWord({stars: 1, low_reason: null, wind_type: 'offshore', wind_speed: v, wind_calm_ms: 8, surf_height: 1.35, period: 8,
@@ -1568,12 +1569,27 @@ def main():
                 rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_b[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
             page.route("**/data/oversikt.json", b_route)
             page.route("**/data/spots/*.json", b_route)
-            om_b = {}
-            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden"):
+            # Det brukeren faktisk ser (feiljegeren V1, 24.11.2026): ordene står ett sted på spotsiden, i «Om spotten» (#spOm) på 1440, for
+            # Breivikeidet og ikke for Unstad. Tidevannskortet og forklaringen tegnes ikke på spotsiden nå (designfase 2), så testene
+            # over som kaller funksjonene direkte, sier ikke at ordene synes. Skjermleseren får setningen i tidevannskurvens etikett.
+            om_b, sett_b, kurve_b = {}, {}, {}
+            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
                 page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}")
                 page.wait_for_selector("#viewSpot:not([hidden]) #spOm .spw-om")
                 om_b[sid_] = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))").get("Tidevann")
-            assert om_b == {"breivikeidet": "Best på lavt vann", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
+                sett_b[sid_] = page.evaluate("[document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1, document.querySelector('#spOm').innerText.split('Best på lavt vann').length - 1]")
+                page.wait_for_selector("#tstripe .tsvg")
+                kurve_b[sid_] = page.get_attribute("#tstripe .tsvg", "aria-label")
+            assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
+            assert sett_b["breivikeidet"] == [1, 1], f"«Best på lavt vann» skal stå ett sted på Breivikeidets spotside på 1440, i «Om spotten»: {sett_b}"
+            assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
+            assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann."), kurve_b["breivikeidet"]
+            assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
+            # på 390 står ordene ingen steder ennå (plassen på mobil tas i designrevisjonen, S33 a) - låst her så det ikke glemmes
+            page.set_viewport_size({"width": 390, "height": 844}); page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload()
+            page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
+            assert page.evaluate("document.querySelector('#viewSpot').innerText.includes('Best på lavt vann')") is False, "«Best på lavt vann» synes på mobil: oppdater testen og STATUS.md (S33 a)"
+            assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann.")
             ctx.close()
             browser.close()
     finally:

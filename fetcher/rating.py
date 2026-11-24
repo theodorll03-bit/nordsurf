@@ -1869,9 +1869,11 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
             if state not in rules["tide_prefer"]:
                 pen = weight * rules["tide_penalty_high"]
                 raw_total += pen
-                # 24.11.2026 (fysikk-kontrolløren, vilkår 2): desimalkomma, som resten av regnestykket («−0,7»)
+                # 24.11.2026 (fysikk-kontrolløren, vilkår 2): desimalkomma, som resten av regnestykket. To desimaler,
+                # som linja for vannstanden (tide_level_penalty(), «−0,49»): med én sto Unstads 0,35 som «−0,3», og
+                # vind −0,2 og tidevann «−0,3» så ikke ut som ett poeng (feiljegeren V2 og kontrolløren 24.11.2026).
                 lines.append(f"Tidevann ({state}): ikke blant det lokale favoriserer - "
-                             + f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.1f})".replace(".", ","))
+                             + f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.2f})".replace(".", ","))
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
 

@@ -353,6 +353,14 @@ function lostParts(h){
   if(!ut.length && h.faded) ut.push({hva: "", n: h.faded, tekst: `−${h.faded}`});
   return ut;
 }
+// Tallet lest opp med hva som er tapt («2 av 5, 1 tapt på tidevann»), samme oppdeling og ord som timestripa
+// (feiljegeren M3, 24.11.2026: dagens tall sa «1 tapt på vind eller tidevann» der stripa sa «1 tapt på tidevann»).
+// Eldre varsel uten delingen: «… tapt på vind eller tidevann» som før.
+function starsAriaLost(n, h){
+  const p = lostParts(h).filter(x=> x.hva);
+  if(!p.length) return STR.starsAria(n, lostAll(h));
+  return STR.spot.timeTall(n, p.map(x=> STR.spot.timeTapt(x.n, x.hva)).join(", "));
+}
 // Vindstyrken som tall (S28, Theodor 23.11.2026): hele m/s som før, men på en spot med egen vindgrense (wind_calm_ms:
 // Breivikeidet 8, Unstad 14 m/s middelvind) står én desimal, rundet ned, når avrundingen ellers ville vist grensa uten at
 // den er nådd (7,9 og ikke 8; vinden teller først fra grensa). Samme regel som rating.wind_ms_text() i henteren.

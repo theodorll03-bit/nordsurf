@@ -160,7 +160,7 @@
       return `<circle class="eks" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="2.5"/><text x="${ex.toFixed(1)}" y="${(lav ? ey + 15 : ey - 7).toFixed(1)}" text-anchor="${anker}">${esc(lav ? STR.spot.lav : STR.spot.hoy)} ${fmtTime.format(new Date(e.ms))}</text>`;
     }).join("");
     const deler = inne.map(e=> e.type === "fjære" ? STR.spot.tideLav(fmtTime.format(new Date(e.ms)), f1(e.cm)) : STR.spot.tideHoy(fmtTime.format(new Date(e.ms)), f1(e.cm)));
-    const etikett = STR.spot.tideAria(deler.length ? deler : [STR.spot.tidevann.toLowerCase()], r && r.prefer && r.prefer.length ? Tidevann.prefTekst(s) : "");
+    const etikett = STR.spot.tideAria(deler.length ? deler : [STR.spot.tidevann.toLowerCase()], (r && r.prefer && r.prefer.length) || tideLowBest(s) ? Tidevann.prefTekst(s) : "");   // også «Best på lavt vann» (regel på vannstanden, feiljegeren V1 24.11.2026)
     boks.innerHTML = `<svg class="tsvg" viewBox="0 0 ${W} ${TH}" width="${W}" height="${TH}" role="img" aria-label="${esc(etikett)}">${band}
       <path class="linje" d="${strok[false]}"/>${strok[true] ? `<path class="koster" d="${strok[true]}"/>` : ""}${merker}<circle class="valgt" r="4.5"/></svg>`;
     cur.geo = {x, y, ev};

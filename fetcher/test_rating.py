@@ -2910,10 +2910,11 @@ for mult42 in (1.5, 2.0, 2.5, 3.0):
             assert _publish42.wind_blamed(ut42) == (r["low_reason"] == "blown_out") and _vakthund42.lyngen_ord(ut42) is None, (mult42, v41b, cm42)
 assert n41_tide >= 20 and n41_vind >= 20, (n41_tide, n41_vind)
 # 42.9 (fysikk-kontrolløren 24.11.2026, vilkår 2): en spot med lokal regel på flo og fjære (local_rules.tide_prefer,
-# Farstadsanden og Unstad) sier ikke «tåler alt» i regnestykket. Linja er den lokale regelens, med desimalkomma.
+# Farstadsanden og Unstad) sier ikke «tåler alt» i regnestykket. Linja er den lokale regelens, med desimalkomma og
+# det vektede fradraget med to desimaler (feiljegeren V2, 24.11.2026: Unstads 0,35 sto som «−0,3»).
 # Mangler tidevannet: «ukjent». Poengene er de samme som linja i local_rules sier.
-for sid42, hoy42 in (("farstadsanden", "Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,7)"),
-                     ("unstad", "Tidevann (høy): ikke blant det lokale favoriserer - −0,5 stjerne (vektet −0,3)")):
+for sid42, hoy42 in (("farstadsanden", "Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,70)"),
+                     ("unstad", "Tidevann (høy): ikke blant det lokale favoriserer - −0,5 stjerne (vektet −0,35)")):
     sp41b = spots[sid42]
     assert sp41b["local_rules"]["tide_prefer"] == ["lav", "middels"] and not sp41b.get("tide")
     for st42, linje42 in (("høy", hoy42), ("lav", "Tidevann (lav): foretrukket lokalt, ingen straff"), ("middels", "Tidevann (middels): foretrukket lokalt, ingen straff"), (None, "Tidevann: ukjent")):

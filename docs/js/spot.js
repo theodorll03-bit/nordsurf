@@ -180,7 +180,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(STR.starsAria(n, lostAll(b.h)))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
