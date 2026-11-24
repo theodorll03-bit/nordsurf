@@ -589,7 +589,7 @@
      har laget, får et løpenummer i history.state ({ns}). Appen husker hvilken rute hvert nummer hadde (i minnet), og hvor
      langt ned hver visning var rullet. Da kan tilbakeknappen på spotsiden gå ett steg tilbake i stedet for å legge et nytt
      steg oppå, og siden man kommer tilbake til, står der man forlot den. */
-  const hist = {idx: 0, ruter: {}, rull: {}, tilbake: false};
+  const hist = {idx: 0, ruter: {}, rull: {}, tilbake: false, venter: null};
   const normRute = (h)=> !h || h==="#" || h==="#/" ? "#hjem" : h;
   const rullKey = ()=> S.view==="spot" ? `spot=${S.spotId}` : S.view;
   function histMerk(){
@@ -603,7 +603,13 @@
   function closeSpot(){
     const view = S.from && S.from!=="spot" ? S.from : "hjem", hash = routeFor(view);
     // forrige oppføring er appens egen og er siden knappen lover: gå ett steg tilbake (ikke et nytt steg oppå)
-    if(hist.idx > 0 && hist.ruter[hist.idx - 1]===hash){ history.back(); return; }
+    if(hist.idx > 0 && hist.ruter[hist.idx - 1]===hash){
+      // history.back() er asynkron: et nytt trykk før hashendringen er kommet ville gått ett steg til, ut av appen
+      // (feiljegeren 24.11.2026). Nye trykk ses bort fra til hashendringen kommer, eller til en kort reservefrist er ute
+      if(hist.venter) return;
+      hist.venter = setTimeout(()=>{ hist.venter = null; }, 1000);
+      history.back(); return;
+    }
     // ellers (lenke rett til spoten, eller siden er lastet på nytt): bytt ut oppføringen, så «tilbake» i nettleseren
     // ikke går til spoten igjen
     history.replaceState(history.state, "", hash);
@@ -722,7 +728,7 @@
     hist.ruter[hist.idx] = normRute(location.hash);
     // husk hvor langt ned hver visning er rullet (nøkkelen er visningen som står framme når rullingen skjer)
     window.addEventListener("scroll", ()=>{ if(DATA && started) hist.rull[rullKey()] = window.scrollY; }, {passive: true});
-    window.addEventListener("hashchange", ()=>{ hist.tilbake = histMerk(); parseRoute(); render(); hist.tilbake = false; });
+    window.addEventListener("hashchange", ()=>{ if(hist.venter){ clearTimeout(hist.venter); hist.venter = null; } hist.tilbake = histMerk(); parseRoute(); render(); hist.tilbake = false; });
     // spotsiden velger mobil- eller PC-oppsett når den tegnes (spot.js render): tegn på nytt når bredden krysser 1024 px
     // (et nettbrett som snus), ellers står mobiloppsettet under PC-stilene (feiljegeren 19.11.2026)
     // Hjem tegnes bare når bredden endrer seg: på mobil endrer høyden seg hver gang adresselinja glir inn og ut.

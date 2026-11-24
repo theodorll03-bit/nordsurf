@@ -1331,6 +1331,29 @@ def main():
                     etter = page.evaluate("({ns: history.state && history.state.ns, len: history.length, y: scrollY, hash: location.hash})")
                     assert etter["ns"] == for0["ns"] and etter["len"] == paa["len"] and etter["hash"] == "#hjem", f"tilbake med {hvordan} skal gå ett steg tilbake, ikke lage et nytt ({label}): {for0} {paa} {etter}"
                     assert etter["y"] == y0, f"Hjem skal stå der den sto etter tilbake med {hvordan} ({label}): {etter}"
+                if mobile:
+                    # to trykk i samme øyeblikk på «Tilbake» (feiljegeren 24.11.2026, funn 4): bare ett steg tilbake, aldri ut av appen
+                    for0 = page.evaluate("({ns: history.state && history.state.ns, y: scrollY})")
+                    page.evaluate("Front.openSpot('unstad')"); page.wait_for_selector(SPOT_KLAR); page.wait_for_timeout(150)
+                    page.dblclick("#spotBack"); page.wait_for_timeout(400)
+                    assert "index.html" in page.url and page.url.endswith("#hjem"), f"to raske trykk på «Tilbake» gikk ut av appen: {page.url}"
+                    page.wait_for_selector(HJEM_KLAR)
+                    dbl = page.evaluate("({ns: history.state && history.state.ns, y: scrollY})")
+                    assert dbl == for0, f"to raske trykk på «Tilbake» skal gå ett steg, til Hjem der den sto ({label}): {for0} {dbl}"
+                    # sperra slipper igjen: neste gang virker knappen som vanlig
+                    page.evaluate("Front.openSpot('unstad')"); page.wait_for_selector(SPOT_KLAR); page.wait_for_timeout(150)
+                    page.click("#spotBack"); page.wait_for_selector(HJEM_KLAR); page.wait_for_timeout(200)
+                    assert page.evaluate("({ns: history.state && history.state.ns, y: scrollY})") == for0, f"«Tilbake» skal virke igjen etter et dobbelttrykk ({label})"
+                # «Hvorfor» (feiljegeren 24.11.2026, funn 2 og 3): en linje som starter med tallet får «Høyde på spoten» som etikett,
+                # punktum som desimaltegn vises med komma, og klokkeslett og datoer står som de er
+                hv_ = page.evaluate("""() => ({gap: breakdownDeler('0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall'),
+                    loft: breakdownDeler('Løftet til 0,4 m: svell ute 1,8 m gjennom gapet, andel 0,22. Anslag, ikke kystmodellens tall'),
+                    energi: breakdownDeler('Energi (svell) 243 kJ (periode omregnet til 7,6 s, ×1,25): faktor 0.65 (potensial ganget ned)'),
+                    komma: ['faktor 0.65', '−0.5 stjerne (vektet −0.3)', 'faktor 1.00', 'kl. 08.02', '17.11.2026', 'observasjonene 17.11 og 22.11', 'kl. 09.30-09.50Z', '5.10', '0,65'].map(breakdownKomma), hs: STR.cell.hs})""")
+                assert hv_["hs"] == "Høyde på spoten" and hv_["gap"] == {"etikett": "Høyde på spoten", "verdi": "0,1 m", "virkning": "svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall"}, hv_["gap"]
+                assert hv_["loft"]["etikett"] == "Løftet til" and hv_["loft"]["verdi"] == "0,4 m", hv_["loft"]
+                assert hv_["energi"]["virkning"] == "faktor 0,65 (potensial ganget ned)" and hv_["energi"]["verdi"] == "243 kJ (periode omregnet til 7,6 s, ×1,25)", hv_["energi"]
+                assert hv_["komma"] == ["faktor 0,65", "−0,5 stjerne (vektet −0,3)", "faktor 1,00", "kl. 08.02", "17.11.2026", "observasjonene 17.11 og 22.11", "kl. 09.30-09.50Z", "5.10", "0,65"], hv_["komma"]
                 # en fane (nytt steg fram) går til toppen som før
                 go("#logger", "#viewSide:not([hidden])"); go("#hjem", HJEM_KLAR)
                 assert page.evaluate("scrollY") == 0, f"Hjem skal stå øverst når man går dit med fanen ({label})"

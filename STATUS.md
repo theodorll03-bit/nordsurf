@@ -44,6 +44,18 @@ På mobil sto dommen over fanelinja (599 px) også før. Den står nå 96 px hø
   - Regnestykket har punktum som desimaltegn enkelte steder («faktor 0.51»). Det skrives av henteren og er ikke rørt.
   - Favorittstjerna (fylt) bruker fyllet for 2 og er derfor litt mørkere grå enn før.
   - Kontrolløren og feiljegeren har ikke sett endringen ennå.
+
+### Runde 2: tre funn fra feiljegeren, 24.11.2026
+
+Oppå de to lokale commitene (`ae646c3` fase 1 og `715466c` flettingen av `fiks/fjord-lyngen`). Ikke committet. Rapporten: `privat/kontor/observasjoner/feiljeger-design-fase1-2026-11-24.md`. Bare visning, `fetcher/` er ikke rørt.
+
+- **Funn 2, tall som etikett i «Hvorfor»:** linja «0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall» starter med tallet og fikk «0,1 M» som etikett. Nå er etiketten «Høyde på spoten» (ordet fantes fra før, `STR.cell.hs`), tallet er verdien og resten forklaringen. «Løftet til 0,4 m: …» deles som før.
+- **Funn 3, punktum som desimaltegn:** «faktor 0.65» vises som «faktor 0,65». Regelen (`breakdownKomma()` i app.js) lar klokkeslett og datoer stå: «kl. 08.02», «09.30-09.50Z», «17.11», «5.10» og «17.11.2026». Et tall som kan leses som dag.måned, blir stående med punktum («1.05»). Regelen endrer heller for lite enn å endre en dato.
+- **Funn 4, to raske trykk på «Tilbake»:** `closeSpot()` ser bort fra nye trykk til hashendringen er kommet, med 1 s reservefrist.
+- **Prøvd på hele varselet** (24.11 kl. 05Z, med Russelv og Lenangsøyra regnet på nytt av feiljegeren): 54 809 linjer, 106 linjetyper. 4702 linjer får komma. 0 linjer har tall som etikett, 0 har tom etikett, og 0 har punktum mellom sifre igjen.
+- **Tester:** `test_spotside_browser.py` har fått dobbelttrykket (`dblclick` på 390: ett steg tilbake, Hjem der den sto, og knappen virker igjen etterpå), og de to tekstreglene med klokkeslett og datoer.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/hvorfor_russelv-26-11-kl08Z_*` (linja «Løftet til») og `hvorfor_russelv-hoyde-paa-spoten_*` (24.11 kl. 23Z, linja som starter med tallet), 390 og 1440.
+- **Ikke rørt:** `fetcher/test_display_only.py` er rød på grenen til Lyngen ligger i main (feiljegerens funn 1). Funn 5, 6 og 7 er ikke rettet.
 ## Russelv som Breivikeidet: vindu 345-30, myk kant og andel 0,22 (S34 a), 24.11.2026
 
 Samme gren (`fiks/fjord-lyngen`), main `237c533` flettet inn (bare datacommits). Ja i svar.md 23.11.2026 kl. 21.00, S34 a og S35 a. Endrer `spots.json` (Russelv, og én setning i Lenangsøyras `_transfer_locked`), `fetcher/test_rating.py`, CLAUDE.md og STATUS.md, og etter kontrollen (runde 2, se under) også `fetcher/rating.py`, `fetcher/publish.py`, `fetcher/vakthund.py`, testene deres og `docs/js/`. Dette erstatter det seksjonen under sier om Russelvs vindu (348-19), harde kant og andel 0,20, og de to funnene der («Russelv er lavere enn Breivikeidet 17.11» og «torsdag 26.11 henger ikke Russelv sammen»).

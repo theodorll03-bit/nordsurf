@@ -1433,7 +1433,17 @@ $("#logPhotoInput").onchange = async ()=>{
 /* ---------- Forklaring av ratingen ---------- */
 // Regnestykket skrives av henteren (rating.py) med «stjerner». Appen sier poeng (design B 4.0), så ordet byttes her
 // i visningen. Tallene røres ikke.
-function breakdownOrd(line){ return String(line).replace(/stjerner?/g, STR.poeng).replace(/Stjerner?/g, cap(STR.poeng)); }
+// Desimaltall med punktum («faktor 0.65») vises med komma. Klokkeslett og datoer røres ikke: et tall som kan leses som
+// dag.måned («17.11», «5.10») eller står etter «kl.» eller i et tidsrom («kl. 08.02», «09.30-09.50Z»), og alt med flere punktum («17.11.2026»), står som det er.
+// Regelen lar heller et desimaltall stå med punktum enn å endre en dato.
+function breakdownKomma(tekst){
+  // (?<!\d[-–]) og (?!Z): andre halvdel av et tidsrom («kl. 09.30-09.50Z») er også et klokkeslett
+  return String(tekst).replace(/(kl\.\s*)?(?<![\d.,])(?<!\d[-–])(\d+)\.(\d+)(?![\d.]|Z)/g, (alt, kl, a, b)=>{
+    const dato = b.length===2 && +b >= 1 && +b <= 12 && a.length <= 2 && +a >= 1 && +a <= 31;
+    return kl || dato ? alt : `${a},${b}`;
+  });
+}
+function breakdownOrd(line){ return breakdownKomma(String(line).replace(/stjerner?/g, STR.poeng).replace(/Stjerner?/g, cap(STR.poeng))); }
 // «Hvorfor» som en liten tabell: etikett, verdi og virkning. Linja deles ved «: » (virkningen står etter) og ved det
 // første tallet utenfor parentes (verdien starter der). En lang parentes i etiketten («Bruddhøyde (Hb, Komar og
 // Gaughan 1972) 0,7 m») flyttes bak verdien, så etiketten blir kort. Uten verdi står resten i verdikolonnen.
@@ -1444,6 +1454,11 @@ function breakdownDeler(line){
     const c = lead[i];
     if(c==="(") dybde++; else if(c===")") dybde = Math.max(0, dybde - 1);
     else if(!dybde && /\d/.test(c)){ m = i > 0 && /[−-]/.test(lead[i - 1]) && (i < 2 || lead[i - 2]===" ") ? i - 1 : i; break; }
+  }
+  if(m===0 && k >= 0){
+    // linja starter med tallet («0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall»):
+    // det er høyden på spoten, så den får det ordet som etikett (STR.cell.hs), tallet er verdien og resten forklaringen
+    return {etikett: STR.cell.hs, verdi: lead.trim(), virkning: eff};
   }
   if(m <= 0){
     // ingen tallverdi foran kolon: «Tidevann (høy): …» har verdien i parentesen, ellers står resten i verdikolonnen.
