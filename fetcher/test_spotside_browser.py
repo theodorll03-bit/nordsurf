@@ -1306,6 +1306,98 @@ def main():
                         py = [any(rating.in_sector(deg, sec) for sec in rating.window_sectors(d)) for deg in range(360)]
                         bad = [deg for deg in range(360) if js[deg] != py[deg]]
                         assert not bad, f"{sid}: inSwellWindow ulik rating.in_sector for {bad[:10]} (vindu {d['swell_window']})"
+                # ---- Designrevisjonen 21.11.2026, fase 1 (privat/designrevisjon-2026-11-21/PLAN.md) ----
+                page.evaluate("document.documentElement.style.fontSize = ''")
+                HJEM_KLAR = "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)"
+                go("#utforsk", "#viewUtforsk:not([hidden])"); go("#hjem", HJEM_KLAR)
+                # punkt 8: tilbakeknappen går ett steg tilbake i historikken (ikke et nytt steg oppå), og Hjem står der den sto
+                hoyde = page.evaluate("document.documentElement.scrollHeight - innerHeight")
+                assert hoyde >= 200, f"Hjem er for kort til å prøve rullingen ({label}): {hoyde}"
+                y0 = min(300, hoyde)
+                page.evaluate(f"window.scrollTo(0, {y0})"); page.wait_for_timeout(150)
+                for hvordan in ("knappen", "nettleseren"):
+                    for0 = page.evaluate("({ns: history.state && history.state.ns, len: history.length, y: scrollY})")
+                    assert for0["y"] == y0 and isinstance(for0["ns"], int), f"Hjem før spoten ({label}): {for0}"
+                    page.evaluate("Front.openSpot('unstad')"); page.wait_for_selector(SPOT_KLAR); page.wait_for_timeout(150)
+                    paa = page.evaluate("({ns: history.state && history.state.ns, len: history.length, y: scrollY})")
+                    assert paa["ns"] == for0["ns"] + 1 and paa["y"] == 0, f"spotsiden skal være et nytt steg og stå øverst ({label}): {paa}"
+                    if hvordan == "nettleseren":
+                        page.go_back()
+                    elif mobile:
+                        page.click("#spotBack")
+                    else:
+                        page.evaluate("Front.closeSpot()")
+                    page.wait_for_selector(HJEM_KLAR); page.wait_for_timeout(200)
+                    etter = page.evaluate("({ns: history.state && history.state.ns, len: history.length, y: scrollY, hash: location.hash})")
+                    assert etter["ns"] == for0["ns"] and etter["len"] == paa["len"] and etter["hash"] == "#hjem", f"tilbake med {hvordan} skal gå ett steg tilbake, ikke lage et nytt ({label}): {for0} {paa} {etter}"
+                    assert etter["y"] == y0, f"Hjem skal stå der den sto etter tilbake med {hvordan} ({label}): {etter}"
+                # en fane (nytt steg fram) går til toppen som før
+                go("#logger", "#viewSide:not([hidden])"); go("#hjem", HJEM_KLAR)
+                assert page.evaluate("scrollY") == 0, f"Hjem skal stå øverst når man går dit med fanen ({label})"
+                # lenke rett til spoten (forrige steg er ikke Hjem): knappen bytter ut steget i stedet for å gå ut av appen
+                page.goto(f"http://127.0.0.1:{port}/index.html?lenke=1#spot=unstad"); page.wait_for_selector(SPOT_KLAR)
+                len0 = page.evaluate("history.length")
+                page.evaluate("Front.closeSpot()"); page.wait_for_selector(HJEM_KLAR)
+                bytt = page.evaluate("({len: history.length, hash: location.hash, view: document.body.dataset.view})")
+                assert bytt == {"len": len0, "hash": "#hjem", "view": "hjem"}, f"tilbake fra en spot som ble åpnet med lenke ({label}): {bytt}"
+                # punkt 1, 2, 6, 9, 10 og 11 på spotsiden
+                page.emulate_media(color_scheme="dark"); go("#spot=unstad", SPOT_KLAR)
+                page.wait_for_function("[...document.querySelectorAll('#viewSpot .sp-foto')].some(b => getComputedStyle(b).display !== 'none' && b.naturalWidth > 0)")
+                f1 = page.evaluate("""() => { const q = (x) => document.querySelector('#viewSpot ' + x), cs = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect();
+                    const k = q('.kredit.linje'), a = k.querySelector('a'), hode = q('.sp-hode, .spw-hode'), hv = q('#hvorfor'); hv.open = true;
+                    const rader = [...hv.querySelectorAll('.hv-tab > div')].map(d => [...d.children].map(c => c.textContent.trim()));
+                    const ut = {kredit: k.textContent.trim(), kredH: r(k).height,
+                        lenkeH: r(a).height, lenkeB: r(a).width, href: a.getAttribute('href'), hodeH: r(hode).height, kant: cs(hode).boxShadow, hele: (q('.kilder.foto') || document.querySelector('#bunn')).textContent,
+                        tallBunn: r(q('.dom .t-tall')).bottom + scrollY, ordBunn: r(q('.dom-ord b')).bottom + scrollY, hero: parseFloat(cs(q('.t-hero')).fontSize), etikett: parseFloat(cs(q('.etikett')).fontSize),
+                        fakta: cs(q('.fakta-linje')).color, ink: cs(document.body).color, rader, hvTekst: hv.textContent, uke2: (q('.uke2 .etikett') || {}).textContent || null, uke2Kant: q('.uke2 .rute') ? cs(q('.uke2 .rute')).borderTopStyle : null,
+                        komma: [...document.querySelectorAll('#viewSpot .t-svell .des')].map(e => e.textContent)};
+                    hv.open = false; return ut; }""")
+                assert f1["kredit"] == "Sentinel-2 · Copernicus/Kartverket · CC BY 4.0" and f1["kredH"] <= 46, f"under toppbildet skal det stå én linje (44 px høy, to linjer ville gitt 88) ({label}): {f1['kredit']!r}, {f1['kredH']} px"
+                assert f1["lenkeH"] >= 44 and f1["lenkeB"] >= 44 and f1["href"].startswith("https://creativecommons.org/licenses/by/4.0"), f"lisenslenka skal ha 44 px trykkflate ({label}): {f1['lenkeH']} x {f1['lenkeB']}"
+                assert "Laget av Sentinel-2" in f1["hele"] and "CESBIO og CNES" in f1["hele"] and "Farger og korn: Nordsurf" in f1["hele"], f"hele krediteringen skal stå under Kilder nederst ({label})"
+                assert round(f1["hodeH"]) == (160 if mobile else 260) and f1["hero"] == (60 if mobile else 96), f"toppbildet og navnet ({label}): {f1['hodeH']}, {f1['hero']}"
+                assert f1["kant"] != "none" and "0px 0px 0px 1px" in f1["kant"], f"bildet skal ha kant i mørketid ({label}): {f1['kant']}"
+                # dommen (tall og ord) står i første skjermbilde på 390 x 663 og 1200 x 660 (mobil: over fanelinja på 64 px)
+                grense = 663 - 64 if mobile else 660
+                assert f1["tallBunn"] <= grense and f1["ordBunn"] <= grense, f"dommen skal synes uten rulling ({label}): tall {f1['tallBunn']}, ord {f1['ordBunn']}, grense {grense}"
+                assert f1["etikett"] == 12 and f1["fakta"] == f1["ink"], f"etiketter 12 px og faktalinja i blekk ({label}): {f1['etikett']}, {f1['fakta']}"
+                assert f1["komma"] == [","], f"desimalkommaet i det store svelltallet skal stå i .des ({label}): {f1['komma']}"
+                # «Hvorfor»: tabell med etikett, verdi og virkning hver for seg, og «poeng» i stedet for «stjerner»
+                assert len(f1["rader"]) >= 5 and all(r_[0] and len(r_) in (2, 3) for r_ in f1["rader"] if len(r_) > 1), f"«Hvorfor» skal være en tabell ({label}): {f1['rader']}"
+                assert "stjerne" not in f1["hvTekst"].lower() and re.fullmatch(r"\d av 5 poeng.*", f1["rader"][-1][1]) and f1["rader"][-1][0] == "Totalt", f"«Hvorfor» skal si poeng ({label}): {f1['rader'][-1]}"
+                per = next((r_ for r_ in f1["rader"] if r_[0] == "Periode"), None)
+                assert per and len(per) == 3 and re.fullmatch(r"\d+ s \(ute\)", per[1]) and per[2], f"verdi og virkning skal stå i hver sin celle ({label}): {per}"
+                if not mobile:
+                    assert f1["uke2"] == "Uke 2 · usikker" and f1["uke2Kant"] == "dashed", f"dag 8 og utover skal ha etikett og stiplet ramme ({label}): {f1['uke2']}, {f1['uke2Kant']}"
+                page.emulate_media(color_scheme="light"); page.wait_for_timeout(100)
+                assert page.evaluate("getComputedStyle(document.querySelector('#viewSpot :is(.sp-hode, .spw-hode)')).boxShadow") in ("none", "rgba(0, 0, 0, 0) 0px 0px 0px 1px"), f"ingen kant rundt bildet om dagen ({label})"
+                # punkt 3, 4 og 5: ringen rundt «Best» bare fra 4 (i korall), nullene roligere, 1 og 2 med eget fyll
+                if not mobile:
+                    go("#hjem", HJEM_KLAR)
+                    def helt(stjerner):
+                        # alle dagene: Unstad får n poeng i en lys time med åpent vindu, de andre spotene får 0 - da er Unstad hovedbildet
+                        page.evaluate("""(n) => { const sp = DATA.spots.find(x => x.id === 'unstad'), mal = sp.dager.find(x => x.h).h;
+                            sp.dager.forEach(d => { d.status = 'ok'; d.h = {...(d.h || mal), t: d.d + 'T10:00Z', stars: n, faded: 0, light: 'dag', low_reason: null}; d.start = d.h.t; d.slutt = d.d + 'T12:00Z'; });
+                            DATA.spots.forEach(x => { if(x !== sp) x.dager.forEach(d => { if(d.h) d.h.stars = 0; }); });
+                            Front.state.fsDag = 1; Front.state.fsRegion = ''; Front.refresh(); }""", stjerner)
+                        page.wait_for_selector("#forside .fs-helt")
+                        return page.evaluate("""() => { const h = document.querySelector('#forside .fs-helt'), b = h.querySelector('.fs-best'), p = h.querySelector('.fs-ring path');
+                            return {cls: h.className, navn: h.querySelector('.fs-navn').textContent, best: b && b.textContent.trim(), ring: !!p, farge: p && getComputedStyle(p).stroke,
+                                signal: getComputedStyle(document.documentElement).getPropertyValue('--signal').trim(), kredit: document.querySelector('#forside .fs-helt + .kredit').textContent.trim()}; }""")
+                    h3 = helt(3)
+                    assert h3["navn"] == "Unstad" and " r-3" in h3["cls"] and h3["best"] and not h3["ring"], f"ingen ring rundt «Best» under 4 poeng: {h3}"
+                    assert h3["kredit"] == "Sentinel-2 · Copernicus/Kartverket · CC BY 4.0", h3["kredit"]
+                    h4 = helt(4)
+                    assert " r-4" in h4["cls"] and h4["ring"] and h4["farge"] == "rgb(192, 81, 81)" and h4["signal"].upper() == "#C05151", f"ringen rundt «Best» fra 4 poeng skal være korall: {h4}"
+                    nul = page.evaluate("""() => { const c = [...document.querySelectorAll('#forside .fs-matrise td.r-0 .mx')][0], t = [...document.querySelectorAll('#forside .fs-matrise td .mx.tre, #forside .fs-matrise td .mx.hoy')][0];
+                        const i1 = document.querySelector('#forside .fs-tegn i.r-1'), cs = getComputedStyle;
+                        return {vekt0: c && cs(c).fontWeight, farge0: c && cs(c).color, tekst0: c && c.textContent, vektAndre: t && cs(t).fontWeight, lav: cs(i1).backgroundColor, muted: cs(document.querySelector('#forside .fs-dato')).color}; }""")
+                    assert nul["tekst0"] == "0" and nul["vekt0"] == "500" and nul["farge0"] == nul["muted"] and nul["vektAndre"] == "800", f"nullene i matrisa: dempet, vekt 500 og fortsatt tallet 0: {nul}"
+                    assert nul["lav"] == "rgb(138, 132, 120)", f"fyllet for 1 og 2 om dagen skal være #8A8478: {nul['lav']}"
+                else:
+                    go("#hjem", HJEM_KLAR)
+                    uk = page.evaluate("""() => { const n = document.querySelector('#viewHjem .uke i.r-0'), cs = getComputedStyle; return n && {vekt: cs(n).fontWeight, tekst: n.textContent, kant: cs(n).boxShadow, farge: cs(n).color, muted: cs(document.querySelector('#viewHjem .kilder')).color}; }""")
+                    assert uk and uk["tekst"] == "0" and uk["vekt"] == "500" and uk["farge"] == uk["muted"] and "216, 210, 198" in uk["kant"], f"nullene i ukerutene: dempet, vekt 500, tynn ramme og fortsatt tallet 0: {uk}"
                 ctx.close()
             # ---- S21 a, S24 a og S26 på skjermen: alle timene på én spot er svak vind uten svell og uten poengtap, og vinden dreier fra
             # time til time (fralands, side, pålands, skrått pålands, 3 m/s med kast 5). Spotsiden sier «Flatt» for dagen og for timen,

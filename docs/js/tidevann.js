@@ -75,7 +75,7 @@
     const neste = !nx ? "" : erNa
       ? `<b>${cap(nx.type)} ${hm(nx.ms)}</b> · <span class="num">${f1(nx.cm)} m</span> · ${omTekst(nx.ms - nowMs)}`
       : `Neste: <b>${cap(nx.type)} ${hm(nx.ms)}</b> · <span class="num">${f1(nx.cm)} m</span>`;
-    return `<div class="tv-les"><span class="tv-h num">${f1(lv.cm)}<small>m</small></span>
+    return `<div class="tv-les"><span class="tv-h num">${desTall(f1(lv.cm))}<small>m</small></span>
       <span class="tv-trend">${PIL(lv.stiger)}${lv.stiger ? "Stiger" : "Synker"}</span><span class="tv-neste">${neste}</span></div>`;
   }
   function ariaTekst(ev, ms){

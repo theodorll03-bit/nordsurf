@@ -1,5 +1,50 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 1: raske rettinger, 24.11.2026
+
+Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).
+
+- **1. Lisensteksten:** under toppbildet står én linje, «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0». Linja er 44 px høy, og lisensen er lenke i hele høyden. Hele teksten står nederst: i siste avsnitt på mobil-spotsiden («Bildet: …») og under Kilder i bunnen på PC. Gjelder spotsiden på mobil og PC og hovedbildet på forsiden. `tools/spotbilder.py` skriver den nye linja (`linje`) i `docs/js/spotbilder.js`. Under skiva står kortformen med årstall som før.
+- **2. Kortere toppbilde:** mobil 160 px (før 220). PC 260 px (før 420), og spotnavnet på PC er 96 px (før 144).
+- **3. Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers står «Best 11–13» som ren tekst.
+- **4. Nullene:** i ukeruter, dagvelger og matrise står 0 i muted med vekt 500 (før 800) og tynn ramme i hair (før outline). Tallet 0 står fortsatt, aldri strek.
+- **5. 1 og 2:** fyllet har eget token `--lav`, #8A8478 om dagen og #8FA0A8 i mørketid. `tools/kontrast.py` krever nå 3:1 for fyllet til 1 og 2 også (før var de unntatt). Mørke timer hadde alt bare skygge uten omriss, så der er ingenting endret.
+- **6. «Hvorfor»:** linjene er en tabell med etikett, verdi og virkning («Periode | 11 s (ute) | god uttelling»). «stjerner» byttes til «poeng» i visningen. Teksten kommer fortsatt fra henteren, og tallene røres ikke. Prøvd på alle 105 linjetypene i varselet 24.11.
+- **7. Desimalkommaet** i det store svelltallet og i tidevannskortet står i `.des`, som trekker sifrene sammen.
+- **8. Tilbake og rulling:** tilbakeknappen på spotsiden går ett steg tilbake i historikken når forrige steg er siden knappen lover. Ellers byttes steget ut (`replaceState`). Hjem og de andre visningene står der de sto når man kommer tilbake, også med tilbake i nettleseren. En fane går til toppen som før.
+- **9. Etiketter** er 12 px på mobil (før 11), med sperring 0,02 em (før 0,04) overalt. Faktalinja og datoene i dagvelgeren står i ink. Klokketikk, vindtall og dagnavn under ukerutene er 12 px. 11 px er igjen bare i kreditt.
+- **10. Dag 8 og utover** på PC-spotsiden har etiketten «UKE 2 · USIKKER» og stiplede ruter.
+- **11. Mørketid:** toppbildene (spotsiden på mobil og PC, hovedbildet på forsiden) har en 1 px kant i hair.
+
+Målt (Playwright, `getBoundingClientRect`, Unstad):
+
+| Mål | Før | Etter |
+|---|---|---|
+| Mobil 390 × 663: dagens tall, topp til bunn | 366–430 px | 270–334 px |
+| Mobil 390 × 663: ordet, bunn | 413 px | 315 px |
+| Mobil 390 × 663: kreditten under navnet | 62 px (4 linjer) | 44 px (1 linje, trykkflate) |
+| PC 1200 × 660: dagens tall, topp til bunn | 675–779 px (under kanten) | 504–608 px |
+| PC 1200 × 660: ordet, bunn | 760 px | 589 px |
+| PC 1200 × 660: setningen, bunn | 826 px | 655 px |
+| PC 1440 × 900: dagens tall, topp til bunn | 659–763 px | 504–608 px |
+| Fyll 1–2 mot flaten, dag | 1,83:1 | 3,24:1 |
+| Fyll 1–2 mot flaten, mørketid | 2,88:1 | 5,57:1 |
+| Tall oppå fyllet 1–2 (`--paa-lav`), dag og mørketid | 7,15:1 og 4,56:1 | 5,08:1 og 5,57:1 |
+| Tekster under 12 px på spotsiden, mobil og PC | 80 og 8 | 3 og 4 |
+
+På mobil sto dommen over fanelinja (599 px) også før. Den står nå 96 px høyere. På 1200 × 660 er tall, ord og setning synlige uten rulling. Setningen har 5 px klaring.
+
+- **Tester:** `test_spotside_browser.py` har en ny bolk til slutt for begge bredder: tilbake med knappen og med nettleseren (samme steg i historikken, samme rulling), fane til toppen, lenke rett til spoten, én kredittlinje med 44 px lenke, bildehøyde og navn, kant i mørketid, dommen innenfor 663 og 660 px, etiketter 12 px, tabellen i «Hvorfor» med «poeng», «Uke 2», ringen ved 3 og 4 poeng, nullene og fyllet for 1–2. `test_spotbilder.py` låser den nye linja. `tools/kontrast.py` er strammet inn (punkt 5). Ingen test er svekket.
+- **Fasiten:** `docs/design/b4/SPEC.md` har fått §9 med det som nå avviker fra resten av fila.
+- **Impeccable:** kjørt før og etter (`impeccable-for.md` og `impeccable-etter.md` i bildemappa). Detektoren har de samme 3 funnene før og etter, alle valg i SPEC. Spriket mot planen står i notatene.
+- **Ikke gjort, og verdt å vite:**
+  - Forsiden på PC: hovedbildet er fortsatt 440 px, så tallet i hovedbildet står på 812–876 px. Det synes på 1440 × 900, men ikke på 1200 × 660. Planens punkt 2 nevner bare spotsiden, og fase 5 regner med 1296 × 440.
+  - `.kort4 .v` (punkt 7) tegnes ikke av noen kode lenger, så der er ingenting pakket inn.
+  - Den gamle dagsgrafen (`SpotGraf.html`, `.plot`) tegnes heller ikke. `--paa-lav` finnes for at tallet oppå fyllet der skal holde 4,5:1 om den tas i bruk igjen.
+  - Regnestykket har punktum som desimaltegn enkelte steder («faktor 0.51»). Det skrives av henteren og er ikke rørt.
+  - Favorittstjerna (fylt) bruker fyllet for 2 og er derfor litt mørkere grå enn før.
+  - Kontrolløren og feiljegeren har ikke sett endringen ennå.
+
 ## Tillit til BarentsWatch per spot: `bw_tillit`, mekanismen og Breivikeidet, 23.11.2026
 
 Gren `fiks/bw-tillit` fra main `ef9c828`. Endrer `fetcher/rating.py`, `fetcher/test_rating.py`, `spots.json`, CLAUDE.md og STATUS.md. Ikke `docs/`, appen eller `publish.py`. Ja fra Theodor i svar.md 23.11 kl. 11.25 («Fiks det»). Kilder: Theodors observasjoner 17.11.2026 og 22.11.2026 på Breivikeidet. Dette er den første av to PR-er. Russelv og Lenangsøyra flyttes ikke her. Svaret på S32 (svar.md 23.11 kl. 14.00) er med: krapp sjø gjør bare timen usikker (e), og vindlinja har fått ordene fra svaret på S32.

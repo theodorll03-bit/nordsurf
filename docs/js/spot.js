@@ -102,7 +102,7 @@
     if(!h || !h.breakdown) return "";
     const ex = ratingWordExplain(h);
     return `<details class="hvorfor" id="hvorfor"><summary aria-expanded="false">Hvorfor denne vurderingen?<svg class="chev" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-      <div class="body">${ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : ""}${h.breakdown.map((line, i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("")}</div></details>`;
+      <div class="body">${ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : ""}${breakdownTabellHtml(h.breakdown)}</div></details>`;
   }
 
   /* ---------- mobil (design B 4.0, SPEC §6B) ---------- */
@@ -110,12 +110,9 @@
   // (svell stort, så surf, vind og tidevann), time for time, retningsskiva, «Hvorfor», logg og kilder.
   // Ren visning som resten av fila. Nettsiden (renderWeb, lenger ned) bruker de samme delene.
   const midtPaa = (key)=> new Date(key + "T11:00:00Z");
-  // Krediteringen under bildet, med lisensnavnet som lenke (CC BY 4.0 krever lenke til lisensen der det er praktisk mulig)
-  function kreditHtml(){
-    const B = window.SPOTBILDER, i = B.lisens && B.lisens_url ? B.kredit.indexOf(B.lisens) : -1;
-    if(i < 0) return esc(B.kredit);
-    return `${esc(B.kredit.slice(0, i))}<a href="${esc(B.lisens_url)}" target="_blank" rel="noopener license">${esc(B.lisens)}</a>${esc(B.kredit.slice(i + B.lisens.length))}`;
-  }
+  // Krediteringen under bildet: kortformen på én linje, med lisensnavnet som lenke (fotoKreditHtml i app.js).
+  // Hele henvisningen står under Kilder nederst (mobil: siste avsnitt, nettsiden: bunnen).
+  const kreditHtml = ()=> fotoKreditHtml(false);
   const lengsteOrd = (navn)=> Math.max(...String(navn).split(/[\s-]+/).map(o=> o.length), 1);
   const ukedagKort = (at)=> fmtWdShort.format(at).replace(/\.$/, "");
   const stegAv = (s, idxs)=> idxs.length >= 2 && (Date.parse(s.hours[idxs[1]].t) - Date.parse(s.hours[idxs[0]].t)) >= 2 * 36e5 ? 6 : 1;
@@ -221,7 +218,7 @@
     const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
       : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
     const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(STR.spot.svell)}</div>
-        ${h && h.swell_offshore!=null ? `<div class="t-svell">${nf1.format(h.swell_offshore)}<small>m</small></div>` : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`}
+        ${h && h.swell_offshore!=null ? `<div class="t-svell">${desTall(nf1.format(h.swell_offshore))}<small>m</small></div>` : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`}
         ${sub ? `<div class="svell-sub">${esc(sub)}</div>` : ""}</div>`;
     const rader = [];
     // surf: høyden som vises og settene (regel (c), visHoyde); ordet når tallet er kjent, men ikke pålitelig
@@ -257,15 +254,16 @@
     S.tideMin = 0;   // kvarter-forskyvningen hører til tidevannskortet på PC
     const b = dagsdom(s, d), best = besteSett(s, d, b);
     const ev = window.Tidevann ? Tidevann.hendelser(s) : [];
+    const foto = !!(window.Skive && Skive.harBilde(s.id));
     const timen = ()=>{ const h = idx!=null ? s.hours[idx] || null : null; return {h, t: h ? new Date(h.t) : new Date()}; };
     const over = ()=>{ const {h, t} = timen(); return faktaHtml(s, h, t) + timeHtml(s, h, t, ev); };
     const under = ()=>{
       const {h, t} = timen(), hh = fmtHour.format(t), sikk = h ? sikkerhet(h) : "–";
       return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh) : ""}${hvorforHtml(h)}
         <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
-        <p class="kilder">${sikk!=="–" ? esc(sikk) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket.</p>`;
+        <p class="kilder">${sikk!=="–" ? esc(sikk) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
     };
-    const foto = !!(window.Skive && Skive.harBilde(s.id)), id = encodeURIComponent(s.id);
+    const id = encodeURIComponent(s.id);
     const fra = STR.spot.fra[S.from] || null, K = window.KJORETID, kj = H.kjoreText(s.id);
     const at = midtPaa(d.key), omr = s.area || H.regionOf(s);
     const meta = [omr, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, `${ukedagKort(at)} ${d.key.slice(8, 10)}.${d.key.slice(5, 7)}`].filter(Boolean).join(" · ");
@@ -279,7 +277,7 @@
       </div>
       <div class="sp-inn">
         <p class="etikett sp-meta">${esc(meta)}</p>${merker.length ? `<p class="etikett sp-merker">${esc(merker.join(" · "))}</p>` : ""}
-        ${foto ? `<p class="kredit">${kreditHtml()}</p>` : ""}
+        ${foto ? `<p class="kredit linje">${kreditHtml()}</p>` : ""}
         ${domHtml(s, d, b)}
         <div id="spOver">${over()}</div>
         <div class="sek-spot"><h2 class="h2">${esc(STR.spot.timeForTime)}</h2>${morkeKol ? `<p class="sub">${esc(STR.lightOnly)}</p>` : ""}</div>
@@ -381,7 +379,7 @@
       </div>
       <div class="spw-inn">
         <p class="fakta-linje spw-meta" id="spMeta">${meta()}</p>${merker.length ? `<p class="etikett sp-merker">${esc(merker.join(" · "))}</p>` : ""}
-        ${foto ? `<p class="kredit">${kreditHtml()}</p>` : ""}
+        ${foto ? `<p class="kredit linje">${kreditHtml()}</p>` : ""}
         <div class="spw-grid">
           <div class="spw-dom">${domHtml(s, d, b)}
             <div class="spw-knapper"><button type="button" class="fav-btn knapp1" data-fav="${esc(s.id)}" aria-pressed="${fav}">${esc(fav ? STR.web.fjernFav : STR.web.lagreFav)}</button><button type="button" class="knapp2" id="loggHer">${esc(STR.logSession)}</button></div></div>
@@ -390,7 +388,7 @@
         </div>
         <div class="sek-spot"><h2 class="h2">${esc(STR.web.neste7)}</h2><p class="sub">${esc(STR.web.usikre)}</p></div>
         <div class="dagvelger sju" role="group" aria-label="${esc(STR.spot.velgDag)}">${sju.map(x=> dagKolHtml(s, x, d.key)).join("")}</div>
-        ${resten.length ? dagvelgerHtml(s, resten, d) : ""}
+        ${resten.length ? `<div class="uke2"><p class="etikett">${esc(STR.web.uke2)}</p>${dagvelgerHtml(s, resten, d)}</div>` : ""}
         <div class="sek-spot"><h2 class="h2">${esc(STR.web.timeForTime(cap(fmtWd.format(at))))}</h2><p class="sub">${esc([morkeKol ? STR.lightOnly : null, STR.web.holdMusa].filter(Boolean).join(" · "))}</p></div>
         <div id="spStripe">${Timestripe.html(s, d, idx, best, H, {bred: true})}</div>
         <div class="sp-tilbakena" id="spTilbakeNa">${tilbakeNa()}</div>
