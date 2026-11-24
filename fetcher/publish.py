@@ -72,6 +72,9 @@ DETAIL_EXCLUDE = (
     "height_spot_model", "likely_flat", "spot_direction_offshore", "spot_direction_overridden",
     "swell_peak_period", "turn",
     "surf_height_shadow", "stars_shadow", "surf_height_shadow_noprior",   # 15.10.2026: skyggemodus, bare i forecast.json/arkivet
+    # 24.11.2026 (S29 c del 1): samlet sjø og vindsjø-del ute - bare lagring i forecast.json og data/backtest/inputs/
+    "total_model", "bw_period_real_max_3h", "total_height_offshore", "total_dir_offshore", "total_period_offshore",
+    "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore",
 )
 
 HOME_DAYS = 9   # (oversikt-1) glidebryteren dekket 7 døgn; to døgns margin

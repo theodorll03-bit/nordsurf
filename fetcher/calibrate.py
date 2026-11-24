@@ -90,6 +90,11 @@ def bw_pairs_for_run(hours, run_id, spot):
             continue
         if h.get("sources_disagree"):
             continue
+        # S29 c del 2 (forslag, av - rating.LONG_SEA_AS_SWELL; fysikk-kontrolløren 24.11.2026): i en time der
+        # ratingen har regnet lang sjø som svell, er swell_offshore og directness i timen fortsatt det lille
+        # svellet GFS skilte ut, mens BarentsWatch-høyden er den lange sjøen. Forholdet ville blitt kunstig høyt.
+        if h.get("long_sea"):
+            continue
         if (h.get("spot_direction_factor") or 0) < 0.7:
             continue
         bw, swell, dn = h.get("bw_height"), h.get("swell_offshore"), h.get("directness")

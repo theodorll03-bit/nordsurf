@@ -1562,3 +1562,69 @@ assert sources._secondary({"secondary_swell_height": 0.66, "secondary_swell_dir"
 src = open(Path(__file__).parent / "fetch.py", encoding="utf-8").read()
 assert '"swell_despiked": (mar or {}).get("swell_despiked")' in src and '"despiked_hours"' in src, "erstattede timer må merkes i timen og kilderapporten"
 print("16: robust svell ute (enkelttimes svelloppdeling rettes fra naboene, ikke over modellbytte/None/ekte endring), sekundærsvell 0,0/0° = None - OK")
+
+# ---------- 17: S29 c del 1 (24.11.2026) - samlet sjø og vindsjø-del ute LAGRES per time (bare lagring) ----------
+# Tallene er GFS Wave for Unstads havpunkt 21.11.2026 kl. 12Z og 22.11 kl. 18Z (ett kall til Open-Meteo 24.11.2026):
+# kl. 12Z lå nordsjøen (2,64 m fra 358 grader med 10,15 s) i vindsjø-delen, kl. 18Z hadde GFS selv flyttet den til svell.
+_raw17 = {"time": ["2026-11-21T12:00", "2026-11-22T18:00", "2026-11-22T19:00"],
+          "wave_height": [2.7, 2.02, 0.0], "wave_direction": [4, 4, 0], "wave_period": [10.2, 9.45, 0.0],
+          "swell_wave_height": [0.58, 1.98, 0.0], "swell_wave_direction": [250, 1, 0], "swell_wave_period": [11.95, 9.4, 0.0],
+          "swell_wave_peak_period": [None, None, None],
+          "secondary_swell_wave_height": [0.0, 0.36, 0.0], "secondary_swell_wave_direction": [0, 252, 0],
+          "secondary_swell_wave_period": [0.0, 10.9, 0.0],
+          "wind_wave_height": [2.64, 0.0, 0.0], "wind_wave_direction": [358, 0, 0], "wind_wave_period": [10.15, 0.0, 0.0]}
+_p17 = sources._parse_marine_hourly(_raw17)
+assert _p17["2026-11-21T12:00Z"]["wind_wave_height"] == 2.64 and _p17["2026-11-21T12:00Z"]["wind_wave_dir"] == 358
+# standardmodellen spørres ikke om vindsjø-delen: feltene mangler i svaret og blir None, ikke KeyError og ikke 0
+_p17std = sources._parse_marine_hourly({k: v for k, v in _raw17.items() if not k.startswith("wind_wave")})
+assert all(v["wind_wave_height"] is None and v["wind_wave_dir"] is None and v["wind_wave_period"] is None for v in _p17std.values())
+assert "wind_wave_height" in sources._marine_params([1], [2], sources.OPENMETEO_SWELL_MODEL)["hourly"]
+assert "wind_wave" not in sources._marine_params([1], [2], None)["hourly"], "vindsjø-delen hentes bare fra GFS (kallvekt)"
+_std17 = {"2026-11-21T12:00Z": {"height": 2.5, "swell_height": 0.9, "swell_dir": 255, "swell_period": 11.0, "total_dir": 350, "total_period": 8.8},
+          "2026-11-22T18:00Z": {"height": 2.1, "swell_height": 1.7, "swell_dir": 2, "swell_period": 9.0, "total_dir": 3, "total_period": 9.1},
+          "2026-11-22T19:00Z": {"height": 1.9, "swell_height": 1.6, "swell_dir": 3, "swell_period": 9.0, "total_dir": 5, "total_period": 9.0}}
+sources._openmeteo_fetch = lambda lat, lon, model=None: _p17 if model == sources.OPENMETEO_SWELL_MODEL else _std17
+sources.ROBUST_SWELL, _robust17 = False, sources.ROBUST_SWELL
+r17 = real_openmeteo_marine(68.3134, 13.3148, apply_ratio_correction=False)
+sources._openmeteo_fetch, sources.ROBUST_SWELL = real_openmeteo_fetch, _robust17
+a17, b17, c17 = r17["2026-11-21T12:00Z"], r17["2026-11-22T18:00Z"], r17["2026-11-22T19:00Z"]
+# lang nordsjø i vindsjø-delen: alt lagres, og svellet (det ratingen bruker) er uendret
+assert (a17["total_height"], a17["total_dir"], a17["total_period"]) == (2.7, 4, 10.2)
+assert (a17["wind_wave_height"], a17["wind_wave_dir"], a17["wind_wave_period"]) == (2.64, 358, 10.15)
+assert (a17["swell_height"], a17["dir"], a17["period"], a17["swell_model"], a17["height"]) == (0.58, 250, 11.95, "gfs", 2.7)
+# GFS svarer 0,0 m fra 0 grader med 0,0 s når den ikke har skilt ut vindsjø: «mangler», aldri 0 (grunnregelen)
+assert (b17["wind_wave_height"], b17["wind_wave_dir"], b17["wind_wave_period"]) == (None, None, None)
+assert (b17["total_height"], b17["total_dir"], b17["total_period"]) == (2.02, 4, 9.45)
+# GFS dekker ikke timen (0/0/0 på alt): totalen kommer fra samme kilde som totalhøyden (standardmodellen), vindsjø mangler
+assert c17["swell_model"] == "standard" and (c17["total_height"], c17["total_dir"], c17["total_period"]) == (1.9, 5, 9.0)
+assert c17["wind_wave_height"] is None
+# rett fra nord (0 grader) er en ekte retning når høyden og perioden er over 0
+assert sources._total_and_wind_wave({"height": 2.0, "total_dir": 0, "total_period": 9.0, "wind_wave_height": 1.5, "wind_wave_dir": 0,
+                                     "wind_wave_period": 8.0}, {})["wind_wave_dir"] == 0
+assert sources._total_and_wind_wave({"height": 2.0, "total_dir": 0, "total_period": 9.0}, {})["total_dir"] == 0
+# ingen kilde har noe: None over hele linja
+assert set(sources._total_and_wind_wave({"height": 0.0, "total_dir": 0, "total_period": 0.0}, {}).values()) == {None}
+assert set(sources._total_and_wind_wave({}, {"height": None}).values()) == {None}
+import backtest_inputs, publish as _publish17
+# total_model: hvilken modell totalen er fra (vindsjø-delen er alltid GFS) - None når ingen har en totalhøyde
+assert (a17["total_model"], b17["total_model"], c17["total_model"]) == ("gfs", "gfs", "standard")
+assert sources._total_and_wind_wave({"height": 0.0}, {})["total_model"] is None and sources._total_and_wind_wave({}, {"height": None})["total_model"] is None
+# A' (fysikk-kontrolløren 24.11.2026): lengste toppperiode ved BarentsWatch-punktet i en EKTE modelltime innen ±3 timer.
+# Unstad 21.11.2026: modelltimer kl. 09, 12, 15, 18Z med 4,3, 9,4, 4,3 og 8,5 s - timene imellom er interpolert.
+_bw17 = sources.bw_interpolate({"2026-11-21T09:00Z": {"height": 0.63, "dir": 324.0, "period": 4.3}, "2026-11-21T12:00Z": {"height": 0.37, "dir": 312.0, "period": 9.4},
+                                "2026-11-21T15:00Z": {"height": 0.55, "dir": 324.0, "period": 4.3}, "2026-11-21T18:00Z": {"height": 0.73, "dir": 310.0, "period": 8.5},
+                                "2026-11-21T21:00Z": {"height": 0.69, "dir": 324.0, "period": 4.3}, "2026-11-22T00:00Z": {"height": 0.54, "dir": 324.0, "period": None}})
+assert _bw17["2026-11-21T11:00Z"]["interpolated"] is True and abs(_bw17["2026-11-21T11:00Z"]["period"] - 7.7) < 0.01
+_m17 = lambda t: sources.bw_real_period_max(_bw17, t)
+assert [_m17(f"2026-11-21T{h:02d}:00Z") for h in (9, 10, 11, 12, 13, 15, 16, 21, 22)] == [9.4, 9.4, 9.4, 9.4, 9.4, 9.4, 8.5, 8.5, 4.3]
+assert _m17("2026-11-22T03:00Z") is None and _m17("2026-11-22T04:00Z") is None and sources.bw_real_period_max({}, "2026-11-21T12:00Z") is None   # periode mangler / utenfor serien: None, aldri 0
+assert '"bw_period_real_max_3h": sources.bw_real_period_max(bw_hourly, k) if bwk else None' in src and '"total_model": (mar or {}).get("total_model")' in src
+for _f in ("total_model", "bw_period_real_max_3h"):
+    assert _f in backtest_inputs.INPUT_KEYS and _f in _publish17.DETAIL_EXCLUDE, _f
+# feltene står i timen (fetch.py), i inndata-arkivet (backtest_inputs.py) og er utelatt fra detaljfilene i docs/ (publish.py)
+_felt17 = ("total_height_offshore", "total_dir_offshore", "total_period_offshore",
+           "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore")
+for _f in _felt17:
+    assert f'"{_f}": (mar or {{}}).get("{_f[:-9]}")' in src, _f
+    assert _f in backtest_inputs.INPUT_KEYS and _f in _publish17.DETAIL_EXCLUDE, _f
+print("17: samlet sjø (med modellmerke) og vindsjø-del ute lagres per time (None når de mangler, aldri 0), og lengste toppperiode ved punktet i en ekte modelltime innen ±3 t - OK")

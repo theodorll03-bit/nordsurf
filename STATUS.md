@@ -1,5 +1,46 @@
 # Nordsurf: status
 
+## S29 c: samlet sjø og vindsjø-del ute lagres (del 1), regel for lang sjø som forslag bak bryter (del 2), 24.11.2026
+
+Gren `fiks/unstad-s29c` fra main `11c5df2`. Ja i svar.md 23.11.2026 kl. 11.20 (S29 c: «lagre total periode og retning ute, og prøv regelen for lang nordsjø fra havsiden med tabell og nytt S-spørsmål før noe går live»). Endrer `fetcher/sources.py`, `fetch.py`, `publish.py`, `backtest_inputs.py`, `rating.py`, `exposure_learn.py`, `calibrate.py`, `tools/kallregnskap.py` og testene. Ikke `spots.json`, ikke `data/`, ingen filer under `docs/` i git. **Ingen poeng, høyder eller ord endres:** `rate()` gir byte-like svar som main for alle 5 454 og 5 481 timer i varslene 21.11 kl. 11Z og 24.11 kl. 05Z, med og uten de nye feltene. Runde 2 samme dag etter fysikk-kontrollørens gjennomgang (`privat/kontor/observasjoner/kontrollor-s29c-2026-11-24.md`: del 1 godkjent med vilkår, del 2 i rettet form A′).
+
+### Del 1: lagring
+
+- **Åtte nye felt per time:** `total_model`, `total_height_offshore`, `total_dir_offshore`, `total_period_offshore` (den samlede sjøen ute, samme kilde som totalhøyden i `sources.openmeteo_marine()`), `wind_wave_height_offshore`, `wind_wave_dir_offshore`, `wind_wave_period_offshore` (GFS Wave sin vindsjø-del) og `bw_period_real_max_3h` (lengste toppperiode ved BarentsWatch-punktet i en ekte modelltime innen ±3 timer, regnet av tall henteren alt har). Mangler: `None`, aldri 0. GFS svarer 0,0 m fra 0° med 0,0 s når den ikke har skilt ut vindsjø, og det lagres som «mangler».
+- **Hvor de ligger (rettet i runde 2):** i `docs/data/forecast.json`, som publiseres på Pages sammen med resten av `docs/` (artifactet «varsel»), og i `data/backtest/inputs/`. De er utelatt fra detaljfilene `docs/data/spots/<id>.json` og fra oversikten (`publish.DETAIL_EXCLUDE`), som er det appen laster. Det er samme behandling som `swell_despiked` og skyggefeltene. Ingen hemmelighet ligger i dem.
+- **Størrelse:** `forecast.json` for varselet 24.11 kl. 05Z går fra 13 027 557 til 14 359 241 byte (+1 331 684, +10,2 %; gzip 592 → 666 KB). Appen laster ikke fila (`docs/js` leser bare oversikten og detaljfilene).
+- **Hemmelige spots:** ingen spot har status `hemmelig` i `spots.json` i dag, varselet 24.11 kl. 05Z har 27 spots (status tom eller `forelopig`), og `publish.public_forecast()` filtrerer slike spots ut av `forecast.json` som før. Ingenting er endret der.
+- **`total_model`:** «gfs» eller «standard», `None` når ingen har en totalhøyde. Totalen kan komme fra standardmodellen når GFS ikke dekker timen, mens vindsjø-delen alltid er GFS. Uten merket ville analyser bakover blandet modellene uten å vite det.
+- **Ikke legg svell og vindsjø sammen ukritisk:** `swell_offshore` skaleres mot standardmodellen etter skjøten (`ratio_blend_correction()`) og glattes (`despike_swell()`). Vindsjø-høyden og totalhøyden er GFS sine rå tall og får ingen av delene. Etter skjøten (dag 7–10) er de på hver sin skala. Regelen i del 2 gjelder bare timer med BarentsWatch-tall (ca. 60 timer), før skjøten. Står i kommentaren ved `sources._total_and_wind_wave()`.
+- **Kall:** ingen nye HTTP-kall. GFS-kallet ber om 13 variabler i stedet for 10 (vekt 1,3), standardmodellen som før. Vektet per kjøring 93 → 102 (27 spots), verste minutt 15 → 17 % av grensa, døgn 7 → 8 %. `test_kallregnskap.py` sjekker nå at regnskapet teller de variablene henteren faktisk ber om.
+- **Ekte modelltimer hos BarentsWatch:** `sources.barentswatch_point()` gir de timene API-et selv svarer med, og `bw_interpolate()` merker dem `interpolated: False` (feltet `bw_interpolated` i timen). Det er merket koden bruker, ikke klokka. I de fem lagrede varslene ligger alle 2 640 ekte timer på UTC-timer delelige med 3, så kontrollørens antakelse stemmer med dataene.
+- **Hva tallene viste (ett kall til Open-Meteo 24.11 kl. 14.07Z, GFS med `past_days=4`, alle 27 havpunkt):** Unstad 21.11 kl. 11–13Z lå 2,5–2,7 m fra 358–359° med 10,1 s i vindsjø-delen, og 0,5–0,6 m fra 250° i svell-delen. 22.11 kl. 07–13Z: 2,3–2,8 m fra 359–1° med 9,7–9,9 s. 22.11 kl. 18Z flyttet GFS selv sjøen over i svell-delen (1,98 m fra 1°, 9,4 s).
+
+### Del 2: forslag som står AV (`rating.LONG_SEA_AS_SWELL = False`, krever Theodors ja)
+
+- **Hva regelen retter:** svellandelen, ikke svellvinduet. Feilen ligger i `swell_share()`, som bruker GFS sin deling av sjøen ute i svell og vindsjø. Vinduet og geometrien står: Unstad ligger fortsatt i skygge for sjø fra nord (eksponering 0,01–0,04 ved 355–0°), og det er BarentsWatch-retningen ved punktet (312–324°) som sier at sjøen bøyer seg inn.
+- **Vilkårene (`rating.long_sea()`):** vindsjø-delen ute har minst 9,0 s middelperiode; fasefarten (1,56 × perioden) er minst 1,2 × middelvinden på spoten; retningen er i svellvinduet eller høyst 30° utenfor; den treffer ikke en nær og bred hindring eller et `exposure_override`-tak; BarentsWatch-punktet viser bølger innen 30° av facing og minst 7,0 s toppperiode. Da regnes den som svell i svellandelen, energien, perioden og retningen. Timen merkes usikker (høyst 3 poeng). Regelen kan bare løfte. Bare Unstad (`LONG_SEA_SPOTS`), bare der BarentsWatch har tall, aldri fjord-spots.
+- **Aldersvilkåret er bare en svak sperre mot storm på stedet.** Det skiller ikke dønning fra vindsjø: vinden er vinden på stranda, ikke ute der sjøen ble laget, og 21.–22.11 var dette trolig moden nordsjø som vinden ute fortsatt drev. Det stopper sjelden noe (1,2: 40 timer, 1,5: 35, 1,7: 23 i variant B).
+- **Tre varianter av perioden ved punktet (`LONG_SEA_BW_CONFIRM`):** A′ («vindu», grunnvalget, kontrollørens forslag): minst 7 s i en ekte modelltime innen ±3 timer. A («time»): i selve timen, også interpolert. B (`None`): ingen periodegrense.
+- **Prøvd på fem lagrede varsler** (21.11 11Z, 22.11 01Z, 22.11 19Z, 23.11 12Z, 24.11 05Z, 27 270 timer), bare Unstad:
+
+| | A | A′ | B |
+|---|---|---|---|
+| Timer opp (alle fra 0) | 10 | 17 | 40 |
+| Lyse | 3 | 5 | 16 |
+| 21.11 kl. 11, 12, 13Z (varsel 21.11 11Z) | 3, 2, 3 poeng (1,15, 1,02, 1,14 m) | det samme | det samme |
+| 22.11 kl. 13Z, varsel 21.11 11Z | 0 | 0 | 0 (retningen ved punktet 325°, 0,2° over grensa) |
+| 22.11 kl. 12 og 13Z, varsel 22.11 01Z | 0, 0 | 3 (1,42 m), 3 (1,27 m) | 3, 3 |
+| 22.11 kl. 07–11Z | 0 | 0 (bare 4,3 s ved punktet) | 3 (1,35–1,47 m) |
+| Ned, andre spots | 0, 0 | 0, 0 | 0, 0 |
+
+- **Funn: for alle kyst-spots flytter regelen andre spots 2 poeng eller mer.** A: 21 timer (9 lyse). A′: 27 timer (13 lyse): Vikten 8, Bøvær 8, Kvalvika 5, Bunes 3, Skagsanden 1, Persfjord 1, Grøtfjord 1. B: 41 timer (17 lyse), også Tromvik 6 og Ersfjordstranda 4, der punktet bare viser 5,1–5,7 s. Ingen av dem har en observasjon. Derfor foreslås bare Unstad. Tallene for A′ er de samme som kontrollørens grove regning (17 opp, 5 lyse, 27 på andre spots).
+- **Faste observasjoner:** alle testene består med bryteren av (test 42 i `test_rating.py` låser at den står av). De faste observasjonene fra september og oktober har ikke vindsjø-delen lagret, så regelen kan ikke prøves ærlig på dem. Verste fall er prøvd i test 42.4. Det viser bare at regelen ikke senker noen god Unstad-dag. **Det finnes ingen observasjon av en flat Unstad-dag med lang nordsjø, så faren for falske treff er ikke prøvd.**
+- **Læringen:** `calibrate.bw_pairs_for_run()` og `exposure_learn.exposure_pairs_for_run()` hopper over timer der regelen har slått til (feltet `long_sea`), test 42.5. Uten virkning med bryteren av.
+- **Usikkert:** én hendelse (21.–22.11), én observasjon uten klokkeslett og én uten høyde. Feltene for 21.–22.11 er hentet i ettertid, ikke fra kjøringene den gang. Kl. 12Z 21.11 er høyden ved punktet 0,37 m, 0,02 m over flat-sperren. Grensa på 30° utenfor vinduet er tilpasset hendelsen: med 20° slår regelen aldri til på Unstad. H i surfehøyde-formelen er hele BarentsWatch-høyden ved punktet, også den lokale sjøen, koblet med den lange sjøens periode. Surfehøyden 1,15 m av 0,43 m ved punktet bygger på Unstads `surf_factor_prior`, som er satt fra 15 s svell.
+- **Før regelen kan slås på:** Theodors ja. Appen må vise den lange sjøen («svell 0,6 m fra 250°» ville stått ved siden av 3 poeng). Regelen bør stå i `spots.json` for Unstad og i CLAUDE.md med kilde. Spør Theodor om han har sett Unstad flat med lang nordsjø. Kontrolløren på nytt.
+- **Rapport og tabeller:** `privat/kontor/observasjoner/utvikler-s29c-2026-11-24.md` og mappa `s29c-2026-11-24/` (ikke i git).
+
 ## Russelv: andelen aldri under 0,20 i 346-21 grader (S36 b), 24.11.2026
 
 Samme gren (`fiks/fjord-lyngen`), oppå commit `79e7fa8`. Ja i svar.md 24.11.2026 kl. 10.25: «**S36: b.** Russelv får det største av Breivikeidets kurve og den gamle 0,20 med hard kant i 348–19°.» S36 er ikke lenger åpen. Endrer `spots.json` (bare Russelv), `fetcher/rating.py`, `fetcher/test_rating.py`, CLAUDE.md og STATUS.md. Ikke `docs/`.

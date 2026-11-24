@@ -188,6 +188,16 @@ def _openmeteo_fetch(lat, lon, model=None):
     return out
 
 
+# 24.11.2026 (S29 c del 1, Theodors ja i svar.md 23.11.2026): GFS Wave sin VINDSJØ-del (høyde, retning,
+# middelperiode) hentes i det samme kallet som svellet. Unstad 21.-22.11.2026: GFS la en lang nordsjø (2,5-2,9 m
+# fra 357-1 grader med 9,7-10,2 s) i vindsjø-delen, og ingenting av det var lagret. Bare lagring: ratingen bruker
+# ikke feltene (se rating.LONG_SEA_AS_SWELL, som står av). Bare GFS-kallet: standardmodellen brukes bare som
+# reserve for svellfeltet, og kallet dit teller da som før (10 variabler). GFS-kallet går fra 10 til 13 variabler
+# (vekt 1,3 i stedet for 1,0, se tools/kallregnskap.py). wind_wave_peak_period er alltid null for GFS Wave
+# (sjekket live 24.11.2026) og hentes ikke.
+MARINE_WIND_WAVE_VARS = ",wind_wave_height,wind_wave_direction,wind_wave_period"
+
+
 def _marine_params(lats, lons, model):
     params = {
         "latitude": ",".join(str(x) for x in lats),
@@ -195,7 +205,7 @@ def _marine_params(lats, lons, model):
         "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,"
         "swell_wave_direction,swell_wave_period,swell_wave_peak_period,"
         "secondary_swell_wave_height,secondary_swell_wave_direction,"
-        "secondary_swell_wave_period",
+        "secondary_swell_wave_period" + (MARINE_WIND_WAVE_VARS if model == OPENMETEO_SWELL_MODEL else ""),
         "timezone": "GMT",
         # 06.10.2026, ROADMAP oppgave B: 16 dager. Live sjekket samme dag:
         # GFS Wave (ncep_gfswave025) gir svelldata alle 384 timer, mens
@@ -227,8 +237,48 @@ def _parse_marine_hourly(h):
             "secondary_swell_height": h.get("secondary_swell_wave_height", missing)[i],
             "secondary_swell_dir": h.get("secondary_swell_wave_direction", missing)[i],
             "secondary_swell_period": h.get("secondary_swell_wave_period", missing)[i],
+            # S29 c del 1: vindsjø-delen (bare GFS-kallet ber om den, se MARINE_WIND_WAVE_VARS)
+            "wind_wave_height": h.get("wind_wave_height", missing)[i],
+            "wind_wave_dir": h.get("wind_wave_direction", missing)[i],
+            "wind_wave_period": h.get("wind_wave_period", missing)[i],
         }
     return out
+
+
+def _total_and_wind_wave(p, f):
+    """S29 c del 1 (24.11.2026): den samlede sjøen ute (høyde, retning, middelperiode) og GFS sin vindsjø-del,
+    slik de skal lagres per time. Bare lagring, ratingen bruker dem ikke.
+
+    Totalen kommer fra SAMME kilde som totalhøyden i openmeteo_marine(): GFS (p) når den har en høyde over 0,
+    ellers standardmodellen (f). Vindsjø-delen finnes bare hos GFS. Grunnregelen (manglende data er aldri 0):
+    GFS svarer bokstavelig 0,0 m fra 0 grader med 0,0 s både når punktet ikke er dekket og når modellen ikke
+    har skilt ut noen vindsjø. Det er «mangler», ikke en måling: retning og periode lagres bare når høyden og
+    perioden er over 0. Retning 0 (rett fra nord) er et ekte tall når høyden og perioden er over 0.
+
+    total_model (fysikk-kontrolløren 24.11.2026) sier hvilken modell totalen er fra: "gfs" eller "standard",
+    None når ingen av dem har en totalhøyde. Vindsjø-delen er alltid GFS, så i en time med total_model
+    "standard" er total og vindsjø-del fra hver sin modell og kan ikke sammenlignes direkte.
+
+    NB, ikke legg sammen ukritisk (fysikk-kontrolløren 24.11.2026): swell_height i openmeteo_marine() blir
+    SKALERT etter skjøten mot standardmodellen (ratio_blend_correction()) og GLATTET (despike_swell()).
+    wind_wave_height og total_height er GFS sine rå tall og blir ingen av delene. Etter skjøten er de to derfor
+    på hver sin skala: kvadratsummen av swell_height og wind_wave_height er da ikke lenger lik total_height, og
+    en svellandel regnet av dem blir feil. Regelen i rating.long_sea() gjelder bare timer med BarentsWatch-tall
+    (de første ca. 60 timene), som ligger før skjøten (dag 7-10). Timer med swell_despiked må sjekkes for seg."""
+    src = p if p.get("height") else (f if f.get("height") else {})
+    th, tp = src.get("height"), src.get("total_period")
+    total_ok = bool(th) and bool(tp) and src.get("total_dir") is not None
+    wh, wp, wd = p.get("wind_wave_height"), p.get("wind_wave_period"), p.get("wind_wave_dir")
+    ww_ok = bool(wh) and bool(wp) and wd is not None
+    return {
+        "total_model": ("gfs" if src is p else "standard") if th else None,
+        "total_height": th if th else None,
+        "total_dir": src.get("total_dir") if total_ok else None,
+        "total_period": tp if total_ok else None,
+        "wind_wave_height": wh if ww_ok else None,
+        "wind_wave_dir": wd if ww_ok else None,
+        "wind_wave_period": wp if ww_ok else None,
+    }
 
 
 def _secondary(src):
@@ -384,7 +434,10 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
     punktet. Totalhøyden (inkl. vindsjø) og sekundærsvellet følger med, men
     sekundærsvellet lagres bare - det skal ikke vises eller brukes i ratingen.
     {time: {height, swell_height, dir, period, peak_period, swell_model,
-    secondary_swell_height, secondary_swell_dir, secondary_swell_period}},
+    secondary_swell_height, secondary_swell_dir, secondary_swell_period,
+    total_model, total_height, total_dir, total_period, wind_wave_height,
+    wind_wave_dir, wind_wave_period}} (de sju siste fra 24.11.2026, S29 c
+    del 1: bare lagring, se _total_and_wind_wave()),
     peak_period er svellets TOPPERIODE (bare til energy_kj(), se
     rating.energy_period()) - ofte None (se _openmeteo_fetch() sin
     docstring: GFS Wave har aldri dette feltet, bare standardmodellen).
@@ -485,12 +538,14 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
                     "peak_period": None,  # ingen topperiode for en TOTALHØYDE-reserve - se energy_period()
                     "swell_model": "total_fallback",
                     "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
+                    **_total_and_wind_wave(p, f),
                 }
             else:  # ingenting i det hele tatt for dette punktet/timen - ekte None, ikke 0
                 out[k] = {
                     "height": None, "swell_height": None, "dir": None, "period": None, "peak_period": None,
                     "swell_model": None,
                     "secondary_swell_height": None, "secondary_swell_dir": None, "secondary_swell_period": None,
+                    **_total_and_wind_wave(p, f),
                 }
             continue
         out[k] = {
@@ -506,6 +561,8 @@ def openmeteo_marine(lat, lon, apply_ratio_correction=True):
             # 16.10.2026: GFS svarer bokstavelig 0,0 m fra 0° når det ikke finnes noe sekundærsvell - det er
             # «mangler», ikke en måling (grunnregelen). Bare et ekte sekundærsvell (høyde > 0 og kjent retning) lagres.
             **(_secondary(src)),
+            # S29 c del 1 (24.11.2026): samlet sjø og vindsjø-del ute, bare lagring (se _total_and_wind_wave())
+            **_total_and_wind_wave(p, f),
         }
     # 07.10.2026, Theodors instruks (bekreftet etter fysikk-kontrollørens
     # funn samme dag): korriger GFS sin svellhøyde etter at standardmodellen
@@ -752,6 +809,25 @@ def bw_interpolate(raw):
                 "interpolated": True,
             }
     return out
+
+
+def bw_real_period_max(bw_hourly, key, hours=3):
+    """Den lengste toppperioden BarentsWatch-punktet har i en EKTE modelltime innen ±`hours` timer fra `key`
+    (timen selv medregnet), eller None når ingen ekte modelltime med periode finnes i vinduet.
+
+    Ekte modelltime = en time BarentsWatch selv svarte med (barentswatch_point(), i tretimersteg), merket
+    "interpolated": False av bw_interpolate(). Timene imellom er lineært interpolert og er ikke modelltall:
+    toppperioden hopper mellom dønningen og den lokale vindsjøen (Unstad 21.11.2026: 4,3, 9,4, 4,3, 8,5 og
+    4,3 s i fem modelltimer på rad), så 7,7 s midt mellom 9,4 og 4,3 s finnes ikke i noe spekter.
+    Bare lagring (S29 c, variant A' i rating.long_sea(), fysikk-kontrollørens forslag 24.11.2026)."""
+    t0 = parse_iso(key)
+    best = None
+    for step in range(-hours, hours + 1):
+        v = bw_hourly.get(hour_key(t0 + dt.timedelta(hours=step)))
+        if not v or v.get("interpolated") is not False or v.get("period") is None:
+            continue
+        best = v["period"] if best is None else max(best, v["period"])
+    return best
 
 
 def weather_interpolate(raw):

@@ -16,7 +16,10 @@ OUT_DIR = ROOT / "data" / "backtest" / "inputs"
 INPUT_HOURS = 72
 INPUT_KEYS = ("bw_height", "bw_dir", "bw_period", "bw_height_max", "bw_interpolated", "swell_offshore", "height_offshore",
               "dir_offshore", "period", "swell_model", "secondary_swell_height", "secondary_swell_dir", "secondary_swell_period",
-              "height_spot_model", "turn", "wind_speed", "wind_dir", "gust", "wind_source", "tide", "light", "daylight")
+              "height_spot_model", "turn", "wind_speed", "wind_dir", "gust", "wind_source", "tide", "light", "daylight",
+              # S29 c del 1 (24.11.2026): samlet sjø og vindsjø-del ute, så regelen for lang sjø kan prøves bakover
+              "total_model", "bw_period_real_max_3h", "total_height_offshore", "total_dir_offshore", "total_period_offshore",
+              "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore")
 
 
 def main():

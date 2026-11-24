@@ -775,6 +775,10 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "bw_dir": bwk.get("dir") if bwk else None,
             "bw_period": bwk.get("period") if bwk else None,
             "bw_interpolated": bwk.get("interpolated") if bwk else None,
+            # 24.11.2026 (S29 c, fysikk-kontrollørens variant A'): lengste toppperiode ved punktet i en EKTE
+            # modelltime (ikke interpolert) innen ±3 timer. Bare lagring: ratingen leser den ikke så lenge
+            # rating.LONG_SEA_AS_SWELL står av. None når BarentsWatch mangler i timen eller i hele vinduet.
+            "bw_period_real_max_3h": sources.bw_real_period_max(bw_hourly, k) if bwk else None,
             # Maks bølgehøyde fra BarentsWatch - bare til visning, se
             # sources.barentswatch_point sin docstring for hvorfor.
             "bw_height_max": bwk.get("max_height") if bwk else None,
@@ -806,6 +810,20 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             # 16.10.2026 (robust svell ute, sources.despike_swell()): timen er erstattet av snittet av naboene -
             # originalverdiene fra GFS her, så en erstattet time aldri ser ut som et ekte modelltall (kontrollør).
             "swell_despiked": (mar or {}).get("swell_despiked"),
+            # 24.11.2026 (S29 c del 1, Theodors ja i svar.md 23.11.2026): den samlede sjøen ute (høyde, retning,
+            # middelperiode, samme Open-Meteo-kilde som svellet) og GFS sin vindsjø-del. BARE LAGRING, så en regel
+            # for lang sjø som GFS kaller vindsjø kan prøves bakover (Unstad 21.11.2026). Ratingen leser dem ikke
+            # så lenge rating.LONG_SEA_AS_SWELL står av. height_offshore over er met.no først, derfor egen totalhøyde.
+            # Mangler: None, aldri 0 (sources._total_and_wind_wave()).
+            # total_model: "gfs" eller "standard" - vindsjø-delen er alltid GFS (se sources._total_and_wind_wave()).
+            # Svellhøyden over skaleres og glattes etter skjøten, vindsjø-høyden gjør ikke det: ikke legg dem sammen der.
+            "total_model": (mar or {}).get("total_model"),
+            "total_height_offshore": (mar or {}).get("total_height"),
+            "total_dir_offshore": (mar or {}).get("total_dir"),
+            "total_period_offshore": (mar or {}).get("total_period"),
+            "wind_wave_height_offshore": (mar or {}).get("wind_wave_height"),
+            "wind_wave_dir_offshore": (mar or {}).get("wind_wave_dir"),
+            "wind_wave_period_offshore": (mar or {}).get("wind_wave_period"),
             "water_temp": (sp or {}).get("water_temp"),
             **(w or {}),
             "light": light,
@@ -826,7 +844,8 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
         if bwk_shadow and bwk_shadow.get("height") is not None:
             hour_sh = {**hour_inn, "bw_height": bwk_shadow.get("height"), "bw_dir": bwk_shadow.get("dir"),
                        "bw_dir_raw": bwk_shadow.get("dir_raw"), "bw_period": bwk_shadow.get("period"),
-                       "bw_height_max": bwk_shadow.get("max_height"), "bw_interpolated": bwk_shadow.get("interpolated")}
+                       "bw_height_max": bwk_shadow.get("max_height"), "bw_interpolated": bwk_shadow.get("interpolated"),
+                       "bw_period_real_max_3h": sources.bw_real_period_max(bw_hourly_shadow, k)}
             r_sh = rate(hour_sh, spot)
             hour["surf_height_shadow"], hour["stars_shadow"] = r_sh["surf_height"], r_sh["stars"]
             if spot.get("surf_factor_source") == "prior":

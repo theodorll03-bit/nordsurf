@@ -387,6 +387,132 @@ def bw_swell_dominates(hour, spot):
     return True
 
 
+# ---------- Lang sjø som GFS kaller vindsjø (S29 c del 2, 24.11.2026) - FORSLAG, STÅR AV ----------
+# Krever Theodors ja før den slås på (nytt S-spørsmål, se STATUS.md 24.11.2026). Med LONG_SEA_AS_SWELL = False er
+# rate() uendret for alle timer (test 42 i test_rating.py).
+#
+# Observasjon 21.11.2026, Theodor (story fra Lofoten Surfsenter): Unstad «litt under hodehøyt og rent». Appen viste
+# 0 poeng og 0,0 m i alle lyse timer. GFS Wave la nordsjøen i VINDSJØ-delen: 2,5-2,9 m fra 357-1 grader med
+# 9,7-10,2 s middelperiode, mens svell-delen bare var 0,5-0,6 m fra 250 grader (tallene hentet med ett kall til
+# Open-Meteo 24.11.2026). Svellandelen (0,2), energien (under 200 kJ) og «kildene uenige» leser alle den delingen.
+#
+# HVA REGELEN RETTER (fysikk-kontrolløren 24.11.2026): SVELLANDELEN, ikke svellvinduet. Feilen ligger i
+# swell_share(), som bruker GFS sin deling av sjøen ute i svell og vindsjø. Vinduet og geometrien står: Unstad
+# ligger fortsatt i skygge for sjø fra nord (eksponering 0,01-0,04 ved 355-0 grader, bak en smal odde 0,4 km
+# bred), og det er BarentsWatch sin egen retning ved punktet (312-324 grader) som sier at sjøen bøyer seg inn.
+#
+# Regelen: når vindsjø-delen ute er LANG og BarentsWatch-punktet viser sjø rett inn, regnes den som svell i
+# svellandelen, energien, perioden og retningen (én og samme omregning av timen, brukt i alle ledd -
+# fysikk-kontrollørens forslag 22.11.2026: «ett felles vilkår, c utløser og S23-vilkåret bekrefter»). Den er et
+# anslag, så timen merkes usikker (høyst 3 poeng). Svellandelen og BarentsWatch-periodefaktoren er to mål på det
+# samme spørsmålet (min() i barentswatch_height()), og regelen setter begge til 1,0 - en dobbel oppheving, ikke
+# en dobbel telling. Svellandelens nevner byttes samtidig fra met.no sin totalhøyde til GFS sin egen (samme
+# modell som delene), ellers ville andelen blitt ca. 0,84 og ikke 1,0 av ren modellforskjell.
+LONG_SEA_AS_SWELL = False
+# Bare Unstad: den eneste spoten med en observasjon av dette (21.11.2026). None betyr alle kyst-spots - prøvd
+# 24.11.2026 på fem lagrede varsler: timer på andre spots (Vikten, Kvalvika, Bøvær, Bunes, Skagsanden, Persfjord,
+# Grøtfjord) flyttet seg 2 poeng eller mer uten noen observasjon. Se STATUS.md.
+LONG_SEA_SPOTS = frozenset({"unstad"})
+# Middelperioden (Tm) til vindsjø-delen ute. GFS har ikke toppperiode for den delen. 9 s middelperiode svarer til
+# ca. 11-12 s toppperiode, og fullt utviklet sjø med så lang middelperiode krever ca. 16-18 m/s.
+LONG_SEA_MIN_PERIOD_S = 9.0
+# Bølgealder mot vinden PÅ SPOTEN: fasefarten (1,56 × T) minst 1,2 × middelvinden. ÆRLIG OM HVA DEN ER
+# (fysikk-kontrolløren 24.11.2026): dette skiller IKKE dønning fra vindsjø. Vinden er vinden på stranda, ikke
+# vinden ute der sjøen ble laget, og GFS kalte sjøen vindsjø nettopp fordi vinden ute fortsatt drev den (ved
+# 10,1 s minst ca. 9,3 m/s langs bølgeretningen). 21.-22.11.2026 var dette trolig moden nordsjø, ikke gammel
+# dønning. Vilkåret stopper sjelden noe (1,2: 40 timer, 1,5: 35, 1,7: 23 i variant B). Det er bare en svak
+# sperre mot storm på stedet: 9 s sjø slipper gjennom opp til 11,7 m/s, 10 s opp til 13 m/s.
+LONG_SEA_WAVE_AGE = 1.2
+LONG_SEA_PHASE_SPEED_PER_S = 9.81 / (2 * math.pi)   # m/s per sekund periode (dypt vann)
+# Høyst 30 grader utenfor svellvinduet (der SHADOW_CURVE går til 0). Tilpasset hendelsen: sjøen kom 22-26 grader
+# utenfor Unstads vindu, og med 20 slår regelen aldri til. Grensa gjør lite arbeid som vindu - det er
+# BarentsWatch-retningen ved punktet som bærer retningen. Den stopper sjø fra land og langs land.
+LONG_SEA_WINDOW_MARGIN_DEG = 30
+# Bekreftelsen ved punktet: bølgene kommer inn innen BW_CONFIRM_DIFF_DEG (30 grader) av facing, som bw_confirms,
+# og toppperioden ved punktet er minst LONG_SEA_BW_PERIOD_MIN_S. Hvor perioden leses, er de tre variantene:
+#   "vindu" (A', grunnvalget, fysikk-kontrollørens forslag 24.11.2026): i minst én EKTE modelltime innen ±3 timer
+#           (bw_period_real_max_3h, regnet i henteren av sources.bw_real_period_max()).
+#   "time"  (A): i selve timen, også når tallet er interpolert.
+#   None    (B): ingen periodegrense ved punktet.
+# Grunnen til A': BarentsWatch-punktet ved Unstad ga 21.11.2026 toppperiode 4,3, 9,4, 4,3, 8,5 og 4,3 s i fem
+# modelltimer på rad (hver tredje time) i den samme sjøen. Det er et tosidig spekter der to systemer er omtrent
+# like store, og toppen velger det ene. 4,3 s betyr ikke at den lange sjøen mangler. A bruker øyeblikksverdien,
+# også interpolerte 7,7 s som ikke finnes i noe spekter, og slår av og på (3, 0, 3 poeng). B ser helt bort fra
+# det eneste beviset fra selve spoten, og løfter timer der punktet bare ser 4-5 s krapp sjø hele døgnet.
+# Svakhet som står igjen i alle tre: H i surfehøyde-formelen er HELE BarentsWatch-høyden ved punktet, også den
+# lokale sjøen, koblet med den lange sjøens periode. I timer der toppen ved punktet er kort, blir Hb for høy.
+LONG_SEA_BW_CONFIRM = "vindu"
+LONG_SEA_BW_PERIOD_MIN_S = 7.0
+
+
+def long_sea(hour, spot):
+    """S29 c del 2 (FORSLAG, av): er GFS sin vindsjø-del ute egentlig lang sjø fra havsiden som skal regnes som
+    svell? Returnerer None (nei, eller noe mangler) eller en dict med den omregnede timen:
+    {"swell_offshore", "height_offshore", "period", "dir_offshore", "swell_peak_period", "_long_sea"}.
+
+    ALT dette må være kjent og oppfylt (mangler noe: None, regelen gjør aldri noe på manglende data):
+    1. Bryteren LONG_SEA_AS_SWELL er på, og spoten er med (LONG_SEA_SPOTS).
+    2. Spoten er en kyst-spot med BarentsWatch-tall i timen. Fjord-spots regner høyden fra en låst andel, og
+       reserven (dag 3 og utover) har ingen kystmodell som kan bekrefte.
+    3. Svellet ute er et ekte GFS-felt (swell_model "gfs"): vindsjø-delen og svell-delen er da samme modell.
+    4. Vindsjø-delen ute er lang: middelperiode minst LONG_SEA_MIN_PERIOD_S.
+    5. Fasefarten (1,56 × perioden) er minst LONG_SEA_WAVE_AGE × middelvinden på spoten. Bare en svak sperre
+       mot storm på stedet, ikke et skille mellom dønning og vindsjø (se LONG_SEA_WAVE_AGE). Ukjent vind: None.
+    6. Den kommer fra havsiden: retningen er i svellvinduet eller høyst LONG_SEA_WINDOW_MARGIN_DEG utenfor, den
+       treffer ikke en nær og bred hindring (blocked_by_near_obstacle(), Nordneset ved Farstadsanden), og ingen
+       exposure_override dekker retningen (Lenangsøyra 225-320, Grøtfjord: der har Theodor satt taket selv).
+    7. BarentsWatch-punktet bekrefter: bølgene kommer inn innen BW_CONFIRM_DIFF_DEG av facing, og toppperioden
+       ved punktet er minst LONG_SEA_BW_PERIOD_MIN_S - i en ekte modelltime innen ±3 timer (A', grunnvalget), i
+       selve timen (A) eller uten periodekrav (B), se LONG_SEA_BW_CONFIRM. Mangler perioden: None.
+
+    Regelen retter svellandelen, ikke svellvinduet: geometrien og vinduet er uendret.
+
+    Når regelen slår til, brukes BarentsWatch-høyden uten periodefaktoren (bw_period_factor_for()).
+
+    Omregningen: høyden er svell og lang sjø lagt sammen som energi (kvadratrot av kvadratsummen). Periode og
+    retning er fra den største av de to (samme modell, CLAUDE.md «Konvensjoner»). Totalhøyden er GFS sin egen
+    (samme modell som delene), ellers den som sto. Toppperioden mangler (GFS har den aldri)."""
+    if not LONG_SEA_AS_SWELL or spot is None:
+        return None
+    if LONG_SEA_SPOTS is not None and spot.get("id") not in LONG_SEA_SPOTS:
+        return None
+    if is_fjord(spot) or hour.get("bw_height") is None or hour.get("swell_model") != "gfs":
+        return None
+    ww_h, ww_t, ww_d = (hour.get("wind_wave_height_offshore"), hour.get("wind_wave_period_offshore"),
+                        hour.get("wind_wave_dir_offshore"))
+    sw_h, sw_t, sw_d = hour.get("swell_offshore"), hour.get("period"), hour.get("dir_offshore")
+    if ww_h is None or ww_t is None or ww_d is None or ww_h <= 0 or sw_h is None:
+        return None
+    if ww_t < LONG_SEA_MIN_PERIOD_S:
+        return None
+    wind = hour.get("wind_speed")
+    if wind is None or LONG_SEA_PHASE_SPEED_PER_S * ww_t < LONG_SEA_WAVE_AGE * wind:
+        return None
+    out = degrees_outside(ww_d, spot)
+    if out is None or out > LONG_SEA_WINDOW_MARGIN_DEG:
+        return None
+    if blocked_by_near_obstacle(ww_d, spot) or exposure_override_cap(ww_d, spot) is not None:
+        return None
+    bw_p, bw_d, facing = hour.get("bw_period"), hour.get("bw_dir"), spot.get("facing")
+    if bw_d is None or facing is None or angle_diff(bw_d, facing) > BW_CONFIRM_DIFF_DEG:
+        return None
+    if LONG_SEA_BW_CONFIRM is not None:
+        confirm_p = hour.get("bw_period_real_max_3h") if LONG_SEA_BW_CONFIRM == "vindu" else bw_p
+        if confirm_p is None or confirm_p < LONG_SEA_BW_PERIOD_MIN_S:
+            return None
+    combined = math.sqrt(sw_h ** 2 + ww_h ** 2)
+    main_is_long_sea = ww_h >= sw_h or sw_t is None or sw_d is None
+    total = hour.get("total_height_offshore")
+    return {
+        "swell_offshore": combined,
+        "height_offshore": max(total, combined) if total is not None else hour.get("height_offshore"),
+        "period": ww_t if main_is_long_sea else sw_t,
+        "dir_offshore": ww_d if main_is_long_sea else sw_d,
+        "swell_peak_period": None if main_is_long_sea else hour.get("swell_peak_period"),
+        "_long_sea": True,
+    }
+
+
 def bw_period_factor_for(hour, spot):
     """Periodefaktoren slik barentswatch_height() bruker den, og hvilken
     periode den bygger på: "bw" (BarentsWatch sin toppperiode), "ute"
@@ -394,6 +520,11 @@ def bw_period_factor_for(hour, spot):
     dominerer, se bw_swell_dominates()) eller None når BarentsWatch-perioden
     mangler. Regelen kan bare ta bort en vindsjø-straff, aldri legge til en.
     Største løft: 0,3 til 1,0."""
+    # S29 c del 2 (forslag, av): lang sjø fra havsiden (long_sea()). Kurven under er laget for å ta ned vindsjø
+    # (0,3 under 6 s, 0,45-0,6 for 7-8 s), og her er sjøen ute 9 s eller mer. Står foran «mangler periode»: i
+    # variant A' og B kan regelen slå til uten toppperiode ved punktet i selve timen.
+    if hour.get("_long_sea"):
+        return 1.0, "lang_sjo"
     bw_period = hour.get("bw_period")
     pf = bw_period_factor(bw_period)
     if bw_period is None:
@@ -1869,8 +2000,17 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
     return raw_total, local_wind, lines
 
 
-def rate(hour, spot):
+def rate(hour, spot, _long_sea=True):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
+    # S29 c del 2 (forslag, AV - LONG_SEA_AS_SWELL): lang sjø fra havsiden som GFS kaller vindsjø, regnes som svell
+    # i ALLE ledd under (svellandel, energi, periode, retning). Timen selv (det som lagres og vises) røres ikke.
+    # Regelen kan bare løfte: gir omregningen færre poeng enn den vanlige regningen (taket på 3 for en usikker time,
+    # eller surfehøyde over ideal_height), gjelder den vanlige (long_sea_base under, brukt helt til slutt).
+    long_sea_hour = long_sea(hour, spot) if _long_sea else None
+    long_sea_base = None
+    if long_sea_hour is not None:
+        long_sea_base = rate(hour, spot, _long_sea=False)
+        hour = {**hour, **long_sea_hour}
     h, source, bw_detail = spot_height(hour, spot)
     period = hour.get("period")  # Open-Meteo, svellet UTE - uendret av grunning
     # 27.09.2026, ROADMAP oppgave 2: eksponering (del C, glattet geometri)
@@ -2031,6 +2171,9 @@ def rate(hour, spot):
     # Tegnet gjør bare timen usikker (S32 e), det er ikke «kildene uenige».
     if source == "barentswatch" and fjord_chop(hour, spot):
         uncertain = True
+    # S29 c del 2 (forslag, av): omregningen er et anslag, ikke modellens egen deling - høyst 3 poeng.
+    if long_sea_hour is not None:
+        uncertain = True
     if sources_disagree:
         uncertain = True
 
@@ -2174,7 +2317,7 @@ def rate(hour, spot):
         fjord_wind_block=fjord_wind_block,
     )
 
-    return {
+    result = {
         "stars": solid,
         "faded": lost_wind + lost_tide,
         "faded_wind": lost_wind,
@@ -2213,6 +2356,10 @@ def rate(hour, spot):
         "bw_period_basis": bw_detail.get("bw_period_basis") if bw_detail else None,
         # Sann når høyden er løftet til gap-grensa (se gap_floor()).
         "gap_floor": gap_used,
+        # S29 c del 2 (forslag, av): feltet finnes bare når regelen har regnet om timen (long_sea()) - det
+        # svellet ratingen faktisk brukte, så appen og læringen (exposure_learn) kan se det. Aldri med bryteren av.
+        **({"long_sea": {"swell_offshore": round(long_sea_hour["swell_offshore"], 2), "period": long_sea_hour["period"],
+                         "dir_offshore": long_sea_hour["dir_offshore"]}} if long_sea_hour is not None else {}),
         # 23.11.2026 (svar.md 23.11.2026 kl. 14.05): sann når høyden ER andelshøyden for en fjord-spot (svell ute ×
         # andel × kantfaktor, se fjord_share_applied()). Feltet finnes bare da, så kyst-spots har det aldri. Det er
         # et eget felt fordi "gap_floor" over er usann når vinden har tatt gap-grensa bort og i reserven under 7 s:
@@ -2291,3 +2438,6 @@ def rate(hour, spot):
             "lines": local_rules_lines,
         },
     }
+    if long_sea_base is not None and result["stars"] < long_sea_base["stars"]:
+        return long_sea_base
+    return result
