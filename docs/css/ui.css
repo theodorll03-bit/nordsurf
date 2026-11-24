@@ -894,6 +894,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .sek-spot > .tdom{display:inline-flex;align-items:center;gap:8px}
 .tdom .tapt{display:inline-flex;align-items:center;gap:5px}
 .tdom .tapt i{box-sizing:border-box;width:10px;height:10px;border:1.5px dashed var(--signal)}
+.tdom .tapt i.tv{border-color:var(--ink)}   /* tapt på tidevann: blekk, ikke korall (S33 c) */
+.tdom .tapt + .tapt{margin-left:2px}
 .tdom .to{font-weight:700;color:var(--ink)}
 .ik{flex:none;margin-right:6px;vertical-align:-2.5px;color:var(--muted)}
 .ik .pk{fill:var(--bg)}
@@ -936,6 +938,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .segs i.pa{background:var(--ink)}
 .tstripe .segs.r-4 i.pa,.tstripe .segs.r-5 i.pa{background:var(--signal)}
 .tstripe .segs i.tapt{box-sizing:border-box;background:none;border:1px dashed var(--signal)}
+.tstripe .segs i.tapt.tv{border-color:var(--ink)}   /* tapt på tidevann: blekk, ikke korall (S33 c) */
 .tstripe .segs.miss{background:repeating-linear-gradient(45deg,var(--hatch) 0 1.5px,transparent 1.5px 5px)}
 .tstripe .vnd{display:flex;flex-direction:column;align-items:center;gap:4px;height:30px;margin-top:8px}
 .tstripe .vnd b{font-family:var(--mono);font-stretch:75%;font-size:.6875rem;line-height:1;font-weight:700}
@@ -944,7 +947,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .tsvg{display:block;overflow:visible}
 .tstripe .tsvg .bnd{fill:var(--tide-band)}
 .tstripe .tsvg .linje{fill:none;stroke:var(--ink);stroke-width:1.75}
-.tstripe .tsvg .koster{fill:none;stroke:var(--signal);stroke-width:2.75;stroke-dasharray:3 2}
+.tstripe .tsvg .koster{fill:none;stroke:var(--ink);stroke-width:2.75;stroke-dasharray:3 2}   /* tidevannet koster poeng: stiplet i blekk (S33 c) */
 .tstripe .tsvg .eks{fill:var(--ink)}
 .tstripe .tsvg text{font-family:var(--mono);font-stretch:87.5%;font-size:11px;font-weight:700;text-transform:uppercase;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
 .tstripe .tsvg .valgt{fill:var(--bg);stroke:var(--ink);stroke-width:2}

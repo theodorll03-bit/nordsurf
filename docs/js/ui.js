@@ -270,10 +270,10 @@
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
     const dag = d0.idag ? "" : `${cap(dagOrd(d0))}: `;
     const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : ratingWord(h);
-    const tapt = h && b.st!=null ? ([h.faded_wind ? H.taptVind(h.faded_wind) : null, h.faded_tide ? H.taptTide(h.faded_tide) : null].filter(Boolean).join(" · ") || (h.faded ? `−${h.faded}` : null)) : null;
+    const tapt = h && b.st!=null ? (lostParts(h).map(p=> p.tekst).join(" · ") || null) : null;
     const sted = s.area || regionOf(s), kj = kjoreText(s.id), setn = favSetning(s, b), obs = favObs(s);
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
-      `${dag}${b.st!=null ? STR.starsAria(b.st, (h && h.faded) || 0) + ", " : ""}${ord}`, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
+      `${dag}${b.st!=null ? STR.starsAria(b.st, lostAll(h)) + ", " : ""}${ord}`, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
         <span class="etikett">${esc([sted, kj, dag + ord, tapt].filter(Boolean).join(" · "))}</span>
@@ -346,7 +346,7 @@
     return med.find(r=> iBesteOkt(r.s, r.b.t)) || med[0] || null;
   }
   const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "");
-  const fsTapt = (h)=> !h ? "" : [h.faded_wind ? STR.hjem.taptVind(h.faded_wind) : null, h.faded_tide ? STR.hjem.taptTide(h.faded_tide) : null].filter(Boolean).join(" · ") || (h.faded ? `−${h.faded}` : "");
+  const fsTapt = (h)=> !h ? "" : lostParts(h).map(p=> p.tekst).join(" · ");
   const fsSvell = (h)=> h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "–";
   // «Best hh–hh» vises bare mens vinduet er åpent (fysikk-kontrolløren 15.10 og 16.11.2026) - samme test som «apent»
   // i overskrift(): et vindu som er over, er ikke et råd
@@ -363,7 +363,7 @@
     const {s, b} = r, h = b.h, n = b.st!=null ? min5(b.st) : null, kj = kjoreText(s.id);
     const vindu = n!=null && n >= 1 && fsApent(b) ? vinduKl(b.start, b.slutt).join("–") : "–";
     const href = `#spot=${encodeURIComponent(s.id)}${b.t ? "&t=" + encodeURIComponent(b.t) : ""}`;
-    const aria = [`${s.name}, ${[regionOf(s), kj].filter(Boolean).join(", ")}`, `${n!=null ? STR.starsAria(n, (h && h.faded) || 0) + ", " : ""}${fsOrd(b)}`, vindu!=="–" ? `${STR.spot.best} ${vindu}` : null, h && h.swell_offshore!=null ? `${STR.spot.svell} ${fsSvell(h)}` : null].filter(Boolean).join(". ");
+    const aria = [`${s.name}, ${[regionOf(s), kj].filter(Boolean).join(", ")}`, `${n!=null ? STR.starsAria(n, lostAll(h)) + ", " : ""}${fsOrd(b)}`, vindu!=="–" ? `${STR.spot.best} ${vindu}` : null, h && h.swell_offshore!=null ? `${STR.spot.svell} ${fsSvell(h)}` : null].filter(Boolean).join(". ");
     return `<tr class="s r-${n!=null ? n : 0}" data-spot="${esc(s.id)}" data-href="${esc(href)}">
       <td class="fs-nr">${esc(STR.web.nr(nr))}</td>
       <td class="fs-nm"><a class="t-navn${s.name.length > 12 ? " lang" : ""}" href="${esc(href)}" aria-label="${esc(aria)}">${esc(s.name)}</a><span class="etikett">${esc([regionOf(s), kj, ...merker(s)].filter(Boolean).join(" · "))}</span></td>
@@ -379,7 +379,7 @@
     const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(" · ");
     // den håndtegnede ringen rundt beste vindu (SPEC §6D punkt 3) - korall bare fra 4, ellers blekk
     const ring = `<svg class="fs-ring" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><path d="M30 12 C70 2 150 2 182 14 C204 24 196 50 150 58 C100 66 30 62 10 46 C-4 34 12 18 46 9"/></svg>`;
-    return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${STR.starsAria(n, (h && h.faded) || 0)}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
+    return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${STR.starsAria(n, lostAll(h))}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
         ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="" decoding="async">` : ""}
         <span class="fs-plate"><span class="etikett">${esc(linje)}</span><span class="t-hero fs-navn${lengste(s.name) > 8 ? " lang" : ""}">${esc(s.name)}</span>
           <span class="fs-rad"><span class="fs-tall">${n}</span><b class="fs-ord">${esc(fsOrd(b))}</b>${fakta ? `<span class="fs-fakta">${esc(fakta)}</span>` : ""}${vindu ? `<span class="fs-best">${esc(STR.spot.best)} ${esc(vindu)}${ring}</span>` : ""}</span></span></a>

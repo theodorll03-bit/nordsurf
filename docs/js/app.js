@@ -323,6 +323,26 @@ function tideLowBest(s){
   const lr = s && s.local_rules, tl = lr && lr.tide_level;
   return !!tl && tl.max_at_cm > tl.full_below_cm && tl.penalty > 0 && (lr.weight==null || lr.weight > 0);
 }
+// Poeng tidevannet tok (S33 c, svar.md 23.11.2026 kl. 14.00): den vanlige tidevannsregelen (faded_tide) pluss det
+// spotens lokale tidevannsregel tok (local_rules.stars_lost - rating.rate(): det tallet er bare det lokale
+// TIDEVANNSfradraget, den lokale vindregelen bokføres som vind). Tapet vises som tidevann («−1 tidevann») med
+// stiplet poeng i blekk, ikke korall. lostAll(): alt som er tapt på vind og tidevann til sammen. Bare visning.
+function tideLost(h){
+  if(!h) return 0;
+  return (h.faded_tide || 0) + ((h.local_rules && h.local_rules.stars_lost) || 0);
+}
+function lostAll(h){
+  if(!h) return 0;
+  return Math.max(h.faded || 0, (h.faded_wind || 0) + (h.faded_tide || 0)) + ((h.local_rules && h.local_rules.stars_lost) || 0);
+}
+// «−1 vind», «−1 tidevann» som liste (eldre varsel uten delingen: bare «−1»)
+function lostParts(h){
+  if(!h) return [];
+  const tv = tideLost(h);
+  const ut = [h.faded_wind ? {hva: "vind", n: h.faded_wind, tekst: STR.hjem.taptVind(h.faded_wind)} : null, tv ? {hva: "tidevann", n: tv, tekst: STR.hjem.taptTide(tv)} : null].filter(Boolean);
+  if(!ut.length && h.faded) ut.push({hva: "", n: h.faded, tekst: `−${h.faded}`});
+  return ut;
+}
 // Vindstyrken som tall (S28, Theodor 23.11.2026): hele m/s som før, men på en spot med egen vindgrense (wind_calm_ms:
 // Breivikeidet 8, Unstad 14 m/s middelvind) står én desimal, rundet ned, når avrundingen ellers ville vist grensa uten at
 // den er nådd (7,9 og ikke 8; vinden teller først fra grensa). Samme regel som rating.wind_ms_text() i henteren.

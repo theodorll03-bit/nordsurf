@@ -366,8 +366,10 @@ def main():
                         assert got_["kort"] == got_["pref"] == got_["fork"] == "Best på lavt vann" and got_["lav"], (sp_["id"], got_)
                         assert got_["celle"].endswith("Best på lavt vann") and "tåler alt" not in got_["celle"], got_
                     else:
-                        # som før: cella og forklaringen sier «tåler alt» uten spot.tide (også Unstad og Farstadsanden, se rapporten S28), kortet følger tide_regel
-                        assert got_["kort"] == got_["pref"] == gammel_kort and got_["fork"] == "tåler alt tidevann" and got_["celle"].endswith("Spoten tåler alt tidevann") and not got_["lav"], (sp_["id"], got_)
+                        # som før: cella sier «tåler alt» uten spot.tide, kortet følger tide_regel. Forklaringen sier «liker lav og middels vann» for
+                        # en spot med lokal regel på flo og fjære (local_rules.tide_prefer, fysikk-kontrolløren 24.11.2026, vilkår 2), ellers «tåler alt»
+                        lp_ = (sp_.get("local_rules") or {}).get("tide_prefer")
+                        assert got_["kort"] == got_["pref"] == gammel_kort and got_["fork"] == (f"liker {' og '.join(lp_)} vann" if lp_ else "tåler alt tidevann") and got_["celle"].endswith("Spoten tåler alt tidevann") and not got_["lav"], (sp_["id"], got_)
                 assert sorted(x["id"] for x in tv_spots if (x.get("local_rules") or {}).get("tide_level")) == ["breivikeidet"]
                 # regelen må ha effekt: vekt 0 eller ingen økning mot flo er ikke «best på lavt vann»
                 lr_b = next(x for x in tv_spots if x["id"] == "breivikeidet")["local_rules"]
@@ -788,7 +790,7 @@ def main():
                   const ut = {kol: {}, aria: {}};
                   for(const tk of boks.querySelectorAll('.tk')){
                     const e = tk.querySelector('.segs'), pa = e.querySelector('i.pa'), bst = tk.querySelector('.bst');
-                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length,
+                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length, tv: e.querySelectorAll('i.tapt.tv').length, tfarge: e.querySelector('i.tapt') ? getComputedStyle(e.querySelector('i.tapt')).borderTopColor : null,
                       farge: pa ? getComputedStyle(pa).backgroundColor : null, mork: tk.classList.contains('mork'), best: bst.classList.contains('pa') ? (bst.classList.contains('k') ? 'korall' : 'blekk') : null};
                   }
                   boks.remove();
@@ -904,6 +906,19 @@ def main():
                     assert (kol["08"]["cls"], kol["08"]["pa"], kol["08"]["tapt"]) == ("r-3", 3, 0) and (kol["09"]["cls"], kol["09"]["pa"], kol["09"]["tapt"]) == ("r-3", 3, 1), (kol["08"], kol["09"])
                     assert (kol["10"]["cls"], kol["10"]["pa"], kol["10"]["tapt"]) == ("r-4", 4, 1) and (kol["11"]["cls"], kol["11"]["pa"], kol["11"]["tapt"]) == ("r-5", 5, 0), (kol["10"], kol["11"])
                     assert kol["08"]["farge"] == kol["09"]["farge"] != kol["10"]["farge"] == kol["11"]["farge"], f"blekk til og med 3 og korall fra 4: {[kol[x]['farge'] for x in ('08', '09', '10', '11')]}"
+                    # S33 c (svar.md 23.11.2026 kl. 14.00): poeng tapt på tidevann er stiplet i blekk, poeng tapt på vind i korall som før
+                    assert (kol["09"]["tv"], kol["10"]["tv"]) == (0, 1) and kol["10"]["tfarge"] == kol["08"]["farge"] != kol["09"]["tfarge"] == kol["10"]["farge"], f"tapt på tidevann skal være stiplet i blekk og tapt på vind i korall ({scheme}): {kol['09']} {kol['10']}"
+                    # det den lokale tidevannsregelen tar (local_rules.stars_lost, Breivikeidet når tidevannet er størst) vises som tidevann
+                    s33 = page.evaluate("""() => { const lok = {stars: 1, faded: 0, faded_wind: 0, faded_tide: 0, local_rules: {stars_lost: 1}}, begge = {stars: 2, faded: 2, faded_wind: 1, faded_tide: 1, local_rules: {stars_lost: 1}};
+                        return {lok: [tideLost(lok), lostAll(lok), lostParts(lok).map(p => p.tekst)], begge: [tideLost(begge), lostAll(begge), lostParts(begge).map(p => p.tekst)],
+                          ingen: [tideLost({stars: 2}), lostAll({stars: 2}), lostParts({stars: 2}).length, tideLost(null), lostAll(null)], gammel: lostParts({stars: 1, faded: 1}).map(p => p.tekst), aria: STR.starsAria(1, lostAll(lok))}; }""")
+                    assert s33["lok"] == [1, 1, ["−1 tidevann"]] and s33["begge"] == [2, 3, ["−1 vind", "−2 tidevann"]] and s33["ingen"] == [0, 0, 0, 0, 0] and s33["gammel"] == ["−1"], s33
+                    assert s33["aria"] == "1 av 5, 1 tapt på vind eller tidevann", s33
+                    # vilkår 1 (fysikk-kontrolløren 24.11.2026): når tidevannet får poenget, er low_reason tom og ordet poengets ord, også i
+                    # fralandsvind 10,2-12 m/s med surfehøyde fra 0,8 m på Breivikeidet (wind_calm_ms 8). Aldri «Blåst ut» der.
+                    ord33 = page.evaluate("""() => [10.2, 11, 11.99].map(v => ratingWord({stars: 1, low_reason: null, wind_type: 'offshore', wind_speed: v, wind_calm_ms: 8, surf_height: 1.35, period: 8,
+                        light: 'dag', faded: 0, faded_wind: 0, faded_tide: 0, zero_losses: {energy: 0, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {stars_lost: 1}})).concat([STR.starWords[1], LOW_REASON_WORD.blown_out])""")
+                    assert ord33[:3] == [ord33[3]] * 3 and ord33[3] != ord33[4], ord33
                     assert kol["12"]["mork"] and kol["12"]["n"] == 0, f"en mørk time har ingen segmenter: {kol['12']}"
                     assert kol["13"]["cls"] == "miss" and kol["13"]["n"] == 0, f"en time uten data er skravert, aldri 0: {kol['13']}"
                     assert kol["14"]["cls"] == "forbud" and kol["14"]["n"] == 0, f"en time i forbudsperioden har ingen vurdering: {kol['14']}"

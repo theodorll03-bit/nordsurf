@@ -1,8 +1,8 @@
 /* Nordsurf: timestripa på spotsiden (design B 4.0, SPEC §6B punkt 7).
 
    Én kolonne per time: strek over de beste timene, fem segmenter (fylt opp til timens tall - blekk til og med
-   3, korall fra 4 som SPEC §5 sier - og tapte poeng med stiplet korall), vindpil og vindstyrke, og under hele stripa tidevannskurven med spotens foretrukne nivå
-   som bånd og stiplet korall der tidevannet koster poeng. Mørke timer og timer i en forbudsperiode har ingen
+   3, korall fra 4 som SPEC §5 sier - og tapte poeng stiplet: vind i korall, tidevann i blekk), vindpil og vindstyrke, og under hele stripa tidevannskurven med spotens foretrukne nivå
+   som bånd og stiplet der tidevannet koster poeng. Mørke timer og timer i en forbudsperiode har ingen
    segmenter (SPEC §5), og timer uten data er skravert - aldri 0.
 
    Ren visning: ingen tall regnes. Timen velges ved å dra eller trykke i stripa, eller med piltaster og
@@ -42,7 +42,7 @@
   const spenn = (cols)=> cols.length ? [cols[0].ms - steg(cols) / 2, cols[cols.length-1].ms + steg(cols.slice(-2)) / 2] : [0, 0];
 
   function tapt(h){
-    const ut = [h.faded_wind ? STR.spot.timeTapt(h.faded_wind, "vind") : null, h.faded_tide ? STR.spot.timeTapt(h.faded_tide, "tidevann") : null].filter(Boolean);
+    const ut = [h.faded_wind ? STR.spot.timeTapt(h.faded_wind, "vind") : null, tideLost(h) ? STR.spot.timeTapt(tideLost(h), "tidevann") : null].filter(Boolean);
     return ut.join(", ");
   }
   function ariaTime(s, c, H, best, ev){
@@ -76,12 +76,14 @@
     const kol = cols.map((c, k)=>{
       const h = c.i >= 0 ? s.hours[c.i] : null;
       const mork = !!h && H.mork(h), kjent = !!h && H.known(h), forbud = !!h && !!h._forbud;   // forbudsperiode: ingen vurdering, aldri «0»
-      const st = kjent && !mork && !forbud ? Math.min(5, H.stars(h)) : 0, lost = kjent && !mork && !forbud ? Math.min(5 - st, h.faded || 0) : 0;
+      const st = kjent && !mork && !forbud ? Math.min(5, H.stars(h)) : 0, lost = kjent && !mork && !forbud ? Math.min(5 - st, lostAll(h)) : 0;
+      // tidevannets poeng står nærmest de hele (vinden bokføres først, øverst) og er stiplet i blekk, vindens i korall (S33 c)
+      const lostTv = Math.min(lost, kjent ? tideLost(h) : 0);
       let seg = "";
       if(!h) seg = `<div class="segs vaert"></div>`;
       else if(mork || forbud) seg = `<div class="segs${forbud ? " forbud" : ""}"></div>`;
       else if(!kjent) seg = `<div class="segs miss"></div>`;
-      else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
+      else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lostTv ? "tapt tv" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
@@ -145,8 +147,8 @@
         }
       }
     }
-    // kurven i to strøk: blekk, og stiplet korall over timene der tidevannet koster poeng (faded_tide)
-    const koster = (ms)=>{ const c = cols.reduce((n, k)=> Math.abs(k.ms - ms) < Math.abs(n.ms - ms) ? k : n, cols[0]); const h = c.i >= 0 ? s.hours[c.i] : null; return !!h && !h._forbud && !H.mork(h) && H.known(h) && (h.faded_tide || 0) > 0; };
+    // kurven i to strøk: hel, og stiplet (i blekk, S33 c) over timene der tidevannet koster poeng (tideLost(): faded_tide og den lokale tidevannsregelen)
+    const koster = (ms)=>{ const c = cols.reduce((n, k)=> Math.abs(k.ms - ms) < Math.abs(n.ms - ms) ? k : n, cols[0]); const h = c.i >= 0 ? s.hours[c.i] : null; return !!h && !h._forbud && !H.mork(h) && H.known(h) && tideLost(h) > 0; };
     const strok = {false: "", true: ""};
     for(let i = 0; i < pkt.length - 1; i++){
       const k = koster((pkt[i].ms + pkt[i+1].ms) / 2);
