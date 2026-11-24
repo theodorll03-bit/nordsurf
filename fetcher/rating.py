@@ -607,10 +607,33 @@ def gap_edge_factor(hour, spot):
                       for kant, bredde in ((start, taper[0]), (end, taper[1]))))
 
 
+def gap_share(hour, spot):
+    """Andelen av svellet ute som når en gap-spot for denne svellretningen:
+    gap_transfer × gap_edge_factor(). Kall bare når gap_swell_in_window() er sann.
+
+    24.11.2026 (svar.md 24.11.2026 kl. 10.25, S36 b): en spot kan sette
+    "gap_min_share" {"window": [fra, til], "share": tall}. Kommer svellet ute
+    fra det vinduet, eller høyst GAP_EDGE_DEG utenfor kanten, er andelen aldri
+    lavere enn "share" (hard kant: hele tallet i hele vinduet). Andelen er da
+    den største av de to. Bare Russelv har feltet: 0,20 i 348-19, det som
+    gjaldt 16.-23.11.2026, så ANDELEN i 346-21° ikke er lavere enn den var før
+    S34 a. Det er ikke et gulv for høyden utenfor 346-21°: i BarentsWatch-sonen
+    ved 343-345° og 22-32° bruker fjord-regelen andelshøyden der Russelv før
+    S34 a var en kyst-spot med BarentsWatch-tallet, og høyden kan være lavere
+    (fysikk-kontrolløren 24.11.2026, lagt fram som S39). Uten feltet er
+    tallet som før."""
+    andel = spot["gap_transfer"] * gap_edge_factor(hour, spot)
+    minst = spot.get("gap_min_share")
+    if minst and distance_to_sector(hour["dir_offshore"], minst["window"]) <= GAP_EDGE_DEG:
+        andel = max(andel, minst["share"])
+    return andel
+
+
 def gap_floor_height(hour, spot):
-    """Høyden gap-grensa gir uten å se på vinden: svell ute × gap_transfer ×
-    gap_edge_factor(). Kall bare når gap_swell_in_window() er sann."""
-    return hour["swell_offshore"] * spot["gap_transfer"] * gap_edge_factor(hour, spot)
+    """Høyden gap-grensa gir uten å se på vinden: svell ute × gap_share()
+    (gap_transfer × gap_edge_factor(), og aldri under gap_min_share når spoten
+    har det). Kall bare når gap_swell_in_window() er sann."""
+    return hour["swell_offshore"] * gap_share(hour, spot)
 
 
 def gap_blocked_by_wind(hour, spot):
@@ -703,7 +726,8 @@ def fjord_in_window(hour, spot):
 
 
 def fjord_share_height(hour, spot):
-    """Andelshøyden for en fjord-spot: svell ute × gap_transfer × gap_edge_factor(), når svellet ute kommer fra
+    """Andelshøyden for en fjord-spot: svell ute × gap_share() (gap_transfer × gap_edge_factor(), og aldri under
+    gap_min_share når spoten har det), når svellet ute kommer fra
     det tegnede vinduet og perioden ute er minst GAP_MIN_PERIOD_S. Ellers None. Vinden ser den ikke på: tar
     vinden grensa bort (gap_blocked_by_wind()), er høyden den samme, og rate() gir 0 poeng (se der).
     BarentsWatch løfter den aldri og senker den aldri (fysikk-kontrolløren 23.11.2026, valg 1 A)."""
@@ -713,6 +737,19 @@ def fjord_share_height(hour, spot):
     if period is None or period < GAP_MIN_PERIOD_S:
         return None
     return gap_floor_height(hour, spot)
+
+
+def fjord_share_applied(hour, spot, h, source):
+    """Sann når høyden rate() regner videre med ER andelshøyden for en fjord-spot: svell ute × gap_share()
+    (gap_transfer × gap_edge_factor(), og aldri under gap_min_share), med svellet ute i det tegnede vinduet. Gjelder også når vinden tar gap-grensa bort
+    (gap_floor_applied() er da usann), og i reserven under GAP_MIN_PERIOD_S, der høyden er det samme tallet
+    (transfer er lik gap_transfer, test 39.1 krever det). Med BarentsWatch-tall og under GAP_MIN_PERIOD_S
+    (eller ukjent periode) gjelder kystmodellen som for en kyst-spot, og svaret er usant."""
+    if h is None or source not in ("barentswatch", "svell_ute") or not fjord_in_window(hour, spot):
+        return False
+    if source == "barentswatch" and fjord_share_height(hour, spot) is None:
+        return False
+    return abs(h - gap_floor_height(hour, spot)) < 1e-9
 
 
 def fjord_chop(hour, spot):
@@ -770,7 +807,9 @@ def spot_height(hour, spot=None):
         # 23.11.2026 (S27, og bw_tillit samme dag): for en fjord-spot bruker reserven samme retningsfaktor som
         # gap-grensa i det tegnede vinduet, så svell ute × transfer er det samme tallet som grensa når andelene er like
         if fjord_in_window(hour, spot):
-            retning = gap_edge_factor(hour, spot)
+            # gap_share() er gap_transfer × kantfaktoren, og aldri under gap_min_share (S36 b). Delt på gap_transfer
+            # er det kantfaktoren når spoten ikke har gap_min_share.
+            retning = gap_share(hour, spot) / spot["gap_transfer"]
         else:
             retning = exposure(hour.get("dir_offshore"), spot, hour.get("period"))
         h = hour["swell_offshore"] * transfer * retning
@@ -1369,13 +1408,19 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                     reasons.append("retning ved punktet")
                 items.append(f"Etter justering {_fmt_m(h)} ({', '.join(reasons)})")
     if fjord_not_lifted:
-        andel = spot["gap_transfer"] * gap_edge_factor(hour, spot)
+        andel = gap_share(hour, spot)
         items.append((f"{_fmt_m(h)}: svell ute {_fmt_m(hour['swell_offshore'])} gjennom gapet, "
                       f"andel {andel:.2f}").replace(".", ",") + ". Anslag, ikke kystmodellens tall")
     elif gap_used:
         # gap_used er bare sann når andelen finnes (se gap_floor())
-        andel = spot["gap_transfer"] * gap_edge_factor(hour, spot)
+        andel = gap_share(hour, spot)
         items.append((f"Løftet til {_fmt_m(h)}: svell ute {_fmt_m(hour['swell_offshore'])} gjennom gapet, "
+                      f"andel {andel:.2f}").replace(".", ",") + ". Anslag, ikke kystmodellens tall")
+    elif fjord_share_applied(hour, spot, h, source):
+        # 24.11.2026 (feiljegeren, funn 4): reserven under 7 s for en fjord-spot. Høyden er samme andel (share_height),
+        # men gap-grensa gjelder ikke der, så linja manglet. Samme ord som over, uten «Løftet til». Bare tekst.
+        andel = gap_share(hour, spot)
+        items.append((f"{_fmt_m(h)}: svell ute {_fmt_m(hour['swell_offshore'])} gjennom gapet, "
                       f"andel {andel:.2f}").replace(".", ",") + ". Anslag, ikke kystmodellens tall")
     if h is not None:
         if period is None:
@@ -1440,7 +1485,14 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                 sf_line += f" (startverdi fra {n} observasjoner)" if n else " (startverdi, ikke lært fra logger)"
             items.append(sf_line)
             items.append(f"Surfehøyde {_fmt_m(surf_height)}, sett ca. {_fmt_m(surf_height_sets)}: {_height_word(hs)}")
-    items.append(f"Retning: {_direction_word(dir_hit)}")
+    # 24.11.2026 (feiljegeren, funn 2): når høyden er andelshøyden for en fjord-spot, sier linja hvor svellet ligger i
+    # det TEGNEDE vinduet (samme directness() som ellers, bare mot det vinduet høyden er regnet fra). dir_hit leses
+    # fra eksponeringen mot swell_window, som ikke kjenner gapet, og ga «svakt inn i skyggen» rett under «svell ute
+    # gjennom gapet». Bare ordet i regnestykket: ingen tall i ratingen bruker dette.
+    dir_word_hit = dir_hit
+    if fjord_share_applied(hour, spot, h, source):
+        dir_word_hit = directness(hour["dir_offshore"], {"swell_window": spot["swell_window_tegnet"]})
+    items.append(f"Retning: {_direction_word(dir_word_hit)}")
     if wind_speed is None:
         items.append("Vind: ukjent")
     else:
@@ -1559,7 +1611,7 @@ LOW_RATING_FLAT_SURF_HEIGHT_MAX = 0.4  # "surfehøyde under ca. 0,4 m", se class
 
 
 def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
-                         potential, lost_wind, lost_tide, solid, blown_out, energy_swell=None):
+                         potential, lost_wind, lost_tide, solid, blown_out, energy_swell=None, share_used=False):
     """05.10.2026 (Theodors rettelse, Grøtfjord kl. 11-17, 05.10.2026 - se
     STATUS.md): ordet for 0 og 1 stjerne skal si HVORFOR, ikke bare "Flatt"
     for alt (den gamle STAR_WORDS[0] i appen var bokstavelig talt "Flatt",
@@ -1610,9 +1662,27 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     "Flat" bare når energien ute også er lav (eller ukjent). Gjelder ikke
     BarentsWatch-timer: der har kystmodellen selv målt lite ved punktet
     (Grøtfjord 26.09.2026: 2,2 m/15,6 s ute fra 272°, BarentsWatch 0,33 m -
-    observert helt flatt, og ordet forblir "Flatt")."""
+    observert helt flatt, og ordet forblir "Flatt").
+
+    23.11.2026 (svar.md 23.11.2026 kl. 14.05, Theodor: «Hvis det er surf på
+    Breivikeidet er det så å si alltid bølger på de to andre spottene i
+    Lyngen»; kilder: observasjon 17.11.2026 og 22.11.2026, Theodor): en fjord-spot
+    (bw_tillit "fjord") får aldri "treffer_ikke" når høyden timen regnes med
+    ER andelshøyden (share_used, se fjord_share_applied()). Høyden er der
+    regnet fra det tegnede vinduet (fjord_share_height() og
+    gap_edge_factor()), mens dir_hit leses fra eksponeringstabellen, som
+    ikke kjenner gapet (Russelv 17.11.2026 kl. 09Z: svell fra 17°, 0,44 m
+    ved spoten, dir_hit 0,53). Ordet ville sagt at svellet bommer i en time
+    der høyden kommer fra nettopp det svellet. Er høyden lav, er ordet
+    "flat". Ellers vinner de andre grunnene som før.
+    24.11.2026 (fysikk-kontrolløren, vilkår 5): unntaket gjelder bare når
+    andelshøyden faktisk er brukt. Før gjaldt det hele det tegnede vinduet,
+    også med BarentsWatch-tall og svellperiode under 7 s, der høyden er
+    BarentsWatch-høyden og spoten regnes som en kyst-spot. Der, og utenfor
+    det tegnede vinduet, er ordet som for en kyst-spot."""
     if solid > 1:
         return None
+    fjord = bool(share_used)   # høyden er andelshøyden: se siste avsnitt i docstringen
     # 19.11.2026 (fysikk-kontrolløren, forslag S22): svellet kommer gjennom gapet, men gap-grensa er tatt bort av
     # kraftig pålandsvind (eller vind fra ukjent retning). Timen er blåst ut, ikke flat: BarentsWatch-høyden ved
     # punktet er lav fordi kystmodellen slipper for lite inn, ikke fordi svellet mangler (Russelv 16.11.2026).
@@ -1624,7 +1694,7 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
     little_total = bw is None or bw < BLOWN_OUT_MIN_BW_HEIGHT
     flat = little_total and (low_hs or (surf_height is not None and surf_height < LOW_RATING_FLAT_SURF_HEIGHT_MAX))
     if flat:
-        if (source != "barentswatch" and dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
+        if (not fjord and source != "barentswatch" and dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
                 and energy_swell is not None
                 and energy_swell >= (energy_thresholds_used(spot) or (None, LOW_ENERGY_WORD_KJ))[1]):
             return "treffer_ikke"
@@ -1637,7 +1707,7 @@ def classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_
         return "blown_out"
     if bw_detail is not None and not little_total and bw_detail["swell_share"] < STORMSJO_SHARE_MAX:
         return "stormsjo"
-    if (dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
+    if (not fjord and dir_hit is not None and dir_hit < SPOT_DIRECTION_OVERRIDE_EXPOSURE
             and not (bw_detail and bw_detail.get("bw_confirms"))):
         return "treffer_ikke"
     return None
@@ -1816,6 +1886,7 @@ def rate(hour, spot):
     # helt flatt observert.
     low_hs = h is not None and h < FLAT_HS_THRESHOLD
     gap_used = gap_floor_applied(hour, spot, h, source)
+    share_used = fjord_share_applied(hour, spot, h, source)
     blown_out = is_blown_out(hour, spot, source, bw_detail, low_hs)
     hb_raw = None if (h is None or low_hs) else breaking_height(h, period)
     # 26.09.2026: svell i kanten av eller utenfor svellvinduet har bøyd seg
@@ -2087,7 +2158,8 @@ def rate(hour, spot):
         local_rules_source = src.split(",")[0].strip() if src else None
 
     low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
-                                      potential, lost_wind, lost_tide, solid, blown_out, energy_swell)
+                                      potential, lost_wind, lost_tide, solid, blown_out, energy_swell,
+                                      share_used=share_used)
 
     breakdown = build_breakdown(
         hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
@@ -2141,6 +2213,11 @@ def rate(hour, spot):
         "bw_period_basis": bw_detail.get("bw_period_basis") if bw_detail else None,
         # Sann når høyden er løftet til gap-grensa (se gap_floor()).
         "gap_floor": gap_used,
+        # 23.11.2026 (svar.md 23.11.2026 kl. 14.05): sann når høyden ER andelshøyden for en fjord-spot (svell ute ×
+        # andel × kantfaktor, se fjord_share_applied()). Feltet finnes bare da, så kyst-spots har det aldri. Det er
+        # et eget felt fordi "gap_floor" over er usann når vinden har tatt gap-grensa bort og i reserven under 7 s:
+        # for en fjord-spot er høyden andelshøyden også da. Bare til visning («anslag, ikke kystmodellens tall»).
+        **({"share_height": True} if share_used else {}),
         "spot_direction_factor": round(bw_detail["spot_direction_factor"], 3) if bw_detail else None,
         # Gradavviket bak spot_direction_factor - til visning ("70 grader
         # skrått på stranda"). None hvis retning eller facing er ukjent.

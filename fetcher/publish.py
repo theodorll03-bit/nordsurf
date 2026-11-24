@@ -97,7 +97,9 @@ HENT_TIMER_UTC = tuple(range(3, 22, 3))
 # spotfeltene forsiden/Utforsk/søket trenger - resten av meta ligger i detaljfila (spotsiden)
 META_FIELDS = ("id", "name", "area", "region", "aliases", "spot", "status", "facing", "swell_window", "enabled", "local_rules", "calibration",
                "forelopig_fra", "restriksjoner",   # ROADMAP K del C.4: «Foreløpig» 14 dager og «Forbud nå» (bare visning)
-               "henting_feilet")   # S6: regionjobben feilet - spoten står uten timer («mangler»), aldri 0
+               "henting_feilet",   # S6: regionjobben feilet - spoten står uten timer («mangler»), aldri 0
+               "swell_window_tegnet",   # 24.11.2026: vinduet appen viser for fjord-spots (visVindu() i docs/js/app.js)
+               "bw_tillit", "andel_forelopig")   # 23.11.2026: fjord-spots, og merkelappen «Foreløpig» når andelen er satt uten observasjon
 # kalibreringen i oversikten uten de tunge delene (eksponeringskurven 4 KiB og accuracy 1 KiB per spot) -
 # Logger-siden viser transfer/surf-faktor/par for alle spots uten å laste detaljfilene (fysikk-kontrollør
 # 15.10.2026: ellers vises standardverdier som fakta); kurven tegnes når spoten er åpnet (detaljfila)

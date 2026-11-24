@@ -20,7 +20,9 @@
   /* ROADMAP K del C.4 (bare visning, ratingen røres ikke): nye spots (status «forelopig», tools/godkjenn_spot.py)
      har merkelappen «Foreløpig» og er ikke med i «Beste økt» de første 14 dagene; spots med ferdsels- eller
      surfeforbud (fra verneforskriften, data/kandidater/vern.json) vises med «Forbud nå» i perioden og er aldri
-     med i «Beste økt» da. Mangler forelopig_fra regnes spoten som ny (ikke anbefalt før datoen er kjent). */
+     med i «Beste økt» da. Mangler forelopig_fra regnes spoten som ny (ikke anbefalt før datoen er kjent).
+     23.11.2026 (bw_tillit, svar.md 23.11.2026 kl. 14.00 og 14.05): en spot der andelen er satt uten observasjon
+     (andel_forelopig i spots.json) har samme merkelapp. Den er med i «Beste økt» som før (nyForelopig() ser bare på status). */
   const FORELOPIG_DAGER = 14;
   const MD_FMT = new Intl.DateTimeFormat("en-CA", {month:"2-digit", day:"2-digit", timeZone:TZ});   // én gang - kalles per spot per bilde
   const osloMD = (t)=>{ const p = MD_FMT.formatToParts(new Date(t)); return `${p.find(x=>x.type==="month").value}-${p.find(x=>x.type==="day").value}`; };
@@ -60,7 +62,7 @@
   }
   const nyForelopig = (s)=> s.status==="forelopig" && !(s.forelopig_fra && Date.now() - Date.parse(s.forelopig_fra) >= FORELOPIG_DAGER*864e5);
   const iBesteOkt = (s, t)=> !nyForelopig(s) && !forbudNa(s, t);
-  const merker = (s)=> [s.status==="forelopig" ? "Foreløpig" : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
+  const merker = (s)=> [s.status==="forelopig" || s.andel_forelopig ? STR.forelopig : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
   const omrMerker = (s)=> [s.area, ...merker(s)].filter(Boolean).join(" · ");
   const stedText = (s)=>{ const r = regionOf(s); return [s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r), ...merker(s)].join(" · "); };
   const regions = ()=> (DATA.regions || []).map(r=>r.name);

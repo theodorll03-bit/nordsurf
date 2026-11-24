@@ -182,7 +182,7 @@
     const K = window.KJORETID, km = (s)=> !K ? 0 : 111 * Math.hypot(s.spot.lat - K.fra.lat, (s.spot.lon - K.fra.lon) * Math.cos(K.fra.lat * Math.PI / 180));
     const naer = spots.filter(s=> s.spot && km(s) <= 150);
     const pts = (naer.length ? naer : spots.filter(s=> s.spot)).map(s=>{ const v = valueFor(s, dayKey);
-      return {id: s.id, name: s.name, lat: s.spot.lat, lon: s.spot.lon, gap: Kart.midtVindu(s.swell_window), st: v.st, tall: v.rute ? "" : String(min5(v.st)), miss: v.miss,
+      return {id: s.id, name: s.name, lat: s.spot.lat, lon: s.spot.lon, gap: Kart.midtVindu(visVindu(s)), st: v.st, tall: v.rute ? "" : String(min5(v.st)), miss: v.miss,
         // uten tall: «–» (mangler), «Mørkt» eller forbudet etter navnet; er dagens lys over, står bare navnet (raden under sier det)
         ord: !v.rute || v.rute==="over" ? "" : v.miss ? "–" : v.word}; });
     return Kart.hjemKart(pts, W, 220);

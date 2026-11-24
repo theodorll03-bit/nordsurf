@@ -441,11 +441,12 @@ function detailsGrid(s, h, t){
   const swellN = `${esc(STR.fromDir(compass(h.dir_offshore)))}${h.dir_offshore!=null?` (${Math.round(h.dir_offshore)}°)`:""}${h.period!=null?`, ${nf0.format(h.period)} s`:""}`;
   const shareV = h.swell_model==="total_fallback" ? "–" : (h.swell_share!=null ? `${nf0.format(h.swell_share*100)} %` : "–");
   const shareN = h.swell_model==="total_fallback" ? esc(STR.totalFallback) : (h.height_offshore!=null ? esc(`av ${nf1.format(h.height_offshore)} m totalt`) : "");
-  const dirV = h.directness!=null ? `${nf0.format(h.directness*100)} %` : "–";
+  const treffV = vinduTreff(h, s);
+  const dirV = treffV!=null ? `${nf0.format(treffV*100)} %` : "–";
   const dirN = h.height_source==="barentswatch" ? esc([uteDirectionText(h,s), vedSpotenDirectionText(h)].filter(Boolean).join(" ")) : esc(`${directionHitText(h, s)}${directionHitText(h, s)?" · ":""}${windowText(s)}`);
   const windN = `${esc(windLabel(h))} ${esc(STR.fromDir(compass(h.wind_dir)))}${h.gust!=null?`, ${esc(STR.gust(nf0.format(h.gust)))}`:""}${h.wind_interpolated?` · ${esc(STR.windSmoothed)}`:""}${h.wind_source==="openmeteo"?` · ${esc(STR.windGfs)}`:""}`;
   const hsN = `${esc(surfSubtext(h))}${h.bw_height_max!=null?` · ${esc(STR.bwMax(nf1.format(h.bw_height_max)))}`:""}${surfAdjustmentLine(h)?`<br>${esc(surfAdjustmentLine(h))}`:""}`;
-  const confN = h.confidence!=null ? esc(STR.confidenceSub(h.confidence_source==="målt", h.day, STR.zone[h.zone]||STR.zone.barentswatch)) : "";
+  const confN = h.confidence!=null ? esc(STR.confidenceSub(h.confidence_source==="målt" && !andelsHoyde(h), h.day, andelsHoyde(h) && h.zone!=="langtid" ? STR.zone.reserve : (STR.zone[h.zone]||STR.zone.barentswatch))) : "";
   const water = h.water_temp!=null ? `${nf0.format(h.water_temp)} °C` : (h.zone==="langtid" ? STR.notThisFar : "–");
   const air = h.air_temp!=null ? `${nf0.format(h.air_temp)} °C` : "–";
   const cal = s.calibration || {};
@@ -467,7 +468,7 @@ function detailsGrid(s, h, t){
     ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(STR.tidePref(s.tide))}`)}
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
-    ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch"?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}
+    ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch" && !andelsHoyde(h)?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}
     ${tapCell("confidence", STR.cell.confidence, h.confidence!=null?`${h.confidence} %`:"–", confN)}
     ${s.shelter_label ? tapCell("shelter", STR.cell.shelter, esc(cap(s.shelter_label)), "") : ""}
     ${tapCell("exposure", STR.cell.calibration, calV, calN)}
@@ -522,6 +523,11 @@ function bwPeriodFactor(period){
   if(period<8) return 0.3+0.3*(period-6)/2;
   return 1.0;
 }
+// 24.11.2026 (feiljegeren, funn 4): høyden er svell ute × andelen gjennom gapet (rating.py: share_height for
+// fjord-spots, gap_floor når grensa løftet), ikke kystmodellens tall. Da vises timen som anslag, ikke som målt:
+// samme ord som appen alt bruker («anslag», «reservemodell», «havmodell», «Usikkert varsel»). Bare visning.
+const GAP_KILDE = "svell ute gjennom gapet (anslag)";
+function andelsHoyde(h){ return !!(h && (h.share_height || h.gap_floor)); }
 function surfAdjustmentLine(h){
   // 27.09.2026 (Theodors rettelse): egen linje for selve justeringen fra
   // BarentsWatch sin totalhøyde til den brukte høyden - bare leddene som
@@ -529,7 +535,14 @@ function surfAdjustmentLine(h){
   // av de to er den reelle årsaken, og retningen bare hvis den ikke er 1,0).
   // 16.11.2026: gap-grensa (rating.gap_floor()) - høyden er løftet, ikke justert ned.
   // 17.11.2026 (S14): ordlyden er «Løftet til 0,5 m: svell ute gjennom gapet (anslag)».
-  if(h.gap_floor && h.height!=null) return `Løftet til ${nf1.format(h.height)} m: svell ute gjennom gapet (anslag)`;
+  // 24.11.2026 (feiljegeren, funn 3 og 4): høyden er andelshøyden (share_height) også når den ikke er løftet -
+  // BarentsWatch etter justering viser mer, vinden har tatt gap-grensa, eller reserven under 7 s. Da står samme
+  // linje uten «Løftet til», som i regnestykket fra rating.py (S32). «Løftet» leses fra den linja når den finnes.
+  if(andelsHoyde(h) && h.height!=null){
+    const linje = (h.breakdown || []).find(x=> typeof x==="string" && x.includes("gjennom gapet, andel"));
+    const loftet = linje ? linje.startsWith("Løftet til") : !!h.gap_floor;
+    return `${loftet ? "Løftet til " : ""}${nf1.format(h.height)} m: ${GAP_KILDE}`;
+  }
   if(h.height_source!=="barentswatch" || h.bw_height==null || h.height==null) return "";
   // 16.11.2026: henterens egen periodefaktor når den finnes. 17.11.2026: den er 1,0
   // når nesten alt ute er svell, selv om BarentsWatch-perioden er kort
@@ -573,16 +586,38 @@ function energyText(h){
   const t = kjText(h);  // samme tekst og samme reserve-merking som hovedlinja
   return t ? ` · ${t}` : "";
 }
+function visVindu(spot){
+  // Vinduet appen VISER (tekst, kompass, skive, kart). 24.11.2026 (feiljegeren, funn 2): for fjord-spots
+  // (bw_tillit "fjord") er det det tegnede vinduet (swell_window_tegnet), for det er det høyden regnes fra når
+  // svellet kommer gjennom gapet. Alle andre spots: swell_window som før. Bare visning.
+  if(!spot) return null;
+  return spot.bw_tillit==="fjord" && spot.swell_window_tegnet ? spot.swell_window_tegnet : (spot.swell_window || null);
+}
+function vinduTreff(h, spot){
+  // Treffgraden (0-1) som vises ved siden av vinduet. For en fjord-spot med svellet i det tegnede vinduet regnes
+  // den fra det tegnede vinduet, som rating.directness(): 1,0 fra 5 grader innenfor kanten, 0,667 på kanten.
+  // h.directness leses der fra eksponeringen mot swell_window, som ikke kjenner gapet. Ellers h.directness.
+  if(!h) return null;
+  if(spot && spot.bw_tillit==="fjord" && spot.swell_window_tegnet && h.dir_offshore!=null && inSwellWindow(h.dir_offshore, spot)){
+    const w = spot.swell_window_tegnet, secs = Array.isArray(w[0]) ? w : [w], d = h.dir_offshore;
+    let inn = 0;
+    secs.forEach(([a,b])=>{ const fra = (d - a + 360) % 360, til = (b - d + 360) % 360; if(fra <= ((b - a + 360) % 360)) inn = Math.max(inn, Math.min(fra, til)); });
+    return inn >= 5 ? 1 : 0.667 + (1 - 0.667) * inn / 5;
+  }
+  return h.directness;
+}
 function windowText(spot){
-  const w = spot.swell_window;
+  const w = visVindu(spot);
   if(!w) return "";
   const secs = Array.isArray(w[0]) ? w : [w];
   return "Vindu " + secs.map(([a,b])=>`${a}–${b}°`).join(", ");
 }
 function inSwellWindow(dir, spot){
   // ligger retningen (fra, 0 = nord) i spotens svellvindu? [a,b] eller [[a,b],[c,d]], med 360-overgang
-  if(dir==null || !spot || !spot.swell_window) return null;
-  const w = spot.swell_window, secs = Array.isArray(w[0]) ? w : [w];
+  // vinduet er det appen viser (visVindu): det tegnede for fjord-spots, ellers swell_window
+  const w = visVindu(spot);
+  if(dir==null || !w) return null;
+  const secs = Array.isArray(w[0]) ? w : [w];
   return secs.some(([a,b])=> ((dir - a + 360) % 360) <= ((b - a + 360) % 360));
 }
 function directionHitText(h, spot){
@@ -591,11 +626,12 @@ function directionHitText(h, spot){
   // geometri med skygge og kant, 0-1), ikke en vindu-test - så «Utenfor vinduet»
   // sto på retninger som faktisk lå i vinduet, men nær kanten/skjermet. Nå sies
   // vinduet fra vinduet, og graden av treff fra eksponeringen. Fysikken er uendret.
-  if(h.directness==null) return "";
+  const treff = vinduTreff(h, spot);
+  if(treff==null) return "";
   const inside = inSwellWindow(h.dir_offshore, spot);
   if(inside===false) return "Utenfor vinduet";
-  if(h.directness >= 0.999) return "Innenfor vinduet";
-  if(h.directness >= 0.667) return "I kanten av vinduet";
+  if(treff >= 0.999) return "Innenfor vinduet";
+  if(treff >= 0.667) return "I kanten av vinduet";
   return inside ? "I vinduet, men skjermet" : "Utenfor vinduet";
 }
 function vinduStatus(h, spot){
@@ -603,12 +639,13 @@ function vinduStatus(h, spot){
   // vinduet sies fra vinduet (inSwellWindow = rating.in_sector), graden av treff fra eksponeringen
   // (h.directness). klasse: hit | edge | skjermet | bekreftet | miss | ukjent. «ukjent» = retningen er i
   // vinduet, men treffgraden (directness) mangler - kartet tegner da verken fronter eller bom (aldri 0).
-  if(!h || h.dir_offshore==null || !spot || !spot.swell_window) return null;
+  if(!h || h.dir_offshore==null || !spot || !visVindu(spot)) return null;
   const inside = inSwellWindow(h.dir_offshore, spot);
   if(inside===false) return h.bw_confirms ? {klasse:"bekreftet", ikon:"delvis", txt:"Utenfor vinduet, men bekreftet ved spoten"} : {klasse:"miss", ikon:"nei", txt:"Utenfor vinduet"};
-  if(h.directness==null) return {klasse:"ukjent", ikon:"ja", txt:"Innenfor vinduet"};
-  if(h.directness >= 0.999) return {klasse:"hit", ikon:"ja", txt:"Innenfor vinduet"};
-  if(h.directness >= 0.667) return {klasse:"edge", ikon:"ja", txt:"I kanten av vinduet"};
+  const treff = vinduTreff(h, spot);
+  if(treff==null) return {klasse:"ukjent", ikon:"ja", txt:"Innenfor vinduet"};
+  if(treff >= 0.999) return {klasse:"hit", ikon:"ja", txt:"Innenfor vinduet"};
+  if(treff >= 0.667) return {klasse:"edge", ikon:"ja", txt:"I kanten av vinduet"};
   return {klasse:"skjermet", ikon:"delvis", txt:"I vinduet, men skjermet"};
 }
 function offshoreShareText(h){
@@ -626,7 +663,7 @@ function uteDirectionText(h, spot){
   if(!hit) return "";
   const deg = h.dir_offshore!=null ? Math.round(h.dir_offshore)+"°" : "";
   // skjermet i vinduet: si hvor mye som når inn, så tallet og ordet henger sammen
-  const pct = hit==="I vinduet, men skjermet" ? `, ${nf0.format(h.directness*100)} % når inn` : "";
+  const pct = hit==="I vinduet, men skjermet" ? `, ${nf0.format(vinduTreff(h, spot)*100)} % når inn` : "";
   return `Ute: ${hit.toLowerCase()}${deg?` (${deg}, ${windowText(spot).toLowerCase()}${pct})`:""}.`;
 }
 function vedSpotenDirectionText(h){
@@ -909,7 +946,7 @@ function renderLogs(){
     const transferPct = nf0.format((cal.transfer_used ?? ((s.hours||[])[0]||{}).transfer ?? 0.6) * 100);
     const transferSrcTxt = cal.transfer_source==="eksponering" ? `Lært fra eksponeringen per retning (del B, ${cal.exposure_buckets_learned_lang} bøtter)`
       : cal.transfer_source==="barentswatch" ? `Lært fra BarentsWatch (${cal.bw_pairs} par over ${cal.bw_days} døgn)`
-      : cal.transfer_source==="spots.json" ? "Satt i spots.json"
+      : cal.transfer_source==="spots.json" ? `Satt i spots.json${s.andel_forelopig ? ` · ${STR.forelopig.toLowerCase()}` : ""}`
       : cal.transfer_source==="logs" ? "Lært fra loggene dine"
       : cal.transfer_source==="skjerming" ? "Geometrisk startverdi fra skjerming (ROADMAP oppgave I), ikke lært ennå"
       : "Standardverdi";

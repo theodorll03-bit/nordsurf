@@ -62,6 +62,23 @@ def main():
         assert len(o["dager"]) == publish.SUMMARY_DAYS and o["dager"][0]["d"] == now.astimezone(OSLO).date().isoformat()
     print(f"1: oversikt-2 med {len(overview['spots'])} spots: meta ({len(publish.META_FIELDS)} felt), {publish.naa_hours(now)} nå-timer og {publish.SUMMARY_DAYS} dager per spot, ingen timer - OK")
 
+    # 1c. bw_tillit og andel_forelopig (23.11.2026): følger spoten inn i oversikten når de er satt, og legges aldri til
+    fc_f = copy.deepcopy(fc)
+    fc_f["spots"][0].update(bw_tillit="fjord", andel_forelopig=True)
+    ov_f, det_f = publish.split(fc_f)
+    assert ov_f["spots"][0]["bw_tillit"] == "fjord" and ov_f["spots"][0]["andel_forelopig"] is True
+    for o, s in zip(ov_f["spots"][1:], fc_f["spots"][1:]):
+        assert ("bw_tillit" in o) == ("bw_tillit" in s) and ("andel_forelopig" in o) == ("andel_forelopig" in s), s["id"]
+    assert all(("andel_forelopig" in o) == ("andel_forelopig" in s) for o, s in zip(overview["spots"], fc["spots"]))
+    # 24.11.2026: det tegnede vinduet følger med i oversikten (appen viser det for fjord-spots, visVindu() i docs/js/app.js)
+    assert "swell_window_tegnet" in publish.META_FIELDS
+    fc_t = copy.deepcopy(fc)
+    fc_t["spots"][0].update(bw_tillit="fjord", swell_window_tegnet=[345, 30])
+    ov_t, det_t = publish.split(fc_t)
+    assert ov_t["spots"][0]["swell_window_tegnet"] == [345, 30] and det_t[fc_t["spots"][0]["id"]]["swell_window_tegnet"] == [345, 30]
+    assert all(("swell_window_tegnet" in o) == ("swell_window_tegnet" in s) for o, s in zip(ov_t["spots"][1:], fc_t["spots"][1:]))
+    print("1c: bw_tillit, andel_forelopig og swell_window_tegnet står i oversikten bare når spoten har dem - OK")
+
     # 1b. fotavtrykk 10.11.2026: «Hent varsel» kl. 03:17-21:17 UTC hver 3. time, ikke kl. 00:17 - nå-timene dekker
     # alltid fram til og med timen den neste planlagte kjøringen starter i (klokkas time finnes også om natta)
     U = lambda time, dag=10: dt.datetime(2026, 11, dag, time, tzinfo=dt.timezone.utc)

@@ -42,7 +42,7 @@
       how: (h) => [
         "Hb = 0,39 × g^(1/5) × (T × H²)^(2/5) (Komar og Gaughan, 1972), ganget med spotens surf-faktor (lært fra loggene dine, ellers startverdi).",
         "Sett = 1,27 × Hb. Under 0,35 m signifikant høyde på spoten regnes det som flatt.",
-        `H er ${SOURCE_WORD[h.height_source] || "ukjent kilde"}, T er svellets periode ute (Open-Meteo, GFS Wave).`,
+        `H er ${andelsHoyde(h) ? GAP_KILDE : SOURCE_WORD[h.height_source] || "ukjent kilde"}, T er svellets periode ute (Open-Meteo, GFS Wave).`,
       ],
     },
     hs: {
@@ -52,7 +52,7 @@
         ["På spoten", m(h.height)],
         ["BarentsWatch ved punktet", m(h.bw_height)],
         ["BarentsWatch maks", h.bw_height_max!=null ? m(h.bw_height_max) + " (vises, brukes aldri i ratingen)" : "mangler"],
-        ["Kilde", SOURCE_WORD[h.height_source] || "mangler"],
+        ["Kilde", andelsHoyde(h) ? GAP_KILDE : SOURCE_WORD[h.height_source] || "mangler"],
       ],
       how: (h) => h.height_source==="barentswatch"
         ? ["BarentsWatch sin totalhøyde ved punktet, justert for svellandel, kort periode og retning skrått på stranda (bare det leddet som faktisk trekker ned).",
@@ -91,9 +91,9 @@
       title: "Retningstreff",
       what: "Hvor godt svellets retning passer spotens vindu - sektoren av retninger med fri linje fra stranda til åpent hav. Svell rett i vinduet når inn med full høyde; svell utenfor må bøye seg rundt land (diffraksjon) og mister det meste. Eksempel: Grøtfjord 25.09.2026, svell 3 grader utenfor vinduet, helt flatt.",
       numbers: (h, spot) => [
-        ["Retningstreff", pct(h.directness)],
+        ["Retningstreff", pct(vinduTreff(h, spot))],
         ["Svell fra", h.dir_offshore!=null ? `${compass(h.dir_offshore)} (${deg(h.dir_offshore)})` : "mangler"],
-        ["Spotens vindu", spot && spot.swell_window ? (Array.isArray(spot.swell_window[0]) ? spot.swell_window : [spot.swell_window]).map(w=>`${w[0]}–${w[1]}°`).join(", ") : "mangler"],
+        ["Spotens vindu", visVindu(spot) ? (Array.isArray(visVindu(spot)[0]) ? visVindu(spot) : [visVindu(spot)]).map(w=>`${w[0]}–${w[1]}°`).join(", ") : "mangler"],
         ["Ved punktet (BarentsWatch)", h.bw_dir!=null ? `fra ${compass(h.bw_dir)}, ${h.spot_direction_diff!=null ? h.spot_direction_diff + "° skrått" : ""}` : "mangler"],
         ["BarentsWatch bekrefter treff", h.bw_confirms==null ? "mangler" : (h.bw_confirms ? "ja" : "nei")],
       ],
@@ -134,7 +134,7 @@
     confidence: {
       title: "Sikkerhet",
       what: "Hvor sannsynlig det er at tallet treffer innenfor ett poeng. Startverdier per antall dager frem, erstattet av målt treffsikkerhet når spoten har nok sammenligninger. Varsler sendes bare for timer med minst 70 %.",
-      numbers: (h) => [["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"], ["Grunnlag", h.confidence_source==="målt" ? "målt" : "anslag"], ["Dager frem", h.day!=null ? String(h.day) : "mangler"], ["Sone", h.zone==="langtid" ? "langtid (dag 8–16, GFS)" : h.zone==="reserve" ? "reservemodell" : "BarentsWatch"]],
+      numbers: (h) => [["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"], ["Grunnlag", h.confidence_source==="målt" && !andelsHoyde(h) ? "målt" : "anslag"], ["Dager frem", h.day!=null ? String(h.day) : "mangler"], ["Sone", h.zone==="langtid" ? "langtid (dag 8–16, GFS)" : h.zone==="reserve" || andelsHoyde(h) ? "reservemodell" : "BarentsWatch"]],
       how: () => ["Hver kjøring arkiveres og sammenlignes med varselet laget under 6 timer før, og med loggene dine. Fra 30 sammenligninger brukes målt prosent."],
     },
     stars: {
@@ -146,7 +146,7 @@
     sources: {
       title: "Kilder",
       what: "BarentsWatch (kystmodell, 100 m) de første ca. 60 timene, deretter reservemodellen (svell ute fra Open-Meteo/GFS Wave × transfer × eksponering) til dag 7, så langtid dag 8–16 merket \"anslag\". Vind fra met.no, så GFS. Tidevann fra Kartverket.",
-      numbers: (h, spot) => [["Høyde denne timen", SOURCE_WORD[h.height_source] || "mangler"], ["BarentsWatch til", spot && spot.bw_until ? spot.bw_until.replace("T"," kl. ").replace("Z"," UTC") : "mangler"], ["Sone", h.zone || "mangler"]],
+      numbers: (h, spot) => [["Høyde denne timen", andelsHoyde(h) ? GAP_KILDE : SOURCE_WORD[h.height_source] || "mangler"], ["BarentsWatch til", spot && spot.bw_until ? spot.bw_until.replace("T"," kl. ").replace("Z"," UTC") : "mangler"], ["Sone", h.zone || "mangler"]],
       how: () => ["Observasjoner fra loggene slår alt. Når en modell motsier en observasjon, er det modellen som er feil."],
     },
     windsea: {
