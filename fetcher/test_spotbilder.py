@@ -80,6 +80,7 @@ with tempfile.TemporaryDirectory() as d:
     js = (d / "spotbilder.js").read_text(encoding="utf-8")
     data = json.loads(js[js.index("{"):js.rindex("}") + 1])
     assert data["ids"] == ["a"] and data["kredit"] == sb.kredit(2025) and data["kort"] == "Sentinel-2 (2025), Copernicus/Kartverket · CC BY 4.0", data
+    assert data["linje"] == "Sentinel-2 · Copernicus/Kartverket · CC BY 4.0" and data["lisens"] in data["linje"], data   # én linje under toppbildet
     assert data["lisens"] == "CC BY 4.0" and data["lisens"] in data["kredit"] and data["lisens_url"] == sb.LISENS_URL, data   # lenka appen viser
 # det som ligger i docs/ stemmer med kilder.json, og hvert bilde appen ber om, finnes
 js_fil, kilder_fil = ROOT / "docs" / "js" / "spotbilder.js", ROOT / "docs" / "img" / "spots" / "kilder.json"

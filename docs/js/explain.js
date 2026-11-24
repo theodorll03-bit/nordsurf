@@ -54,7 +54,8 @@
         ["BarentsWatch maks", h.bw_height_max!=null ? m(h.bw_height_max) + " (vises, brukes aldri i ratingen)" : "mangler"],
         ["Kilde", andelsHoyde(h) ? GAP_KILDE : SOURCE_WORD[h.height_source] || "mangler"],
       ],
-      how: (h) => h.height_source==="barentswatch"
+      how: (h) => andelsHoyde(h) ? [STR.gapHow]   // S37 b: høyden er svell ute × andelen gjennom gapet
+        : h.height_source==="barentswatch"
         ? ["BarentsWatch sin totalhøyde ved punktet, justert for svellandel, kort periode og retning skrått på stranda (bare det leddet som faktisk trekker ned).",
            "Sannhetshierarkiet: observasjoner > BarentsWatch > reservemodellen > geometri."]
         : ["Svell ute × transfer × eksponering (reservemodellen). BarentsWatch dekker bare de første ca. 60 timene."],
@@ -104,7 +105,8 @@
     exposure: {
       title: "Eksponering",
       what: "Andelen av svellet ute som når spoten for en gitt retning, når geometri (odder, øyer, bukter) er tatt hensyn til. 1,0 midt i vinduet, under 0,67 utenfor.",
-      numbers: (h) => [["Eksponering denne timen", pct(h.directness)], ["Transfer (direkte treff)", h.transfer!=null ? pct(h.transfer) : "mangler"]],
+      // S37 c: når høyden er andelshøyden, er det andelen gjennom gapet som er brukt i timen, ikke eksponeringskurven
+      numbers: (h) => [["Eksponering denne timen", andelsHoyde(h) ? (andelBrukt(h) ? `${andelBrukt(h)} · ${STR.gapAndel}` : "mangler") : pct(h.directness)], ["Transfer (direkte treff)", h.transfer!=null ? pct(h.transfer) : "mangler"]],
       how: () => ["Geometrisk kurve per 10 grader (del C), blandet med lært kurve fra BarentsWatch (del B) der det finnes nok par.",
                   "Transfer er hvor mye av svellet ute som når stranda ved direkte treff - modell mot modell, lært fra BarentsWatch, aldri fra loggene."],
     },
@@ -134,7 +136,7 @@
     confidence: {
       title: "Sikkerhet",
       what: "Hvor sannsynlig det er at tallet treffer innenfor ett poeng. Startverdier per antall dager frem, erstattet av målt treffsikkerhet når spoten har nok sammenligninger. Varsler sendes bare for timer med minst 70 %.",
-      numbers: (h) => [["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"], ["Grunnlag", h.confidence_source==="målt" && !andelsHoyde(h) ? "målt" : "anslag"], ["Dager frem", h.day!=null ? String(h.day) : "mangler"], ["Sone", h.zone==="langtid" ? "langtid (dag 8–16, GFS)" : h.zone==="reserve" || andelsHoyde(h) ? "reservemodell" : "BarentsWatch"]],
+      numbers: (h) => [["Sikkerhet", sikkerhetProsent(h, "mangler")], ["Grunnlag", h.confidence_source==="målt" && !andelsHoyde(h) ? "målt" : "anslag"], ["Dager frem", h.day!=null ? String(h.day) : "mangler"], ["Sone", h.zone==="langtid" ? "langtid (dag 8–16, GFS)" : h.zone==="reserve" || andelsHoyde(h) ? "reservemodell" : "BarentsWatch"]],
       how: () => ["Hver kjøring arkiveres og sammenlignes med varselet laget under 6 timer før, og med loggene dine. Fra 30 sammenligninger brukes målt prosent."],
     },
     stars: {
@@ -169,7 +171,7 @@
         ["Usikker time", h.uncertain ? "ja" : "nei"],
         ["Jevnet ut mellom målepunkter", h.bw_interpolated ? "ja" : "nei"],
         ["Dager frem", h.day!=null ? String(h.day) : "mangler"],
-        ["Sikkerhet", h.confidence!=null ? `${h.confidence} %` : "mangler"],
+        ["Sikkerhet", sikkerhetProsent(h, "mangler")],
       ],
       how: () => ["\"Kildene er uenige\": BarentsWatch viser høyde ved punktet, men svellet ute treffer ikke vinduet eller er mest vindsjø - da er timen usikker og rates forsiktig.",
                   "\"Blåst ut\": vinden tar poengene. \"For mye vind\": det samme i sterk fralandsvind. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",

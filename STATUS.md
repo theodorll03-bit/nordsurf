@@ -13,8 +13,8 @@ Gren `fiks/tidevann-s28`, med `fiks/fjord-lyngen` (`79e7fa8`) flettet inn. Ikke 
 - **Tall før og etter (varselet 24.11 kl. 05Z, kjøring 45330376779, 27 spots, 5481 timer, «før» er `fiks/fjord-lyngen`):** 0 timer endret i noe felt fra `rate()`: poeng, høyde, surfehøyde, `low_reason`, `faded_*`, `zero_losses`, `local_rules` og regnestykket er like i alle timer. Ingen time i dette varselet har et tilfelle der tidevannet er størst og ingen tar poenget alene, og ingen har vind i avrundingssonen på Breivikeidet eller Unstad.
 - **Det som endres på skjermen i dette varselet:** Farstadsanden 28.11 kl. 13Z og 14Z (og 06.12 kl. 18Z, mørk) har 0 poeng der Magnus sin tidevannsregel tok ett. De får nå «−1 tidevann» og et stiplet poeng i blekk. Poeng og ord er de samme.
 - **Ordet kan flytte seg (ikke i dette varselet; rettet i runde 2 under, der `low_reason` følger bokføringen):** appen velger «Blåst ut» eller «For mye vind» ut fra `faded_wind` og `zero_losses.wind`. Når tidevannet får poenget, er `faded_wind` 0, og timen heter poengets ord. Prøvetimen i skjermbildene (Breivikeidet 26.11 kl. 12Z med vinden satt til 11,2 m/s fra 200 grader; tidevannet 3,1 m er ekte): 1 poeng før og etter, «For mye vind» og «−1 vind» før, «Dårlig» og «−1 tidevann» etter. `low_reason` er `blown_out` i begge. Kontrolløren bør se på dette.
-- **Fletting:** konflikter i `fetcher/rating.py` (`wind_ms_text()` ved siden av `disagree_reason(..., fjord=False)`, og kallet til `classify_low_rating()`, som nå har både `lost_wind_first`/`lost_tide_first` og `share_used`), `fetcher/test_rating.py` og `docs/sw.js`. Lyngen-grenens tester 39 og 40 står urørt. S28-testene heter nå 41 (bokføringen) og 42 (vindtallet).
-- **Tester:** test_rating.py 41 og 42, og test_spotside_browser.py (S28: «Best på lavt vann» for alle spots, vindtallet mot `rating.wind_ms_text()` for 0-30 m/s; S33 c: stiplet i blekk for tidevann og korall for vind i lys og mørk, `tideLost()`, `lostAll()` og `lostParts()`). Alle 17 testfilene er grønne lokalt 24.11.
+- **Fletting:** konflikter i `fetcher/rating.py` (`wind_ms_text()` ved siden av `disagree_reason(..., fjord=False)`, og kallet til `classify_low_rating()`, som nå har både `lost_wind_first`/`lost_tide_first` og `share_used`), `fetcher/test_rating.py` og `docs/sw.js`. Lyngen-grenens tester 39 og 40 står urørt. S28-testene het da 41 (bokføringen) og 42 (vindtallet), og heter 42 og 43 etter flettingen med main (runde 3).
+- **Tester:** test_rating.py 42 og 43 (41 og 42 før flettingen med main 24.11), og test_spotside_browser.py (S28: «Best på lavt vann» for alle spots, vindtallet mot `rating.wind_ms_text()` for 0-30 m/s; S33 c: stiplet i blekk for tidevann og korall for vind i lys og mørk, `tideLost()`, `lostAll()` og `lostParts()`). Alle 17 testfilene er grønne lokalt 24.11.
 - **Skjermbilder:** `privat/design-b4/s28-2026-11-24/for/` og `etter/` (390 og 1440, dag og mørketid).
 - **Runde 2, 24.11.2026 (fysikk-kontrolløren: godkjent med vilkår, `privat/kontor/observasjoner/kontrollor-s28-s33-2026-11-24.md`):**
   - **Vilkår 1, ordet følger bokføringen:** `classify_low_rating()` og `wind_took_points` får `lost_wind` og `lost_tide` ETTER omfordelingen. Før fikk de bokføringen med vinden først, så en time der tidevannet fikk poenget, var `blown_out` mens tapet sto som «−1 tidevann». På Breivikeidet i fralandsvind 10,2-12 m/s med 1 poeng og surfehøyde fra 0,8 m ville appen da sagt «Blåst ut» (mot Theodor S15 a). Nå er `low_reason` None i slike timer, og appen viser poengets ord («Dårlig»). `publish.wind_blamed()` og `vakthund.lyngen_ord()` gir det samme. Test 41.1 venter None, og test 41.8 går gjennom Breivikeidet med fralandsvind 10,2-12 m/s, 1 poeng og minst 0,8 m: aldri `blown_out` uten at vinden har fått et poeng.
@@ -26,6 +26,99 @@ Gren `fiks/tidevann-s28`, med `fiks/fjord-lyngen` (`79e7fa8`) flettet inn. Ikke 
   - **Gammel skjevhet, ikke rørt (fysikk-kontrolløren 24.11):** når vinden og tidevannet tar poenget hver for seg, og sammen bare ett, får tidevannet det, også når vinden er størst (Farstadsanden, vind 0,71-0,79 mot tidevann 0,70) og ved likhet. Kommentaren «Uavgjort: vinden» gjelder bare tilfellet der ingen tar poenget alene. Med S33 c synes dette som «−1 tidevann». I de fire varslene er alle slike timer mørke.
   - Farstadsanden 28.11 kl. 13Z og 14Z heter «Treffer ikke» med «−1 tidevann» ved siden av. Ordet var det samme før.
   - Unstads linje sier «vektet −0,3» for et fradrag på 0,35 (én desimal, som før). Den lokale vindlinja i `local_rules.lines` har fortsatt punktum («−0.7»); den tegnes ikke på spotsiden. Ordlyden «ikke blant det lokale favoriserer» synes nå i «Hvorfor». «Best på lavt vann» har ingen plass på mobil ennå (tas i designrevisjonen, S33 a): tidevannscella og forklaringen tegnes ikke på spotsiden slik den er nå. Regnestykket sier «(N uten vind)» når vinden tar poenget, men har ingen tilsvarende ord når tidevannet tar det. `.rs.tapt` i spotgraf.js (ikke i bruk på spotsiden) er urørt.
+## Designrevisjonen fase 1: raske rettinger, 24.11.2026
+
+Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).
+
+- **1. Lisensteksten:** under toppbildet står én linje, «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0». Linja er 44 px høy, og lisensen er lenke i hele høyden. Hele teksten står nederst: i siste avsnitt på mobil-spotsiden («Bildet: …») og under Kilder i bunnen på PC. Gjelder spotsiden på mobil og PC og hovedbildet på forsiden. `tools/spotbilder.py` skriver den nye linja (`linje`) i `docs/js/spotbilder.js`. Under skiva står kortformen med årstall som før.
+- **2. Kortere toppbilde:** mobil 160 px (før 220). PC 260 px (før 420), og spotnavnet på PC er 96 px (før 144).
+- **3. Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers står «Best 11–13» som ren tekst.
+- **4. Nullene:** i ukeruter, dagvelger og matrise står 0 i muted med vekt 500 (før 800) og tynn ramme i hair (før outline). Tallet 0 står fortsatt, aldri strek.
+- **5. 1 og 2:** fyllet har eget token `--lav`, #8A8478 om dagen og #8FA0A8 i mørketid. `tools/kontrast.py` krever nå 3:1 for fyllet til 1 og 2 også (før var de unntatt). Mørke timer hadde alt bare skygge uten omriss, så der er ingenting endret.
+- **6. «Hvorfor»:** linjene er en tabell med etikett, verdi og virkning («Periode | 11 s (ute) | god uttelling»). «stjerner» byttes til «poeng» i visningen. Teksten kommer fortsatt fra henteren, og tallene røres ikke. Prøvd på alle 105 linjetypene i varselet 24.11.
+- **7. Desimalkommaet** i det store svelltallet og i tidevannskortet står i `.des`, som trekker sifrene sammen.
+- **8. Tilbake og rulling:** tilbakeknappen på spotsiden går ett steg tilbake i historikken når forrige steg er siden knappen lover. Ellers byttes steget ut (`replaceState`). Hjem og de andre visningene står der de sto når man kommer tilbake, også med tilbake i nettleseren. En fane går til toppen som før.
+- **9. Etiketter** er 12 px på mobil (før 11), med sperring 0,02 em (før 0,04) overalt. Faktalinja og datoene i dagvelgeren står i ink. Klokketikk, vindtall og dagnavn under ukerutene er 12 px. 11 px er igjen bare i kreditt.
+- **10. Dag 8 og utover** på PC-spotsiden har etiketten «UKE 2 · USIKKER» og stiplede ruter.
+- **11. Mørketid:** toppbildene (spotsiden på mobil og PC, hovedbildet på forsiden) har en 1 px kant i hair.
+
+Målt (Playwright, `getBoundingClientRect`, Unstad):
+
+| Mål | Før | Etter |
+|---|---|---|
+| Mobil 390 × 663: dagens tall, topp til bunn | 366–430 px | 270–334 px |
+| Mobil 390 × 663: ordet, bunn | 413 px | 315 px |
+| Mobil 390 × 663: kreditten under navnet | 62 px (4 linjer) | 44 px (1 linje, trykkflate) |
+| PC 1200 × 660: dagens tall, topp til bunn | 675–779 px (under kanten) | 504–608 px |
+| PC 1200 × 660: ordet, bunn | 760 px | 589 px |
+| PC 1200 × 660: setningen, bunn | 826 px | 655 px |
+| PC 1440 × 900: dagens tall, topp til bunn | 659–763 px | 504–608 px |
+| Fyll 1–2 mot flaten, dag | 1,83:1 | 3,24:1 |
+| Fyll 1–2 mot flaten, mørketid | 2,88:1 | 5,57:1 |
+| Tall oppå fyllet 1–2 (`--paa-lav`), dag og mørketid | 7,15:1 og 4,56:1 | 5,08:1 og 5,57:1 |
+| Tekster under 12 px på spotsiden, mobil og PC | 80 og 8 | 3 og 4 |
+
+På mobil sto dommen over fanelinja (599 px) også før. Den står nå 96 px høyere. På 1200 × 660 er tall, ord og setning synlige uten rulling. Setningen har 5 px klaring.
+
+- **Tester:** `test_spotside_browser.py` har en ny bolk til slutt for begge bredder: tilbake med knappen og med nettleseren (samme steg i historikken, samme rulling), fane til toppen, lenke rett til spoten, én kredittlinje med 44 px lenke, bildehøyde og navn, kant i mørketid, dommen innenfor 663 og 660 px, etiketter 12 px, tabellen i «Hvorfor» med «poeng», «Uke 2», ringen ved 3 og 4 poeng, nullene og fyllet for 1–2. `test_spotbilder.py` låser den nye linja. `tools/kontrast.py` er strammet inn (punkt 5). Ingen test er svekket.
+- **Fasiten:** `docs/design/b4/SPEC.md` har fått §9 med det som nå avviker fra resten av fila.
+- **Impeccable:** kjørt før og etter (`impeccable-for.md` og `impeccable-etter.md` i bildemappa). Detektoren har de samme 3 funnene før og etter, alle valg i SPEC. Spriket mot planen står i notatene.
+- **Ikke gjort, og verdt å vite:**
+  - Forsiden på PC: hovedbildet er fortsatt 440 px, så tallet i hovedbildet står på 812–876 px. Det synes på 1440 × 900, men ikke på 1200 × 660. Planens punkt 2 nevner bare spotsiden, og fase 5 regner med 1296 × 440.
+  - `.kort4 .v` (punkt 7) tegnes ikke av noen kode lenger, så der er ingenting pakket inn.
+  - Den gamle dagsgrafen (`SpotGraf.html`, `.plot`) tegnes heller ikke. `--paa-lav` finnes for at tallet oppå fyllet der skal holde 4,5:1 om den tas i bruk igjen.
+  - Regnestykket har punktum som desimaltegn enkelte steder («faktor 0.51»). Det skrives av henteren og er ikke rørt.
+  - Favorittstjerna (fylt) bruker fyllet for 2 og er derfor litt mørkere grå enn før.
+  - Kontrolløren og feiljegeren har ikke sett endringen ennå.
+
+### Runde 2: tre funn fra feiljegeren, 24.11.2026
+
+Oppå de to lokale commitene (`ae646c3` fase 1 og `715466c` flettingen av `fiks/fjord-lyngen`). Ikke committet. Rapporten: `privat/kontor/observasjoner/feiljeger-design-fase1-2026-11-24.md`. Bare visning, `fetcher/` er ikke rørt.
+
+- **Funn 2, tall som etikett i «Hvorfor»:** linja «0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall» starter med tallet og fikk «0,1 M» som etikett. Nå er etiketten «Høyde på spoten» (ordet fantes fra før, `STR.cell.hs`), tallet er verdien og resten forklaringen. «Løftet til 0,4 m: …» deles som før.
+- **Funn 3, punktum som desimaltegn:** «faktor 0.65» vises som «faktor 0,65». Regelen (`breakdownKomma()` i app.js) lar klokkeslett og datoer stå: «kl. 08.02», «09.30-09.50Z», «17.11», «5.10» og «17.11.2026». Et tall som kan leses som dag.måned, blir stående med punktum («1.05»). Regelen endrer heller for lite enn å endre en dato.
+- **Funn 4, to raske trykk på «Tilbake»:** `closeSpot()` ser bort fra nye trykk til hashendringen er kommet, med 1 s reservefrist.
+- **Prøvd på hele varselet** (24.11 kl. 05Z, med Russelv og Lenangsøyra regnet på nytt av feiljegeren): 54 809 linjer, 106 linjetyper. 4702 linjer får komma. 0 linjer har tall som etikett, 0 har tom etikett, og 0 har punktum mellom sifre igjen.
+- **Tester:** `test_spotside_browser.py` har fått dobbelttrykket (`dblclick` på 390: ett steg tilbake, Hjem der den sto, og knappen virker igjen etterpå), og de to tekstreglene med klokkeslett og datoer.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/hvorfor_russelv-26-11-kl08Z_*` (linja «Løftet til») og `hvorfor_russelv-hoyde-paa-spoten_*` (24.11 kl. 23Z, linja som starter med tallet), 390 og 1440.
+- **Ikke rørt:** `fetcher/test_display_only.py` er rød på grenen til Lyngen ligger i main (feiljegerens funn 1). Funn 5, 6 og 7 er ikke rettet.
+
+### Runde 3: S37 a, b og c (anslag gjennom gapet), 24.11.2026
+
+Ja i svar.md 24.11.2026 kl. 10.25. Oppå tre lokale commits (siste `ed627dd`). Ikke committet. Gjelder timer der høyden er svell ute × andelen gjennom gapet (`share_height` eller `gap_floor`: Breivikeidet, Russelv og Lenangsøyra). Bare visning, `fetcher/` er ikke rørt utenom testen.
+
+- **Viktig:** de tre stedene ligger i forklaringsarkene (`docs/js/explain.js`) og i den gamle detaljruta (`detailsGrid()` i app.js). Ingen av dem kan åpnes i design B 4.0 i dag: ingenting på siden har `data-explain`, og `detailsGrid()` kalles ikke. Endringen er gjort og testet, men brukeren ser den ikke før arkene kobles til igjen. Spotsiden viser sikkerheten som ord («Usikkert varsel · havmodell»), uten prosenttall, fra før.
+- **a) Sikkerhet:** «–» i stedet for prosenttallet i slike timer (`sikkerhetProsent()` i app.js), i arket «Sikkerhet», i arket om usikre timer og i detaljruta. Grunnlag og sone sto alt som «anslag» og «reservemodell».
+- **b) «Slik regnes det ut» for høyden:** «Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.» (`STR.gapHow`).
+- **c) «Eksponering denne timen»:** viser andelen som er brukt i timen, «0,22 · andel gjennom gapet». Andelen er ikke et eget felt i de publiserte dataene. Den leses fra linja i regnestykket («andel 0,22»). Mangler linja, regnes den fra høyden på spoten delt på svellet ute. Mangler de også, står det «mangler».
+- **«poeng»:** «Totalt 0 av 5 poeng» på Russelv 26.11 kl. 08Z, sett på bilde. Byttet kom i runde 1.
+- **Uendret:** timer uten `share_height` og `gap_floor`, og alle kyst-spots. Prosenttallet, eksponeringen i prosent og teksten om BarentsWatch står som før (testet).
+- **Tester:** ny del i bolken i `test_spotside_browser.py`: andelstime, time med bare `gap_floor`, time uten linja i regnestykket, time uten høyde, kyst-time og time uten sikkerhet.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-1/etter/s37/`, 28 bilder: Russelv 26.11 kl. 08Z og Breivikeidet 26.11 kl. 07Z, 390 og 1440, dag og mørketid, arkene «Sikkerhet», «Signifikant høyde» og «Eksponering», og «Hvorfor» på Russelv. Arkene er åpnet med `openExplain()` i skriptet. Dataene er varselet 24.11 kl. 05Z med de tre fjord-spotene regnet på nytt med grenens `rating.py`.
+- **Gjenstår:** å koble arkene til noe brukeren kan trykke på, hvis S37 skal synes. Et eget felt for andelen i de publiserte dataene ville vært tryggere enn å lese tallet fra teksten.
+## Russelv: andelen aldri under 0,20 i 346-21 grader (S36 b), 24.11.2026
+
+Samme gren (`fiks/fjord-lyngen`), oppå commit `79e7fa8`. Ja i svar.md 24.11.2026 kl. 10.25: «**S36: b.** Russelv får det største av Breivikeidets kurve og den gamle 0,20 med hard kant i 348–19°.» S36 er ikke lenger åpen. Endrer `spots.json` (bare Russelv), `fetcher/rating.py`, `fetcher/test_rating.py`, CLAUDE.md og STATUS.md. Ikke `docs/`.
+
+- **Hva:** nytt felt på Russelv, `gap_min_share` {vindu 348-19, andel 0,20}, og én generell kodevei, `rating.gap_share()`: andelen er `gap_transfer` × kantfaktoren, og aldri under `gap_min_share` når svellet ute kommer fra det vinduet (høyst 2 grader utenfor, altså 346-21). Bare Russelv har feltet. Uten feltet er tallet som før, så ingen andre spots endres i noe felt. Vinduet som vises i appen er fortsatt 345-30.
+- **Hvorfor (svaret):** grunnen i S34 a var at Russelv ikke skal få mindre enn Breivikeidet, ikke at den skal ned. Ingen observasjon sier at vestkanten på Russelv skal senkes.
+- **Andelen på Russelv nå:** 0,22 langs fjordaksen (5-25 grader) som i S34 a, 0,20 fra 346 til 359 grader (der den myke kanten ellers ga 0,15-0,20), og Breivikeidets kurve alene vest for 346 og øst for 25 grader.
+- **Faste observasjoner:** uendret. 16.11 kl. 11Z (svell fra 20 grader): 0,53 m, sett 1,08 m, 1 poeng (test 31.1). 17.11 kl. 11Z (17 grader): 0,48 m, 1 poeng, høyst 1 holder (test 31.9). Begge ligger langs aksen, der 0,22 gjelder.
+- **Test 39.7, låst på de nye tallene:** 2,4 m svell fra 346 og 350 grader gir igjen 0,48 m: 1 poeng og 0,78 m surfehøyde ved 7,9 s, 2 poeng og 0,86 m ved 10 s. Med S34 a alene var det 0,36 og 0,40 m og 0 poeng ved 7,9 s. Testen viser også at tallene faller tilbake dit uten feltet.
+- **De to faste Breivikeidet-dagene på Russelv (test 40):** 17.11 kl. 08 og 09Z som før (0,49 m, surfehøyde 0,79 m, lik Breivikeidet). 22.11 kl. 08, 09 og 10Z: 0,58, 0,57 og 0,52 m og surfehøyde 0,89, 0,88 og 0,82 m (med S34 a alene 0,48 m og 0,76-0,77 m; Breivikeidet 0,76-0,77 m). Poengene er de samme (0, 1, 0).
+- **Ny test 41:** andelen grad for grad er den største av de to. For hver grad 340-35, 7,9 og 10 s, tre svellhøyder og begge soner (672 timer) gir Russelv aldri lavere surfehøyde eller poeng enn Russelv slik den var 16.-23.11 (kopien `RH`), og høyden er aldri under Breivikeidets kurve. Unntak, som ikke kommer av S36 b men av fjord-regelen i det bredere vinduet fra S34 a: i testen er høyden lavere enn `RH` i 6 av de 672 timene (BarentsWatch-sonen ved 343-345 grader, 0,21 mot 0,27 m, begge under grensa for flatt med 0,3 m ved punktet). Testen prøver bare 0,3 m ved punktet. Med mer ved punktet kan også surfehøyden og poengene bli lavere, se neste punkt. Når 0,20 vinner (350 grader), virker `share_height`, anslag-linja («andel 0,20»), retningsordet og unntaket for «treffer ikke» som ellers.
+- **Vestkanten kan fortsatt bli lavere enn før S34 a utenfor 346-21 grader (fysikk-kontrolløren 24.11.2026, tekstvilkår).** Gulvet 0,20 gjelder bare i 346-21 grader. I BarentsWatch-sonen ved 343-345 og 22-32 grader kan Russelv fortsatt bli lavere enn før S34 a, fordi fjord-regelen der bruker andelshøyden og ikke BarentsWatch-tallet (før S34 a var Russelv en kyst-spot i de retningene). Ekte eksempel: 22.11 kl. 10Z (344 grader) er surfehøyden 0,60 m mot 0,63 m før S34 a, 0 poeng begge veier. Regnet eksempel (fysikk-kontrolløren 24.11.2026): 2,4 m og 14 s fra 343 grader med 0,8 m og 7-11 s ved punktet ga 4 poeng før S34 a og gir 0 nå. I de fire avspilte varslene har ingen poeng gått tapt, og der punktet viste mer enn andelen ved 341-345 grader, var perioden ved punktet 3,2-3,8 s (krapp sjø). Lagt fram for Theodor som S39.
+- **Fire varsler, før (`79e7fa8`) mot nå:** bare Russelv endres, og bare opp. Ingen poeng flytter seg.
+
+| Varsel | Timer endret | Høyde opp | Surfehøyde opp | Poeng endret |
+|---|---|---|---|---|
+| 24.11 kl. 05Z | 2 | 2 | 0 | 0 |
+| 23.11 kl. 12Z | 5 | 5 | 0 | 0 |
+| 22.11 kl. 19Z | 2 | 2 | 2 | 0 |
+| 22.11 kl. 01Z | 5 | 5 | 3 | 0 |
+
+  Varselet 22.11 kl. 01Z: 22.11 kl. 13Z går fra 0,0 til 0,71 m surfehøyde igjen (2,2 m fra 347 grader: 0,34 til 0,44 m), kl. 09Z fra 0,70 til 0,87 m og kl. 14Z fra 0,62 til 0,67 m. Kl. 09Z blir grunnen «blåst ut» igjen, som før S34 a (0 poeng begge veier). Varselet 22.11 kl. 19Z: 25.11 kl. 17 og 18Z (mørkt, 1,8 m fra 348-353 grader, 6,2-6,4 s, reserven) går fra flatt til 0,56-0,57 m, 0 poeng. Mot main er poengene som i tabellen «Fire varsler» under: Russelv opp 1 i 3 og 5 timer og opp 2 i én (03.12 kl. 06Z), Lenangsøyra ned 1 i 12 til 17.
+- **Usikkert:** 0,20 i 348-19 er tallet fra én observasjon (16.11, svell fra 19-20 grader). Det finnes fortsatt ingen observasjon fra Russelv med svell fra vest for nord.
 
 ## Russelv som Breivikeidet: vindu 345-30, myk kant og andel 0,22 (S34 a), 24.11.2026
 
@@ -72,7 +165,7 @@ Samme gren (`fiks/fjord-lyngen`), main `237c533` flettet inn (bare datacommits).
   - **Opp 1 (8 timer):** varselet 22.11 kl. 19Z: 26.11 kl. 12, 13 og 14Z (svell 2,3 m fra 26-27 grader, 8 s, skumring og mørkt, Breivikeidet 2). Varselet 22.11 kl. 01Z: 26.11 kl. 02, 05, 06 og 07Z (2,1-2,2 m fra 18-19 grader, 7,7 s, mørkt, Breivikeidet 2) og 03.12 kl. 12Z (1,8 m fra 25 grader, 9,1 s, skumring, Breivikeidet 3).
   - Alle går opp mot Breivikeidet og aldri over den, samme vei som observasjonen 16.11 og «Lyngen henger sammen». Ingen stopp etter 2-poengsregelen: timen med 2 poeng er utenfor 48 timer.
   - **«Lyngen henger sammen» i de fire varslene:** main har 10, 20, 15 og 44 avvik (4, 10, 4 og 13 uten mørke timer). Grenen har 0 i alle fire.
-- **Vestkanten går ned (følge av myk kant, lagt fram for Theodor som S36, til orientering):** svell fra 346-350 grader ga 0,20 × svellet med hard kant. Nå er andelen 0,15-0,165 der. Med 2,4 m svell og 7,9 s går Russelv fra 0,48 m og 1 poeng til 0,36 m (346) og 0,40 m (350) og 0 poeng. Med 10 s er det fortsatt 1 poeng. I varselet 22.11 kl. 01Z går surfehøyden ned 22.11 kl. 09Z (0,87 til 0,70 m), kl. 10Z (0,63 til 0,60 m), kl. 13Z (0,71 til 0,0 m: 2,2 m fra 347 grader gir 0,34 m, under grensa for flatt) og kl. 14Z (0,67 til 0,62 m). Ingen av timene mister poeng (de hadde 0). Det bryter ingen observasjon: 16.11 kom svellet fra 19-20 grader, og der går Russelv opp. Alternativet i S36: andelen på Russelv er den største av Breivikeidets kurve og 0,20 med hard kant i 348-19 grader. Det gir 0,22 langs aksen og 0,20 ved 348-355, og ingen time blir lavere enn før. Test 39.7 låser tallene ved 346 og 350 grader slik de er nå.
+- **Vestkanten gikk ned med S34 a alene (lagt fram for Theodor som S36; svaret ble b, se seksjonen over. Senkningen under gjelder ikke lenger i 346-21 grader. Utenfor det, i BarentsWatch-sonen ved 343-345 og 22-32 grader, kan Russelv fortsatt bli lavere enn før S34 a, se S36 b-seksjonen og S39):** svell fra 346-350 grader ga 0,20 × svellet med hard kant. Nå er andelen 0,15-0,165 der. Med 2,4 m svell og 7,9 s går Russelv fra 0,48 m og 1 poeng til 0,36 m (346) og 0,40 m (350) og 0 poeng. Med 10 s er det fortsatt 1 poeng. I varselet 22.11 kl. 01Z går surfehøyden ned 22.11 kl. 09Z (0,87 til 0,70 m), kl. 10Z (0,63 til 0,60 m), kl. 13Z (0,71 til 0,0 m: 2,2 m fra 347 grader gir 0,34 m, under grensa for flatt) og kl. 14Z (0,67 til 0,62 m). Ingen av timene mister poeng (de hadde 0). Det bryter ingen observasjon: 16.11 kom svellet fra 19-20 grader, og der går Russelv opp. Alternativet i S36: andelen på Russelv er den største av Breivikeidets kurve og 0,20 med hard kant i 348-19 grader. Det gir 0,22 langs aksen og 0,20 ved 348-355, og ingen time blir lavere enn før. Test 39.7 låser tallene ved 346 og 350 grader slik de er nå.
 - **Rettet etter fysikk-kontrolløren og feiljegeren 24.11.2026 (runde 2):**
   - `classify_low_rating()`: unntaket for «Treffer ikke» gjelder bare når høyden er andelshøyden (`share_height`). Før gjaldt det hele det tegnede vinduet, også med BarentsWatch-tall og svellperiode under 7 s, der høyden er BarentsWatch-høyden. Følge i varselet 24.11 kl. 05Z: 9 mørke timer med 0 poeng og 0,0 m surfehøyde får grunnen `treffer_ikke` igjen (Russelv 25.11 kl. 17-19Z og 26.11 kl. 00-02Z, Lenangsøyra 25.11 kl. 22Z til 26.11 kl. 00Z; svell 1,8-1,9 m, 6,0-6,6 s). Ingen poeng eller høyder endres. Ny test i 40.2, og en mutasjon tilbake til hele vinduet feiler der.
   - Regnestykket: «Retning: …» leses fra det tegnede vinduet når høyden er andelshøyden (før «svakt inn i skyggen» rett under «svell ute gjennom gapet»). Bare ordet. 114 timer på Russelv og Lenangsøyra i varselet 24.11 kl. 05Z får annen tekst, Breivikeidet ingen.
@@ -85,7 +178,7 @@ Samme gren (`fiks/fjord-lyngen`), main `237c533` flettet inn (bare datacommits).
 - **Kontrolløren 24.11.2026:** godkjent med vilkår. 16.11 og 17.11 holder (17.11 uten margin). Vilkårene er rettet over.
 - **Etterkontrollen 24.11.2026:** godkjent. Runde 2 endrer bare tekst (`breakdown` og `low_reason`) i 21 816 avspilte timer over fire varsler. Poeng, høyder og usikker-merket er like.
 - **Feiljegeren 24.11.2026:** én stopper, som er rekkefølge og ikke kode: vakthunden leser live-siden, så grenen flettes først når publiseringen virker igjen, og «Hent varsel» kjøres rett etterpå. Tre funn i appen er rettet i runde 2. Gjenstår, og er lagt fram for Theodor: prosenttallet under Sikkerhet står ved siden av «Anslag», «Slik regnes det» nevner BarentsWatch i timer med andelshøyde, og «Eksponering denne timen» viser tabellens tall.
-- **Usikkert:** 345-30 er ikke tegnet for Russelv. Andelen 0,22 er lånt. Vestkanten går ned (S36). Prosenttallet under Sikkerhet (for eksempel 99 %) står fortsatt ved siden av «Anslag» i timer med andelshøyde.
+- **Usikkert:** 345-30 er ikke tegnet for Russelv. Andelen 0,22 er lånt. Vestkanten er rettet med S36 b i 346-21 grader (seksjonen over; resten er S39). Prosenttallet under Sikkerhet (for eksempel 99 %) står fortsatt ved siden av «Anslag» i timer med andelshøyde.
 
 ## Russelv og Lenangsøyra er `fjord`, og «Lyngen henger sammen», 23.11.2026
 
@@ -117,6 +210,16 @@ Gren `fiks/fjord-lyngen` fra main `0826ca8`. Ratingdelen endrer `spots.json`, `f
 - **Endrede tester (ingen fast observasjon er svekket):** testene som brukte de to spotene som vanlige kystspots, kjører nå på en kystkopi uten fjord-feltene (`kystkopi()` i test_rating.py), med samme forventninger som i main: 7.2, 7.3, 7.4, 7.7 og 31.6 (Lenangsøyra), `R29` i test 29, 31.7, 39.2, 39.5 og 39.7 (Russelv). Nye forventninger på de ekte spotene: 31.7 (BarentsWatch 1,2 m løftet høyden før, nå står 0,48 m og timen er usikker), 31.9 (0,59 til 0,43 m, fortsatt høyst 1 poeng og ikke flere enn på kystkopien), 35 (ukjent vindretning fra 8 m/s: høyden står, så vinden bokføres med 3 poeng og taket for usikkert varsel med 1, der det før var 0,09 m og ingenting å bokføre), listene i 31, 36, 37.1 og 39.1 (tre gap-spots, myk kant på to, låst andel på tre, tre `fjord`-spots, `andel_forelopig` bare på Lenangsøyra). 7.1, 29.5 og 31.1 bruker de ekte spotene og er uendret.
 - **Nye tester:** test_rating.py 40 (de to faste dagene i begge soner, aldri `treffer_ikke` i det tegnede vinduet i 34 816 timer, Lenangsøyra minst som Breivikeidet i alle 360 retninger, funnet om Russelv 17.11, `share_height`, og de faste observasjonene 26.09 og 16.11). test_vakthund.py 7 (ordene, timene, ukjent, ny sak, kommentar, lukking, og at `main()` kjører sjekken uten å stoppe resten). 16 mutasjoner i en kopi ble alle fanget, blant dem Lenangsøyra tilbake til kyst, Russelv uten lås, unntaket for «Treffer ikke» bort, og vakthundsjekken av.
 - **Usikkert:** andelen på Lenangsøyra er en antakelse. Vinduet på Russelv (348-19) er smalere enn de to andre (345-30), og andelen er lavere. Begge deler gir avvik torsdag 26.11. En observasjon den dagen, fra en av de tre, avgjør mye.
+## Driftsrettelse: publiseringen ventet ikke på artifacten, 24.11.2026
+
+Gren `drift/publiser-vent`. Endrer bare `.github/workflows/publiser.yml` og STATUS.md. Driftsrettelse etter regelen i CLAUDE.md (publiseringen sto stille), og stedfortrederen ba om det i svar.md 24.11 kl. 06.15.
+
+- **Hva som skjedde:** «Hent varsel» hentet som den skulle 24.11 kl. 02:14Z og 05:01Z, men jobben `publiser / deploy` feilet begge gangene med «No artifacts named "github-pages" were found». Siden ble sist oppdatert 23.11 kl. 12:50Z.
+- **Hvorfor:** `actions/deploy-pages@v4` lister kjøringens artifacts rett etter opplastingen. I de to feilede kjøringene spurte den 0,3 s etter at `github-pages` var lastet opp, og fikk 8 artifacts tilbake i stedet for 9. Artifacten fantes (82,5 MB, sjekket i API-et etterpå). I den siste vellykkede kjøringen (23.11 kl. 12:50Z) var tidsrommet like kort, men lista hadde 9. Ingen workflow-fil er endret siden 10.11, og githubstatus.com meldte ingen feil, så det er forsinkelsen hos GitHub som har endret seg.
+- **Rettelsen:** et nytt steg mellom opplasting og publisering spør API-et om `github-pages` er synlig for kjøringen (hvert 5. sekund, høyst 60 s) og venter så 10 s til. Finner den ikke artifacten, prøver publiseringen likevel, som før. Ingen nye rettigheter (`actions: read` fantes fra før).
+- **Ikke rørt:** `rating.py`, `spots.json`, `docs/` og `data/`.
+- **Usikkert:** det nye steget spør det åpne API-et, mens deploy-pages kan bruke en annen liste internt. De 10 sekundene er lagt til for det. Feiler publiseringen igjen etter dette, er neste steg å kjøre deploy-steget på nytt i samme jobb.
+- **Kontroll:** fysikk-kontrolløren er ikke kjørt, for endringen rører ingen tall og ingen kode i `fetcher/` eller `docs/`.
 
 ## Tillit til BarentsWatch per spot: `bw_tillit`, mekanismen og Breivikeidet, 23.11.2026
 
