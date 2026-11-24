@@ -1332,6 +1332,18 @@ def _fmt_penalty(n):
     return f"−{n:.1f}".replace(".", ",")
 
 
+def wind_ms_text(speed, calm_ms=None):
+    """Vindstyrken i hele m/s, som før. 23.11.2026 (S28, ja fra Theodor i svar.md 23.11.2026; feiljegeren 23.11.2026):
+    på en spot med egen vindgrense (calm_ms = wind_calm_ms(spot), Breivikeidet 8 og Unstad 14 m/s middelvind) viste
+    avrundingen 7,5-7,99 m/s som «8» og 13,5-13,99 som «14», mens vinden teller først fra grensa. Når avrundingen
+    ellers ville vist grensa uten at den er nådd, står én desimal, rundet ned («7,9»). Alle andre tall og spots som før.
+    Samme regel som windMsText() i docs/js/app.js."""
+    txt = f"{speed:.0f}"
+    if calm_ms is not None and speed < calm_ms and float(txt) >= calm_ms:
+        return f"{math.floor(speed * 10) / 10:.1f}".replace(".", ",")
+    return txt
+
+
 def disagree_reason(hour, dir_hit, bw_detail, fjord=False):
     """Kort norsk forklaring på HVA av 4a-betingelsene som slo inn, til
     varselbanneret på detaljsiden (5c). Bygget her, ikke i appen - appen
@@ -1515,10 +1527,14 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             damptxt += f", vinden teller først fra {blown_out_wind_ms(spot):.0f} m/s her"
         elif wp is not None and wpp["pen"] < wp - 1e-9:
             damptxt += ", lokal regel strengere"
-        items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
+        items.append(f"Vind {wind_ms_text(wind_speed, wind_calm_ms(spot))} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
     if tide_level_line:
-        # 22.11.2026: spoten har en myk regel på vannstanden (tide_level_penalty()) - da er «tåler alt» feil
+        # 22.11.2026: spoten har en myk regel på vannstanden (tide_level_penalty()) - da er «tåler alt» feil.
+        # 24.11.2026 (fysikk-kontrolløren, vilkår 2): det samme for en spot med lokal regel på flo og fjære
+        # (local_rules.tide_prefer, Farstadsanden og Unstad) - linja er den local_rules_penalty() skriver.
         items.append(tide_level_line)
+    elif (spot.get("local_rules") or {}).get("tide_prefer") and "tide_penalty_high" in spot["local_rules"]:
+        items.append("Tidevann: ukjent")   # regelen finnes, men tidevannet mangler for timen: aldri «tåler alt»
     elif not spot.get("tide"):
         items.append("Tidevann: spoten tåler alt")
     elif not tide:
@@ -1821,6 +1837,16 @@ def tide_level_penalty(hour, spot):
     return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
 
 
+def local_tide_prefer_line(spot, lines):
+    """Tidevannslinja local_rules_penalty() skrev for en spot med lokal regel på flo og fjære (local_rules.tide_prefer),
+    ellers None. 24.11.2026 (fysikk-kontrolløren, vilkår 2): regnestykket sa «Tidevann: spoten tåler alt» for
+    Farstadsanden og Unstad mens den lokale regelen tok ett poeng. Bare tekst."""
+    rules = spot.get("local_rules") or {}
+    if "tide_penalty_high" not in rules or "tide_prefer" not in rules:
+        return None
+    return next((l for l in lines if l.startswith("Tidevann (") and ("ikke blant det lokale" in l or "foretrukket lokalt" in l)), None)
+
+
 def local_rules_penalty(hour, spot, wind_type_, wind_speed):
     """Tidevann og en strengere offshore-sjekk, begge "koster stjerner".
     15.10.2026 (Theodors regel 4): returnerer (tidevann_rå, vind_rå, linjer),
@@ -1843,8 +1869,11 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
             if state not in rules["tide_prefer"]:
                 pen = weight * rules["tide_penalty_high"]
                 raw_total += pen
+                # 24.11.2026 (fysikk-kontrolløren, vilkår 2): desimalkomma, som resten av regnestykket. To desimaler,
+                # som linja for vannstanden (tide_level_penalty(), «−0,49»): med én sto Unstads 0,35 som «−0,3», og
+                # vind −0,2 og tidevann «−0,3» så ikke ut som ett poeng (feiljegeren V2 og kontrolløren 24.11.2026).
                 lines.append(f"Tidevann ({state}): ikke blant det lokale favoriserer - "
-                             f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.1f})")
+                             + f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.2f})".replace(".", ","))
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
 
@@ -2138,7 +2167,20 @@ def rate(hour, spot):
     if five_lost == "tide" and without_wind == 5:
         without_wind = 4   # den femte stjernen holdes tilbake av tidevannet også uten vind
     lost_wind = max(0, without_wind - solid)
-    lost_tide = min(lost_total - lost_wind, tide_pen if five_lost != "tide" else max(1, tide_pen))
+    tide_cap = tide_pen if five_lost != "tide" else max(1, tide_pen)
+    # 23.11.2026 (S28, ja fra Theodor i svar.md 23.11.2026; feiljegeren 22.11.2026: Breivikeidet 22.11 kl. 09-10Z,
+    # potensial 2, vinden −0,3 og tidevannsregelen −0,45 tok ett poeng sammen, og appen sa «(2 uten vind)»): når
+    # verken vinden eller tidevannet ALENE tar poenget, får det største fradraget skylda. Uavgjort: vinden, som før.
+    # Poengene er de samme. Tidevannets del går som før først til den vanlige tidevannsregelen (faded_tide), så til
+    # de lokale reglene (local_rules.stars_lost). Ikke når det femte poenget holdes tilbake (five_lost).
+    # 24.11.2026 (fysikk-kontrolløren, vilkår 1): ordet følger den samme bokføringen. low_reason og «og sterk vind» i
+    # regnestykket leser lost_wind og lost_tide ETTER omfordelingen, så en time der tidevannet får poenget ikke heter
+    # «blown_out» mens tapet vises som tidevann (Breivikeidet, fralandsvind 10,2-12 m/s: appen sa «Blåst ut»).
+    wind_alone_lost = potential - max(0, min(potential, math.floor(potential - wp + 0.5)))
+    if (lost_wind > 0 and five_lost is None and wind_alone_lost == 0 and without_wind == potential
+            and tide_pen + local_tide_raw > wp):
+        lost_wind = 0
+    lost_tide = min(lost_total - lost_wind, tide_cap)
     local_extra_stars = lost_total - lost_wind - lost_tide
     solid_before_local = solid + local_extra_stars
     # 19.11.2026 (fysikk-kontrolløren, forslag S22): mangler vindstyrken, er det faste poenget et fradrag for et
@@ -2170,7 +2212,7 @@ def rate(hour, spot):
         energy_period_value, energy_period_source,
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
         wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
-        tide_level_line=tide_level_penalty(hour, spot)[1],
+        tide_level_line=tide_level_penalty(hour, spot)[1] or local_tide_prefer_line(spot, local_rules_lines),
         fjord_wind_block=fjord_wind_block,
     )
 

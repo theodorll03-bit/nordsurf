@@ -324,10 +324,55 @@ function windArrowHtml(h){
   // pila peker dit vinden BLÅSER (fra-retning + 180), som værpiler flest
   return `<span class="wind-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" style="--rot:${Math.round(h.wind_dir+180)}deg"><path d="M12 3l5 7h-3v11h-4V10H7z"/></svg></span>`;
 }
+// Spoten har en myk regel på vannstanden der lavere vann er bedre (local_rules.tide_level i spots.json og
+// rating.tide_level_penalty(): ingen straff opp til full_below_cm, så økende mot max_at_cm). Da sies tidevannet
+// «Best på lavt vann» og ikke «tåler alt tidevann» (S28, Theodor 23.11.2026): i tidevannscella, i forklaringen og i
+// tidevannskortet (Tidevann.prefTekst, som også står i «Om spotten» på PC). Bare Breivikeidet har regelen. Spots med
+// tide eller tide_prefer (Farstadsanden, Unstad) og spots uten tidevannsregel viser det samme som før.
+function tideLowBest(s){
+  const lr = s && s.local_rules, tl = lr && lr.tide_level;
+  return !!tl && tl.max_at_cm > tl.full_below_cm && tl.penalty > 0 && (lr.weight==null || lr.weight > 0);
+}
+// Poeng tidevannet tok (S33 c, svar.md 23.11.2026 kl. 14.00): den vanlige tidevannsregelen (faded_tide) pluss det
+// spotens lokale tidevannsregel tok (local_rules.stars_lost - rating.rate(): det tallet er bare det lokale
+// TIDEVANNSfradraget, den lokale vindregelen bokføres som vind). Tapet vises som tidevann («−1 tidevann») med
+// stiplet poeng i blekk, ikke korall. lostAll(): alt som er tapt på vind og tidevann til sammen. Bare visning.
+function tideLost(h){
+  if(!h) return 0;
+  return (h.faded_tide || 0) + ((h.local_rules && h.local_rules.stars_lost) || 0);
+}
+function lostAll(h){
+  if(!h) return 0;
+  return Math.max(h.faded || 0, (h.faded_wind || 0) + (h.faded_tide || 0)) + ((h.local_rules && h.local_rules.stars_lost) || 0);
+}
+// «−1 vind», «−1 tidevann» som liste (eldre varsel uten delingen: bare «−1»)
+function lostParts(h){
+  if(!h) return [];
+  const tv = tideLost(h);
+  const ut = [h.faded_wind ? {hva: "vind", n: h.faded_wind, tekst: STR.hjem.taptVind(h.faded_wind)} : null, tv ? {hva: "tidevann", n: tv, tekst: STR.hjem.taptTide(tv)} : null].filter(Boolean);
+  if(!ut.length && h.faded) ut.push({hva: "", n: h.faded, tekst: `−${h.faded}`});
+  return ut;
+}
+// Tallet lest opp med hva som er tapt («2 av 5, 1 tapt på tidevann»), samme oppdeling og ord som timestripa
+// (feiljegeren M3, 24.11.2026: dagens tall sa «1 tapt på vind eller tidevann» der stripa sa «1 tapt på tidevann»).
+// Eldre varsel uten delingen: «… tapt på vind eller tidevann» som før.
+function starsAriaLost(n, h){
+  const p = lostParts(h).filter(x=> x.hva);
+  if(!p.length) return STR.starsAria(n, lostAll(h));
+  return STR.spot.timeTall(n, p.map(x=> STR.spot.timeTapt(x.n, x.hva)).join(", "));
+}
+// Vindstyrken som tall (S28, Theodor 23.11.2026): hele m/s som før, men på en spot med egen vindgrense (wind_calm_ms:
+// Breivikeidet 8, Unstad 14 m/s middelvind) står én desimal, rundet ned, når avrundingen ellers ville vist grensa uten at
+// den er nådd (7,9 og ikke 8; vinden teller først fra grensa). Samme regel som rating.wind_ms_text() i henteren.
+function windMsText(h){
+  const v = h.wind_speed, egen = h.wind_calm_ms;
+  if(egen!=null && v < egen && Math.round(v) >= egen) return nf1.format(Math.floor(v * 10) / 10);
+  return nf0.format(v);
+}
 function windShort(h){
   if(!h || h.wind_speed==null) return "";
   const type = windLabel(h);
-  return `${nf0.format(h.wind_speed)} m/s${type?` ${type}`:""}`;
+  return `${windMsText(h)} m/s${type?` ${type}`:""}`;
 }
 function windShorter(h){
   // Kortversjon til kortene i lista (Theodor 09.10.2026, småfiks 2): "3 m/s
@@ -336,7 +381,7 @@ function windShorter(h){
   if(!h || h.wind_speed==null) return "";
   const type = windLabel(h);
   const short = STR.windShort[type] || type;
-  return `${nf0.format(h.wind_speed)} m/s${short?` ${short}`:""}`;
+  return `${windMsText(h)} m/s${short?` ${short}`:""}`;
 }
 function kjText(h){
   // Energien ute, samme tall som Energi-cellen i Detaljer: svellenergien når
@@ -474,8 +519,8 @@ function detailsGrid(s, h, t){
     ${tapCell("exposure", STR.cell.exposure, h.transfer!=null?`${nf0.format(h.transfer*100)} %`:"–", STR.transferSub)}
     ${tapCell("windsea", STR.cell.windsea, h.secondary_swell_height!=null?`${nf1.format(h.secondary_swell_height)} m`:"–", h.secondary_swell_height!=null?`${esc(STR.fromDir(compass(h.secondary_swell_dir)))}${h.secondary_swell_period!=null?`, ${nf0.format(h.secondary_swell_period)} s`:""}`:"")}
     ${tapCell("period", STR.cell.period, h.period!=null?`${nf0.format(h.period)} s`:"–", h.bw_period!=null?`BarentsWatch ${nf0.format(h.bw_period)} s ved punktet`:"")}
-    ${tapCell("wind", STR.cell.wind, h.wind_speed!=null?`${nf0.format(h.wind_speed)} m/s`:"–", windN)}
-    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(STR.tidePref(s.tide))}`)}
+    ${tapCell("wind", STR.cell.wind, h.wind_speed!=null?`${windMsText(h)} m/s`:"–", windN)}
+    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(!(s.tide && s.tide.length) && tideLowBest(s) ? STR.tideLowBest : STR.tidePref(s.tide))}`)}
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
     ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch" && !andelsHoyde(h)?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}

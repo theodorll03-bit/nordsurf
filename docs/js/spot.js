@@ -180,7 +180,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(STR.starsAria(n, (b.h && b.h.faded) || 0))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
@@ -209,9 +209,9 @@
     if(!h || !H.known(h)) return `<p class="sub">${esc(STR.hjem.mangler)}</p>`;
     if(H.mork(h)) return `<p class="sub">${esc(STR.lightOnly)}</p>`;
     const st = Math.min(5, H.stars(h));
-    const tapt = [h.faded_wind ? STR.hjem.taptVind(h.faded_wind) : null, h.faded_tide ? STR.hjem.taptTide(h.faded_tide) : null].filter(Boolean);
-    if(h.faded && !tapt.length) tapt.push(`−${h.faded}`);   // eldre varsel uten delingen
-    return `<p class="sub tdom r-${st}">${tapt.length ? `<span class="tapt"><i aria-hidden="true"></i>${esc(tapt.join(" · "))}</span>` : ""}<span class="rute r-${st}" role="img" aria-label="${esc(STR.starsAria(st, 0))}">${st}</span><span class="to">${esc(ratingWord(h))}</span></p>`;
+    // hvert tap med sitt stiplede poeng: vind i korall, tidevann i blekk (S33 c). Eldre varsel uten delingen: bare «−1».
+    const tapt = lostParts(h).map(p=> `<span class="tapt"><i${p.hva === "tidevann" ? ' class="tv"' : ""} aria-hidden="true"></i>${esc(p.tekst)}</span>`).join("");
+    return `<p class="sub tdom r-${st}">${tapt}<span class="rute r-${st}" role="img" aria-label="${esc(STR.starsAria(st, 0))}">${st}</span><span class="to">${esc(ratingWord(h))}</span></p>`;
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
@@ -230,7 +230,7 @@
     else if(h && h.surf_height!=null && (!vh || vh.a <= 0)) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, `<span class="ordv">${esc(ratingWord(h))}</span>`, "", ""));
     if(h && h.wind_speed!=null){
       const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
-      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, nf0.format(h.wind_speed), "m/s",
+      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, windMsText(h), "m/s",
         esc([[windLabel(h), fra].filter(Boolean).join(" "), h.gust!=null ? STR.gust(nf0.format(h.gust)) : null].filter(Boolean).join(" · "))));
     }
     const lv = window.Tidevann ? Tidevann.nivaa(ev, t.getTime()) : null;
