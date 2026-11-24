@@ -43,7 +43,7 @@
   /* kyst: {land: [sti...], coast: [sti...]} i viewBox -100..100 (tools/lag_minikart.py) */
   function markup(spot, h, kyst, opts){
     const o = opts || {};
-    const inside = h && h.dir_offshore!=null && spot.swell_window ? inSwellWindow(h.dir_offshore, spot) : null;
+    const inside = h && h.dir_offshore!=null && visVindu(spot) ? inSwellWindow(h.dir_offshore, spot) : null;
     // buene ruller bare når svellet faktisk treffer (i vinduet OG ikke skjermet - opts.hit fra spot.js sin vinduTekst)
     const hit = opts && opts.hit!=null ? opts.hit : inside;
     const hasSwell = h && h.dir_offshore!=null;
@@ -61,13 +61,13 @@
       `Minikart rundt ${spot.name}, 3,5 km radius, nord opp.`,
       hasSwell ? `Svell fra ${compass(h.dir_offshore)} ${Math.round(h.dir_offshore)} grader, ${opts && opts.vinduTekst ? opts.vinduTekst.toLowerCase().replace("vinduet", "svellvinduet") : inside==null ? "" : inside ? "innenfor svellvinduet" : "utenfor svellvinduet"}.` : "Svellretning mangler.",
       hasWind ? `Vind fra ${compass(h.wind_dir)} ${Math.round(h.wind_dir)} grader.` : "Vindretning mangler.",
-      spot.swell_window ? `Svellvindu ${windowText(spot).replace("Vindu ", "")}.` : "",
+      visVindu(spot) ? `Svellvindu ${windowText(spot).replace("Vindu ", "")}.` : "",
     ].join(" ");
     return `<svg class="minikart${o.still ? " still" : ""}" viewBox="-118 -118 236 236" data-tekst-px="12" role="img" aria-label="${esc(aria)}">
       <defs><clipPath id="mkClip-${esc(spot.id)}"><circle r="${R}"/></clipPath></defs>
       <circle class="sjo" r="${R}"/>
       <g clip-path="url(#mkClip-${esc(spot.id)})">${coast}${land}</g>
-      ${spot.swell_window ? `<path class="vindu" d="${wedge(spot.swell_window, R)}"/>` : ""}
+      ${visVindu(spot) ? `<path class="vindu" d="${wedge(visVindu(spot), R)}"/>` : ""}
       <g class="ticks">${ticks.join("")}</g>
       <circle class="rand" r="${R}"/>${fra}
       ${hasSwell ? (hit ? arcs(h.dir_offshore) : "") + arrowFromRim(h.dir_offshore, 40, hit ? "svell" : "svell miss") : ""}

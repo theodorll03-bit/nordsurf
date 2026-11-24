@@ -1,6 +1,6 @@
-# Testlab for treffsikkerhet - 2026-11-16 14:03 UTC
+# Testlab for treffsikkerhet - 2026-11-23 16:31 UTC
 
-Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 1643 spot-timer. Vindmålinger: 0 spot-timer.
+Saker: 15 (15 faste observasjoner, 0 logger, 0 benchmarks). WW3-arkiv: 2939 spot-timer. Vindmålinger: 0 spot-timer.
 
 ## Forbehold: faste observasjoner er justeringsgrunnlag, ikke en uavhengig test
 
@@ -152,5 +152,5 @@ Ikke evaluert per variant: grunnlinje 0, ww3_svell 5, energi_tp 0, energi_ww3 5,
 - Kolonnen 'Grunnlinje på SAMME saker' er dagens rating regnet på nøyaktig de sakene varianten evaluerte - sammenlign den, ikke grunnlinjeraden øverst, når varianten hopper over saker.
 - Dekning: WW3-arkivet ('fersk', 48 t) og inndata-bildet (72 t) tas bare ukentlig - logger/benchmarks i dagene imellom får 'ikke evaluert' i variantene som trenger dem.
 - Benchmarks: fyll data/benchmarks.json (format i fila) med tall fra surf-forecast/Surfline; inndataene for timen hentes fra data/backtest/inputs/ (skrives av workflowen hver uke og kan kjøres oftere).
-- laert_eksponering: del B kjører i SKYGGEMODUS i produksjonen (Theodor 14.10.2026) - varianten viser hva ratingen ville blitt med læringen koblet inn. Lærte bøtter lang/kort (par) per spot: grotfjord 0/0 (21 par), tromvik 0/0 (50 par), ersfjordstranda 0/0 (61 par), russelv 0/0 (70 par), lenangsoyra 0/0 (71 par), steinkrossa 0/0 (28 par), unstad 0/0 (72 par), farstadsanden 0/0 (28 par), bleik 0/0 (33 par), bunes 0/0 (35 par), ducks 0/0 (35 par), eggum 0/0 (33 par), haukland 0/0 (46 par), horseid 0/0 (32 par), hoyvika 0/0 (32 par), kvalnes 0/0 (52 par), kvalvika 0/0 (41 par), skagsanden 0/0 (47 par), stave 0/0 (31 par), the-frog 0/0 (39 par), utakleiv 0/0 (43 par), vikten 0/0 (52 par), bovaer 0/0 (2 par), berlevag-sandfjorden 0/0 (0 par), persfjord 0/0 (8 par), seines 0/0 (0 par). Uten lærte bøtter er varianten identisk med grunnlinja.
+- laert_eksponering: del B kjører i SKYGGEMODUS i produksjonen (Theodor 14.10.2026) - varianten viser hva ratingen ville blitt med læringen koblet inn. Lærte bøtter lang/kort (par) per spot: grotfjord 0/0 (29 par), tromvik 0/0 (73 par), ersfjordstranda 0/0 (85 par), russelv 0/0 (103 par), lenangsoyra 0/0 (95 par), steinkrossa 0/3 (48 par), unstad 0/0 (104 par), farstadsanden 0/0 (28 par), bleik 0/0 (48 par), bunes 0/0 (54 par), ducks 0/0 (60 par), eggum 0/0 (54 par), haukland 0/0 (81 par), horseid 0/0 (54 par), hoyvika 0/0 (49 par), kvalnes 0/0 (85 par), kvalvika 0/0 (74 par), skagsanden 0/0 (81 par), stave 0/0 (40 par), the-frog 0/0 (63 par), utakleiv 0/0 (80 par), vikten 0/0 (88 par), bovaer 0/0 (35 par), berlevag-sandfjorden 0/0 (4 par), persfjord 0/0 (34 par), seines 0/0 (0 par), breivikeidet 0/0 (47 par). Uten lærte bøtter er varianten identisk med grunnlinja.
 - Testlaben endrer aldri spots.json eller ratingen.

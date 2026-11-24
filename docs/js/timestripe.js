@@ -91,7 +91,7 @@
       if(bred){
         // svellet ute: tallet og en stolpe; retningen det kommer FRA som pil mot spoten - fylt når den er i vinduet
         const sv = h && h.swell_offshore!=null ? h.swell_offshore : null, dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
-        const inne = dir!=null && s.swell_window ? inSwellWindow(dir, s) : false;
+        const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
         ekstra = `<div class="svl">${sv!=null ? `<b>${nf1.format(sv)}</b><i style="height:${svMaks > 0 ? Math.max(2, Math.round(sv / svMaks * 20)) : 2}px"></i>` : h ? "<b>–</b>" : ""}</div>`
           + `<div class="sfr">${dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${inne ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : h ? "<b>–</b>" : ""}</div>`;
       }

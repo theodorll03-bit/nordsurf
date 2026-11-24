@@ -13,6 +13,11 @@ finnes (da med en liten tilstandsfil for 6-timersgrensen, som workflowen tar var
 
 Bakgrunn: 15.10 kl. 19Z-16.10 ca. 09Z feilet «Hent varsel» uten at noen merket det (PR #19).
 
+«Lyngen henger sammen» (svar.md 23.11.2026 kl. 14.05): i samme kjøring leser vakthunden detaljfilene for
+Breivikeidet, Russelv og Lenangsøyra fra live-siden. Har Breivikeidet minst 2 poeng i en time der Russelv eller
+Lenangsøyra viser «Flatt» eller «Treffer ikke», åpner den en egen issue, «Lyngen henger ikke sammen» (se
+lyngen_avvik() og vakt_lyngen()). Mørke timer telles ikke (appen viser «Mørkt» der). Bare varsel: ratingen endres aldri herfra.
+
 Testing (bare utenfor main): VAKTHUND_TEST_ALDER_T=<timer> later som varselet er så gammelt (workflow_dispatch-
 input «test_alder_timer»), og issuen merkes som test.
 
@@ -92,13 +97,13 @@ class GitHub:
         r.raise_for_status()
         return [{"conclusion": k.get("conclusion"), "created_at": k.get("created_at"), "html_url": k.get("html_url")} for k in r.json().get("workflow_runs", [])]
 
-    def apen_issue(self):
+    def apen_issue(self, tittel=TITTEL):
         r = self.s.get(self._url("issues"), params={"state": "open", "per_page": 50}, headers=self.h, timeout=30)
         r.raise_for_status()
-        return next((i for i in r.json() if i.get("title") == TITTEL and "pull_request" not in i), None)
+        return next((i for i in r.json() if i.get("title") == tittel and "pull_request" not in i), None)
 
-    def ny_issue(self, body):
-        r = self.s.post(self._url("issues"), json={"title": TITTEL, "body": body, "labels": ["vakthund"]}, headers=self.h, timeout=30)
+    def ny_issue(self, body, tittel=TITTEL):
+        r = self.s.post(self._url("issues"), json={"title": tittel, "body": body, "labels": ["vakthund"]}, headers=self.h, timeout=30)
         r.raise_for_status()
         return r.json()
 
@@ -191,6 +196,148 @@ def les_oversikt(now, forsok=2, pause_s=10, get=None, sleep=None):
     return None
 
 
+# ---------- «Lyngen henger sammen» ----------
+# svar.md 23.11.2026 kl. 14.05 (Theodor: «Hvis det er surf på Breivikeidet er det så å si alltid bølger på de to andre
+# spottene i Lyngen»; kilder: observasjon 17.11.2026 og 22.11.2026, Theodor): Breivikeidet ligger innerst i samme fjord som
+# Russelv og Lenangsøyra. Svell som gir bølger på Breivikeidet har passert de to andre. Sjekken varsler når varselet
+# likevel sier noe annet. Den endrer ingenting selv.
+LIVE_SPOT = "https://theodorll03-bit.github.io/nordsurf/data/spots/{id}.json"
+LYNGEN_ANKER = "breivikeidet"
+LYNGEN_FOLGER = ("russelv", "lenangsoyra")
+LYNGEN_MIN_POENG = 2          # Breivikeidet må ha minst så mange poeng i timen
+LYNGEN_TITTEL = "Lyngen henger ikke sammen"
+LYNGEN_DEDUPE_T = 23          # samme avvik står i varselet i dagevis: høyst én kommentar i døgnet (sjekkene går hver 6. time)
+LYNGEN_MAKS_LINJER = 12       # timer som listes i issuen, resten telles
+SMALL_SURF_MIN_M = 0.3        # under dette heter en time uten poeng «Flatt» (samme grense som docs/js/app.js)
+
+
+def lyngen_ord(h):
+    """«Flatt» eller «Treffer ikke» når appen viser det ordet for timen (ratingWord() i docs/js/app.js, med
+    zeroWord() og calmWindWord()), ellers None. Mangler tallet (0 poeng uten grunn og uten surfehøyde), viser
+    appen «–»: det er ukjent og gir None (manglende data er aldri 0)."""
+    stars, grunn, surf = h.get("stars") or 0, h.get("low_reason"), h.get("surf_height")
+    if not stars and grunn in (None, "", "flat") and surf is not None:
+        return "Flatt" if surf < SMALL_SURF_MIN_M else None          # zeroWord(): fra 0,3 m heter timen noe annet
+    if grunn == "blown_out":
+        # calmWindWord(): svak vind uten poengtap og under 0,3 m heter «Flatt». Ellers får vinden ordet.
+        if stars or surf is None or surf >= SMALL_SURF_MIN_M:
+            return None
+        tapt = max((h.get("zero_losses") or {}).get("wind") or 0, h.get("faded_wind") or 0)
+        if tapt > 0:
+            return None
+        import rating  # ligger ved siden av denne fila, bare standardbiblioteket
+        sterk = rating.blown_out_wind_strong(h.get("wind_speed"), h.get("gust"), h.get("wind_type"), h.get("wind_calm_ms"))
+        return "Flatt" if sterk is False else None
+    if grunn == "flat":
+        return "Flatt"
+    if grunn == "treffer_ikke":
+        return "Treffer ikke"
+    return None
+
+
+def lyngen_morkt(h):
+    """Sann når timen er mørk i dataene (lysfeltet «light» er "mørkt", eller det mangler og «daylight» er False, som
+    lightClass() i docs/js/app.js). Appen viser «Mørkt» og ikke ordet i slike timer. Mangler begge feltene, er lyset
+    ukjent, og timen regnes ikke som mørk."""
+    lys = h.get("light")
+    return lys == "mørkt" if lys is not None else h.get("daylight") is False
+
+
+def lyngen_avvik(detaljer, now):
+    """(avvik, ukjente). detaljer: {spot_id: detaljfila fra live-siden, eller None når den ikke kunne leses}.
+    avvik: timer fra og med denne timen der Breivikeidet har minst LYNGEN_MIN_POENG poeng mens Russelv eller
+    Lenangsøyra viser «Flatt» eller «Treffer ikke» (lyngen_ord()). ukjente: spotene som ikke kunne sjekkes,
+    fordi fila mangler, er uten timer eller er fra en annen kjøring («run») enn Breivikeidets. Ukjent er
+    aldri et avvik. En time som mangler hos den ene, eller poeng som mangler, hoppes over.
+    24.11.2026 (feiljegeren, funn 5): mørke timer hos Russelv eller Lenangsøyra telles ikke (lyngen_morkt()). Appen
+    viser «Mørkt» der og ikke «Flatt» eller «Treffer ikke». Timer uten lysfelt telles som før."""
+    anker = detaljer.get(LYNGEN_ANKER)
+    if not anker or not anker.get("hours"):
+        return [], list(LYNGEN_FOLGER)
+    fra = now.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:00Z")
+    gode = {h.get("t"): h for h in anker["hours"]
+            if h.get("t") and h["t"] >= fra and isinstance(h.get("stars"), int) and h["stars"] >= LYNGEN_MIN_POENG}
+    avvik, ukjente = [], []
+    for spot_id in LYNGEN_FOLGER:
+        d = detaljer.get(spot_id)
+        if not d or not d.get("hours") or d.get("run") != anker.get("run"):
+            ukjente.append(spot_id)
+            continue
+        for h in d["hours"]:
+            a = gode.get(h.get("t"))
+            ordet = lyngen_ord(h) if a and not lyngen_morkt(h) else None
+            if ordet:
+                avvik.append({"t": h["t"], "spot": spot_id, "navn": d.get("name") or spot_id, "ord": ordet, "poeng": h.get("stars") or 0,
+                              "surf_height": h.get("surf_height"), "anker_poeng": a["stars"], "anker_surf_height": a.get("surf_height")})
+    return sorted(avvik, key=lambda x: (x["t"], x["spot"])), ukjente
+
+
+def _m(v):
+    return "ukjent høyde" if v is None else f"{v:.1f}".replace(".", ",") + " m"
+
+
+def lyngen_tekst(avvik, now, run=None):
+    linjer = [f"**{now:%d.%m.%Y kl. %H:%M} UTC** - vakthunden fant {len(avvik)} time(r) der Breivikeidet har minst {LYNGEN_MIN_POENG} poeng "
+              "mens Russelv eller Lenangsøyra viser «Flatt» eller «Treffer ikke»:", ""]
+    for a in avvik[:LYNGEN_MAKS_LINJER]:
+        linjer.append(f"- {a['t'][8:10]}.{a['t'][5:7]} kl. {a['t'][11:13]}Z: Breivikeidet {a['anker_poeng']} poeng ({_m(a['anker_surf_height'])}), "
+                      f"{a['navn']} «{a['ord']}» ({a['poeng']} poeng, {_m(a['surf_height'])})")
+    if len(avvik) > LYNGEN_MAKS_LINJER:
+        linjer.append(f"- og {len(avvik) - LYNGEN_MAKS_LINJER} time(r) til")
+    linjer += ["", "Regelen (Theodor 23.11.2026): når Breivikeidet har surf, er det så å si alltid bølger på Russelv og Lenangsøyra. "
+               "Dette er bare et varsel. Vakthunden endrer ikke ratingen." + (f" Varselet er fra kjøring {run}." if run else ""),
+               "", "Vakthunden kommenterer høyst én gang i døgnet og lukker issuen selv når varselet ikke lenger har slike timer."]
+    return "\n".join(linjer)
+
+
+def vakt_lyngen(gh, avvik, ukjente, now, run=None):
+    """Issuen «Lyngen henger ikke sammen», samme gang som vakt(). Returnerer (hva, nr): «ny», «kommentert»,
+    «dedupe», «lukket», «ukjent» (ingen avvik funnet, men minst én spot kunne ikke sjekkes: en åpen issue blir
+    stående) eller «i orden»."""
+    issue = gh.apen_issue(LYNGEN_TITTEL)
+    nr = issue["number"] if issue else None
+    if not avvik:
+        if ukjente:
+            print(f"Vakthund: Lyngen-sjekken kunne ikke gjøres for {', '.join(ukjente)} - ingen alarm, lar en åpen issue stå")
+            return "ukjent", nr
+        if issue:
+            gh.kommenter(nr, f"**{now:%d.%m.%Y kl. %H:%M} UTC** - varselet har ikke lenger timer der Breivikeidet har minst {LYNGEN_MIN_POENG} poeng "
+                             "mens Russelv eller Lenangsøyra viser «Flatt» eller «Treffer ikke». Lukker.")
+            gh.lukk(nr)
+            print(f"Vakthund: Lyngen henger sammen igjen - lukket issue #{nr}")
+            return "lukket", nr
+        print("Vakthund: Lyngen henger sammen")
+        return "i orden", None
+    kort = f"{len(avvik)} time(r), første {avvik[0]['t']} ({avvik[0]['navn']} «{avvik[0]['ord']}»)"
+    if issue:
+        sist = iso(issue.get("updated_at") or issue["created_at"])
+        if now - sist < dt.timedelta(hours=LYNGEN_DEDUPE_T):
+            print(f"Vakthund: Lyngen henger ikke sammen, men issue #{nr} er oppdatert siste {LYNGEN_DEDUPE_T} t - hopper over: {kort}")
+            return "dedupe", nr
+        gh.kommenter(nr, lyngen_tekst(avvik, now, run))
+        print(f"Vakthund: kommenterte issue #{nr} (Lyngen): {kort}")
+        return "kommentert", nr
+    ny = gh.ny_issue(lyngen_tekst(avvik, now, run), LYNGEN_TITTEL)
+    print(f"Vakthund: opprettet issue #{ny.get('number')} (Lyngen): {kort}")
+    return "ny", ny.get("number")
+
+
+def les_lyngen(now, get=None):
+    """Detaljfilene for de tre spotene fra live-siden: {spot_id: dict eller None}. Ett forsøk per fil med kort
+    tidsgrense (workflowen gir vakthunden 120 s i alt). En fil som ikke kan leses er ukjent, ikke et avvik."""
+    get, ut = get or requests.get, {}
+    for spot_id in (LYNGEN_ANKER,) + LYNGEN_FOLGER:
+        url = LIVE_SPOT.format(id=spot_id)
+        try:
+            r = get(url, params={"v": int(now.timestamp())}, headers=UA, timeout=15)
+            r.raise_for_status()
+            ut[spot_id] = r.json()
+        except (requests.RequestException, ValueError) as e:
+            print(f"Kunne ikke lese {url}: {e}")
+            ut[spot_id] = None
+    return ut
+
+
 def main():
     sti = Path(sys.argv[1] if len(sys.argv) > 1 else "vakthund_state.json")
     state = json.loads(sti.read_text(encoding="utf-8")) if sti.exists() else {}
@@ -218,6 +365,14 @@ def main():
     if probs:
         ntfy(probs, now, state)
         sti.write_text(json.dumps(state), encoding="utf-8")
+    # «Lyngen henger sammen»: til slutt, og bare når live-siden svarte. En feil her skal aldri stoppe vakthunden.
+    if repo and token and oversikt is not None:
+        try:
+            detaljer = les_lyngen(now)
+            avvik, ukjente = lyngen_avvik(detaljer, now)
+            vakt_lyngen(gh, avvik, ukjente, now, run=(detaljer.get(LYNGEN_ANKER) or {}).get("run"))
+        except Exception as e:  # noqa: BLE001 - vakthunden skal aldri feile selv
+            print(f"Vakthund: Lyngen-sjekken feilet: {e}")
 
 
 if __name__ == "__main__":

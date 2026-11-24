@@ -32,7 +32,7 @@
   function html(s, h, hh, o){
     // o.stor: nettsiden (SPEC §6C, 300 px) - teksten i skiva holdes på 12 px av svgtekst.js (data-tekst-px)
     const stor = !!(o && o.stor), px = stor ? 300 : 168;
-    const vinduer = sektorer(s.swell_window);
+    const vinduer = sektorer(visVindu(s));
     const svell = h && h.dir_offshore!=null ? h.dir_offshore : null, vind = h && h.wind_speed!=null && h.wind_dir!=null ? h.wind_dir : null;
     const iVindu = svell!=null ? inSwellWindow(svell, s) : null;
     const vinduTxt = vinduer.map(([a, b])=> STR.spot.vinduTil(a, b)).join(" og ");
