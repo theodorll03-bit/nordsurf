@@ -1628,3 +1628,38 @@ for _f in _felt17:
     assert f'"{_f}": (mar or {{}}).get("{_f[:-9]}")' in src, _f
     assert _f in backtest_inputs.INPUT_KEYS and _f in _publish17.DETAIL_EXCLUDE, _f
 print("17: samlet sjø (med modellmerke) og vindsjø-del ute lagres per time (None når de mangler, aldri 0), og lengste toppperiode ved punktet i en ekte modelltime innen ±3 t - OK")
+
+# ---------- 18: S40 (24.11.2026) - inndata-bildet lagres hver dag: døgnets første varsel, aldri «hemmelig»-spots ----------
+import tempfile as _tmp18
+with _tmp18.TemporaryDirectory() as _d18:
+    _d18 = Path(_d18)
+    _h18 = [{"t": f"2026-11-21T{i % 24:02d}:00:00Z", "bw_height": 0.4, "wind_wave_height_offshore": 2.6, "wind_wave_period_offshore": None,
+             "stars": 3, "tide": None} for i in range(80)]
+    _fc18 = lambda gen: {"generated": gen, "spots": [{"id": "unstad", "hours": _h18},
+                                                     {"id": "skjult", "status": "hemmelig", "hours": _h18},
+                                                     {"id": "ny", "status": "forelopig", "hours": _h18[:5]}]}
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-21T03:00:00+00:00")), encoding="utf-8")
+    _p18 = backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn")
+    assert _p18 is not None and _p18.name == "2026-11-21T03.json"
+    _o18 = json.loads(_p18.read_text(encoding="utf-8"))
+    assert set(_o18["spots"]) == {"unstad", "ny"}, "en hemmelig spot skal aldri i inndata-arkivet"
+    assert "skjult" not in _p18.read_text(encoding="utf-8")
+    _t18 = _o18["spots"]["unstad"]["2026-11-21T05:00:00Z"]
+    # bare inndata (ikke resultatet), og det som mangler lagres ikke - aldri som 0
+    assert _t18 == {"bw_height": 0.4, "wind_wave_height_offshore": 2.6}, _t18
+    assert len(_h18[:backtest_inputs.INPUT_HOURS]) == 72
+    # senere kjøring samme døgn: ingenting skrives. Nytt døgn: ny fil. Uten --daglig (mandagens testlab): skriver alltid.
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-21T09:00:00+00:00")), encoding="utf-8")
+    assert backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn") is None
+    assert sorted(f.name for f in (_d18 / "inn").iterdir()) == ["2026-11-21T03.json"]
+    assert backtest_inputs.main([], _d18 / "fc.json", _d18 / "inn").name == "2026-11-21T09.json"
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-22T03:00:00+00:00")), encoding="utf-8")
+    assert backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn").name == "2026-11-22T03.json"
+# «Hent varsel» kjører det daglige bildet i begge veier (matrise og sekvensiell), ETTER publish.py (som tar ut hemmelige
+# spots av forecast.json), og fila går i den samme commiten som læringsdataene (ingen ekstra commit fra boten)
+_wf18 = (Path(__file__).resolve().parent.parent / ".github" / "workflows" / "forecast.yml").read_text(encoding="utf-8")
+assert _wf18.count("python fetcher/backtest_inputs.py --daglig") == 2 and _wf18.count("git add -A data/backtest/inputs") == 2
+for _del18 in _wf18.split("\n  sekvensiell:"):
+    assert _del18.index("run: python fetcher/publish.py") < _del18.index("backtest_inputs.py --daglig") < _del18.index('git commit -m "Nytt varsel (læringsdata)"')
+assert _wf18.count('git commit -m') == 2, "det daglige bildet skal ikke ha sin egen commit"
+print("18: inndata-bildet lagres daglig (døgnets første varsel, uten hemmelige spots, mangler lagres ikke), i samme commit som læringsdataene - OK")
