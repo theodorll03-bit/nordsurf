@@ -130,6 +130,12 @@ def main():
     assert not publish.wind_blamed(BO("x", 8.2, "sideonshore", gust=14, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 8.2, "sideonshore", gust=14))
     assert not publish.wind_blamed(BO("x", 13.9, gust=22, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 14.0, wind_calm_ms=14.0))
     assert not publish.wind_blamed(BO("x", 6.5, gust=11.5, wind_calm_ms=8.0)) and publish.wind_blamed(BO("x", 8.0, wind_calm_ms=8.0))   # Breivikeidet
+    # S28 (fysikk-kontrolløren 24.11.2026): vind rett under spotens egen grense rundes ned i oversikten, så 7,995-7,999 m/s
+    # ikke blir 8,00 (appen ville vist «8» der ratingen regnet under grensa). Alle andre tall rundes som før.
+    naa_v = lambda v, **k: publish._naa_hour({"t": "2026-11-24T10:00Z", "stars": 2, "wind_speed": v, **k})["wind_speed"]
+    assert [naa_v(v, wind_calm_ms=8.0) for v in (7.994, 7.995, 7.9999, 8.0, 8.004, 3.216666, 7.5)] == [7.99, 7.99, 7.99, 8.0, 8.0, 3.22, 7.5]
+    assert [naa_v(v, wind_calm_ms=14.0) for v in (13.996, 13.99, 14.0, 7.996)] == [13.99, 13.99, 14.0, 8.0]
+    assert [naa_v(v) for v in (7.996, 13.996, 3.216666)] == [8.0, 14.0, 3.22]   # uten egen grense: som før
     assert not publish.wind_blamed(BO("x", 11.9, "offshore", gust=20, wind_calm_ms=8.0)) and publish.wind_blamed(BO("x", 12.0, "offshore", wind_calm_ms=8.0))
     assert not publish.wind_blamed(BO("x", 13.9, "offshore", gust=20, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", 14.0, "offshore", wind_calm_ms=14.0))
     assert not publish.wind_blamed(BO("x", 13.9, None, wind_calm_ms=14.0)) and publish.wind_blamed(BO("x", None, wind_calm_ms=14.0))

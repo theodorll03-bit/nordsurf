@@ -142,7 +142,7 @@
     const every3 = cols.filter((c, k)=> d.step===6 || c.hh % 3===0);
     const morkCls = (h)=> h && h.light==="mørkt" ? ' class="mork"' : "";   // piler og tall i mørke timer blir grå
     const harMork = cols.some(c=> c.i >= 0 && s.hours[c.i].light==="mørkt");
-    const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div${morkCls(h)} style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${nf0.format(h.wind_speed)}</span>` : "<small>–</small>"}</div>`; }).join("");
+    const vind = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div${morkCls(h)} style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.wind_speed!=null ? `${ARROW(h.wind_dir)}<span class="b">${windMsText(h)}</span>` : "<small>–</small>"}</div>`; }).join("");
     const svell = every3.map(c=>{ const h = c.i>=0 ? s.hours[c.i] : null; return `<div${morkCls(h)} style="grid-column:span ${d.step===1 ? 3 : 1}">${h && h.swell_offshore!=null ? `${ARROW(h.dir_offshore)}<span class="b">${nf1.format(h.swell_offshore)}</span><small>${h.period!=null ? nf0.format(h.period) + "s" : "–"}</small>` : "<small>–</small>"}</div>`; }).join("");
     const tideT = d.idxs.includes(selIdx) ? new Date(s.hours[selIdx].t) : new Date(s.hours[d.idxs[0]].t);
     // samme kurve som tidevannskortet, tegnet i ekte piksler av Tidevann.mount() (spot.js) når bredden er kjent

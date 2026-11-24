@@ -114,7 +114,7 @@
       title: "Vind",
       what: "Fralandsvind (fra land) holder bølgene rene og glatte; pålandsvind (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett fralandsvind - lange, rene linjer.",
       numbers: (h) => [
-        ["Vind", h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
+        ["Vind", h.wind_speed!=null ? `${windMsText(h)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
         ["Kast", h.gust!=null ? `${nf0.format(h.gust)} m/s` : "mangler"],
         ["Type", WIND_WORD[h.wind_type] || "mangler"],
         ["Poeng tapt på vind", h.faded_wind!=null ? String(h.faded_wind) : (h.faded!=null ? String(h.faded) : "mangler")],
@@ -128,8 +128,8 @@
       what: "Flo og fjære flytter hvor og hvordan bølgene brekker. Noen spots liker lavvann (Farstadsanden, ifølge lokale surfere), andre tåler alt.",
       numbers: (h, spot) => [
         ["Nå", h.tide ? `${h.tide.rising?"stigende":"fallende"}, ${h.tide.state}${h.tide.level!=null?` (${nf1.format(h.tide.level)})`:""}` : "mangler"],
-        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : "tåler alt tidevann"],
-        ["Poeng tapt på tidevann", h.faded_tide!=null ? String(h.faded_tide) : "mangler"],
+        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : spot && spot.local_rules && spot.local_rules.tide_prefer && spot.local_rules.tide_prefer.length ? `liker ${spot.local_rules.tide_prefer.join(" og ")} vann` : (typeof tideLowBest === "function" && tideLowBest(spot) ? STR.tideLowBest : "tåler alt tidevann")],
+        ["Poeng tapt på tidevann", h.faded_tide!=null ? String(typeof tideLost === "function" ? tideLost(h) : h.faded_tide) : "mangler"],
       ],
       how: () => ["Kartverket sin tidevannsvarsel for nærmeste punkt. Lokale regler (med navngitt kilde) kan trekke ett poeng ved feil tidevann, dempet med regelens vekt."],
     },
