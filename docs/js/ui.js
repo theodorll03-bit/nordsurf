@@ -278,6 +278,9 @@
     const kj = (s)=> (window.KJORETID && KJORETID.min[s.id]) || Infinity;
     return spots.map(s=> ({s, st: dayBest(s, key).st})).sort((a, b)=> (b.st!=null ? b.st : -1) - (a.st!=null ? a.st : -1) || kj(a.s) - kj(b.s) || a.s.name.localeCompare(b.s.name, "nb")).map(x=> x.s);
   }
+  // Metalinja i radene: hvert ledd («ca. 1 t 20 min», «Treffer ikke») holdes samlet, så linja bare brytes mellom leddene
+  // og aldri midt i et ledd. Skilletegnet står sist i leddet foran. Teksten er den samme som før: «Lyngen · Foreløpig · …».
+  const metaHtml = (deler)=>{ const d = deler.filter(Boolean); return d.map((x, i)=> `<span class="ledd">${esc(x)}${i < d.length - 1 ? " ·" : ""}</span>`).join(" "); };
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
@@ -286,12 +289,13 @@
     const dag = d0.idag ? "" : `${cap(dagOrd(d0))}: `, dagSynlig = d0.idag || S.hjemMorgen ? "" : dag;
     const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : ratingWord(h);
     const tapt = h && b.st!=null ? ([h.faded_wind ? H.taptVind(h.faded_wind) : null, h.faded_tide ? H.taptTide(h.faded_tide) : null].filter(Boolean).join(" · ") || (h.faded ? `−${h.faded}` : null)) : null;
-    const sted = [s.area || regionOf(s), ...(kort ? merker(s) : [])].join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
+    // merkene («Foreløpig», forbudet) står etter stedet i alle rader, også favorittene (runde 3, 24.11.2026)
+    const stedDeler = [s.area || regionOf(s), ...merker(s)], sted = stedDeler.join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
       `${dag}${b.st!=null ? STR.starsAria(b.st, (h && h.faded) || 0) + ", " : ""}${ord}`, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
-        <span class="etikett">${esc([sted, kj, dagSynlig + ord, tapt].filter(Boolean).join(" · "))}</span>
+        <span class="etikett">${metaHtml([...stedDeler, kj, dagSynlig + ord, tapt])}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
         ${obs ? `<span class="etikett obs">${esc(obs)}</span>` : ""}
         ${ukeHtml(s, days, "under")}</span>`;

@@ -1479,6 +1479,57 @@ def main():
                 page.mouse.move(0, 0)
                 go("#utforsk", "#viewUtforsk:not([hidden])"); go("#hjem", HJEM_KLAR)
                 INK, PAPIR = "rgb(0, 41, 65)", "rgb(242, 239, 232)"
+                # Runde 3 (24.11.2026): merket «Foreløpig» står i metalinja i alle radene - regionradene og favorittene på mobil-Hjem,
+                # søketreffene, og på nettsiden forsidetabellen og lista på Utforsk. Feltene leses fra spots.json (status
+                # «forelopig» for Bøvær og Breivikeidet, andel_forelopig for Russelv og Lenangsøyra). Testfilas varsel er eldre enn de
+                # to første, så de legges inn i siden som kopier av Grøtfjord. Unstad er kalibrert og skal ikke ha merket.
+                SJ = {x["id"]: x for x in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"]}
+                MERKET = ["bovaer", "breivikeidet", "russelv", "lenangsoyra"]
+                assert all(SJ[i].get("status") == "forelopig" for i in MERKET[:2]) and all(SJ[i].get("andel_forelopig") for i in MERKET[2:]), "spots.json: de fire spotene skal være merket foreløpig"
+                assert SJ["unstad"].get("status") != "forelopig" and not SJ["unstad"].get("andel_forelopig"), "spots.json: Unstad er kalibrert"
+                page.evaluate("""(sj) => { const mal = DATA.spots.find(s => s.id === 'grotfjord'); window.__r3 = {lagt: [], auth: window.Auth, region: Front.helpers.chosenRegion()};
+                    for(const x of sj){ let s = DATA.spots.find(y => y.id === x.id);
+                        if(!s){ s = {...mal, id: x.id, name: x.name, area: x.area, region: 'Troms', spot: mal.spot}; DATA.spots.push(s); window.__r3.lagt.push(x.id); }
+                        if(x.status === 'forelopig'){ s.status = 'forelopig'; s.forelopig_fra = '2026-11-01T00:00:00Z'; } if(x.andel_forelopig) s.andel_forelopig = true; }
+                    window.Auth = {state: {ready: true, user: {id: 't', email: 't@eksempel.no'}, profile: null, favorites: new Set([...sj.map(x => x.id), 'unstad'])}, toggleFavorite: async () => {}, signOut: async () => {}};
+                    Front.helpers.setRegion('Troms'); Front.state.visAlle.Troms = true; Front.state.fsRegion = ''; Front.state.fsAlle = true; Front.refresh(); }""",
+                    [{"id": i, "name": SJ[i]["name"], "area": SJ[i].get("area"), "status": SJ[i].get("status"), "andel_forelopig": SJ[i].get("andel_forelopig")} for i in MERKET])
+                page.wait_for_timeout(200)
+                LES_MERKE = """(q) => Object.fromEntries([...document.querySelectorAll(q.rad)].map(r => { const a = r.matches('a') ? r : r.querySelector('a'), id = (a.getAttribute('href').match(/#spot=([^&]+)/) || [])[1], e = r.querySelector(q.meta);
+                    return [decodeURIComponent(id), e ? e.textContent.replace(/\\s+/g, ' ').trim() : null]; }))"""
+                def merke_sjekk(hvor, rad, meta):
+                    m_ = page.evaluate(LES_MERKE, {"rad": rad, "meta": meta})
+                    # Unstad kan stå i hovedbildet på forsiden i stedet for i tabellen: da er Grøtfjord den kalibrerte spoten som sjekkes
+                    uten = "unstad" if "unstad" in m_ else "grotfjord"
+                    assert set(MERKET) | {uten} <= set(m_), f"{hvor} ({label}): radene mangler: {sorted((set(MERKET) | {uten}) - set(m_))}"
+                    for i_ in MERKET:
+                        assert m_[i_].split(" · ").count("Foreløpig") == 1, f"{hvor} ({label}): «Foreløpig» skal stå én gang i metalinja for {i_}: {m_[i_]!r}"
+                    assert "Foreløpig" not in m_[uten], f"{hvor} ({label}): {uten} er kalibrert og skal ikke ha merket: {m_[uten]!r}"
+                    return m_
+                if mobile:
+                    merke_sjekk("favorittradene", "#viewHjem .favliste:not(.regionliste) a.favlinje", ".etikett")
+                    page.evaluate("() => { Auth.state.favorites.delete('unstad'); DATA.spots.find(s => s.id === 'unstad').__region = DATA.spots.find(s => s.id === 'unstad').region; DATA.spots.find(s => s.id === 'unstad').region = 'Troms'; Front.refresh(); }"); page.wait_for_timeout(150)
+                    mr = merke_sjekk("regionradene", "#viewHjem .regionliste a.favlinje", ".etikett")
+                    page.evaluate("() => { const u = DATA.spots.find(s => s.id === 'unstad'); u.region = u.__region; delete u.__region; }")
+                    # metalinja: leddene står med « · » mellom seg som før, og ingen ledd er brutt midt i (bare mellom leddene)
+                    ledd = page.evaluate("""() => [...document.querySelectorAll('#viewHjem .favlinje .etikett')].map(e => { const lh = parseFloat(getComputedStyle(e).lineHeight), d = [...e.querySelectorAll('.ledd')];
+                        return {tekst: e.textContent.trim(), ledd: d.map(x => x.textContent.trim().replace(/ ·$/, '')), hoye: d.filter(x => x.getBoundingClientRect().height > lh * 1.5).length, utenfor: d.filter(x => x.getBoundingClientRect().right > innerWidth - 15).length}; })""")
+                    assert ledd and all(l_["ledd"] and l_["tekst"] == " · ".join(l_["ledd"]) and l_["hoye"] == 0 and l_["utenfor"] == 0 for l_ in ledd), f"metalinja skal bare brytes mellom leddene: {[l_ for l_ in ledd if l_['hoye'] or l_['utenfor'] or l_['tekst'] != ' · '.join(l_['ledd'])][:2]}"
+                    assert mr["lenangsoyra"].startswith("Lyngen · Foreløpig · ca. 1 t 20 min · "), f"Lenangsøyra: sted, merke og kjøretid i metalinja: {mr['lenangsoyra']!r}"
+                    go("#sok", "#viewSok:not([hidden]) #sokM")
+                    merke_sjekk("søket", "#viewSok .srad", ".nm small")
+                    go("#hjem", HJEM_KLAR)
+                else:
+                    page.wait_for_selector("#forside table.fs-tabell tr.s")
+                    merke_sjekk("forsidetabellen", "#forside table.fs-tabell tr.s", ".fs-nm .etikett")
+                    page.evaluate("() => { Front.state.utforskView = null; Front.state.utforskViewSatt = true; Front.state.listeAlle = true; }")
+                    go("#utforsk", "#viewUtforsk:not([hidden]) #utforskListe .srad")
+                    merke_sjekk("lista på Utforsk", "#utforskListe .srad", ".nm small")
+                    go("#hjem", HJEM_KLAR)
+                page.evaluate("""() => { const r = window.__r3; DATA.spots = DATA.spots.filter(s => !r.lagt.includes(s.id)); for(const s of DATA.spots){ if(['russelv', 'lenangsoyra'].includes(s.id)) delete s.andel_forelopig; }
+                    window.Auth = r.auth; Front.helpers.setRegion(r.region); delete Front.state.visAlle.Troms; Front.state.fsRegion = null; Front.state.fsAlle = false; Front.state.listeAlle = false; delete window.__r3; Front.refresh(); }""")
+                page.wait_for_timeout(200)
+                print(f"fase 2 runde 3 ({label}): «Foreløpig» i metalinja for Bøvær, Breivikeidet, Russelv og Lenangsøyra, ikke for Unstad - OK")
                 # punkt 2 (kildefilene): duplikatene er slettet, ikke overstyrt, og alle radier er var(--radius) - unntatt de runde
                 # kartmerkene, skiva og prikkene i forklaringen til eksponeringsfiguren
                 app_css, ui_css = (DOCS / "css" / "app.css").read_text(encoding="utf-8"), (DOCS / "css" / "ui.css").read_text(encoding="utf-8")
@@ -1528,8 +1579,9 @@ def main():
                     assert srt["kjAvgjor"] and srt["navnAvgjor"], f"testdataene skal prøve både kjøretid og navn som nøkkel: {srt}"
                     assert all(px == "44px" and tt == "uppercase" for *_, px, tt in fv), f"favorittraden: tallet 44 px og navnet i versaler: {fv[:2]}"
                     # punkt 5 med tastatur: Tab fra toppen når «Fra Tromsø», Enter åpner Innstillinger, og kontoen (innloggingen) nås med Tab
-                    page.evaluate("() => { window.scrollTo(0, 0); document.activeElement && document.activeElement.blur(); }")
-                    for _i in range(6):
+                    # start fra «Hopp til innholdet», det første som kan få fokus på siden (søket over har flyttet startpunktet for Tab)
+                    page.evaluate("() => { window.scrollTo(0, 0); document.querySelector('a.skip').focus(); }")
+                    for _i in range(3):
                         page.keyboard.press("Tab")
                         if page.evaluate("document.activeElement && document.activeElement.id") == "hjemFra": break
                     assert page.evaluate("document.activeElement.id") == "hjemFra", "«Fra Tromsø» nås ikke med Tab fra toppen av Hjem"

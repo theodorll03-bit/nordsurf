@@ -71,6 +71,44 @@ Gjenstår etter runde 2:
 - Siden ruller bak det åpne loggarket, og fokus står på `body` etter fanebytte. Begge var slik på main.
 - Maskable-ikonet: motivet når 0,85 av halve bredden (trygg sone 0,80). Formen er som på main.
 
+### Runde 3, 24.11.2026: merket «Foreløpig» og metalinja
+
+Oppå de to lokale commitene (siste `39ad464`). Ucommittet, ikke pushet.
+
+- **Merket var ikke borte fra regionradene.** S15 b-bildene er tatt med varselet 24.11 kl. 05Z, som er laget før Lyngen-endringen og ikke har `andel_forelopig` for Russelv og Lenangsøyra. Main viser heller ikke merket for de to med det varselet. Med varselet kl. 13Z står «Lyngen · Foreløpig · …» i regionradene på både main og grenen.
+- **Favorittradene har nå merket også.** Der sto det ikke på main («Lenangsøyra · Lyngen · ca. 1 t 20 min · …»). Nå står «Foreløpig» etter stedet i alle rader på mobil-Hjem.
+- **Metalinja brytes bare mellom leddene.** Hvert ledd («ca. 1 t 20 min», «Treffer ikke») holdes samlet, og linjene jevnes ut (`text-wrap: balance`). Lenangsøyra: «LYNGEN · FORELØPIG ·» og «CA. 1 T 20 MIN · TREFFER IKKE».
+
+Målt på alle 27 spots som favoritter og alle seks regioner, to klokkeslett (108 rader), varselet kl. 13Z, Chromium og WebKit:
+
+| Bredde | Over to linjer | Over tre linjer | Ett ord alene på siste linje | Ledd brutt midt i |
+|---|---|---|---|---|
+| 360 px | 34 | 2 | 0 | 0 |
+| 390 px | 30 | 2 | 0 | 0 |
+
+De to radene over tre linjer er Lenangsøyra med «Dagens lys er over» («Lyngen · Foreløpig ·», «ca. 1 t 20 min ·», «Dagens lys er over»).
+
+Hva de gamle radene viste som de nye ikke viser (mot `origin/main`, samme varsel):
+
+| Visning | Felt | Main | Grenen | Hvorfor |
+|---|---|---|---|---|
+| Hjem, regionradene | «Nå» og ordet for nå-timen | «Nå Smått», «Nå Mørkt» | dagens tall og ord | planen punkt 1 (S15 b, til Theodor) |
+| Hjem, regionradene | høyden nå | «0,7–0,9 m» | ingen høyde | følger av planen (SPEC 6A har ingen høyde i metalinja), til Theodor |
+| Hjem, regionradene | «Foreløpig» og forbudet | etter stedet | etter stedet | likt |
+| Hjem, regionradene | kjøretid, tapte poeng («−1 vind»), ukedager under rutene | ikke vist | vist | nytt, SPEC 6A |
+| Hjem, regionradene | mangler data | «–» og skravert rute | «Mangler data», tom tallplass, skravert rute | likt i innhold |
+| Hjem, regionradene | overskriften «Troms 8 spots» med ukedagene | egen linje | «8 spots» i seksjonsstarten, ukedager under hver rad | planen |
+| Hjem, favorittene | «Foreløpig» | ikke vist | vist | rettet i runde 3 |
+| Hjem | pilla «Innstillinger» nederst | vist | bak «FRA TROMSØ» | planen punkt 5 |
+| Søk, Utforsk-lista, lista utenfor kartet | sted, merke, ord nå, høyde | vist | vist | likt, bare ny form |
+| Forsidetabellen (PC) | region, kjøretid, merke | vist | vist | likt |
+| Logger | navnet på hver spot i tomme seksjoner | én blokk per spot | én linje per seksjon | planen punkt 3 |
+| Logger | «foreløpig» ved andelen | vist | vist | likt |
+
+Ingen andre glipper funnet. «Usikkert» er et vurderingsord og står som ord i raden både på main og grenen.
+
+Tester: `test_spotside_browser.py` låser «Foreløpig» én gang i metalinja for Bøvær, Breivikeidet, Russelv og Lenangsøyra (feltene leses fra spots.json) i favorittradene, regionradene og søket på mobil, og i forsidetabellen og lista på Utforsk på PC, og at Unstad ikke har det. Den låser også at metalinja bare brytes mellom leddene.
+
 ## Designrevisjonen fase 1: raske rettinger, 24.11.2026
 
 Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).

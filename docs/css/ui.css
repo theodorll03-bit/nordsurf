@@ -218,7 +218,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .favtekst{display:block;min-width:0}
 .favtekst > span{display:block}
 .favlinje .t-navn.lang{font-stretch:75%}
-.favlinje .etikett{margin-top:var(--s1)}
+.favlinje .etikett{margin-top:var(--s1);text-wrap:balance}   /* to jevne linjer i stedet for ett ledd alene på linje to */
+.favlinje .etikett .ledd{display:inline-block;max-width:100%}   /* et ledd brytes bare hvis det alene er bredere enn raden */
 .favlinje .etikett.obs{color:var(--ink)}
 .favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
 .favlinje .uke{display:grid;margin-top:12px}
