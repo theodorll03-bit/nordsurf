@@ -116,10 +116,11 @@
   // siste lyse time (lys_til) siden oversikten ble laget. Da vises ingenting for dagen.
   const dayOver = (d)=> !!d && (d.status==="over" || (!!d.lys_til && Date.now() >= new Date(d.lys_til).getTime() + 36e5));
   const UKE_DAGER = 7;
-  function weekDays(){
-    // 7 døgn fra i dag (norsk tid); er dagens lys over for alle spots, starter ukeradene på i morgen
-    const base = (DATA.spots[0] && DATA.spots[0].dager) || [];
-    const skip = base.length > UKE_DAGER && DATA.spots.every(s=> dayOver((s.dager || [])[0])) ? 1 : 0;
+  function weekDays(spots){
+    // 7 døgn fra i dag (norsk tid); er dagens lys over for alle spots, starter ukeradene på i morgen.
+    // `spots`: spotene lista viser (mobil-Hjem). Uten: alle spots (lyset kan være over i nord og ikke i sør)
+    const base = (DATA.spots[0] && DATA.spots[0].dager) || [], av = spots && spots.length ? spots : DATA.spots;
+    const skip = base.length > UKE_DAGER && av.every(s=> dayOver((s.dager || [])[0])) ? 1 : 0;
     return base.slice(skip, skip + UKE_DAGER).map((d, j)=>{ const k = j + skip; const at = new Date(d.d + "T11:00:00Z"); return {key: d.d, kort: fmtDayShort.format(at).replace(/\.$/, "").slice(0, 2).toLowerCase(), dato: at.getUTCDate(), lang: fmtDay.format(at), idag: k===0}; });
   }
   function dayBest(s, key){
@@ -185,7 +186,12 @@
     const dato = `${cap(fmtDayShort.format(now).replace(/\.$/, ""))} ${key.slice(8, 10)}.${key.slice(5, 7)}`;
     const l = K ? lysIDag(K.fra.lat, K.fra.lon) : null;
     const lys = !l ? null : l.start==null ? STR.lightNone : l.hele ? STR.hjem.lysHele : STR.hjem.lys(fmtTime.format(new Date(l.start)), fmtTime.format(new Date(l.end)));
-    return `<div class="hjem-linje"><p class="etikett">${esc([dato, lys].filter(Boolean).join(" · "))}</p>${K ? `<p class="etikett">${esc(STR.hjem.fra(K.fra.navn))}</p>` : ""}</div>`;
+    // ordmerket til venstre, «Fra Tromsø ▾» til høyre (startstedet for kjøretidene, og veien til Innstillinger der området
+    // velges - designrevisjonen fase 2 punkt 5 og 6), datoen og lyset på linja under
+    const fra = K ? STR.hjem.fra(K.fra.navn) : STR.hjem.innstillinger;
+    return `<div class="hjem-linje"><span class="wm">${typeof wordmarkSvg==="function" ? wordmarkSvg() : ""}</span>
+      <a class="hjem-fra" href="#innstillinger" id="hjemFra" aria-label="${esc(K ? STR.hjem.fraAria(K.fra.navn) : fra)}">${esc(fra)}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4 6 8.5 10 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></a>
+      <p class="etikett">${esc([dato, lys].filter(Boolean).join(" · "))}</p></div>`;
   }
   const dagOrd = (d)=> relDay(new Date(d.key + "T11:00:00Z"));   // «i dag», «i morgen» eller ukedagen
   // Overskriften: to korte setninger av de samme dagstallene (dayBest) som ukerutene og favorittradene viser, så den
@@ -266,35 +272,44 @@
     const t = new Date(l.t);
     return [`${STR.hjem.obs} ${fmtDayShort.format(t).replace(/\.$/, "")} ${fmtTime.format(t)}`, l.stars!=null ? STR.starsAria(l.stars, 0) : null, l.size, STR.logWind[l.wind] || l.wind].filter(Boolean).join(" · ");
   }
-  function favLinjeHtml(s, days, rediger){
+  // Sortering på mobil-Hjem (designrevisjonen fase 2 punkt 1): dagens tall først, så kortest kjøretid (spots uten
+  // kjøretid sist), så navnet. En rad uten tall (mangler, mørkt, forbud, over) står etter alle med tall
+  function sorterDag(spots, key){
+    const kj = (s)=> (window.KJORETID && KJORETID.min[s.id]) || Infinity;
+    return spots.map(s=> ({s, st: dayBest(s, key).st})).sort((a, b)=> (b.st!=null ? b.st : -1) - (a.st!=null ? a.st : -1) || kj(a.s) - kj(b.s) || a.s.name.localeCompare(b.s.name, "nb")).map(x=> x.s);
+  }
+  function favLinjeHtml(s, days, rediger, kort){
+    // kort: raden i regionlista - samme form, uten setningen og siste observasjon
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
-    const dag = d0.idag ? "" : `${cap(dagOrd(d0))}: `;
+    // lista starter i morgen (lyset er over): dagen står én gang over lista («Mørkt nå. Tallene gjelder i morgen.»),
+    // ikke på hver rad. Skjermleseren får den fortsatt per rad
+    const dag = d0.idag ? "" : `${cap(dagOrd(d0))}: `, dagSynlig = d0.idag || S.hjemMorgen ? "" : dag;
     const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : ratingWord(h);
     const tapt = h && b.st!=null ? ([h.faded_wind ? H.taptVind(h.faded_wind) : null, h.faded_tide ? H.taptTide(h.faded_tide) : null].filter(Boolean).join(" · ") || (h.faded ? `−${h.faded}` : null)) : null;
-    const sted = s.area || regionOf(s), kj = kjoreText(s.id), setn = favSetning(s, b), obs = favObs(s);
+    const sted = [s.area || regionOf(s), ...(kort ? merker(s) : [])].join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
       `${dag}${b.st!=null ? STR.starsAria(b.st, (h && h.faded) || 0) + ", " : ""}${ord}`, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
-        <span class="etikett">${esc([sted, kj, dag + ord, tapt].filter(Boolean).join(" · "))}</span>
+        <span class="etikett">${esc([sted, kj, dagSynlig + ord, tapt].filter(Boolean).join(" · "))}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
         ${obs ? `<span class="etikett obs">${esc(obs)}</span>` : ""}
         ${ukeHtml(s, days, "under")}</span>`;
     const cls = `favlinje ${b.st!=null ? `r-${min5(b.st)}` : "r-0"}`;
-    if(rediger) return `<div class="${cls}" role="group" aria-label="${esc(aria)}">${inni}<button type="button" class="ghost" data-fjern="${esc(s.id)}" aria-label="${esc(STR.hjem.fjernAria(s.name))}">${esc(STR.hjem.fjern)}</button></div>`;
+    if(rediger) return `<div class="${cls}" role="group" aria-label="${esc(aria)}">${inni}<button type="button" class="knapp2 ghost" data-fjern="${esc(s.id)}" aria-label="${esc(STR.hjem.fjernAria(s.name))}">${esc(STR.hjem.fjern)}</button></div>`;
     return `<a class="${cls}" href="#spot=${esc(s.id)}" aria-label="${esc(`${aria}. ${H.apne}`)}">${inni}</a>`;
   }
   function favListeHtml(favs, days){
     // mobil: rader uten streker (SPEC §6A punkt 4). «Rediger» viser «Fjern» på hver rad og «Legg til spot» (søket).
     const H = STR.hjem, red = !!S.favRediger;
     return `<section class="sek"><h2 class="h2">Favoritter</h2><button type="button" class="sekknapp" id="favRediger" aria-pressed="${red}">${esc(red ? H.ferdig : H.rediger)}</button></section>
-      <div class="favliste">${favs.map(s=> favLinjeHtml(s, days, red)).join("")}</div>${red ? `<p class="favleggtil"><a class="ghost" href="#sok">${esc(H.leggTil)}</a></p>` : ""}`;
+      <div class="favliste">${sorterDag(favs, days[0].key).map(s=> favLinjeHtml(s, days, red)).join("")}</div>${red ? `<p class="favleggtil"><a class="knapp2" href="#sok">${esc(H.leggTil)}</a></p>` : ""}`;
   }
 
   /* ---------- Hjem ---------- */
   function favHtml(days){
     const favs = DATA.spots.filter(s=>isFavSpot(s.id));
-    if(!favs.length){ S.favRediger = false; return ""; }
+    if(!favs.length || !days.length){ S.favRediger = false; return ""; }
     return favListeHtml(favs, days);
   }
   function groups(){
@@ -303,31 +318,20 @@
     const order = regions();
     return [...by.keys()].sort((a, b)=> (order.indexOf(a)+1 || 99) - (order.indexOf(b)+1 || 99) || a.localeCompare(b, "nb")).map(r=>({region: r, spots: by.get(r)}));
   }
-  function radHtml(s, days){
-    const h = naaOf(s), {st, oh} = naaVisning(s, h);
-    // ordet og høyden gjelder nå-timen, ukerutene ved siden av er dagens beste (Theodor S15 b, 17.11.2026): «Nå» står foran
-    const ord = oh.ord.replace(/\s+nå$/, ""), naa = ord==="–" ? "" : STR.spot.naa;   // uten time er det ikke noe ord å merke
-    return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${naa ? naa.toLowerCase() + " " : ""}${ord.toLowerCase()}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
-      <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${naa ? `<span class="na-tid">${esc(naa)}</span> ` : ""}${esc(ord)}${oh.hoyde ? ` <span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
-      ${ukeHtml(s, days, false)}</a>`;
-  }
-  function regionChips(current, onPickAttr){
-    return `<div class="chips regionvelger" role="group" aria-label="Region">${regions().map(r=>`<button type="button" class="chip" data-${onPickAttr}="${esc(r)}" aria-pressed="${r===current}">${esc(r)}</button>`).join("")}</div>`;
-  }
-  function gruppeHtml(g, days){
-    const n = g.spots.length, all = S.visAlle[g.region] || n <= 8;
-    const sorted = [...g.spots].sort(byRatingNow);
-    const shown = all ? sorted : sorted.slice(0, 5);
-    const id = "reg-" + norm(g.region).replace(/[^a-z0-9]+/g, "-");
-    return `<section class="gruppe" id="${id}"><div class="gruppe-topp"><h3>${esc(g.region)}<small>${n} ${n===1?"spot":"spots"}</small></h3><span class="uke" aria-hidden="true">${days.map(d=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("")}</span></div>
-      <div class="rader">${shown.map(s=>radHtml(s, days)).join("")}</div>
-      ${!all ? `<button type="button" class="ghost visalle" data-region="${esc(g.region)}">Vis alle ${n}</button>` : ""}</section>`;
+  // Regionlista på mobil-Hjem (designrevisjonen fase 2 punkt 1 og 2): regionene som tekstfaner med 3 px strek under den
+  // valgte, og spotene som favorittraden i kort utgave (tall, NAVN, metalinje, ukeoversikt). Tallet og ordet er dagens,
+  // som i favorittene - ikke nå-timen. Over 8 spots: de 5 første og «Vis alle N».
+  function regionFaner(current){
+    return `<div class="faner regionvelger" role="group" aria-label="${esc(STR.hjem.region)}">${regions().map(r=>`<button type="button" data-region="${esc(r)}" aria-pressed="${r===current}">${esc(r)}</button>`).join("")}</div>`;
   }
   function regionHtml(days){
-    // mobil: «Spots i <region>» med regionvelger; over 8 spots: de 5 beste nå og «Vis alle N»
-    const r = S.region || chosenRegion();
+    const r = S.region || chosenRegion(), H = STR.hjem;
     const g = groups().find(x=>x.region===r) || {region: r, spots: []};
-    return `<section class="sek"><h2 class="h2">Spots i ${esc(r)}</h2></section>${regionChips(r, "region")}${g.spots.length ? gruppeHtml(g, days) : `<p class="muted">Ingen spots i ${esc(r)} ennå.</p>`}`;
+    const n = g.spots.length, all = S.visAlle[r] || n <= 8;
+    const sorted = days.length ? sorterDag(g.spots, days[0].key) : [], shown = all ? sorted : sorted.slice(0, 5);
+    return `<section class="sek"><h2 class="h2">${esc(H.spotsI(r))}</h2><p class="sub">${esc(STR.web.antall(n))}</p></section>${regionFaner(r)}
+      ${shown.length ? `<div class="favliste regionliste">${shown.map(s=> favLinjeHtml(s, days, false, true)).join("")}</div>` : `<p class="muted">${esc(H.ingenSpots(r))}</p>`}
+      ${!all ? `<p class="visalle"><button type="button" class="knapp2" data-visalle="${esc(r)}">${esc(STR.web.visAlle(n))}</button></p>` : ""}`;
   }
   /* ---------- Nettsiden: forsiden «Beste i dag» (design B 4.0 steg 6, SPEC §6D) ---------- */
   // Datolinje, overskrift av to setninger (samme overskrift() som mobil, på spotene og dagen filtrene viser - så den aldri
@@ -445,31 +449,38 @@
     $$("table.fs-tabell tr.s", root).forEach(tr=> tr.onclick = (e)=>{ if(!e.target.closest("a")) location.hash = tr.dataset.href; });
   }
   function renderHome(){
-    const root = $("#viewHjem"); const days = weekDays(); const gen = new Date(DATA.generated);
-    if(isDesktop()) return renderForside(root, days);
-    // mobil (SPEC §6A): topplinje, overskrift av to setninger, kompakt kart (220 pt), favorittene som rader.
-    // «Beste økt» er tatt bort på mobil (Theodors svar 16.11.2026, punkt 3b). Søk ligger i fanelinja, Innstillinger nederst.
+    const root = $("#viewHjem"); const gen = new Date(DATA.generated);
+    if(isDesktop()) return renderForside(root, weekDays());
+    // mobil (SPEC §6A): topplinje med ordmerket og «Fra Tromsø ▾» (Innstillinger), overskrift av to setninger, kompakt
+    // kart (220 pt), favorittene og regionens spots som rader. «Beste økt» er tatt bort på mobil (Theodors svar
+    // 16.11.2026, punkt 3b). Søk er fjerde fane.
     const sc = scope();
     const kilder = "Varsel fra BarentsWatch, MET Norge, Open-Meteo og Kartverket.";
     const favs = DATA.spots.filter(s=> isFavSpot(s.id));
+    // er dagens lys over for alle spotene sida viser (favorittene og regionen), viser radene i morgen, og det står én
+    // gang over lista - ikke «Dagens lys er over» på hver rad (designrevisjonen fase 2 punkt 1)
+    const rr = S.region || chosenRegion(), vist = [...new Set([...favs, ...DATA.spots.filter(s=> regionOf(s)===rr)])];
+    const days = weekDays(vist);
+    S.hjemDag = days.length ? days[0].key : null;   // dagen radene viser (også lest av nettlesertesten)
+    S.hjemMorgen = !!(days.length && !days[0].idag && days[0].key===(((DATA.spots[0] || {}).dager || [])[1] || {}).d);
     const kart = window.Utforsk && Utforsk.hjemKart && days.length ? Utforsk.hjemKart(favs.length ? favs : sc.spots, days[0].key, document.documentElement.clientWidth || 390) : "";
     root.innerHTML = `
       ${typeof staleBanner==="function" ? staleBanner() : ""}
       ${topplinjeHtml()}
       ${overskriftHtml(favs.length ? favs : sc.spots, days, favs.length > 0)}
       ${kart ? `<a class="hjemkart" href="#utforsk" aria-label="Utforsk kartet">${kart}</a><p class="hjemkart-kilde">${esc(STR.hjem.kartKilde)}</p>` : ""}
+      ${S.hjemMorgen ? `<p class="hjem-merk" id="hjemMerk">${esc(STR.hjem.morktNa)}</p>` : ""}
       ${favHtml(days)}
       ${regionHtml(days)}
-      <p class="kilder">${kilder} ${esc(STR.updated(relDay(gen), fmtTime.format(gen)))}.</p>
-      <p class="hjem-bunn"><a class="ghost" href="#innstillinger">${esc(STR.hjem.innstillinger)}</a></p>`;
+      <p class="kilder">${kilder} ${esc(STR.updated(relDay(gen), fmtTime.format(gen)))}.</p>`;
     // ny tegning etter Rediger/Ferdig/Fjern: fokus tilbake på knappen (eller overskriften når siste favoritt er fjernet)
     const fokusRediger = ()=>{ const k = $("#favRediger", root) || $(".hjem-overskrift", root); if(k){ if(!k.matches("button")) k.tabIndex = -1; k.focus(); } };
     const red = $("#favRediger", root); if(red) red.onclick = ()=>{ S.favRediger = !S.favRediger; renderHome(); fokusRediger(); };
     $$("[data-fjern]", root).forEach(b=> b.onclick = ()=> toggleFavoriteUI(b.dataset.fjern).then(()=>{ if(S.view==="hjem"){ renderHome(); fokusRediger(); } }));
-    $$(".visalle", root).forEach(b=> b.onclick = ()=>{ S.visAlle[b.dataset.region] = true; renderHome(); });
-    $$("[data-region]", root).forEach(b=>{ if(b.classList.contains("chip")) b.onclick = ()=>{ setRegion(b.dataset.region); renderHome(); }; });
-    // valgt regionbrikke alltid synlig (PR #12 punkt a): rull brikkeraden sidelengs, aldri siden
-    $$(".regionvelger", root).forEach(row=>{ const c = row.querySelector('[aria-pressed="true"]'); if(c && row.scrollWidth > row.clientWidth){ row.scrollLeft = Math.max(0, c.offsetLeft - row.offsetLeft - (row.clientWidth - c.offsetWidth) / 2); } });
+    $$("[data-visalle]", root).forEach(b=> b.onclick = ()=>{ S.visAlle[b.dataset.visalle] = true; renderHome(); });
+    // regionfanene brekker over flere linjer (alle synes alltid, PR #12 punkt a). Fokus blir stående på den valgte fanen
+    $$(".regionvelger [data-region]", root).forEach(b=> b.onclick = ()=>{ const y = window.scrollY; setRegion(b.dataset.region); renderHome(); window.scrollTo(0, y);
+      const k = $(`.regionvelger [data-region="${CSS.escape(b.dataset.region)}"]`, root); if(k) k.focus({preventScroll: true}); });
   }
 
   /* ---------- nettsiden: temaknappen og bunnen (B4 steg 6, SPEC §6C punkt 1 og 7) ---------- */
@@ -516,8 +527,8 @@
     const shown = S.sokFlere ? r : r.slice(0, SOK_MAKS);
     const by = new Map(); for(const s of shown){ const k = regionOf(s); if(!by.has(k)) by.set(k, []); by.get(k).push(s); }
     const order = regions();
-    const html = [...by.keys()].sort((a, b)=> (order.indexOf(a)+1 || 99) - (order.indexOf(b)+1 || 99)).map(k=>`<h3>${esc(k)} <small>${by.get(k).length}</small></h3><div class="alfa" role="listbox">${by.get(k).map(sradHtml).join("")}</div>`).join("");
-    return `<div class="sokgrupper">${html}${shown.length < r.length ? `<button type="button" class="ghost visflere" id="sokFlere">Vis flere (${r.length - shown.length})</button>` : ""}</div>`;
+    const html = [...by.keys()].sort((a, b)=> (order.indexOf(a)+1 || 99) - (order.indexOf(b)+1 || 99)).map(k=>`${sekHtml(k, String(by.get(k).length))}<div class="alfa" role="listbox">${by.get(k).map(sradHtml).join("")}</div>`).join("");
+    return `<div class="sokgrupper">${html}${shown.length < r.length ? `<button type="button" class="knapp2 visflere" id="sokFlere">Vis flere (${r.length - shown.length})</button>` : ""}</div>`;
   }
   function forslagHtml(){
     const favs = DATA.spots.filter(s=>isFavSpot(s.id));
@@ -525,9 +536,9 @@
     const regs = regions();
     const alpha = [...DATA.spots].sort((a, b)=>a.name.localeCompare(b.name, "nb"));
     return `<div class="forslag">
-      ${favs.length ? `<h3>Favoritter</h3><div class="chips">${favs.map(s=>`<a class="chip" href="#spot=${esc(s.id)}">${esc(s.name)}</a>`).join("")}</div>` : ""}
-      <h3>Områder</h3><div class="chips">${[...regs, ...areas.filter(a=>!regs.includes(a))].map(a=>`<button type="button" class="chip" data-q="${esc(a)}">${esc(a)}</button>`).join("")}</div>
-      <h3>Alle spots <small>${alpha.length}</small></h3><div class="alfa lang" role="listbox">${alpha.map(sradHtml).join("")}</div></div>`;
+      ${favs.length ? `${sekHtml("Favoritter")}<div class="chips">${favs.map(s=>`<a class="chip" href="#spot=${esc(s.id)}">${esc(s.name)}</a>`).join("")}</div>` : ""}
+      ${sekHtml("Områder")}<div class="chips">${[...regs, ...areas.filter(a=>!regs.includes(a))].map(a=>`<button type="button" class="chip" data-q="${esc(a)}">${esc(a)}</button>`).join("")}</div>
+      ${sekHtml("Alle spots", String(alpha.length))}<div class="alfa lang" role="listbox">${alpha.map(sradHtml).join("")}</div></div>`;
   }
   function wireResults(root){
     $$("[data-q]", root).forEach(b=> b.onclick = ()=>{ S.q = b.dataset.q; S.sokFlere = false; const inp = $("#sokM") || $("#sokPC"); if(inp){ inp.value = S.q; } if($("#sokM")) renderSok(); else renderDrop(); });
@@ -628,7 +639,7 @@
   function show(view){
     const map = {hjem:"viewHjem", sok:"viewSok", utforsk:"viewUtforsk", logger:"viewSide", innstillinger:"viewSide", spot:"viewSpot"};
     $$("#main .view").forEach(v=>{ v.hidden = v.id !== map[view]; });
-    const navView = view==="spot" ? S.from : view==="innstillinger" || view==="sok" ? "hjem" : view;
+    const navView = view==="spot" ? S.from : view==="innstillinger" ? "hjem" : view;   // søk er egen fane (fase 2 punkt 5)
     $$("[data-nav]").forEach(a=>{ if(a.dataset.nav===navView) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     document.body.dataset.view = view;
     // ved «tilbake» ruller render() til der visningen sto sist. Ellers til toppen
@@ -640,12 +651,12 @@
       bar.innerHTML = "";
       renderLogs();
       if(!loadLogs().length){
-        $("#detailPane").insertAdjacentHTML("afterbegin", `<header class="top"><h1>Logger</h1></header><div class="kort tom"><h3>Ingen økter logget ennå</h3><p>Når du logger hvordan det faktisk var, lærer varselet spotene dine bedre.</p><button type="button" class="primary" id="loggForste">Logg en økt</button></div>`);
-        const first = $("#detailPane header.top + .kort.tom + header.top"); if(first) first.remove();
+        $("#detailPane").insertAdjacentHTML("afterbegin", `<header class="top"><h1 class="t-overskrift">Logger</h1></header><div class="tom"><h3>Ingen økter logget ennå</h3><p>Når du logger hvordan det faktisk var, lærer varselet spotene dine bedre.</p><button type="button" class="knapp1" id="loggForste">Logg en økt</button></div>`);
+        const first = $("#detailPane header.top + .tom + header.top"); if(first) first.remove();
         $("#loggForste").onclick = ()=> openSheet();
       }
     } else {
-      bar.innerHTML = `<button type="button" class="back" id="sideBack"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Hjem</button>`;
+      bar.innerHTML = `<button type="button" class="back" id="sideBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>Hjem</button>`;
       $("#sideBack").onclick = ()=> go("hjem");
       renderSettings();
     }
@@ -655,7 +666,7 @@
     if(!s){ go("hjem", true); return; }
     if(!spotIsFull(s)){
       root.innerHTML = `<div class="spot-topp"><button type="button" class="back" id="spotBack" aria-label="Tilbake"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3 5 9l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tittel"><h1>${esc(s.name)}</h1><div class="omr">${esc(stedText(s))}</div></div></div>
-        <p class="muted" role="status" id="spotLaster">${s._loadErr ? `Fikk ikke hentet detaljene for ${esc(s.name)}. Sjekk at du er på nett, og prøv igjen.` : "Henter detaljene …"}</p>${s._loadErr ? `<button type="button" class="ghost" id="spotRetry">Prøv igjen</button>` : ""}`;
+        <p class="muted" role="status" id="spotLaster">${s._loadErr ? `Fikk ikke hentet detaljene for ${esc(s.name)}. Sjekk at du er på nett, og prøv igjen.` : "Henter detaljene …"}</p>${s._loadErr ? `<button type="button" class="knapp2" id="spotRetry">Prøv igjen</button>` : ""}`;
       $("#spotBack").onclick = closeSpot;
       const rb = $("#spotRetry"); if(rb) rb.onclick = ()=>{ s._loadErr = false; renderSpotView(); };
       if(!s._loadErr) ensureSpot(s.id).then(()=>{ if(S.view==="spot" && S.spotId===s.id) renderSpotView(); }).catch((e)=>{ console.error(e); s._loadErr = true; if(S.view==="spot" && S.spotId===s.id) renderSpotView(); });

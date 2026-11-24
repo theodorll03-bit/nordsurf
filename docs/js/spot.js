@@ -109,8 +109,9 @@
   }
 
   /* ---------- mobil (design B 4.0, SPEC §6B) ---------- */
-  // Rekkefølge: kornfoto med tilbake- og favorittknapp, navn, metalinje, dagens dom, faktalinje, valgt time
-  // (svell stort, så surf, vind og tidevann), time for time, retningsskiva, «Hvorfor», logg og kilder.
+  // Rekkefølge: kornfoto med tilbake- og favorittknapp, navn, metalinje, dagvelgeren (står fast øverst når siden rulles,
+  // designrevisjonen fase 2 punkt 4), dagens dom, faktalinje, valgt time (svell stort, så surf, vind og tidevann),
+  // time for time, retningsskiva, «Hvorfor», logg og kilder.
   // Ren visning som resten av fila. Nettsiden (renderWeb, lenger ned) bruker de samme delene.
   const midtPaa = (key)=> new Date(key + "T11:00:00Z");
   // Krediteringen under bildet: kortformen på én linje, med lisensnavnet som lenke (fotoKreditHtml i app.js).
@@ -215,7 +216,7 @@
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
-    const maal = (ikon, k, v, enhet, sub)=> `<div class="maal"><span class="etikett">${ikon}${esc(k)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span></div>`;
+    const maal = (ikon, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${ikon}${esc(k)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
     const dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
     const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
     const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
@@ -239,7 +240,11 @@
       const naer = [lv.a, lv.b].find(e=> Math.abs(e.ms - t.getTime()) <= 40 * 6e4);
       const vei = naer ? `${esc(STR.spot.snur)} ${fmtTime.format(new Date(naer.ms))}`
         : `<span aria-hidden="true">${lv.stiger ? "↑" : "↓"}</span><span class="sr">${esc(lv.stiger ? STR.spot.stiger : STR.spot.synker)}, </span> ${esc(lv.stiger ? STR.spot.hoy : STR.spot.lav)} ${fmtTime.format(new Date(lv.b.ms))}`;
-      rader.push(maal(PIL("", null, IK_TIDE), STR.spot.tidevann, nf1.format(lv.cm / 100), "m", vei));
+      // Spotens tidevannsregel på mobil (S33 a, svar.md 23.11.2026 kl. 14.00): en kort setning på egen linje under raden
+      // («Best på lav til middels vannstand», Tidevann.prefKort - bygger på Tidevann.prefTekst og s.tide_regel.prefer).
+      // Spots uten regel har ingen linje. På nettsiden står setningen i «Om spotten».
+      const pref = !H.isDesktop() && window.Tidevann && Tidevann.prefKort ? Tidevann.prefKort(s) : "";
+      rader.push(maal(PIL("", null, IK_TIDE), STR.spot.tidevann, nf1.format(lv.cm / 100), "m", vei, pref));
     }
     return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.kl(hh))}</h2>${timeDomHtml(s, h, t)}</div>${svell}${rader.length ? `<div class="maalene">${rader.join("")}</div>` : ""}`;
   }
@@ -281,20 +286,32 @@
       <div class="sp-inn">
         <p class="etikett sp-meta">${esc(meta)}</p>${merker.length ? `<p class="etikett sp-merker">${esc(merker.join(" · "))}</p>` : ""}
         ${foto ? `<p class="kredit linje">${kreditHtml()}</p>` : ""}
+        ${dagvelgerHtml(s, dager, d)}
         ${domHtml(s, d, b)}
         <div id="spOver">${over()}</div>
         <div class="sek-spot"><h2 class="h2">${esc(STR.spot.timeForTime)}</h2>${morkeKol ? `<p class="sub">${esc(STR.lightOnly)}</p>` : ""}</div>
-        ${dagvelgerHtml(s, dager, d)}
         <div id="spStripe">${Timestripe.html(s, d, idx, best, H)}</div>
         <div class="sp-tilbakena" id="spTilbakeNa">${tilbakeNa()}</div>
         <div id="spUnder">${under()}</div>
       </div>`;
-    const heleSiden = (etter)=>{
+    const heleSiden = (etter, visDom)=>{
       // nytt valg som bytter dag: tegn alt på nytt uten å hoppe i siden eller i dagrekka
       const y = window.scrollY, dv = $(".dagvelger", root), x = dv ? dv.scrollLeft : 0;
       renderMobil(root, s, S);
       const dv2 = $(".dagvelger", root); if(dv2) dv2.scrollLeft = x;
-      window.scrollTo(0, y); if(etter) etter();
+      window.scrollTo(0, y);
+      // Dagbytte (designrevisjonen fase 2 punkt 4): dagvelgeren står fast øverst. Er dommen for den nye dagen rullet ut
+      // over den, rulles siden så dommen står rett under dagvelgeren - dag, dom og time synes sammen.
+      // Står timen (KL.-blokka) under fanelinja, rulles siden ned så langt det går uten at dommen går under dagvelgeren.
+      const dom = visDom && dv2 ? $(".dom", root) : null, time = $("#spOver", root), fane = document.querySelector(".tabbar");
+      if(dom){
+        const hoyde = dv2.getBoundingClientRect().height, feste = parseFloat(getComputedStyle(dv2).top) || 0;
+        const ledig = dom.getBoundingClientRect().top - (feste + hoyde + 8);   // så mye kan siden rulles før dommen når dagvelgeren
+        const synlig = fane && fane.getBoundingClientRect().height ? fane.getBoundingClientRect().top : window.innerHeight;
+        const under = time ? time.getBoundingClientRect().bottom + 8 - synlig : 0;
+        if(ledig < 0) window.scrollBy(0, ledig); else if(under > 0) window.scrollBy(0, Math.min(under, ledig));
+      }
+      if(etter) etter();
     };
     const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
     const kobleUnder = ()=>{
@@ -308,7 +325,7 @@
       const n = H.nowIdx(s);
       // i dag med lys nå: tilbake til «nå»; ellers dagens beste lyse time
       S.idx = nd.key===dayKey(new Date()) && nd.idxs.includes(n) && H.usable(s.hours[n]) ? null : SpotGraf.bestOfDay(s, nd);
-      heleSiden(()=>{ const k2 = $(`.dagknapp[data-day="${nd.key}"]`, root); if(k2) k2.focus({preventScroll: true}); });
+      heleSiden(()=>{ const k2 = $(`.dagknapp[data-day="${nd.key}"]`, root); if(k2) k2.focus({preventScroll: true}); }, true);
     });
     const valgt = $('.dagknapp[aria-pressed="true"]', root), dv = $(".dagvelger", root);
     if(valgt && dv) dv.scrollLeft = Math.max(0, valgt.offsetLeft - dv.offsetLeft - 16);

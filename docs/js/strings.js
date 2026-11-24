@@ -138,6 +138,11 @@
       ca: "ca.",   // foran kjøretiden: tallene er anslag (Theodors stedfortreder 16.11.2026)
       kartKilde: "Kart: GSHHS",   // kystlinja i det kompakte kartet (docs/geo/coast.json)
       innstillinger: "Innstillinger",
+      // «FRA TROMSØ ▾» øverst på mobil-Hjem åpner Innstillinger (designrevisjonen fase 2 punkt 5): det skjermleseren sier
+      fraAria: (sted) => `Fra ${sted}. Innstillinger`,
+      // lyset er over for alle spotene i lista: lista viser i morgen, og det står én gang over den (fase 2 punkt 1)
+      morktNa: "Mørkt nå. Tallene gjelder i morgen.",
+      spotsI: (region) => `Spots i ${region}`, ingenSpots: (region) => `Ingen spots i ${region} ennå.`, region: "Region",
       // ordet i metalinja når dagen ikke har noe tall, og det som er tapt på vind og tidevann
       forbud: "Surfing forbudt", morktOrd: "Mørkt", over: "Dagens lys er over", mangler: "Mangler data",
       taptVind: (n) => `−${n} vind`, taptTide: (n) => `−${n} tidevann`, apne: "Åpne spoten",
@@ -249,6 +254,9 @@
     toast: {logged:"Økt logget", logFail:"Kunne ikke lagre. Sjekk at nettleseren tillater lagring.", loginForFav:"Logg inn for å lagre favoritter", login:"Logg inn",
       favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet - sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
     witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
+    // Logger (designrevisjonen fase 2 punkt 3): tom tilstand står én gang per seksjon. Gjelder setningen bare noen av
+    // spotene, står navnene (eller antallet) foran
+    logger: {noen: (navn) => `${navn}:`, antall: (n) => `${n} spots:`},
     breakdownTitle: "Hvorfor denne ratingen?",
     explainClose: "Lukk",
     thisHour: "Denne timen", howComputed: "Slik regnes det ut",

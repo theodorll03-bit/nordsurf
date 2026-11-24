@@ -1,5 +1,46 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 2: B 4.0 ferdig på mobil, 24.11.2026
+
+Gren `design/revisjon-fase2` fra main `30eefa3`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 2, punkt 1 til 7. Ja i svar.md 21.11.2026 kl. 18.30. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-2/` (mobil-Hjem, Utforsk, Søk, Logger, Innstillinger og Unstad på 390 × 663, Hjem og Unstad på 1440 × 900, dag og mørketid, varselet 24.11 kl. 13Z med klokka på 15.20).
+
+- **1. Mobil-Hjem:** regionlista («Spots i Troms») bruker favorittraden (tall 44 px, NAVN, metalinje, ukeoversikt), uten setning. De gamle radene med rund kant er borte. Favorittene og regionlista står etter dagens tall, så kjøretid, så navn. Tallet og ordet i regionlista er dagens, ikke nå-timen (erstatter «Nå» foran ordet, S15 b). Er dagens lys over for spotene Hjem viser, viser radene i morgen, og «Mørkt nå. Tallene gjelder i morgen.» står én gang over lista. Før sto «Nå Mørkt» og «Dagens lys er over» på hver rad.
+- **2. Én knappefamilie:** `.primary` og `.ghost` er nå bare navn på `.knapp1` og `.knapp2` (massiv blekk, eller 2 px blekk-kant, rette hjørner, Martian i versaler). Brikkene (dag og utsnitt på Utforsk, loggarket, områdene i Søk) har samme form, valgt er fylt. Regionene på Hjem er tekstfaner med 3 px strek under. Slettet i app.css: `.primary`, `.ghost`, `.btn`, `.chips button`, `.back`, `:focus-visible`, `.muted`, `nav.tabs` og `.tab`. Alle radier er `var(--radius)`, unntatt de runde kartmerkene, skiva og prikkene i eksponeringsfiguren.
+- **3. Søk, Utforsk, Logger og Innstillinger** har seksjonsstreken. Listeraden (tall i rute, NAVN i Martian, sted som etikett, ord til høyre) er lik i Søk, Utforsk og lista utenfor kartet: uten streker på mobil, med hair på nettsiden. Flaten over kartet for valgt spot starter med seksjonsstreken. Skjemafeltene har 2 px strek under som søkefeltet. Tom tilstand i Logger står én gang per seksjon.
+- **4. Dagvelgeren** på mobil-spotsiden står over dommen og blir stående øverst når siden rulles. Etter dagbytte rulles siden så dommen står under dagvelgeren og timen over fanelinja. `position:sticky` virket ikke på mobil før (`body{overflow:auto}`). Det er rettet på mobil.
+- **5. Navigasjon:** fanelinja har fire faner, HJEM, UTFORSK, LOGGER og SØK, og søk har egen aktiv tilstand. «FRA TROMSØ» øverst på mobil-Hjem åpner Innstillinger. Pilla «Innstillinger» nederst på Hjem er borte.
+- **6. Ordmerket** står øverst på mobil-Hjem (21 px høyt) og er 28 px i toppen på nettsiden, med 44 px trykkflate. `docs/icon.svg` og PNG-ikonene bruker #F2EFE8 og #002941.
+- **7. Tilstander:** musa over, trykk og fokus på knapper, brikker, faner, dager og rader. Én fokusring, 2 px blekk, definert ett sted. Valgt fane og dag har 3 px blekkstrek under, også i «Neste 7 dager» på nettsiden (før 4 px over).
+- **Tillegg (S33 a):** spotens tidevannsregel står på mobil som en kort setning under TIDEVANN-raden i KL.-blokka («Best på lav til middels vannstand», `Tidevann.prefKort()`). Unstad og Farstadsanden har den i dag.
+
+Målt (Playwright, `getBoundingClientRect`, Unstad, 390 × 663, fanelinja starter på 599 px):
+
+| Mål | Før | Etter |
+|---|---|---|
+| Etter dagbytte: dagvelgeren | 273–346 px | 0–72 px |
+| Etter dagbytte: dagens tall | −310 til −246 px (over kanten) | 80–144 px |
+| Etter dagbytte: «Kl. hh» | −110 til −71 px (over kanten) | 280–319 px |
+| Etter dagbytte: radene SURF, VIND og TIDEVANN, bunn | utenfor | 595 px |
+| Første skjermbilde, uten trykk: dagens tall | 270–334 px | 356–420 px |
+| Tidevannsregelen i raden | finnes ikke | 236 px bred, én linje, høyre kant 374 px |
+| E-postfeltet i Innstillinger | 166 × 29 px | hele bredden, 44 px høyt |
+| Tekst under 11 px (Søk) | 1 («27», 10,8 px) | 0 |
+| Ulike radier på skjermen: Hjem, Søk, Logger, Innstillinger | 2, 4, 4, 2 | 0, 0, 1, 0 |
+| `:hover` og `:active` i ui.css | 13 og 0 | 33 og 31 |
+| Fokusregler | 11 i ui.css og 1 i app.css (3 px) | 1 (2 px), pluss to unntak for avstand |
+
+Tallet i første skjermbilde står 86 px lenger ned enn etter fase 1, fordi dagvelgeren (72 px) står over dommen. Det står fortsatt over fanelinja. På en dag der både SURF og VIND har forklaring over to linjer, slutter radene på 617 px etter dagbytte, og da ligger tidevannsregelen under fanelinja (målt én gang).
+
+Tester: ny bolk for fase 2 i `fetcher/test_spotside_browser.py` (begge bredder). Oppdatert fordi utseendet er endret, ikke svekket: regionradene i samme fil (før `a.rad` med «Nå» foran ordet, nå favorittraden med dagens tall og sortering), og `fetcher/test_skalering_browser.py` (regionfaner i stedet for brikker, seksjonsstart i stedet for `h3` i søket). `tools/kontrast.py` sjekker også blekk og fokusring mot `--hover` og `--trykk`.
+
+Gjenstår:
+- Ikke committet. Fysikk-kontrolløren og feiljegeren har ikke sett endringen.
+- `position:sticky` virker fortsatt ikke på nettsiden (toppen og overskriftsraden i forsidetabellen ruller bort). Samme årsak, ikke rørt i fase 2.
+- Startstedet kan ikke byttes bak «FRA TROMSØ». Lenka går til Innstillinger.
+- Forklaringsarkene (S38) kan fortsatt ikke åpnes fra B 4.0.
+- Breivikeidets setning («Best på lavt vann») kommer med `fiks/tidevann-s28` og faller inn i samme rad når `Tidevann.prefTekst()` gir den.
+- Død CSS fra de gamle kortene står til fase 4. Bare prøvd i Chromium.
+
 ## Designrevisjonen fase 1: raske rettinger, 24.11.2026
 
 Gren `design/revisjon-fase1` fra main `237c533`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 1, punkt 1 til 11. Ja fra stedfortrederen i svar.md 21.11. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt, og ingen tall regnes på nytt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-1/` (Hjem og Unstad, 390 × 663, 1440 × 900 og 1200 × 660, dag og mørketid, varselet 24.11 kl. 05Z med klokka på 09.40).
