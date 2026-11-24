@@ -314,10 +314,27 @@ function windArrowHtml(h){
   // pila peker dit vinden BLÅSER (fra-retning + 180), som værpiler flest
   return `<span class="wind-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" style="--rot:${Math.round(h.wind_dir+180)}deg"><path d="M12 3l5 7h-3v11h-4V10H7z"/></svg></span>`;
 }
+// Spoten har en myk regel på vannstanden der lavere vann er bedre (local_rules.tide_level i spots.json og
+// rating.tide_level_penalty(): ingen straff opp til full_below_cm, så økende mot max_at_cm). Da sies tidevannet
+// «Best på lavt vann» og ikke «tåler alt tidevann» (S28, Theodor 23.11.2026): i tidevannscella, i forklaringen og i
+// tidevannskortet (Tidevann.prefTekst, som også står i «Om spotten» på PC). Bare Breivikeidet har regelen. Spots med
+// tide eller tide_prefer (Farstadsanden, Unstad) og spots uten tidevannsregel viser det samme som før.
+function tideLowBest(s){
+  const lr = s && s.local_rules, tl = lr && lr.tide_level;
+  return !!tl && tl.max_at_cm > tl.full_below_cm && tl.penalty > 0 && (lr.weight==null || lr.weight > 0);
+}
+// Vindstyrken som tall (S28, Theodor 23.11.2026): hele m/s som før, men på en spot med egen vindgrense (wind_calm_ms:
+// Breivikeidet 8, Unstad 14 m/s middelvind) står én desimal, rundet ned, når avrundingen ellers ville vist grensa uten at
+// den er nådd (7,9 og ikke 8; vinden teller først fra grensa). Samme regel som rating.wind_ms_text() i henteren.
+function windMsText(h){
+  const v = h.wind_speed, egen = h.wind_calm_ms;
+  if(egen!=null && v < egen && Math.round(v) >= egen) return nf1.format(Math.floor(v * 10) / 10);
+  return nf0.format(v);
+}
 function windShort(h){
   if(!h || h.wind_speed==null) return "";
   const type = windLabel(h);
-  return `${nf0.format(h.wind_speed)} m/s${type?` ${type}`:""}`;
+  return `${windMsText(h)} m/s${type?` ${type}`:""}`;
 }
 function windShorter(h){
   // Kortversjon til kortene i lista (Theodor 09.10.2026, småfiks 2): "3 m/s
@@ -326,7 +343,7 @@ function windShorter(h){
   if(!h || h.wind_speed==null) return "";
   const type = windLabel(h);
   const short = STR.windShort[type] || type;
-  return `${nf0.format(h.wind_speed)} m/s${short?` ${short}`:""}`;
+  return `${windMsText(h)} m/s${short?` ${short}`:""}`;
 }
 function kjText(h){
   // Energien ute, samme tall som Energi-cellen i Detaljer: svellenergien når
@@ -463,8 +480,8 @@ function detailsGrid(s, h, t){
     ${tapCell("exposure", STR.cell.exposure, h.transfer!=null?`${nf0.format(h.transfer*100)} %`:"–", STR.transferSub)}
     ${tapCell("windsea", STR.cell.windsea, h.secondary_swell_height!=null?`${nf1.format(h.secondary_swell_height)} m`:"–", h.secondary_swell_height!=null?`${esc(STR.fromDir(compass(h.secondary_swell_dir)))}${h.secondary_swell_period!=null?`, ${nf0.format(h.secondary_swell_period)} s`:""}`:"")}
     ${tapCell("period", STR.cell.period, h.period!=null?`${nf0.format(h.period)} s`:"–", h.bw_period!=null?`BarentsWatch ${nf0.format(h.bw_period)} s ved punktet`:"")}
-    ${tapCell("wind", STR.cell.wind, h.wind_speed!=null?`${nf0.format(h.wind_speed)} m/s`:"–", windN)}
-    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(STR.tidePref(s.tide))}`)}
+    ${tapCell("wind", STR.cell.wind, h.wind_speed!=null?`${windMsText(h)} m/s`:"–", windN)}
+    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(!(s.tide && s.tide.length) && tideLowBest(s) ? STR.tideLowBest : STR.tidePref(s.tide))}`)}
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
     ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch"?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}

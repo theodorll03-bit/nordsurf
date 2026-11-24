@@ -1234,6 +1234,18 @@ def _fmt_penalty(n):
     return f"−{n:.1f}".replace(".", ",")
 
 
+def wind_ms_text(speed, calm_ms=None):
+    """Vindstyrken i hele m/s, som før. 23.11.2026 (S28, ja fra Theodor i svar.md 23.11.2026; feiljegeren 23.11.2026):
+    på en spot med egen vindgrense (calm_ms = wind_calm_ms(spot), Breivikeidet 8 og Unstad 14 m/s middelvind) viste
+    avrundingen 7,5-7,99 m/s som «8» og 13,5-13,99 som «14», mens vinden teller først fra grensa. Når avrundingen
+    ellers ville vist grensa uten at den er nådd, står én desimal, rundet ned («7,9»). Alle andre tall og spots som før.
+    Samme regel som windMsText() i docs/js/app.js."""
+    txt = f"{speed:.0f}"
+    if calm_ms is not None and speed < calm_ms and float(txt) >= calm_ms:
+        return f"{math.floor(speed * 10) / 10:.1f}".replace(".", ",")
+    return txt
+
+
 def disagree_reason(hour, dir_hit, bw_detail):
     """Kort norsk forklaring på HVA av 4a-betingelsene som slo inn, til
     varselbanneret på detaljsiden (5c). Bygget her, ikke i appen - appen
@@ -1388,7 +1400,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             damptxt = ", dempet av " + ("svært kraftig" if (energy_swell_kj or 0) >= 10000 else "kraftig") + " svell"
         if wp is not None and wpp["pen"] < wp - 1e-9:
             damptxt += ", lokal regel strengere"
-        items.append(f"Vind {wind_speed:.0f} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
+        items.append(f"Vind {wind_ms_text(wind_speed, wind_calm_ms(spot))} m/s {label}{gusttxt}{damptxt}: {_fmt_penalty(wp)}")
     if tide_level_line:
         # 22.11.2026: spoten har en myk regel på vannstanden (tide_level_penalty()) - da er «tåler alt» feil
         items.append(tide_level_line)
@@ -1974,7 +1986,19 @@ def rate(hour, spot):
     if five_lost == "tide" and without_wind == 5:
         without_wind = 4   # den femte stjernen holdes tilbake av tidevannet også uten vind
     lost_wind = max(0, without_wind - solid)
-    lost_tide = min(lost_total - lost_wind, tide_pen if five_lost != "tide" else max(1, tide_pen))
+    tide_cap = tide_pen if five_lost != "tide" else max(1, tide_pen)
+    # ordet ved 0-1 poeng (low_reason) bruker bokføringen med vinden først, som før (S28: bare fordelingen endres)
+    lost_wind_first, lost_tide_first = lost_wind, min(lost_total - lost_wind, tide_cap)
+    # 23.11.2026 (S28, ja fra Theodor i svar.md 23.11.2026; feiljegeren 22.11.2026: Breivikeidet 22.11 kl. 09-10Z,
+    # potensial 2, vinden −0,3 og tidevannsregelen −0,45 tok ett poeng sammen, og appen sa «(2 uten vind)»): når
+    # verken vinden eller tidevannet ALENE tar poenget, får det største fradraget skylda. Uavgjort: vinden, som før.
+    # Poengene er de samme. Tidevannets del går som før først til den vanlige tidevannsregelen (faded_tide), så til
+    # de lokale reglene (local_rules.stars_lost). Ikke når det femte poenget holdes tilbake (five_lost).
+    wind_alone_lost = potential - max(0, min(potential, math.floor(potential - wp + 0.5)))
+    if (lost_wind > 0 and five_lost is None and wind_alone_lost == 0 and without_wind == potential
+            and tide_pen + local_tide_raw > wp):
+        lost_wind = 0
+    lost_tide = min(lost_total - lost_wind, tide_cap)
     local_extra_stars = lost_total - lost_wind - lost_tide
     solid_before_local = solid + local_extra_stars
     # 19.11.2026 (fysikk-kontrolløren, forslag S22): mangler vindstyrken, er det faste poenget et fradrag for et
@@ -1994,7 +2018,7 @@ def rate(hour, spot):
         local_rules_source = src.split(",")[0].strip() if src else None
 
     low_reason = classify_low_rating(hour, spot, source, bw_detail, low_hs, surf_height, dir_hit,
-                                      potential, lost_wind, lost_tide, solid, blown_out, energy_swell)
+                                      potential, lost_wind_first, lost_tide_first, solid, blown_out, energy_swell)
 
     breakdown = build_breakdown(
         hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
@@ -2004,7 +2028,7 @@ def rate(hour, spot):
         sources_disagree, capped_from, disagree_cap, energy_swell, energy_factor_value,
         energy_period_value, energy_period_source,
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
-        wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
+        wind_took_points=lost_wind_first > 0 or zero_losses["wind"] > 0,
         tide_level_line=tide_level_penalty(hour, spot)[1],
     )
 

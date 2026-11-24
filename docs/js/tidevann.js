@@ -53,7 +53,8 @@
 
   function prefTekst(s){
     const r = s.tide_regel;
-    if(!r || !r.prefer || !r.prefer.length) return STR.tidePref(null);
+    // S28: en regel på vannstanden (local_rules.tide_level, jo lavere jo bedre) er ikke «tåler alt» - se tideLowBest() i app.js
+    if(!r || !r.prefer || !r.prefer.length) return typeof tideLowBest === "function" && tideLowBest(s) ? STR.tideLowBest : STR.tidePref(null);
     const rekke = ["lav", "middels", "høy"].filter(x=> r.prefer.includes(x));
     const til = rekke.length === 2 && Math.abs(["lav", "middels", "høy"].indexOf(rekke[0]) - ["lav", "middels", "høy"].indexOf(rekke[1])) === 1;
     return `${s.name} er best på ${rekke.length === 1 ? rekke[0] : til ? rekke[0] + " til " + rekke[1] : rekke.join(" og ")} vannstand`;

@@ -230,7 +230,7 @@
     else if(h && h.surf_height!=null && (!vh || vh.a <= 0)) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, `<span class="ordv">${esc(ratingWord(h))}</span>`, "", ""));
     if(h && h.wind_speed!=null){
       const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
-      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, nf0.format(h.wind_speed), "m/s",
+      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, windMsText(h), "m/s",
         esc([[windLabel(h), fra].filter(Boolean).join(" "), h.gust!=null ? STR.gust(nf0.format(h.gust)) : null].filter(Boolean).join(" · "))));
     }
     const lv = window.Tidevann ? Tidevann.nivaa(ev, t.getTime()) : null;

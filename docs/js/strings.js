@@ -225,6 +225,7 @@
     tideNow: (rising, state) => `${rising?"Stigende":"Fallende"}, ${state}`,
     tideNext: (type, time) => `${type} kl. ${time}`,
     tidePref: (list) => list && list.length ? `Spoten liker ${list.join(" og ")} vann` : "Spoten tåler alt tidevann",
+    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden: jo lavere, jo bedre (local_rules.tide_level, Theodor 23.11.2026, S28)
     lightOnly: "Bare lyse timer får tall",
     lightNone: "Mørkt hele dagen", lightSub: (sun) => sun ? "Fra skumring til skumring" : "Mørketid, bare skumring", lightUsable: "Brukbart lys",
     temps: (water, air) => `${water} i vannet, ${air} i lufta`,

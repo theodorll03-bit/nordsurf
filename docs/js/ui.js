@@ -108,7 +108,7 @@
   }
   function windText(h){
     if(!h || h.wind_speed==null) return null;
-    return `${nf0.format(h.wind_speed)} m/s${h.wind_type ? " " + windLabel(h) : ""}`;
+    return `${windMsText(h)} m/s${h.wind_type ? " " + windLabel(h) : ""}`;
   }
   // Dagens lys er over (Theodor 15.10, PR #12 punkt c): «over» fra henteren, eller klokka har passert
   // siste lyse time (lys_til) siden oversikten ble laget. Da vises ingenting for dagen.

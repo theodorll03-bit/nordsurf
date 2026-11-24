@@ -50,7 +50,7 @@
     const dom = h._forbud ? STR.hjem.forbud.toLowerCase() : !H.known(h) ? STR.spot.timeMangler : H.mork(h) ? STR.spot.timeMork : STR.spot.timeTall(H.stars(h), tapt(h));
     const lv = window.Tidevann ? Tidevann.nivaa(ev, c.ms) : null;
     const rest = [h.swell_offshore!=null ? STR.spot.timeSvell(nf1.format(h.swell_offshore)) : null,
-      h.wind_speed!=null ? STR.spot.timeVind(nf0.format(h.wind_speed), windLabel(h)) : null,
+      h.wind_speed!=null ? STR.spot.timeVind(windMsText(h), windLabel(h)) : null,
       lv ? STR.spot.timeTide(f1(lv.cm), lv.stiger) : null].filter(Boolean).join(", ");
     return STR.spot.timeAria(hh, dom + (best.has(c.i) ? ", " + STR.spot.timeBest : ""), rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "");
   }
@@ -85,7 +85,7 @@
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
-      const vind = visVind ? `${pil}<b>${nf0.format(h.wind_speed)}</b>`
+      const vind = visVind ? `${pil}<b>${windMsText(h)}</b>`
         : h && h.wind_speed==null && c.hh % hvert === 0 ? "<b>–</b>" : "";
       let ekstra = "";
       if(bred){
