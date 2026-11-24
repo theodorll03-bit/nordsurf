@@ -22,6 +22,7 @@
 
     /* rating: ord for 0-5 stjerner, og de fire ordene for 0-1 stjerne */
     starWords: ["Flatt","Dårlig","Ok","Bra","Veldig bra","Rått"],
+    poeng: "poeng",   // ordet for vurderingen i «Hvorfor» (henteren skriver «stjerner» i regnestykket, appen sier poeng)
     pickWords: ["Flatt","Dårlig","Ok","Bra","Topp","Rått"],
     lowReason: {flat:"Flatt", blown_out:"Blåst ut", stormsjo:"Stormsjø", treffer_ikke:"Treffer ikke"},
     // 0 stjerner med årsak «flat» (Theodors ja 09.10.2026, begge runder): ordet
@@ -148,6 +149,7 @@
       tilbake: "Tilbake", tilbakeTil: (sted) => `Tilbake til ${sted}`, fra: {hjem: "Hjem", utforsk: "Utforsk", logger: "Logger"},
       bildeAlt: (spot) => `Satellittbilde av ${spot} ovenfra, nord opp`,
       best: "Best", lys: "Lys", luft: "Luft", vann: "Vann", oppdatert: "Oppdatert",
+      bildet: "Bildet",   // foran hele krediteringen for kornfotoet, nederst under Kilder
       // «Svell ute» og ikke «Svell»: tallet er svellet ute (swell_offshore), ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
       kl: (hh) => `Kl. ${hh}`, svell: "Svell ute", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
       mangler: "mangler data", hoy: "høy", lav: "lav", snur: "snur",
@@ -176,6 +178,7 @@
       morketid: "Mørketid",                      // temaknappen i toppen (SPEC §6C punkt 1)
       lagreFav: "Lagre som favoritt", fjernFav: "Fjern fra favoritter",
       neste7: "Neste 7 dager", usikre: "Dag 4–7 er usikre",
+      uke2: "Uke 2 · usikker",                   // etiketten foran dag 8 og utover på spotsiden (designrevisjonen 21.11.2026)
       timeForTime: (dag) => `${dag} time for time`, holdMusa: "Hold musa over en time",
       rader: {kl: "Kl.", vurdering: "Vurdering", tideSub: "over sjøkartnull"},
       spotten: "Spotten", omSpotten: "Om spotten",
@@ -249,6 +252,10 @@
     breakdownTitle: "Hvorfor denne ratingen?",
     explainClose: "Lukk",
     thisHour: "Denne timen", howComputed: "Slik regnes det ut",
+    // S37 (svar.md 24.11.2026 kl. 10.25): timer der høyden er svell ute × andelen gjennom gapet (fjord-spots, share_height).
+    // gapHow er «Slik regnes det ut» for høyden (ordrett fra svaret), gapAndel står etter andelen under «Eksponering denne timen»
+    gapHow: "Svell ute × andelen som kommer gjennom gapet. Anslag, ikke kystmodellens tall.",
+    gapAndel: "andel gjennom gapet",
   };
   window.STR = STR;
 })();

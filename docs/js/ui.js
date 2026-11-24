@@ -377,13 +377,13 @@
     const vindu = fsApent(b) ? vinduKl(b.start, b.slutt).join("–") : "";   // vinduet er over: ingen «Best», ingen ring
     const fakta = [fsSvell(h), h && h.wind_speed!=null ? windLabel(h) : null].filter(x=> x && x!=="–").join(" · ");
     const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(" · ");
-    // den håndtegnede ringen rundt beste vindu (SPEC §6D punkt 3) - korall bare fra 4, ellers blekk
-    const ring = `<svg class="fs-ring" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><path d="M30 12 C70 2 150 2 182 14 C204 24 196 50 150 58 C100 66 30 62 10 46 C-4 34 12 18 46 9"/></svg>`;
+    // den håndtegnede ringen rundt beste vindu (SPEC §6D punkt 3) - bare når dagen har 4 eller 5, i korall. Ellers ren tekst
+    const ring = n < 4 ? "" : `<svg class="fs-ring" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><path d="M30 12 C70 2 150 2 182 14 C204 24 196 50 150 58 C100 66 30 62 10 46 C-4 34 12 18 46 9"/></svg>`;
     return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${STR.starsAria(n, (h && h.faded) || 0)}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
         ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="" decoding="async">` : ""}
         <span class="fs-plate"><span class="etikett">${esc(linje)}</span><span class="t-hero fs-navn${lengste(s.name) > 8 ? " lang" : ""}">${esc(s.name)}</span>
-          <span class="fs-rad"><span class="fs-tall">${n}</span><b class="fs-ord">${esc(fsOrd(b))}</b>${fakta ? `<span class="fs-fakta">${esc(fakta)}</span>` : ""}${vindu ? `<span class="fs-best">${esc(STR.spot.best)} ${esc(vindu)}${ring}</span>` : ""}</span></span></a>
-      ${foto ? `<p class="kredit">${esc(STR.web.fig(1, s.name))} ${esc(window.SPOTBILDER.kort)}</p>` : ""}`;
+          <span class="fs-rad"><span class="fs-tall">${n}</span><b class="fs-ord">${esc(fsOrd(b))}</b>${fakta ? `<span class="fs-fakta">${esc(fakta)}</span>` : ""}${vindu ? `<span class="fs-best${ring ? " medring" : ""}">${esc(STR.spot.best)} ${esc(vindu)}${ring}</span>` : ""}</span></span></a>
+      ${foto ? `<p class="kredit linje">${fotoKreditHtml(false)}</p>` : ""}`;
   }
   const lengste = (navn)=> Math.max(...String(navn).split(/[\s-]+/).map(o=> o.length), 1);
   function fsMatrise(spots, days, perSpot){
@@ -487,9 +487,10 @@
   }
   function bunnHtml(){
     const W = STR.web, B = window.SPOTBILDER;
-    const kilder = [...W.kildeListe, W.kartOsm, B ? B.kort : null].filter(Boolean);
+    // hele krediteringen for kornfotoene står her (under bildene står bare kortformen), med lisensen som lenke
+    const kilder = [...W.kildeListe, W.kartOsm].map(esc).concat(B ? [fotoKreditHtml(true)] : []);
     return `<div class="bunn-inn"><div><span class="wm" aria-hidden="true">${typeof wordmarkSvg==="function" ? wordmarkSvg() : ""}</span><p>${esc(W.bunn)}</p></div>
-      <div><h2 class="bunn-tittel">${esc(W.kilder)}</h2><ul>${kilder.map(k=> `<li>${esc(k)}</li>`).join("")}</ul></div>
+      <div><h2 class="bunn-tittel">${esc(W.kilder)}</h2><ul>${kilder.map(k=> `<li>${k}</li>`).join("")}</ul></div>
       <div><a href="#innstillinger">${esc(STR.hjem.innstillinger)}</a></div></div>`;
   }
 
@@ -581,8 +582,39 @@
   function routeFor(view){ return view==="spot" ? `#spot=${encodeURIComponent(S.spotId)}` : `#${view}`; }
   function go(view, replace){
     const hash = routeFor(view);
-    if(location.hash !== hash){ if(replace) history.replaceState(null, "", hash); else location.hash = hash; }
+    if(location.hash !== hash){ if(replace) history.replaceState(history.state, "", hash); else location.hash = hash; }
     else render();
+  }
+  /* Tilbake og rulling (designrevisjonen 21.11.2026, fase 1 punkt 8). Hver oppføring i nettleserens historikk som appen
+     har laget, får et løpenummer i history.state ({ns}). Appen husker hvilken rute hvert nummer hadde (i minnet), og hvor
+     langt ned hver visning var rullet. Da kan tilbakeknappen på spotsiden gå ett steg tilbake i stedet for å legge et nytt
+     steg oppå, og siden man kommer tilbake til, står der man forlot den. */
+  const hist = {idx: 0, ruter: {}, rull: {}, tilbake: false, venter: null};
+  const normRute = (h)=> !h || h==="#" || h==="#/" ? "#hjem" : h;
+  const rullKey = ()=> S.view==="spot" ? `spot=${S.spotId}` : S.view;
+  function histMerk(){
+    // kalles ved oppstart og ved hver hashchange: ny oppføring får neste nummer, en gammel (fram/tilbake) har sitt eget
+    const st = history.state, forrige = hist.idx;
+    if(st && typeof st.ns==="number") hist.idx = st.ns;
+    else { hist.idx = forrige + 1; try{ history.replaceState({...(st || {}), ns: hist.idx}, ""); }catch(e){} }
+    hist.ruter[hist.idx] = normRute(location.hash);
+    return hist.idx < forrige;   // sant når brukeren gikk bakover i historikken
+  }
+  function closeSpot(){
+    const view = S.from && S.from!=="spot" ? S.from : "hjem", hash = routeFor(view);
+    // forrige oppføring er appens egen og er siden knappen lover: gå ett steg tilbake (ikke et nytt steg oppå)
+    if(hist.idx > 0 && hist.ruter[hist.idx - 1]===hash){
+      // history.back() er asynkron: et nytt trykk før hashendringen er kommet ville gått ett steg til, ut av appen
+      // (feiljegeren 24.11.2026). Nye trykk ses bort fra til hashendringen kommer, eller til en kort reservefrist er ute
+      if(hist.venter) return;
+      hist.venter = setTimeout(()=>{ hist.venter = null; }, 1000);
+      history.back(); return;
+    }
+    // ellers (lenke rett til spoten, eller siden er lastet på nytt): bytt ut oppføringen, så «tilbake» i nettleseren
+    // ikke går til spoten igjen
+    history.replaceState(history.state, "", hash);
+    hist.ruter[hist.idx] = normRute(hash);
+    parseRoute(); render();
   }
   function openSpot(id, t, opts){
     // t: tidsstempel («2026-10-17T08:00Z») fra oversikten, eller timeindeks (spotsiden selv)
@@ -593,14 +625,14 @@
     const hash = `#spot=${encodeURIComponent(id)}${t!=null ? "&t=" + encodeURIComponent(t) : ""}`;
     if(location.hash !== hash) location.hash = hash; else render();
   }
-  function closeSpot(){ go(S.from && S.from!=="spot" ? S.from : "hjem"); }
   function show(view){
     const map = {hjem:"viewHjem", sok:"viewSok", utforsk:"viewUtforsk", logger:"viewSide", innstillinger:"viewSide", spot:"viewSpot"};
     $$("#main .view").forEach(v=>{ v.hidden = v.id !== map[view]; });
     const navView = view==="spot" ? S.from : view==="innstillinger" || view==="sok" ? "hjem" : view;
     $$("[data-nav]").forEach(a=>{ if(a.dataset.nav===navView) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     document.body.dataset.view = view;
-    window.scrollTo(0, 0);
+    // ved «tilbake» ruller render() til der visningen sto sist. Ellers til toppen
+    if(!hist.tilbake) window.scrollTo(0, 0);
   }
   function renderSide(){
     const bar = $("#pageBar");
@@ -641,6 +673,7 @@
     else if(S.view==="utforsk") Utforsk.render(S, behold);
     else if(S.view==="logger" || S.view==="innstillinger") renderSide();
     else if(S.view==="spot") renderSpotView();
+    if(hist.tilbake){ hist.tilbake = false; window.scrollTo(0, hist.rull[rullKey()] || 0); }
   }
   // felt brukeren skriver i: bare disse får teksten satt tilbake (glidebryteren i timestripa og tallfelt styrer siden selv)
   const SKRIVEFELT = new Set(["text", "email", "search", "url", "tel", "password", "textarea"]);
@@ -688,7 +721,14 @@
     wireTopSearch(); temaKnapp();
     const bunn = $("#bunn"); if(bunn) bunn.innerHTML = bunnHtml();
     const retry = $("#feilRetry"); if(retry) retry.onclick = ()=> location.reload();
-    window.addEventListener("hashchange", ()=>{ parseRoute(); render(); });
+    // rullingen styres her (se «Tilbake og rulling» over), ikke av nettleseren: innholdet tegnes på nytt ved hver rute
+    try{ history.scrollRestoration = "manual"; }catch(e){}
+    const st0 = history.state;
+    if(st0 && typeof st0.ns==="number") hist.idx = st0.ns; else { try{ history.replaceState({...(st0 || {}), ns: 0}, ""); }catch(e){} }
+    hist.ruter[hist.idx] = normRute(location.hash);
+    // husk hvor langt ned hver visning er rullet (nøkkelen er visningen som står framme når rullingen skjer)
+    window.addEventListener("scroll", ()=>{ if(DATA && started) hist.rull[rullKey()] = window.scrollY; }, {passive: true});
+    window.addEventListener("hashchange", ()=>{ if(hist.venter){ clearTimeout(hist.venter); hist.venter = null; } hist.tilbake = histMerk(); parseRoute(); render(); hist.tilbake = false; });
     // spotsiden velger mobil- eller PC-oppsett når den tegnes (spot.js render): tegn på nytt når bredden krysser 1024 px
     // (et nettbrett som snus), ellers står mobiloppsettet under PC-stilene (feiljegeren 19.11.2026)
     // Hjem tegnes bare når bredden endrer seg: på mobil endrer høyden seg hver gang adresselinja glir inn og ut.

@@ -7,6 +7,8 @@
 :root{
   /* B 4.0-tokenene (SPEC §2) */
   --bg:#F2EFE8; --ink:#002941; --muted:#5E5A51; --hair:#D8D2C6; --outline:#B9B2A4;
+  --lav:#8A8478; --paa-lav:#00131F;   /* fyllet for 1 og 2 (3,2:1 mot papiret, designrevisjonen 21.11.2026 fase 1) og tallet oppå det */
+  --bildekant:transparent;            /* i mørketid får bildene en tynn kant, ellers flyter de ut i bakgrunnen */
   --signal:#C05151; --on-signal:#F2EFE8;
   --data:#B6DFED; --tide-band:rgba(182,223,237,.55);
   --kartland:#002941; --on-kartland:#F2EFE8;
@@ -20,12 +22,12 @@
   --water:var(--ink); --water-soft:var(--tide-band); --water-top:var(--tide-band);   /* tidevann: kurven i blekk, båndet i --data */
   --selected:var(--ink); --on-selected:var(--bg);
   --accent:var(--ink); --focus:var(--ink); --warn:var(--ink);
-  /* vurdering (SPEC §5): 0-3 er blekk, korall fra 4. --rN er fyll (ruter, søyler, prikker), --rN-ink er ordet
+  /* vurdering (SPEC §5): 0-3 er blekk, korall fra 4. Fyllet for 1 og 2 er --lav (minst 3:1 mot flaten), ikke --outline. --rN er fyll (ruter, søyler, prikker), --rN-ink er ordet
      (liten tekst, derfor aldri korall), --rN-on er tallet oppå fyllet, --rN-tall er tallet alene (stor tekst).
      Tall oppå korall er alltid minst 14 px fet (Theodor 12.11). */
   --r0:var(--hair); --r0-ink:var(--muted); --r0-on:var(--ink); --r0-tall:var(--muted);
-  --r1:var(--outline); --r1-ink:var(--ink); --r1-on:var(--ink); --r1-tall:var(--ink);
-  --r2:var(--outline); --r2-ink:var(--ink); --r2-on:var(--ink); --r2-tall:var(--ink);
+  --r1:var(--lav); --r1-ink:var(--ink); --r1-on:var(--paa-lav); --r1-tall:var(--ink);
+  --r2:var(--lav); --r2-ink:var(--ink); --r2-on:var(--paa-lav); --r2-tall:var(--ink);
   --r3:var(--ink); --r3-ink:var(--ink); --r3-on:var(--bg); --r3-tall:var(--ink);
   --r4:var(--signal); --r4-ink:var(--ink); --r4-on:var(--on-signal); --r4-tall:var(--signal);
   --r5:var(--signal); --r5-ink:var(--ink); --r5-on:var(--on-signal); --r5-tall:var(--signal);
@@ -47,7 +49,8 @@
   --t-brod:1.0625rem; --lh-brod:1.41;        /* 16-18/22-26 */
   --t-navn:1.25rem; --lh-navn:1.1;           /* liste, navn 20/22 */
   --t-listetall:2.75rem; --lh-listetall:.909;   /* liste, tall 44/40 */
-  --t-etikett:0.6875rem; --lh-etikett:1.273; /* 11/14, minste tekst */
+  --t-etikett:0.75rem; --lh-etikett:1.333;   /* 12/16 på mobil også (designrevisjonen fase 1); 11 px er bare for kreditt */
+  --sperr:.02em;                             /* sperringen i etiketter: mono er luftig fra før */
   /* avstandsskala (SPEC §4) */
   --s1:4px; --s2:8px; --s3:16px; --s4:24px; --s5:40px; --s6:64px; --s7:96px; --s8:144px;
   /* eldre størrelser, brukes av komponentene til skjermene bygges om */
@@ -62,6 +65,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
+    --lav:#8FA0A8; --paa-lav:#002941; --bildekant:#244D63;
     --signal:#FD6E6E; --on-signal:#002941;
     --tide-band:rgba(182,223,237,.16);
     --kartland:#E3D3B0; --on-kartland:#002941;
@@ -74,6 +78,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
+  --lav:#8FA0A8; --paa-lav:#002941; --bildekant:#244D63;
   --signal:#FD6E6E; --on-signal:#002941;
   --tide-band:rgba(182,223,237,.16);
   --kartland:#E3D3B0; --on-kartland:#002941;
@@ -115,16 +120,17 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .t-tall{font-size:var(--t-tall);line-height:var(--lh-tall)}
 .t-vindu{font-size:var(--t-vindu);line-height:var(--lh-vindu);color:var(--signal)}
 .t-svell{font-size:var(--t-svell);line-height:var(--lh-svell)}
+.des{display:inline-block;margin:0 -.2em;line-height:inherit}   /* desimalkommaet i store mono-tall: uten hullet midt i tallet */
 .t-navn{font-size:var(--t-navn);line-height:var(--lh-navn);text-transform:uppercase}
 .t-listetall{font-size:var(--t-listetall);line-height:var(--lh-listetall)}
 .t-overskrift{font-family:var(--display);font-size:var(--t-overskrift);line-height:var(--lh-overskrift);font-weight:600;letter-spacing:-.02em}
 .t-brod{font-family:var(--body);font-size:var(--t-brod);line-height:var(--lh-brod);font-weight:400}
-.etikett{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.etikett{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:var(--sperr);color:var(--muted)}
 /* Seksjonsstart: 2 px blekk, 3 px luft, 0,75 px blekk, 9 px luft, så tittelen til venstre og en kommentar i --muted til høyre */
 .seksjon,.sek,.sek-spot{position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 var(--s3);margin:var(--s5) 0 var(--s3);padding-top:12.75px;border-top:2px solid var(--ink)}
 .seksjon::before,.sek::before,.sek-spot::before{content:"";position:absolute;left:0;right:0;top:3px;height:.75px;background:var(--ink)}
-.seksjon,.sek > .h2,.sek-spot > .h2,.seksjon > h2{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
-.seksjon > .kommentar,.sek > .sub,.sek-spot > .sub{margin:0;font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.seksjon,.sek > .h2,.sek-spot > .h2,.seksjon > h2{font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:700;text-transform:uppercase;letter-spacing:var(--sperr);color:var(--ink)}
+.seksjon > .kommentar,.sek > .sub,.sek-spot > .sub{margin:0;font-family:var(--mono);font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:var(--sperr);color:var(--muted)}
 .sub{color:var(--muted);font-size:var(--fs-secondary);margin:4px 0 0}
 .muted{color:var(--muted)}
 .wm{display:inline-block;color:var(--ink);text-decoration:none;line-height:0}
@@ -138,7 +144,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* B 4.0: flat fanelinje i full bredde (SPEC §6A punkt 5) - papirflate, tynn strek over, Martian 11, aktiv fane fet */
 .tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:stretch;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));padding:0 8px env(safe-area-inset-bottom,0px);background:var(--surface);border-top:.75px solid var(--ink);z-index:30}
 .tabs{flex:1;display:flex}
-.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:44px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:44px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:var(--sperr)}
 .tabs a svg{width:22px;height:22px}
 .tabs a[aria-current="page"]{color:var(--ink);font-weight:800}
 .sokknapp{flex:none;width:56px;display:grid;place-items:center;color:var(--ink);text-decoration:none}
@@ -192,7 +198,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .hjemkart-svg .land{fill:var(--kartland)}
 .hk-lapp{font-family:var(--mono);font-size:12px;font-weight:800;fill:var(--ink);stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;paint-order:stroke}
 .hjemkart-kilde{margin:var(--s1) 0 0;text-align:right;color:var(--muted);font-size:0.6875rem;line-height:1.27}
-.sekknapp{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;margin:-16px 0;cursor:pointer;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sekknapp{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;margin:-16px 0;cursor:pointer;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;text-transform:uppercase;letter-spacing:var(--sperr);color:var(--muted)}
 .sekknapp[aria-pressed="true"]{color:var(--ink);font-weight:700}
 .favliste{display:grid;gap:var(--s4)}
 .favlinje{display:grid;grid-template-columns:2.75rem minmax(0,1fr);column-gap:var(--s3);align-items:start;color:var(--ink);text-decoration:none}
@@ -204,7 +210,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .favlinje .etikett.obs{color:var(--ink)}
 .favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
 .favlinje .uke{display:grid;margin-top:12px}
-.favlinje .uke b{font-family:var(--mono);font-stretch:87.5%;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.favlinje .uke b{font-family:var(--mono);font-stretch:87.5%;font-weight:500;text-transform:uppercase;letter-spacing:var(--sperr)}
 .favlinje .uke b.idag{font-weight:800}
 .favlinje > .ghost{grid-column:2;justify-self:start;margin-top:12px}
 .favleggtil,.hjem-bunn{margin:var(--s4) 0 0}
@@ -228,6 +234,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .rtall.big{font-size:3rem}
 .rute{flex:none;display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1;color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
 .rute.r-4,.rute.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.rute.r-0,.uke i.r-0{font-weight:500;box-shadow:inset 0 0 0 1px var(--hair)}   /* nullene roligere: dempet, vekt 500, tynn ramme. Aldri strek, strek betyr «mangler» */
 .rute.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
 .rute.mork{background:var(--night);box-shadow:none}
 .rute.forbud{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--hair)}
@@ -255,7 +262,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .uke i.dark{background:var(--night);color:transparent;box-shadow:none}
 .uke i.over{background:transparent;color:transparent;box-shadow:none}
 .uke i.forbud{background:var(--sunken);color:transparent;box-shadow:inset 0 0 0 1px var(--hair)}
-.uke b{color:var(--muted);font-family:var(--body);font-stretch:normal;font-size:0.6875rem;font-weight:600;height:1rem}
+.uke b{color:var(--muted);font-family:var(--body);font-stretch:normal;font-size:0.75rem;font-weight:600;height:1rem}
 .uke b.idag{color:var(--ink)}
 .gruppe{margin-top:22px}
 .gruppe-topp{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 14px 8px}   /* samme sidepadding som .rad, så ukedagene står rett over rutene (Theodor 15.10) */
@@ -537,7 +544,15 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .hvorfor summary::-webkit-details-marker{display:none}
 .hvorfor summary .chev{transition:transform .2s ease}
 .hvorfor[open] summary .chev{transform:rotate(180deg)}
-.hvorfor .body{padding:12px 4px 0}
+.hvorfor .body{padding:4px 0 0}
+/* regnestykket som en liten tabell (etikett, verdi, virkning), samme form som «Om spotten» */
+.hv-tab{margin:0}
+.hv-tab > div{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.hv-tab dt{grid-row:1 / span 2;margin:0;padding-top:3px;overflow-wrap:anywhere}
+.hv-tab dd{grid-column:2;margin:0;font-size:1rem;line-height:1.375}
+.hv-tab dd.hv-e{color:var(--muted)}
+.hv-tab .hel dt{grid-column:1 / -1;padding-top:0;font-size:1rem;line-height:1.375}
+.hv-tab .total dt,.hv-tab .total dd{color:var(--ink);font-weight:700}
 .kilder{color:var(--muted);font-size:var(--fs-caption);margin:18px 0 0}
 .logg-her{margin-top:18px}
 .logg-her .primary{width:100%}
@@ -560,7 +575,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* B 4.0: skriftskalaen på web (SPEC §3, fra 1024 px) */
 @media (min-width: 1024px){
   :root{
-    --t-hero:9rem; --lh-hero:.861;             /* 144/124 */
+    --t-hero:6rem; --lh-hero:.875;             /* 96/84 (fra 144/124, designrevisjonen fase 1) */
     --t-tall:8rem; --lh-tall:.8125;            /* 128/104 */
     --t-vindu:4rem; --lh-vindu:.875;           /* 64/56 */
     --t-svell:6rem; --lh-svell:.917;           /* 96/88 */
@@ -580,7 +595,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* ---------- Nettsiden (fra 1024 px, design B 4.0 steg 6: SPEC §6C og §6D, samme grense som skriftskalaen) ----------
    Innholdet står i 1296 px (72 px marg på 1440), 12 kolonner med 24 px mellomrom. Ingen kort og ingen bokser: seksjoner
    skilles med den doble streken, tabellene har 1 px hair mellom radene (SPEC §1 og §4). */
-.knapp1,.knapp2{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+.knapp1,.knapp2{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase;cursor:pointer;text-decoration:none}
 .knapp1{background:var(--ink);color:var(--bg)}
 .knapp2{box-shadow:inset 0 0 0 2px var(--ink);color:var(--ink)}
 .knapp1:focus-visible,.knapp2:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
@@ -594,7 +609,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .topbar{position:sticky;top:0;display:grid !important;grid-template-columns:auto auto minmax(0,1fr) minmax(220px,280px) auto;align-items:center;gap:0 32px;height:64px;padding:0 var(--web-marg);background:var(--bg);border-bottom:1px solid var(--hair);z-index:20}
   .topbar .wm svg{height:1.5rem}
   .topnav{display:flex;gap:28px;align-self:stretch}
-  .topnav a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 2px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .topnav a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 2px;text-decoration:none;color:var(--muted);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
   .topnav a:hover{color:var(--ink)}
   .topnav a[aria-current="page"]{color:var(--ink);font-weight:800}
   .topnav a[aria-current="page"]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--ink)}
@@ -602,7 +617,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .topsok .sok-field{min-height:44px;padding:0 2px;border-radius:0;background:transparent;box-shadow:inset 0 -2px 0 var(--ink);color:var(--ink)}
   .topsok .sok-field:focus-within{box-shadow:inset 0 -3px 0 var(--ink);outline:2px solid var(--focus);outline-offset:2px}
   .sok-field input{font-size:var(--fs-secondary)}
-  .temaknapp{all:unset;box-sizing:border-box;grid-column:5;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;box-shadow:inset 0 0 0 2px var(--ink);color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+  .temaknapp{all:unset;box-sizing:border-box;grid-column:5;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;box-shadow:inset 0 0 0 2px var(--ink);color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase;cursor:pointer}
   .temaknapp[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
   .temaknapp:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
   .sok-drop{border-radius:0;box-shadow:0 0 0 1px var(--outline)}
@@ -613,9 +628,10 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .bunn-inn::before{content:"";position:absolute;left:0;right:0;top:3px;height:.75px;background:var(--ink)}
   .bunn .wm{color:var(--ink)} .bunn .wm svg{height:1.5rem}
   .bunn p{margin:12px 0 0;color:var(--muted)}
-  .bunn-tittel{margin:0 0 8px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+  .bunn-tittel{margin:0 0 8px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink)}
   .bunn ul{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.875rem;color:var(--muted)}
   .bunn a{display:inline-flex;align-items:center;min-height:44px;color:var(--ink);text-underline-offset:3px}
+  .bunn li a{display:inline;min-height:0}   /* lenke i løpende tekst */
   body[data-view="utforsk"] .bunn{display:none !important}
 
   /* ---------- Utforsk ---------- */
@@ -632,8 +648,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .utforsk-liste .srad{grid-template-columns:1.5rem minmax(0,1fr) auto;min-height:56px;padding:8px 0;border-radius:0;border-bottom:1px solid var(--hair)}
   .utforsk-liste .srad:hover{background:var(--unreached)}
   .utforsk-liste .srad .nm b{font-family:var(--mono);font-stretch:87.5%;font-size:.9375rem;font-weight:800;text-transform:uppercase;letter-spacing:0}
-  .utforsk-liste .srad .nm small{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
-  .utforsk-liste .srad .na{color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .utforsk-liste .srad .nm small{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase}
+  .utforsk-liste .srad .na{color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
   .utforsk-liste .srad .na .num{font-weight:500;text-transform:none;color:var(--muted)}
   .utforsk-liste .visflere{margin-top:16px}
 
@@ -644,17 +660,17 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   #forside .hjem-overskrift{margin:var(--s3) 0 0;max-width:22em}
   .fs-filter{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s5);margin-top:var(--s5)}
   .fs-seg{display:flex;box-shadow:inset 0 0 0 2px var(--ink)}
-  .fs-seg button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);cursor:pointer}
+  .fs-seg button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink);cursor:pointer}
   .fs-seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
   .fs-faner{display:flex;flex-wrap:wrap;gap:0 24px}
-  .fs-faner button{all:unset;box-sizing:border-box;position:relative;display:inline-flex;align-items:center;gap:6px;min-height:44px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);cursor:pointer}
+  .fs-faner button{all:unset;box-sizing:border-box;position:relative;display:inline-flex;align-items:center;gap:6px;min-height:44px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink);cursor:pointer}
   .fs-faner button span{font-weight:500;color:var(--muted)}
   .fs-faner button[aria-pressed="true"]{font-weight:800}
   .fs-faner button[aria-pressed="true"]::after{content:"";position:absolute;left:0;right:0;bottom:2px;height:3px;background:var(--ink)}
   .fs-seg button:focus-visible,.fs-faner button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
   /* hovedbildet 1296 × 440 med papirplate; aldri tekst rett på bildet (SPEC §7) */
-  .fs-helt{position:relative;display:block;height:440px;margin-top:var(--s5);color:var(--ink);text-decoration:none;background:var(--sunken)}
-  .fs-helt.uten{height:auto;background:none}
+  .fs-helt{position:relative;display:block;height:440px;margin-top:var(--s5);color:var(--ink);text-decoration:none;background:var(--sunken);box-shadow:0 0 0 1px var(--bildekant)}
+  .fs-helt.uten{height:auto;background:none;box-shadow:none}
   .fs-helt .sp-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
   .fs-plate{position:absolute;left:0;bottom:-24px;display:flex;flex-direction:column;gap:8px;max-width:min(640px, 60%);padding:20px 32px 0 0;background:var(--bg)}
   .fs-helt.uten .fs-plate{position:static;max-width:none;padding:0}
@@ -662,18 +678,19 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-navn.lang{font-stretch:75%}
   .fs-rad{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin-top:8px}
   .fs-tall{font-family:var(--mono);font-stretch:87.5%;font-size:4.75rem;line-height:.84;font-weight:800;color:var(--rc-tall)}
-  .fs-ord{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .fs-ord{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .fs-fakta{font-size:1.125rem}
-  .fs-best{position:relative;display:inline-flex;align-items:center;padding:10px 22px;font-family:var(--mono);font-stretch:87.5%;font-size:1.75rem;line-height:1;font-weight:800;text-transform:uppercase;white-space:nowrap}
+  .fs-best{position:relative;display:inline-flex;align-items:center;padding:10px 0;font-family:var(--mono);font-stretch:87.5%;font-size:1.75rem;line-height:1;font-weight:800;text-transform:uppercase;white-space:nowrap}
   .fs-helt.r-4 .fs-best,.fs-helt.r-5 .fs-best{color:var(--signal)}   /* 28 px fet: korall er lov fra 24 px (SPEC §2) */
   .fs-ring{position:absolute;inset:-4px -6px;width:calc(100% + 12px);height:calc(100% + 8px);overflow:visible;pointer-events:none}
-  .fs-ring path{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
-  .fs-helt + .kredit{margin-top:36px}
+  .fs-best.medring{padding:10px 22px}   /* ringen står bare rundt et vindu med 4 eller 5 (SPEC §6D), ellers ren tekst */
+  .fs-ring path{fill:none;stroke:var(--signal);stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  .fs-helt + .kredit.linje{margin-top:36px}
   .fs-helt:focus-visible{outline:2px solid var(--focus);outline-offset:4px}
   #forside .sek{margin-top:var(--s7)}
   /* «Beste i dag»: tabell med 1 px hair mellom radene */
   .fs-tabell,.fs-matrise{width:100%;border-collapse:collapse}
-  .fs-tabell th,.fs-matrise thead th{padding:0 12px 10px 0;text-align:left;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--hair)}
+  .fs-tabell th,.fs-matrise thead th{padding:0 12px 10px 0;text-align:left;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--hair)}
   /* overskriftsraden står fast under toppen når «Vis alle» gir en lang tabell (skalering, punkt 8) */
   .fs-tabell thead th{position:sticky;top:64px;z-index:2;padding-top:10px;background:var(--bg);border-bottom:0;box-shadow:inset 0 -1px 0 var(--hair)}
   .fs-tabell td{padding:16px 12px 16px 0;border-bottom:1px solid var(--hair);vertical-align:middle}
@@ -687,7 +704,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-tabell .fs-dom{white-space:nowrap}
   .fs-tabell .fs-dom .t-listetall{display:inline-block;min-width:1.6ch;margin-right:10px;vertical-align:middle;color:var(--rc-tall)}
   .fs-tabell .fs-dom .ord{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle}
-  .fs-tabell .fs-dom b{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .fs-tabell .fs-dom b{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .fs-tabell .fs-bst{font-family:var(--mono);font-stretch:87.5%;font-size:1rem;font-weight:800;white-space:nowrap}
   .fs-tabell .fs-sv{white-space:nowrap}
   .fs-tabell .fs-tim{width:250px}
@@ -709,14 +726,15 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-matrise tbody th{padding:0 12px 0 0;height:76px;text-align:left;font-family:var(--mono);font-stretch:87.5%;font-size:.875rem;font-weight:800;text-transform:uppercase;border-bottom:1px solid var(--hair)}
   .fs-matrise td{text-align:center;border-bottom:1px solid var(--hair);font-family:var(--mono);font-stretch:87.5%;font-weight:800;color:var(--muted)}
   .fs-matrise .mx{font-size:1.125rem;line-height:1}
+  .fs-matrise .r-0 .mx{font-weight:500}
   .fs-matrise .mx.tre{font-size:1.875rem;color:var(--ink)}
   .fs-matrise .mx.hoy{font-size:3rem;color:var(--signal)}
-  .fs-matrise td.tom{font-size:var(--t-etikett);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+  .fs-matrise td.tom{font-size:var(--t-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase}
 
   /* ---------- Spotsiden (SPEC §6C) ---------- */
   #viewSpot{padding:0 0 var(--s7)}
-  .spw-hode{position:relative;height:420px;margin-bottom:96px;background:var(--sunken)}
-  .spw-hode.uten{height:120px;background:none}
+  .spw-hode{position:relative;height:260px;margin-bottom:96px;background:var(--sunken);box-shadow:0 0 0 1px var(--bildekant)}   /* 260 px (fra 420) */
+  .spw-hode.uten{height:120px;background:none;box-shadow:none}
   .spw-hode .sp-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 55%}
   /* plata følger navnet (skriften under er regnet fra vindusbredden), så lange navn aldri står rett på bildet (SPEC §7) */
   .spw-plate{position:absolute;left:0;bottom:-64px;max-width:100%;padding:16px 40px 0 var(--web-marg);background:var(--bg)}
@@ -728,7 +746,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   @media (min-width: 1360px){ .spw-inn{padding:0} }
   .fakta-linje.spw-meta{margin:0;gap:4px 0}   /* hodet har 64 px plate + 32 px luft (marginene slås sammen) */
   .spw-meta span + span::before{content:"·";margin:0 .6em}
-  .spw-inn > .kredit{margin-top:8px}
+  .spw-inn > .kredit{margin-top:0}
+  .kredit.linje + .spw-grid{margin-top:var(--s4)}
   .spw-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0 24px;margin-top:var(--s5);align-items:start}
   .spw-dom{grid-column:1/6}
   .spw-dom .dom{margin-top:0}
@@ -763,14 +782,14 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .dagknapp.stor[aria-pressed="true"] .ud{color:var(--ink);font-weight:800}
   .dk-v{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px 8px;margin-top:6px}
   .dk-tall{font-family:var(--mono);font-stretch:87.5%;font-size:3rem;line-height:.84;font-weight:800;color:var(--rc-tall)}
-  .dk-ord{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .dk-ord{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .dagknapp.stor.miss .dk-ord,.dagknapp.stor.dark .dk-ord,.dagknapp.stor.over .dk-ord,.dagknapp.stor.forbud .dk-ord{color:var(--muted);font-weight:500}
-  .dk-best{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .dk-best{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .dk-sub{font-size:.9375rem;line-height:1.35;color:var(--ink)}
   .dk-sub + .dk-sub{color:var(--muted)}
   /* «Time for time»: tabellen med etikettkolonne på 144 px (timestripe.js, {bred: true}) */
   .tstripe.bred{display:grid;grid-template-columns:144px minmax(0,1fr);margin-top:var(--s3);cursor:default}
-  .tetik{display:grid;grid-template-rows:28px 50px 54px 28px 38px 72px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .tetik{display:grid;grid-template-rows:28px 50px 54px 28px 38px 72px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
   .tetik span{display:flex;align-items:center;gap:4px}
   .tetik span:last-child{flex-direction:column;align-items:flex-start;justify-content:center}
   .tetik small{font-size:inherit;text-transform:none;letter-spacing:0}
@@ -802,6 +821,16 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-fig{margin:0}
   .spw-fig .minikart{display:block;width:100%;max-width:520px;height:auto;margin:8px 0 0}
   .spw-fig figcaption{margin-top:12px}
+  .hv-tab > div{grid-template-columns:200px minmax(0,1fr) minmax(0,1fr);gap:0 24px;padding:12px 0}
+  .hv-tab dt{grid-row:auto}
+  .hv-tab dd.hv-e{grid-column:3}
+  .hv-tab dd.hv-v.bred{grid-column:2 / span 2}
+  /* dag 8 og utover: egen rad med etikett og stiplede ruter, så den ikke leses som en gjentakelse av uka over */
+  .uke2{display:flex;align-items:center;gap:var(--s4);margin-top:var(--s4)}
+  .uke2 .etikett{margin:0;flex:none}
+  .spw .uke2 .dagvelger:not(.sju){margin-top:0}
+  .uke2 .rute{box-shadow:none;border:1px dashed var(--muted)}
+  .uke2 .rute.r-4,.uke2 .rute.r-5{border-color:var(--ink)}
   .spw-om{margin:0}
   .spw-om div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--hair)}
   .spw-om div:first-child{border-top:1px solid var(--hair)}
@@ -856,16 +885,16 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .forbudlinje{color:var(--muted);font-size:var(--fs-secondary);margin:6px 0 0}
 
 /* ---------- B 4.0: spotsiden på mobil (SPEC §6B) ----------
-   Kornfoto øverst (Trykk i lyst tema, Lodd i mørkt), navnet på en plate i papirfargen som går 34 px ned over
+   Kornfoto øverst, 160 px (Trykk i lyst tema, Lodd i mørkt), navnet på en plate i papirfargen som går 34 px ned over
    bildekanten, så dom, time, timestripe og retningsskive. Aldri tekst rett på bildet og aldri korall i bildet
    (SPEC §7). Nettsiden (fra 1024 px, .spw) bruker de samme delene, se «Nettsiden: spotsiden» lenger ned. */
-.sp-hode{position:relative;margin:0 -16px 34px;height:calc(220px + env(safe-area-inset-top,0px));background:var(--sunken)}
-.sp-hode.uten{height:calc(112px + env(safe-area-inset-top,0px));background:none}
+.sp-hode{position:relative;margin:0 -16px 34px;height:calc(160px + env(safe-area-inset-top,0px));background:var(--sunken);box-shadow:0 0 0 1px var(--bildekant)}   /* 160 px (fra 220): dommen skal stå i første skjermbilde */
+.sp-hode.uten{height:calc(112px + env(safe-area-inset-top,0px));background:none;box-shadow:none}
 .sp-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 55%;display:block}
 .sp-foto.lodd,.skive .b.lodd{display:none}
 .sp-knapper{position:absolute;left:8px;right:8px;top:calc(4px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center}
 .sp-tilbake{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;height:44px;cursor:pointer}
-.sp-tilbake > span{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px 0 8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.sp-tilbake > span{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px 0 8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:.75rem;font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
 .sp-tilbake:focus-visible > span{outline:2px solid var(--focus);outline-offset:2px}
 .sp-fav{position:relative;display:grid;place-items:center;width:44px;height:44px}
 .sp-fav::before{content:"";position:absolute;inset:4px;background:var(--bg)}
@@ -881,16 +910,22 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .kredit{margin:6px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:.6875rem;line-height:1.4;color:var(--muted)}
 .kredit.liten{margin-top:10px}
 .kredit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+/* den ene linja under toppbildet: linja er 44 px høy, og lenka fyller høyden (44 px trykkflate uten å ligge over nabotekst) */
+.kredit.linje{display:flex;flex-wrap:wrap;align-items:center;min-height:44px;margin:0;white-space:pre-wrap}
+.kredit.linje a{display:inline-flex;align-items:center;min-height:44px}
+.kredit.linje + .dom{margin-top:6px}
+.kilder.foto{margin-top:8px}
+.kilder a{color:inherit;text-underline-offset:2px}
 .dom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:20px}
 .dom-v{display:flex;align-items:flex-end;gap:12px;min-width:0}
 .dom .t-tall{color:var(--rc-tall)}
 .dom-ord{display:flex;flex-direction:column;gap:3px;min-width:0}
-.dom-ord b{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;line-height:1.23;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.dom-ord b{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;line-height:1.23;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
 .dom-h{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .dom .t-vindu{color:var(--ink);white-space:nowrap}   /* korall først fra 4 (SPEC §5) */
 .dom.r-4 .t-vindu,.dom.r-5 .t-vindu{color:var(--signal)}
 .dom-setn{margin:20px 0 0;font-size:1.125rem;line-height:1.444}
-.fakta-linje{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fakta-linje{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink)}
 .sek-spot > .tdom{display:inline-flex;align-items:center;gap:8px}
 .tdom .tapt{display:inline-flex;align-items:center;gap:5px}
 .tdom .tapt i{box-sizing:border-box;width:10px;height:10px;border:1.5px dashed var(--signal)}
@@ -907,20 +942,21 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .maal{display:grid;grid-template-columns:110px auto 1fr;align-items:baseline;column-gap:12px}
 .maal .mv{font-family:var(--mono);font-stretch:87.5%;font-size:1.375rem;line-height:1.1;font-weight:800;white-space:nowrap}
 .maal .mv small{margin-left:3px;font-size:.8125rem;font-weight:700}
-.maal .mv .ordv{font-size:.8125rem;letter-spacing:.04em;text-transform:uppercase}
+.maal .mv .ordv{font-size:.8125rem;letter-spacing:var(--sperr);text-transform:uppercase}
 .maal .mu{min-width:0;font-size:1rem;line-height:1.375;color:var(--muted)}
 /* dagvelgeren: ukedag, dagens tall i ruta fra ukeoversikten, dato */
 .dagvelger{display:flex;gap:2px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
 .dagvelger::-webkit-scrollbar{display:none}
 .dagknapp{all:unset;box-sizing:border-box;flex:none;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:44px;min-height:44px;padding:6px 4px 7px;border-bottom:2px solid transparent;cursor:pointer}
-.dagknapp .ud,.dagknapp .dt{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.dagknapp .ud,.dagknapp .dt{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
+.dagknapp .dt{color:var(--ink)}
 .dagknapp[aria-pressed="true"]{border-bottom-color:var(--ink)}
 .dagknapp[aria-pressed="true"] .ud{font-weight:800;color:var(--ink)}
 .dagknapp:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .dagknapp .rute.over{box-shadow:inset 0 0 0 1px var(--hair)}
 /* timestripa (docs/js/timestripe.js): tikk 16, strek 4, segmenter 38, vind 30, tidevann 52 */
 .tstripe{position:relative;margin-top:14px;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none}
-.tstripe .tikk{position:relative;display:grid;height:16px;font-family:var(--mono);font-stretch:87.5%;font-size:.6875rem;line-height:14px;color:var(--muted)}
+.tstripe .tikk{position:relative;display:grid;height:16px;font-family:var(--mono);font-stretch:87.5%;font-size:.75rem;line-height:14px;color:var(--muted)}
 .tstripe .tikk span{text-align:center;white-space:nowrap}
 .tstripe .tikk em{position:absolute;top:0;transform:translateX(-50%);font-style:normal;font-weight:800;text-transform:uppercase;color:var(--ink)}
 .tstripe .skygge{position:absolute;left:0;right:0;top:16px;height:147px;display:grid;pointer-events:none}
@@ -938,7 +974,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .segs i.tapt{box-sizing:border-box;background:none;border:1px dashed var(--signal)}
 .tstripe .segs.miss{background:repeating-linear-gradient(45deg,var(--hatch) 0 1.5px,transparent 1.5px 5px)}
 .tstripe .vnd{display:flex;flex-direction:column;align-items:center;gap:4px;height:30px;margin-top:8px}
-.tstripe .vnd b{font-family:var(--mono);font-stretch:75%;font-size:.6875rem;line-height:1;font-weight:700}
+.tstripe .vnd b{font-family:var(--mono);font-stretch:75%;font-size:.75rem;line-height:1;font-weight:700}
 .tstripe .tk.mork .vnd{color:var(--dim)}
 .tstripe .tide{height:52px;margin-top:8px}
 .tstripe .tsvg{display:block;overflow:visible}
@@ -946,7 +982,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .tsvg .linje{fill:none;stroke:var(--ink);stroke-width:1.75}
 .tstripe .tsvg .koster{fill:none;stroke:var(--signal);stroke-width:2.75;stroke-dasharray:3 2}
 .tstripe .tsvg .eks{fill:var(--ink)}
-.tstripe .tsvg text{font-family:var(--mono);font-stretch:87.5%;font-size:11px;font-weight:700;text-transform:uppercase;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
+.tstripe .tsvg text{font-family:var(--mono);font-stretch:87.5%;font-size:12px;font-weight:700;text-transform:uppercase;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
 .tstripe .tsvg .valgt{fill:var(--bg);stroke:var(--ink);stroke-width:2}
 .tstripe .ring{position:absolute;top:16px;height:87px;box-shadow:inset 0 0 0 2px var(--ink);pointer-events:none}
 .tstripe:focus-within .ring{outline:2px solid var(--focus);outline-offset:2px}
@@ -954,7 +990,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 @media (prefers-reduced-motion: no-preference){.tstripe .ring{transition:left 160ms ease}}
 .sp-tilbakena:empty{display:none}
 .sp-tilbakena{margin-top:12px}
-.sp-tilbakena .tilbakena{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;box-shadow:inset 0 0 0 1px var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.sp-tilbakena .tilbakena{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;box-shadow:inset 0 0 0 1px var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase;cursor:pointer}
 .sp-tilbakena .tilbakena:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 /* retningsskiva (docs/js/skive.js): bildet svakt under hele skiva, i full styrke i svellvinduet */
 .skive-rad{display:flex;align-items:center;gap:18px;margin-top:16px}
@@ -976,7 +1012,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .skive .vd .p{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linecap:square;stroke-linejoin:round}
 .skive .m0{fill:var(--bg)}
 .skive .m1{fill:var(--ink)}
-.skive .hr text{font-family:var(--mono);font-stretch:87.5%;font-size:11px;font-weight:700;text-anchor:middle;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
+.skive .hr text{font-family:var(--mono);font-stretch:87.5%;font-size:12px;font-weight:700;text-anchor:middle;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
 .skive-forkl{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:14px}
 .skive-forkl > span{display:flex;flex-direction:column;gap:3px}
 .skive-forkl .v{font-size:1rem;line-height:1.3125}

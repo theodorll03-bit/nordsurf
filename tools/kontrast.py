@@ -9,11 +9,12 @@ Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
   --rN-ink (ordet) på --raised og --surface; --rN-on (tallet i ruta) på --rN for N=1..5;
   --on-selected på --selected; --on-kartland på --kartland (stedsnavn på land).
 - stor tekst og grafikk (3:1): --rN-tall på --surface (tallet alene er stort; korall er bare lov på tekst fra
-  24 px fet i dagtema, SPEC §1 regel 2); --r3..--r5 på --raised (fylte ruter); --signal på --surface;
+  24 px fet i dagtema, SPEC §1 regel 2); --r1..--r5 på --raised (fylte ruter - 1 og 2 har eget fyll --lav fra
+  designrevisjonen 21.11.2026, fase 1 punkt 5: #8A8478 om dagen, #8FA0A8 i mørketid); --signal på --surface;
   --kartland mot --surface; --focus på --surface og --raised; --muted på
   --raised (stiplede rammer); --water på --raised (tidevannskurven); --dim på --surface (tekst og pil i mørk
   time, bevisst dempet).
-- IKKE krav: --outline-fyllet (--r0..--r2 og tomme ruter) mot flaten. Ruta er pynt; tallet i ruta bærer
+- IKKE krav: --r0 og omrisset rundt tomme ruter (--outline, --hair) mot flaten. Ruta er pynt; tallet i ruta bærer
   meningen (SPEC §8: farge er aldri eneste bærer), og tallet sjekkes over.
 - Tallet i korallruta (--on-signal på --signal) er 4,03:1 om dagen. Theodor 12.11.2026: fargen beholdes, og
   tallet oppå korall er alltid minst 14 px fet, så det regnes som stor tekst (krav 3:1). Gjelder --rN-on på
@@ -100,7 +101,7 @@ def pairs(toks, tema="lys"):
         for bg in ("raised", "surface"):
             out.append((f"ordet --r{n}-ink på --{bg}", col(f"r{n}-ink"), col(bg), TEXT_MIN))
         out.append((f"tallet alene --r{n}-tall på --surface (stor tekst)", col(f"r{n}-tall"), surface, GRAPHIC_MIN))
-        if n >= 3:
+        if n >= 1:   # fra 24.11.2026 også 1 og 2 (før var de --outline, 1,83:1, og unntatt)
             out.append((f"fyll --r{n} på --raised (grafikk)", col(f"r{n}"), col("raised"), GRAPHIC_MIN))
         if n >= 1:
             korall = toks[f"r{n}"].strip() == "var(--signal)"
