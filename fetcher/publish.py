@@ -55,7 +55,7 @@ OUT = ROOT / "docs" / "data"
 # standardverdien som et faktum (fysikk-kontrollør 14.10.2026).
 HOME_HOUR_FIELDS = (
     "t", "stars", "faded", "light", "daylight", "surf_height", "low_reason", "period",
-    "local_rules", "zero_losses", "faded_wind", "faded_tide", "sources_disagree",
+    "local_rules", "zero_losses", "faded_wind", "faded_tide", "sources_disagree", "long_sea", "uncertain",
     "energy_swell_kj", "energy_total_kj", "swell_offshore", "swell_model", "transfer",
     # Spotside/søk (Theodor 15.10.2026): Hjem og Utforsk viser høydespennet, vinden
     # (m/s og type) og svellet ute med retning uten å åpne spoten.
@@ -76,6 +76,7 @@ DETAIL_EXCLUDE = (
     # 24.11.2026 (S29 c del 1): samlet sjø og vindsjø-del ute - bare lagring i forecast.json og data/backtest/inputs/
     "total_model", "bw_period_real_max_3h", "total_height_offshore", "total_dir_offshore", "total_period_offshore",
     "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore",
+    "long_sea_seen",   # K2 (25.11.2026): regelen for lang sjø traff, men vanlig regning vant - bare et merke for læringen
 )
 
 HOME_DAYS = 9   # (oversikt-1) glidebryteren dekket 7 døgn; to døgns margin
@@ -90,7 +91,8 @@ NAA_FIELDS = ("t", "stars", "faded", "light", "daylight", "surf_height", "surf_h
               "energy_total_kj", "swell_model", "local_rules",   # ordet ved 0 stjerner (zeroCause) og kjText trenger disse
               "wind_speed", "wind_type", "wind_dir", "swell_offshore", "dir_offshore", "gust", "zone",
               "directness", "bw_confirms",
-              "long_sea",       # S40: timen er regnet med lang sjø (etiketten «Lang sjø ute» i appen)
+              "long_sea",       # S40: timen er regnet med lang sjø (etiketten «Lang sjø ute» og «usikkert» i appen)
+              "uncertain",      # S40 (V1): bare når timen er usikker - «usikkert» skal følge med ut av spotsiden
               "wind_calm_ms")   # spotens egen vindgrense for ordet (calmWindWord i app.js); Utforsk (16.10): svellkilen bruker samme regel som spotsiden (app.js vinduStatus)
 BW_WHEN = ("blown_out", "stormsjo")   # regel (c), app.js heightMForDisplay
 SUMMARY_DAYS = 8   # 8 døgn: når dagens lys er over, starter appens 7 ruter på i morgen (nattjobben 15.10, PR #12 punkt c)
@@ -137,7 +139,7 @@ def _naa_hour(h):
             v = r
         if k == "daylight" and h.get("light") is not None:
             continue
-        if k in ("sources_disagree", "faded_wind", "faded_tide") and not v:
+        if k in ("sources_disagree", "faded_wind", "faded_tide", "uncertain") and not v:
             continue
         if k == "long_sea":
             v = True   # forsiden trenger bare merket (etiketten «Lang sjø ute»); tallene står alt i swell_offshore/period/dir_offshore

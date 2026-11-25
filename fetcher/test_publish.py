@@ -338,6 +338,13 @@ def main():
     o12 = next(x for x in ov12["spots"] if x["id"] == "unstad")
     b12 = [d["h"] for d in o12["dager"] if d.get("h") and d["h"]["t"] == d12["t"]]
     assert b12 and b12[0]["swell_offshore"] == 2.76 and b12[0]["dir_offshore"] == 359 and b12[0]["long_sea"] is True, b12
+    # V1 (feiljegeren 25.11.2026): «usikkert» følger med til forsiden (bare når timen er usikker, ellers ikke noe felt)
+    assert b12[0]["uncertain"] is True and "uncertain" in publish.NAA_FIELDS and "long_sea" in publish.HOME_HOUR_FIELDS and "uncertain" in publish.HOME_HOUR_FIELDS
+    assert publish._naa_hour({"t": "x", "stars": 2, "uncertain": False}) == {"t": "x", "stars": 2}
+    # K2: merket for «regelen traff, men vanlig regning vant» er bare til læringen og går ikke ut i detaljfila
+    u12["hours"][i12 + 1]["long_sea_seen"] = True
+    assert "long_sea_seen" not in publish.split(fc12)[1]["unstad"]["hours"][i12 + 1]
+    del u12["hours"][i12 + 1]["long_sea_seen"]
     assert publish.vis_lang_sjo(u12["hours"][i12 + 1]) is u12["hours"][i12 + 1], "en time uten long_sea returneres urørt"
     # mangler et tall i long_sea, byttes det ikke (aldri None eller 0 inn over et tall som finnes)
     h12 = publish.vis_lang_sjo(dict(u12["hours"][i12], long_sea=dict(ls, period=None, height_offshore=None)))

@@ -1577,10 +1577,16 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         if hour.get("bw_period") is not None and bw_detail.get("bw_period_basis") == "ute":
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: ikke brukt. "
                          + f"Nesten alt ute er svell med periode {period:.1f} s".replace(".", ","))
-        elif long_sea_used and bw_detail.get("bw_period_basis") == "lang_sjo_kort_topp":
-            # M4: kort topp ved punktet i selve timen (eller ukjent) - høyst halve energien der er den lange sjøen
-            kort = f"{hour['bw_period']:.0f} s" if hour.get("bw_period") is not None else "ukjent"
-            items.append(f"BarentsWatch-periode {kort}: kort, høyst halve energien regnes som lang sjø")
+        elif long_sea_used:
+            # M4 og K1 (fysikk-kontrolløren 25.11.2026): regelen leser toppperioden ved punktet I SELVE TIMEN, også når
+            # tallet er jevnet ut mellom to modelltimer (BarentsWatch gir tall hver tredje time). Da står det i linja.
+            # Under 7 s eller ukjent: høyst halve energien der er den lange sjøen. Ellers hele høyden.
+            jevnet = " (jevnet ut mellom to modelltimer)" if hour.get("bw_interpolated") else ""
+            bw_p_txt = f"{hour['bw_period']:.0f} s{jevnet}" if hour.get("bw_period") is not None else "ukjent"
+            if bw_detail.get("bw_period_basis") == "lang_sjo_kort_topp":
+                items.append(f"BarentsWatch-periode {bw_p_txt}: kort, høyst halve energien regnes som lang sjø")
+            else:
+                items.append(f"BarentsWatch-periode {bw_p_txt}: lang, hele høyden ved punktet regnes som lang sjø")
         elif hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         if bw_detail["spot_direction_offshore"]:
@@ -1728,7 +1734,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     if sources_disagree and disagree_cap is not None and disagree_cap > potential:
         items.append(f"Kilder uenige: kappet fra {disagree_cap} til maks 1 stjerne")
     elif capped_from is not None and capped_from > potential:
-        items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner (ingen BarentsWatch, og retning utenfor vinduet eller stor dreining)")
+        # S40 (feiljegeren 25.11.2026, V4): i en time regnet med lang sjø er grunnen selve omregningen, ikke manglende BarentsWatch
+        grunn = ("lang sjø regnet som svell er et anslag" if long_sea_used
+                 else "ingen BarentsWatch, og retning utenfor vinduet eller stor dreining")
+        items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner ({grunn})")
     # 15.10.2026: 5-stjerners-porten
     if five_open:
         items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter - 5 mulig")
@@ -2564,6 +2573,9 @@ def rate(hour, spot, _long_sea=True):
     # S40: regelen gjelder bare når den gir FLERE poeng enn den vanlige regningen. Gir den like mange eller færre
     # (taket på 3, flat-sperren etter M4, surfehøyde over ideal_height), står timen akkurat som uten regelen: ingen
     # time skifter bare ord eller høyde, og ingen går ned.
+    # K2 (fysikk-kontrolløren 25.11.2026): treffet merkes (long_sea_seen), så læringen kan hoppe over timen også da.
+    # Svellet i timen er fortsatt det lille GFS skilte ut, mens høyden ved punktet er den lange sjøen. Resten av
+    # svaret er den vanlige regningen, urørt. Appen leser ikke merket (publish.DETAIL_EXCLUDE).
     if long_sea_base is not None and result["stars"] <= long_sea_base["stars"]:
-        return long_sea_base
+        return {**long_sea_base, "long_sea_seen": True}
     return result

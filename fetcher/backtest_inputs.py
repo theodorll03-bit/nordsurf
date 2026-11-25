@@ -29,13 +29,18 @@ INPUT_KEYS = ("bw_height", "bw_dir", "bw_period", "bw_height_max", "bw_interpola
               "height_spot_model", "turn", "wind_speed", "wind_dir", "gust", "wind_source", "tide", "light", "daylight",
               # S29 c del 1 (24.11.2026): samlet sjø og vindsjø-del ute, så regelen for lang sjø kan prøves bakover
               "total_model", "bw_period_real_max_3h", "total_height_offshore", "total_dir_offshore", "total_period_offshore",
-              "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore")
+              "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore",
+              # K3 (fysikk-kontrolløren 25.11.2026): regelen for lang sjø hopper over timer der svellet er glattet (M3).
+              # Uten merket ville en avspilling av arkivet regnet slike timer annerledes enn henteren gjorde.
+              "swell_despiked")
 
 
 def snapshot(fc):
     """Inndata-bildet av et varsel: de første INPUT_HOURS timene per spot, bare INPUT_KEYS, og bare verdier som
     finnes (None lagres ikke, så «mangler» blir aldri et tall). Spots med status «hemmelig» er aldri med."""
-    out = {"generated": fc["generated"], "spots": {}}
+    # time_axis_verified: timene er varselets egne («t» i forecast.json, UTC), ikke et oppslag i en modellfil.
+    # backtest.load_inputs_archive() leser bare filer med merket (K3: uten det ble arkivet aldri lest av testlaben).
+    out = {"generated": fc["generated"], "time_axis_verified": True, "spots": {}}
     for s in fc["spots"]:
         if s.get("status") == "hemmelig":
             continue

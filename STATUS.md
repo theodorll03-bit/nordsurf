@@ -48,6 +48,19 @@ Timer som endrer poeng, surfehøyde eller noe annet i svaret fra `rate()`: **16*
 
 - **Flettet med main etter «Best på lavt vann» (PR 55), 25.11.2026:** konflikter i STATUS.md, `timestripe.js`, `utforsk.js`, `sw.js` og `test_rating.py`, løst ved å beholde begge sider (S28 sin vindtekst `windMsText()` og visningen av lang sjø; mains test 42 og 43 foran test 44). Avspillingen på det flettede gir samme tabell: 16 timer, bare Unstad 21. og 22.11, alle opp, ingen ned, og ingen time har annet poeng eller annen surfehøyde enn før flettingen. I samme commit: forklaringsarket «Svell ute» (`explain.js`) og skjermleserteksten til retningsskiva sier nå «lang sjø» i slike timer. Alle 17 testene grønne på første forsøk, nettlesertestene én om gangen. Bilder etter flettingen: `privat/design-b4/s40-2026-11-24/etter-fletting/`.
 
+- **Rettet etter kontrolløren og feiljegeren, 25.11.2026** (godkjent på `5a83b5b`, ingen stoppere; rapporter i `privat/kontor/observasjoner/kontrollor-s40-2026-11-25.md` og `feiljeger-s40-2026-11-25.md`):
+  - **V1, «usikkert» følger med ut av spotsiden:** `uncertain` er med i nå-timen og beste time i oversikten (bare når timen er usikker). I timer regnet med lang sjø sier Hjem «Bra på Unstad i dag, usikkert.», raden «Nå Bra, usikkert», og setningen med tallene (favorittraden og toppkortet på spotsiden) slutter med «Usikkert varsel.» Tabellen på PC-forsiden og kortet i Utforsk sier «Bra, usikkert». Merket står bare på timer med `long_sea`, ikke på andre usikre timer: det ville vært en ny visning for alle spots, og er ikke bestilt.
+  - **V2, push-varselet:** `notify.describe()` bruker den lange sjøens periode og legger til «lang sjø regnet som svell, usikkert varsel». Varselet sier fortsatt «stjerner» og `sideonshore` som før (hele varselteksten gjør det, ikke rørt).
+  - **V4:** kapp-linja sier «(lang sjø regnet som svell er et anslag)» i slike timer.
+  - **V5:** lagringssteget i `forecast.yml` har `continue-on-error: true`, så heller ikke tidsgrensa kan stoppe opplasting og publisering.
+  - **K1:** regelen leser toppperioden ved punktet i selve timen, også når tallet er jevnet ut mellom to modelltimer. «Hvorfor» sier det nå: «BarentsWatch-periode 8 s (jevnet ut mellom to modelltimer): lang, hele høyden ved punktet regnes som lang sjø». Regelen selv er ikke endret.
+  - **K2:** treffer regelen uten å gi flere poeng, merkes timen `long_sea_seen` (resten av svaret er urørt, og merket går ikke ut i appens filer). Læringen hopper over slike timer også.
+  - **K3:** `swell_despiked` er med i inndata-bildet, og fila har `time_axis_verified`, så `backtest.load_inputs_archive()` leser den. De fire gamle filene uten merket leses fortsatt ikke.
+  - **K4:** CLAUDE.md presisert (M4 også når perioden mangler, interpolerte tall, spennet 2,06-2,86 m og 9,0-10,15 s, og `long_sea_seen`).
+  - **Kosmetisk:** etikettkolonnen i «Hvorfor» er 7,5 rem (før 7), så «BARENTSWATCH-» står med bindestreken på første linje på 390 og 375 px (målt).
+  - **S42-tekstene i henteren** (`3574576` fra `design/revisjon-fase2`) er hentet inn som egen commit. Testen der het også 44 og heter 45 her.
+  - Bilder: `privat/design-b4/s40-2026-11-24/etter-retting/`.
+
 ### Del 1: lagring
 
 - **Åtte nye felt per time:** `total_model`, `total_height_offshore`, `total_dir_offshore`, `total_period_offshore` (den samlede sjøen ute, samme kilde som totalhøyden i `sources.openmeteo_marine()`), `wind_wave_height_offshore`, `wind_wave_dir_offshore`, `wind_wave_period_offshore` (GFS Wave sin vindsjø-del) og `bw_period_real_max_3h` (lengste toppperiode ved BarentsWatch-punktet i en ekte modelltime innen ±3 timer, regnet av tall henteren alt har). Mangler: `None`, aldri 0. GFS svarer 0,0 m fra 0° med 0,0 s når den ikke har skilt ut vindsjø, og det lagres som «mangler».

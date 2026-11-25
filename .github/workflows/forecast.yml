@@ -170,6 +170,7 @@ jobs:
       # Står ETTER publish.py, som skriver forecast.json uten «hemmelig»-spots. Feiler steget, går kjøringen videre.
       - name: Inndata-bilde, døgnets første varsel (S40)
         if: ${{ github.event.inputs.proeve != 'true' }}
+        continue-on-error: true   # heller ikke tidsgrensa skal kunne stoppe opplastingen og publiseringen (feiljegeren 25.11.2026, V5)
         timeout-minutes: 2
         run: python fetcher/backtest_inputs.py --daglig || echo "Inndata-bildet feilet - varselet lagres likevel"
       - name: Last opp varselet
@@ -253,6 +254,7 @@ jobs:
       # Står ETTER publish.py, som skriver forecast.json uten «hemmelig»-spots. Feiler steget, går kjøringen videre.
       - name: Inndata-bilde, døgnets første varsel (S40)
         if: ${{ github.event.inputs.proeve != 'true' }}
+        continue-on-error: true   # heller ikke tidsgrensa skal kunne stoppe opplastingen og publiseringen (feiljegeren 25.11.2026, V5)
         timeout-minutes: 2
         run: python fetcher/backtest_inputs.py --daglig || echo "Inndata-bildet feilet - varselet lagres likevel"
       - name: Last opp varselet

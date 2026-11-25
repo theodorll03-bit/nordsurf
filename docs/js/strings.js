@@ -125,6 +125,9 @@
       lys: (a, b) => `Lys ${a}–${b}`, lysHele: "Lys hele døgnet",   // midnattssol (Theodor 16.11.2026)
       fra: (sted) => `Fra ${sted}`,
       ordSpot: (ord, spot, dag) => `${ord} på ${spot} ${dag}.`,
+      // S40 (feiljegeren 25.11.2026, V1): en time regnet med lang sjø (long_sea) er usikker. Ordet følger med ut av
+      // spotsiden: «Bra på Unstad i dag, usikkert.», «Nå Bra, usikkert», og «Usikkert varsel.» etter tallene i setningen.
+      usikkert: "usikkert",
       ord: (ord, dag) => `${ord} ${dag}.`,
       ingen: (dag) => `Ingen surf ${dag}.`,
       ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,

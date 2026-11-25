@@ -126,7 +126,7 @@
     const tid = S.utforskDay==null ? "nå" : t ? `${fmtWdLong.format(t)} kl. ${fmtHour.format(t)}` : cap(fmtWdLong.format(new Date(S.utforskDay + "T11:00:00Z")));
     const hoyde = v.forbud ? null : H().ordOgHoyde(h).hoyde;
     return `<div class="topp"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(H().stedText(s))} · ${esc(tid)}</div></div><button type="button" class="iconbtn lukk" id="kortLukk" aria-label="Lukk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
-      <div class="vurd r-${min5(v.st)}">${ruteHtml(v.st, v.rute)}<span class="ord">${esc(v.word)}</span>${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}${v.forbud ? `<span class="omr">${esc(v.forbud.periode)}</span>` : ""}</div>
+      <div class="vurd r-${min5(v.st)}">${ruteHtml(v.st, v.rute)}<span class="ord">${esc(v.word + (v.forbud ? "" : H().usikkertTillegg(h)))}</span>${hoyde ? `<span class="num">${esc(hoyde)} m</span>` : ""}${v.forbud ? `<span class="omr">${esc(v.forbud.periode)}</span>` : ""}</div>
       <div class="fakta"><div>Surf<b>${v.forbud ? "–" : hoyde ? `${esc(hoyde)} m` : h && h.surf_height!=null ? esc(Spot.kroppshoyde(h) || ratingWord(h)) : "–"}</b></div><div>${h && h.long_sea ? esc(STR.spot.langSjo) : "Svell ute"}<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}${h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))}` : ""}` : "–"}</b></div><div>Vind<b>${h && h.wind_speed!=null ? `${windMsText(h)} m/s ${esc(windLabel(h))}` : "–"}</b></div></div>
       <button type="button" class="primary" id="kortApne">Se hele varselet</button>`;
   }

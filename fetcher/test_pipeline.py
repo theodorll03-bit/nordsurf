@@ -1634,7 +1634,7 @@ import tempfile as _tmp18
 with _tmp18.TemporaryDirectory() as _d18:
     _d18 = Path(_d18)
     _h18 = [{"t": f"2026-11-21T{i % 24:02d}:00:00Z", "bw_height": 0.4, "wind_wave_height_offshore": 2.6, "wind_wave_period_offshore": None,
-             "stars": 3, "tide": None} for i in range(80)]
+             "stars": 3, "tide": None, "swell_despiked": {"swell_height": 0.5, "dir": 250, "period": 12.0} if i % 24 == 7 else None} for i in range(80)]
     _fc18 = lambda gen: {"generated": gen, "spots": [{"id": "unstad", "hours": _h18},
                                                      {"id": "skjult", "status": "hemmelig", "hours": _h18},
                                                      {"id": "ny", "status": "forelopig", "hours": _h18[:5]}]}
@@ -1648,6 +1648,18 @@ with _tmp18.TemporaryDirectory() as _d18:
     # bare inndata (ikke resultatet), og det som mangler lagres ikke - aldri som 0
     assert _t18 == {"bw_height": 0.4, "wind_wave_height_offshore": 2.6}, _t18
     assert len(_h18[:backtest_inputs.INPUT_HOURS]) == 72
+    # K3 (fysikk-kontrolløren 25.11.2026): merket for glattet svell følger med (regelen for lang sjø hopper over slike timer),
+    # og fila har time_axis_verified, så testlaben faktisk leser den (uten merket hoppet load_inputs_archive() over alt)
+    assert _o18["spots"]["unstad"]["2026-11-21T07:00:00Z"]["swell_despiked"] == {"swell_height": 0.5, "dir": 250, "period": 12.0}
+    assert "swell_despiked" not in _t18 and _o18["time_axis_verified"] is True
+    import backtest as _backtest18
+    _gml18 = _backtest18.INPUTS_DIR
+    _backtest18.INPUTS_DIR = _d18 / "inn"
+    try:
+        _ark18 = _backtest18.load_inputs_archive()
+    finally:
+        _backtest18.INPUTS_DIR = _gml18
+    assert set(_ark18) == {"unstad", "ny"} and _ark18["unstad"]["2026-11-21T05:00:00Z"] == _t18, "testlaben skal lese inndata-bildet"
     # senere kjøring samme døgn: ingenting skrives. Nytt døgn: ny fil. Uten --daglig (mandagens testlab): skriver alltid.
     (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-21T09:00:00+00:00")), encoding="utf-8")
     assert backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn") is None
@@ -1662,4 +1674,17 @@ assert _wf18.count("python fetcher/backtest_inputs.py --daglig") == 2 and _wf18.
 for _del18 in _wf18.split("\n  sekvensiell:"):
     assert _del18.index("run: python fetcher/publish.py") < _del18.index("backtest_inputs.py --daglig") < _del18.index('git commit -m "Nytt varsel (læringsdata)"')
 assert _wf18.count('git commit -m') == 2, "det daglige bildet skal ikke ha sin egen commit"
+# V5 (feiljegeren 25.11.2026): steget står foran opplastingen, så verken en feil eller tidsgrensa får stoppe jobben
+for _del18 in _wf18.split("\n  sekvensiell:"):
+    _steg18 = _del18[_del18.index("- name: Inndata-bilde, døgnets første varsel"):_del18.index("- name: Last opp varselet")]
+    assert "continue-on-error: true" in _steg18 and "timeout-minutes: 2" in _steg18, _steg18
+# V2 (feiljegeren 25.11.2026): push-varselet for et vindu der regelen for lang sjø slo til, bruker den lange sjøens periode
+# (timen i forecast.json har svell-delens 12 s urørt) og sier at varselet er usikkert. Andre vinduer er som før.
+_now19 = dt.datetime(2026, 11, 21, 8, 0, tzinfo=dt.timezone.utc)
+_t19 = {"stars": 3, "surf_height": 1.15, "surf_height_sets": 1.46, "period": 12.0, "wind_type": "sideonshore"}
+_w19 = lambda h: {"start": dt.datetime(2026, 11, 21, 11, tzinfo=dt.timezone.utc), "end": dt.datetime(2026, 11, 21, 13, tzinfo=dt.timezone.utc), "best": 3, "hours": [h]}
+_tit19, _txt19 = notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359})), _now19)
+assert _txt19 == "1,1 m (sett 1,5 m), 10 s, sideonshore, lang sjø regnet som svell, usikkert varsel", _txt19
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19)), _now19)[1] == "1,1 m (sett 1,5 m), 12 s, sideonshore"
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": None})), _now19)[1].startswith("1,1 m (sett 1,5 m), 12 s"), "mangler perioden i long_sea: timens egen, aldri 0"
 print("18: inndata-bildet lagres daglig (døgnets første varsel, uten hemmelige spots, mangler lagres ikke), i samme commit som læringsdataene - OK")
