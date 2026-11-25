@@ -664,7 +664,7 @@ function surfAdjustmentLine(h){
   if(!dirOk) reasons.push(h.spot_direction_diff!=null ? `retning ${Math.round(h.spot_direction_diff)}° skrått ved punktet` : "retning ved punktet");
   return `Etter justering ${nf1.format(h.height)} m (${reasons.join(", ")})`;
 }
-const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet - langt svell reiser seg mer når det treffer grunnen.";
+const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet: langt svell reiser seg mer når det treffer grunnen.";
 // 06.10.2026, Theodors oppgave (andre runde): samme tekst Theodor selv
 // formulerte, ordrett - erstatter den første versjonen av denne teksten.
 const ENERGY_EXPLAINER = "Energi i bølgene ute. Lang periode gir mye mer energi og kraft, selv med samme høyde.";
@@ -1087,7 +1087,7 @@ function renderLogs(){
       `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren: fjernes aldri automatisk.</div>`
     ).join("");
     return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
-      <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
+      <p>Eksponering per retning: hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
       ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå: ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
@@ -1115,7 +1115,7 @@ function renderLogs(){
     const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeightNear,l.forecastPeriod))));
     const better = dev250<=dev150 ? "250 m" : "150 m";
     return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
-      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`};
+      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet: bytt manuelt i spots.json om du vil.</p></div>`};
   }));
   // Hvor ofte timer der kildene var uenige (BarentsWatch-høyde, men trolig
   // vindsjø eller feil retning ved spoten - kappet til maks 1 stjerne)
@@ -1149,7 +1149,7 @@ function renderLogs(){
       // (var energyTotalKj, samme feil som selve regelen hadde).
       const broke = good.filter(l=>l.energySwellKj!=null && l.energySwellKj < zero);
       if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
-        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) hadde under ${nf0.format(zero)} kJ svellenergi - under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) hadde under ${nf0.format(zero)} kJ svellenergi: under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
       }
     }
     if(lr.tide_prefer && lr.tide_penalty_high!=null){

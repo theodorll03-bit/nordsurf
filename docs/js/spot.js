@@ -234,24 +234,28 @@
     const hh = fmtHour.format(t);
     const maal = (ikon, key, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
     // Surfehøyden ved spoten er det store tallet (fase 3 punkt 1), med kroppsmålet under. Høyden er den samme som
-    // listene viser (visHoyde, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk time: tallet
-    // står i grått, som tallene i timestripa (SPEC §5).
+    // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
+    // time: tallet står i grått, som tallene i timestripa, og under «–» står bare årsaken («Treffer ikke»), ikke karakteren («Flatt»): ingen vurdering i mørket (SPEC §5).
     const hoyde = H.heightText(h), mork = !!h && H.mork(h);
-    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
-      : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div><div class="svell-sub">${esc(h._forbud ? STR.hjem.forbud : ratingWord(h))}</div>`
+    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : mork ? karakter(h).aarsak : ratingWord(h);
+    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
+      : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
       : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
     const surf = `<div class="svell surf"><div class="etikett">${forklar("surf_height", `${PIL("", null, IK_SURF)}${esc(STR.spot.surf)}`)}</div>${stort}</div>`;
     const rader = [];
     // svellet ute er en rad på linje med vind og tidevann (fase 3 punkt 1). Pila er korall bare når svellet er i
     // vinduet og timen har 4 eller mer (fase 3 punkt 4), ellers blekk i vinduet og grå utenfor.
-    if(h && h.swell_offshore!=null){
+    // Mangler svellet i en time med andre tall, står raden med ordet for det (feiljegeren, funn 6), og periode og retning
+    // står når de finnes.
+    if(h && (h.swell_offshore!=null || H.known(h))){
       const dir = h.dir_offshore!=null ? h.dir_offshore : null;
       const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
       const hoy = inne && fire(h);
       const sub = h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
         : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
       rader.push(maal(PIL("sv" + (inne ? " inne" : "") + (hoy ? " hoy" : ""), dir, IK_SVELL), "swell", h.long_sea ? STR.spot.langSjo : STR.spot.svell,
-        esc(nf1.format(h.swell_offshore)), "m", esc(sub), h.long_sea ? STR.spot.langSjoNote : ""));
+        h.swell_offshore!=null ? esc(nf1.format(h.swell_offshore)) : "–", h.swell_offshore!=null ? "m" : "",
+        esc([h.swell_offshore!=null ? null : cap(STR.spot.mangler), sub || null].filter(Boolean).join(" · ")), h.long_sea ? STR.spot.langSjoNote : ""));
     }
     if(h && h.wind_speed!=null){
       const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
@@ -377,12 +381,12 @@
     // spoten og vinden i den beste timen. Surfehøyden, ikke svellet ute (fase 3 punkt 3): «–» når ordet er Flatt eller Treffer ikke
     const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null, h = b.h;
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;   // som i domHtml: et vindu som er over, vises ikke
-    const ht = n!=null && h ? H.ordOgHoyde(h).hoyde : null, surf = n!=null ? (ht ? `${ht} m` : "–") : "", grunn = domGrunn(b);
+    const ht = n!=null && h ? H.ordOgHoyde(h).hoyde : null, surf = n!=null ? (ht ? `${ht} m` : "–") : "", grunn = domGrunn(b), ord = domOrd(b) + (n!=null ? H.usikkertTillegg(h) : "");   // «, usikkert» ved lang sjø (S40), som i listene
     const vind = h && h.wind_speed!=null ? windLabel(h) : "";
-    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + domOrd(b) + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${STR.spot.surf.toLowerCase()} ${surf}` : ""}`;
+    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${STR.spot.surf.toLowerCase()} ${surf}` : ""}`;
     return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
         <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
-        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(domOrd(b))}</span></span>
+        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
         ${grunn ? `<span class="dk-grunn">${esc(grunn)}</span>` : ""}<span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
         <span class="dk-sub">${esc(surf)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
   }

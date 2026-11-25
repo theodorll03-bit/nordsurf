@@ -124,7 +124,7 @@
         ["Kilde", h.wind_source==="openmeteo" ? "Open-Meteo GFS (langtid)" : h.wind_source==="metno" ? "met.no" + (h.wind_interpolated ? ", jevnet ut mellom 6-timersverdier" : "") : "mangler"],
       ],
       how: () => ["Fralands avgjøres av spotens fralandssektor. Ellers måles vinden mot retningen stranda vender: innenfor 45° er rett pålands, 45–80° skrått pålands, over 80° sidevind.",
-                  "Vindtabellen trekker poeng etter styrke og type: vist som stiplede ruter i timestripa."],
+                  "Vindtabellen trekker poeng etter styrke og type: vist som stiplede ruter i timestripa, bare for valgt time."],
     },
     tide: {
       title: "Tidevann",
@@ -144,7 +144,7 @@
     },
     stars: {
       title: "Poeng",
-      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 poeng sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til ett poeng). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden) eller «For mye vind» (sterk fralandsvind), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Stiplede ruter i timestripa er poeng som vind og tidevann tar fra svellets potensial.",
+      what: "0 flatt, 1 dårlig, 2 ok, 3 bra, 4 veldig bra, 5 rått. Ved 0 poeng sier ordet hvor mye som faktisk er der: «Flatt» under 0,3 m surfehøyde, «Smått» fra 0,3 m (litt bølger, for lite til ett poeng). Fra 0,8 m sier ordet hva som trekker mest: «Grøtete» (kort periode eller lite energi), «Blåst ut» (vinden) eller «For mye vind» (sterk fralandsvind), «Feil tidevann», «For lite svell» (lokal energigrense, kilden nevnes), «Usikkert» (kildene er uenige om svellet når inn), eller «Ikke surfbart nå» når ingen enkelt ting er hovedårsaken. Trykk på ratingen for forklaringen. Stiplede ruter i timestripa, bare for valgt time, er poeng som vind og tidevann tar fra svellets potensial.",
       numbers: (h) => [["Poeng", h.stars!=null ? String(h.stars) : "mangler"], ["Tapt", h.faded!=null ? String(h.faded) : "mangler"], ["Grunn for 0–1", h.low_reason ? (typeof ratingWord === "function" ? ratingWord(h) : lowWord(h.low_reason)) : "–"]],
       how: () => ["Surfehøyde mot spotens idealhøyde × periode × energi × retningstreff gir potensialet; vind og tidevann trekker fra. Trykk på tallet for hele regnestykket."],
     },
@@ -228,7 +228,16 @@
     const c = document.getElementById("exClose"), s = document.getElementById("exScrim");
     if(c) c.onclick = closeExplain;
     if(s) s.onclick = closeExplain;
-    document.addEventListener("keydown", (ev)=>{ if(ev.key==="Escape" && document.getElementById("exSheet").classList.contains("open")) closeExplain(); });
+    document.addEventListener("keydown", (ev)=>{
+      if(ev.key==="Escape" && document.getElementById("exSheet").classList.contains("open")) return closeExplain();
+      // arkene er modale (aria-modal): Tab og Shift+Tab blir i arket som er åpent, siden bak kan ikke nås (feiljegeren 25.11.2026, funn 15)
+      const ark = ev.key==="Tab" ? [...document.querySelectorAll(".sheet.open")].pop() : null;
+      if(!ark) return;
+      const f = [...ark.querySelectorAll("a[href],button,input,select,textarea,summary,[tabindex]")].filter(e=> !e.disabled && e.tabIndex >= 0 && e.getClientRects().length);
+      if(!f.length) return ev.preventDefault();
+      const i = f.indexOf(document.activeElement), n = ev.shiftKey ? f.length - 1 : 0;
+      if(i < 0 || (ev.shiftKey ? i===0 : i===f.length - 1)){ ev.preventDefault(); f[n].focus(); }
+    });
   });
   window.EXPLAIN = EXPLAIN;
   window.openExplain = openExplain;

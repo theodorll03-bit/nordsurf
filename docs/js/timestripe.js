@@ -6,8 +6,8 @@
    i en forbudsperiode har ingen segmenter (SPEC §5), og timer uten data er skravert - aldri 0.
 
    Designrevisjonen fase 3 punkt 4: stolpene har fast skala per spot, fra 0 til spotens max_height (spots.json, i
-   detaljfila), og en tynn linje ved nedre grense i ideal_height. Høyden er den samme som det store tallet i KL.-blokka
-   (Spot.visHoyde): Flatt og Treffer ikke har ingen stolpe, bare grunnlinja. Tapte poeng stiples i blekk, ikke korall,
+   detaljfila), og en tynn linje ved nedre grense i ideal_height, med tallet i margen utenfor stolpene. Høyden er den samme som det store tallet i KL.-blokka
+   (hoydeVist i ui.js): Flatt og Treffer ikke har ingen stolpe, bare grunnlinja. Mangler høyden i dataene, er stolpeplassen skravert. Tapte poeng stiples i blekk, ikke korall,
    og bare for valgt time (klassen «valgt» på kolonnen, flyttes av velg()). Teksten («−2 vind») står i KL.-blokka.
 
    Ren visning: ingen tall regnes. Timen velges ved å dra eller trykke i stripa, eller med piltaster og
@@ -78,7 +78,7 @@
     }).join("");
     // surfehøyden som stolpe med fast skala: 0 til spotens max_height. Mangler den, skaleres det mot den høyeste
     // surfehøyden i varselet for spoten (aldri mot dagens egen topp, så dagene kan sammenlignes). Over skalaen: full stolpe.
-    const hoydeAv = (h)=>{ const v = h && !h._forbud && H.known(h) && window.Spot ? Spot.visHoyde(h) : null; return v ? v.a : null; };
+    const hoydeAv = (h)=>{ const v = h && !h._forbud && H.known(h) ? H.hoydeVist(h) : null; return v ? v.a : null; };
     const maks = s.max_height > 0 ? s.max_height : Math.max(1, ...s.hours.map(h=> hoydeAv(h) || 0));
     const ideal = Array.isArray(s.ideal_height) && s.ideal_height[0] > 0 && s.ideal_height[0] < maks ? s.ideal_height[0] : null;
     const px = (v)=> Math.max(2, Math.round(Math.min(1, v / maks) * SURF_H));
@@ -87,7 +87,7 @@
       const h = c.i >= 0 ? s.hours[c.i] : null;
       const mork = !!h && H.mork(h), kjent = !!h && H.known(h), forbud = !!h && !!h._forbud;   // forbudsperiode: ingen vurdering, aldri «0»
       const st = kjent && !mork && !forbud ? Math.min(5, H.stars(h)) : 0, lost = kjent && !mork && !forbud ? Math.min(5 - st, lostAll(h)) : 0;
-      // tidevannets poeng står nærmest de hele (vinden bokføres først, øverst) og er stiplet i blekk, vindens i korall (S33 c)
+      // tidevannets poeng står nærmest de hele (vinden bokføres først, øverst) og er stiplet i blekk, som vindens (fase 3 punkt 4)
       const lostTv = Math.min(lost, kjent ? tideLost(h) : 0);
       let seg = "";
       if(!h) seg = `<div class="segs vaert"></div>`;
@@ -96,7 +96,7 @@
       else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lostTv ? "tapt tv" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
       // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe
       const v = hoydeAv(h);
-      const surf = `<div class="srf">${bred ? `<b>${v!=null ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && !kjent ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
+      const surf = `<div class="srf">${bred ? `<b>${v!=null ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
@@ -123,8 +123,8 @@
     const R = STR.web ? STR.web.rader : null;
     const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.surf)} <small>m</small></span>
       <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small>m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
-    return `<div class="tstripe${bred ? " bred" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
-      ${bred ? `${etiketter}<div class="tflate">${inni}</div>` : inni}
+    return `<div class="tstripe${bred ? " bred" : ""}${ideal!=null ? " med-ideal" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
+      ${etiketter}<div class="tflate">${inni}</div>
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>
       <input class="sr" type="range" id="tstripeVelg" min="${valgbare[0]}" max="${valgbare[valgbare.length-1]}" step="1" value="${kSel}" aria-valuetext="${esc(ariaTime(s, cols[kSel], H, best, ev))}">
     </div>`;

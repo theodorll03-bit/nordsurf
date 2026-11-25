@@ -95,9 +95,24 @@
   const spotById = (id)=> DATA.spots.find(x=>x.id===id);
   const numHtml = (t)=> esc(t).replace(/\d[\d,.–]*/g, m=>`<span class="num">${m}</span>`);
   const min5 = (n)=> Math.min(5, n||0);
-  function heightText(h){
-    // «1,6–2,1 m» (høyden som vises–settene); regel (c) via Spot.visHoyde; tallet mangler → null
+  // Høyden som vises, {a, b} eller null («–»): felles for listene, det store tallet i KL.-blokka og stolpene i timestripa
+  // (feiljegeren 25.11.2026, funn 3). Regel (c) via Spot.visHoyde, og uten poeng bare fra 0,3 m: en flat time har ingen
+  // høyde noe sted, aldri «0,0 m».
+  function hoydeVist(h){
     const v = window.Spot ? Spot.visHoyde(h) : (h && h.surf_height!=null ? {a: h.surf_height, b: h.surf_height_sets} : null);
+    return v && (stars(h) >= 1 || v.a >= 0.3) ? v : null;
+  }
+  // Høyden skulle vært der, men tallet mangler i dataene: skravur i timestripa, aldri en tom kolonne som ser ut som flatt
+  // (feiljegeren, funn 7). Flatt og Treffer ikke mangler ikke noe, de har ingen høyde.
+  function hoydeMangler(h){
+    if(!known(h) || h._forbud || (window.Spot && Spot.visHoyde(h))) return false;
+    if(!h.low_reason || h.low_reason==="stormsjo") return true;
+    if(h.low_reason==="blown_out") return !!h.stars || calmWindWord(h)==null;
+    return false;
+  }
+  function heightText(h){
+    // «1,6–2,1 m» (høyden som vises–settene); ingen høyde → null
+    const v = hoydeVist(h);
     if(!v) return null;
     const a = nf1.format(v.a), b = v.b!=null ? nf1.format(v.b) : null;
     return b!=null && b!==a ? `${a}–${b}` : a;
@@ -107,10 +122,7 @@
   const usikkertTillegg = (h)=> h && h.long_sea ? `, ${STR.hjem.usikkert}` : "";
   function ordOgHoyde(h){
     if(!h) return {ord:"–", hoyde:null};
-    const ord = ratingWord(h);
-    const v = window.Spot ? Spot.visHoyde(h) : null;
-    const show = v!=null && (stars(h) >= 1 || v.a >= 0.3);
-    return {ord, hoyde: show ? heightText(h) : null};
+    return {ord: ratingWord(h), hoyde: heightText(h)};
   }
   // Ordet og høyden til høyre i listeraden (Søk, Utforsk og lista utenfor kartet): karakteren, surfehøyden ved spoten
   // («–» når ordet er Flatt eller Treffer ikke, fase 3 punkt 3) og årsaken på egen linje (fase 3 punkt 5). Er ruta tom
@@ -118,7 +130,7 @@
   function naHtml(h, rute, ordTom){
     if(rute) return esc(ordTom);
     const k = karakter(h), hoyde = ordOgHoyde(h).hoyde;
-    return `${esc(k.ord)}<span class="num">${hoyde ? `${esc(hoyde)} m` : "–"}</span>${k.aarsak ? `<span class="grunn">${esc(k.aarsak)}</span>` : ""}`;
+    return `${esc(k.ord + usikkertTillegg(h))}<span class="num">${hoyde ? `${esc(hoyde)} m` : "–"}</span>${k.aarsak ? `<span class="grunn">${esc(k.aarsak)}</span>` : ""}`;
   }
   function windText(h){
     if(!h || h.wind_speed==null) return null;
@@ -230,8 +242,9 @@
     let neste = null, surfSenere = false;
     for(const {d, rs} of rest){ const t = topp(rs); if(!t || t.b.st < 1) continue; surfSenere = true; if(t.b.st >= 2 && (!neste || t.b.st > neste.t.b.st)) neste = {t, d}; }
     // Dårlig dag (under 2 poeng, med tall) og en bedre dag senere: overskriften gir råd (fase 3 punkt 5). «Lite å hente
-    // i morgen.» og så hvor og når: «Tromvik er best, onsdag.» Dagene uten tall (mangler, mørkt, forbud, over) er som før.
-    if(neste && st0 < 2 && r0.some(r=> r.b.st!=null) && !noen(r0, "miss") && !alle(r0, "over"))
+    // i morgen.» og så hvor og når: «Tromvik er best, onsdag.» Mangler tallet, eller er lyset over, på en av spotene, sies
+    // setningene under som før («Ingen surf resten av dagen.»; feiljegeren, funn 5). Dager uten noe tall (mørkt, forbud) også.
+    if(neste && st0 < 2 && r0.some(r=> r.b.st!=null) && !noen(r0, "miss") && !noen(r0, "over"))
       return [H.lite(dag0), H.bestSpot(neste.t.s.name, dagOrd(neste.d) + usikkertTillegg(neste.t.b.h))];
     let s1;
     if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0 + usikkertTillegg(t0.b.h));
@@ -318,7 +331,7 @@
     const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
     const hoyde = v.rute==="mork" ? null : v.oh.hoyde;
     return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${hoyde} m` : ""}`,
-      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : v.rute==="mork" ? "" : ` <span class="num">–</span>`}`};
   }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
@@ -729,12 +742,12 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent, ordOgHoyde});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, hoydeVist, hoydeMangler, usikkertTillegg, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent, ordOgHoyde});
   }
   function render(behold){
     if(!DATA) return;
     show(S.view);
-    document.title = S.view==="spot" && spotById(S.spotId) ? `${spotById(S.spotId).name} – Nordsurf` : "Nordsurf";
+    document.title = S.view==="spot" && spotById(S.spotId) ? `${spotById(S.spotId).name} · Nordsurf` : "Nordsurf";
     if(S.view==="hjem") renderHome();
     else if(S.view==="sok") renderSok();
     else if(S.view==="utforsk") Utforsk.render(S, behold);
@@ -813,6 +826,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, hoydeVist, hoydeMangler, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();
