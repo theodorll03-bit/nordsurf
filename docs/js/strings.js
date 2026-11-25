@@ -169,6 +169,10 @@
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
       tideLav: (kl, m) => `lavvann ${kl}, ${m} meter`, tideHoy: (kl, m) => `høyvann ${kl}, ${m} meter`,
       skiveAria: (spot, hh, svell, vind) => `${spot} kl. ${hh}: ${svell}.${vind ? " " + vind + "." : ""}`,
+      // S40: timen er regnet med lang sjø (long_sea) - skjermleseren skal ikke kalle den svell
+      skiveLangSjo: (grader, inne, vindu) => `lang sjø fra ${grader} grader, regnet som svell, ${inne ? "innenfor" : "utenfor"} svellvinduet ${vindu}`,
+      langSjoRegnet: "Regnet som svell", langSjoRegnetV: "ja, usikkert (høyst 3 poeng)", langSjoGfs: "Svelldelen i værmodellen",
+      langSjoHow: "Værmodellen (GFS Wave) kaller denne sjøen vindsjø. Den er lang, kommer fra havsiden, og kystmodellen ved stranda viser lange bølger rett inn. Derfor er den regnet som svell her. Det er et anslag, så timen er usikker.",
       skiveSvell: (grader, inne, vindu) => `svell fra ${grader} grader, ${inne ? "innenfor" : "utenfor"} svellvinduet ${vindu}`,
       skiveSvellMangler: "svell mangler data", skiveVind: (retning, ord) => `Vind fra ${retning}${ord ? ", " + ord : ""}`,
       vinduTil: (a, b) => `${a} til ${b}`,
@@ -234,6 +238,7 @@
     tideNow: (rising, state) => `${rising?"Stigende":"Fallende"}, ${state}`,
     tideNext: (type, time) => `${type} kl. ${time}`,
     tidePref: (list) => list && list.length ? `Spoten liker ${list.join(" og ")} vann` : "Spoten tåler alt tidevann",
+    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden: jo lavere, jo bedre (local_rules.tide_level, Theodor 23.11.2026, S28)
     lightOnly: "Bare lyse timer får tall",
     lightNone: "Mørkt hele dagen", lightSub: (sun) => sun ? "Fra skumring til skumring" : "Mørketid, bare skumring", lightUsable: "Brukbart lys",
     temps: (water, air) => `${water} i vannet, ${air} i lufta`,

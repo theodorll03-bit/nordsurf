@@ -35,6 +35,7 @@ Kjør: python fetcher/publish.py [--src docs/data/forecast.json] [--out docs/dat
 import argparse
 import hashlib
 import json
+import math
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -127,7 +128,13 @@ def _naa_hour(h):
             continue
         v = h[k]
         if k in ROUND and isinstance(v, (int, float)) and not isinstance(v, bool):
-            v = round(v, ROUND[k]) if ROUND[k] else int(round(v))
+            r = round(v, ROUND[k]) if ROUND[k] else int(round(v))
+            # 24.11.2026 (fysikk-kontrolløren, S28): vind rett under spotens egen vindgrense (wind_calm_ms) rundes ned,
+            # så 7,995-7,999 m/s ikke blir 8,00 og vises som «8» der ratingen regnet under grensa. Alt annet som før.
+            calm = h.get("wind_calm_ms")
+            if k == "wind_speed" and calm is not None and v < calm <= r:
+                r = math.floor(v * 100) / 100
+            v = r
         if k == "daylight" and h.get("light") is not None:
             continue
         if k in ("sources_disagree", "faded_wind", "faded_tide") and not v:

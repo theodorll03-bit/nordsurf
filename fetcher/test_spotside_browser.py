@@ -344,6 +344,50 @@ def main():
                         assert energi_ == tide_ == "Grense satt ut fra observasjonene 17.11 og 22.11", (energi_, tide_)
                         assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 17.11 og 22.11.2026"
 
+                # S28 (Theodor 23.11.2026): «Best på lavt vann» for en spot med regel på vannstanden (local_rules.tide_level, jo lavere jo
+                # bedre - bare Breivikeidet), i tidevannscella (detailsGrid), forklaringen (EXPLAIN.tide) og tidevannskortet (Tidevann.html og
+                # prefTekst, som også står i «Om spotten» på PC). Alle andre spots viser det samme som før. Spotmetaen er spots.json slik
+                # publish.py legger den i detaljfila (local_rules og tide_regel), timene og tidevannet fra Grøtfjord i fiksturen.
+                tv_spots = [x for x in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"] if x.get("status") != "hemmelig"]
+                tv_h = details["grotfjord"]["hours"][now_idx(details["grotfjord"]["hours"])]
+                for sp_ in tv_spots:
+                    meta_ = dict(details["grotfjord"], **{k: v for k, v in sp_.items() if k in ("id", "name", "local_rules", "tide")}, tide_regel=publish.tide_regel(sp_))
+                    if "local_rules" not in sp_: meta_.pop("local_rules", None)
+                    if "tide" not in sp_: meta_.pop("tide", None)
+                    got_ = page.evaluate("""([s, h]) => { const t = new Date(h.t), d = document.createElement('div');
+                        d.innerHTML = detailsGrid(s, h, t); const celle = d.querySelector('[data-explain="tide"] .n').textContent;
+                        d.innerHTML = Tidevann.html(s, t.getTime(), t.getTime(), true); const kort = d.querySelector('.tv-fot > span').textContent;
+                        const fork = Object.fromEntries(EXPLAIN.tide.numbers(h, s))["Spoten"];
+                        return {celle, kort, pref: Tidevann.prefTekst(s), fork, lav: tideLowBest(s)}; }""", [meta_, tv_h])
+                    lav_ = bool((sp_.get("local_rules") or {}).get("tide_level"))
+                    pref_ = (meta_["tide_regel"] or {}).get("prefer")
+                    gammel_kort = (f"{sp_['name']} er best på " + {("lav",): "lav", ("lav", "middels"): "lav til middels", ("middels", "høy"): "middels til høy", ("høy",): "høy", ("middels",): "middels"}[tuple(x for x in ("lav", "middels", "høy") if x in pref_)] + " vannstand") if pref_ else "Spoten tåler alt tidevann"
+                    if lav_:
+                        assert got_["kort"] == got_["pref"] == got_["fork"] == "Best på lavt vann" and got_["lav"], (sp_["id"], got_)
+                        assert got_["celle"].endswith("Best på lavt vann") and "tåler alt" not in got_["celle"], got_
+                    else:
+                        # som før: cella sier «tåler alt» uten spot.tide, kortet følger tide_regel. Forklaringen sier «liker lav og middels vann» for
+                        # en spot med lokal regel på flo og fjære (local_rules.tide_prefer, fysikk-kontrolløren 24.11.2026, vilkår 2), ellers «tåler alt»
+                        lp_ = (sp_.get("local_rules") or {}).get("tide_prefer")
+                        assert got_["kort"] == got_["pref"] == gammel_kort and got_["fork"] == (f"liker {' og '.join(lp_)} vann" if lp_ else "tåler alt tidevann") and got_["celle"].endswith("Spoten tåler alt tidevann") and not got_["lav"], (sp_["id"], got_)
+                assert sorted(x["id"] for x in tv_spots if (x.get("local_rules") or {}).get("tide_level")) == ["breivikeidet"]
+                # regelen må ha effekt: vekt 0 eller ingen økning mot flo er ikke «best på lavt vann»
+                lr_b = next(x for x in tv_spots if x["id"] == "breivikeidet")["local_rules"]
+                assert page.evaluate("(lr) => [tideLowBest({local_rules: lr}), tideLowBest({local_rules: {...lr, weight: 0}}), tideLowBest({local_rules: {...lr, tide_level: {...lr.tide_level, penalty: 0}}}), tideLowBest({}), tideLowBest(null)]", lr_b) == [True, False, False, False, False]
+
+                # S28: vindtallet rett under spotens egen grense (wind_calm_ms) er én desimal rundet ned, ellers hele m/s som før. Samme
+                # regel som rating.wind_ms_text() i regnestykket, for 0-30 m/s i hundredeler uten grense og med grensene 8 og 14.
+                vt_ = page.evaluate("() => { const ut = {}; for(const c of [null, 8, 14]) ut[String(c)] = Array.from({length: 3001}, (_, i) => windMsText({wind_speed: i / 100, wind_calm_ms: c})); return ut; }")
+                for c_ in (None, 8.0, 14.0):
+                    py_ = [rating.wind_ms_text(i / 100, c_) for i in range(3001)]
+                    js_ = vt_[str(int(c_)) if c_ else "null"]
+                    # Python runder x,5 til nærmeste partall, Intl.NumberFormat bort fra null: bare tallene utenfor grensesonen kan skille
+                    avvik_ = [i / 100 for i in range(3001) if js_[i] != py_[i] and not (i % 100 == 50 and abs(float(py_[i].replace(",", ".")) - float(js_[i].replace(",", "."))) == 1)]
+                    assert not avvik_, (c_, avvik_[:10])
+                    if c_:
+                        lo_ = int(c_ * 100) - 50
+                        assert [js_[i] for i in (lo_ - 1, lo_, lo_ + 46, lo_ + 49, int(c_ * 100))] == [str(int(c_) - 1), f"{int(c_) - 1},5", f"{int(c_) - 1},9", f"{int(c_) - 1},9", str(int(c_))], (c_, [js_[i] for i in (lo_ - 1, lo_, lo_ + 46, lo_ + 49, int(c_ * 100))])
+
                 # «For mye vind» (Theodor S15 a, 17.11.2026): fralandsvind som har tatt poeng heter ikke «Blåst ut». «Blåst ut» står
                 # når vinden ikke er fralands, og når ingen poeng er tapt på vind (det meste er vindsjø i svak fralandsvind).
                 vo = page.evaluate("""() => { const b = {stars: 0, period: 10, surf_height: 1.2, wind_speed: 15, light: 'dag'}, z = (w) => ({energy: 0, wind: w, tide: 0, local: 0, cap: 0});
@@ -746,7 +790,7 @@ def main():
                   const ut = {kol: {}, aria: {}};
                   for(const tk of boks.querySelectorAll('.tk')){
                     const e = tk.querySelector('.segs'), pa = e.querySelector('i.pa'), bst = tk.querySelector('.bst');
-                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length,
+                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length, tv: e.querySelectorAll('i.tapt.tv').length, tfarge: e.querySelector('i.tapt') ? getComputedStyle(e.querySelector('i.tapt')).borderTopColor : null,
                       farge: pa ? getComputedStyle(pa).backgroundColor : null, mork: tk.classList.contains('mork'), best: bst.classList.contains('pa') ? (bst.classList.contains('k') ? 'korall' : 'blekk') : null};
                   }
                   boks.remove();
@@ -862,6 +906,20 @@ def main():
                     assert (kol["08"]["cls"], kol["08"]["pa"], kol["08"]["tapt"]) == ("r-3", 3, 0) and (kol["09"]["cls"], kol["09"]["pa"], kol["09"]["tapt"]) == ("r-3", 3, 1), (kol["08"], kol["09"])
                     assert (kol["10"]["cls"], kol["10"]["pa"], kol["10"]["tapt"]) == ("r-4", 4, 1) and (kol["11"]["cls"], kol["11"]["pa"], kol["11"]["tapt"]) == ("r-5", 5, 0), (kol["10"], kol["11"])
                     assert kol["08"]["farge"] == kol["09"]["farge"] != kol["10"]["farge"] == kol["11"]["farge"], f"blekk til og med 3 og korall fra 4: {[kol[x]['farge'] for x in ('08', '09', '10', '11')]}"
+                    # S33 c (svar.md 23.11.2026 kl. 14.00): poeng tapt på tidevann er stiplet i blekk, poeng tapt på vind i korall som før
+                    assert (kol["09"]["tv"], kol["10"]["tv"]) == (0, 1) and kol["10"]["tfarge"] == kol["08"]["farge"] != kol["09"]["tfarge"] == kol["10"]["farge"], f"tapt på tidevann skal være stiplet i blekk og tapt på vind i korall ({scheme}): {kol['09']} {kol['10']}"
+                    # det den lokale tidevannsregelen tar (local_rules.stars_lost, Breivikeidet når tidevannet er størst) vises som tidevann
+                    s33 = page.evaluate("""() => { const lok = {stars: 1, faded: 0, faded_wind: 0, faded_tide: 0, local_rules: {stars_lost: 1}}, begge = {stars: 2, faded: 2, faded_wind: 1, faded_tide: 1, local_rules: {stars_lost: 1}};
+                        return {lok: [tideLost(lok), lostAll(lok), lostParts(lok).map(p => p.tekst)], begge: [tideLost(begge), lostAll(begge), lostParts(begge).map(p => p.tekst)],
+                          ingen: [tideLost({stars: 2}), lostAll({stars: 2}), lostParts({stars: 2}).length, tideLost(null), lostAll(null)], gammel: lostParts({stars: 1, faded: 1}).map(p => p.tekst), aria: [starsAriaLost(1, lok), starsAriaLost(2, begge), starsAriaLost(1, {stars: 1, faded: 1}), starsAriaLost(2, {stars: 2}), starsAriaLost(3, null)]}; }""")
+                    assert s33["lok"] == [1, 1, ["−1 tidevann"]] and s33["begge"] == [2, 3, ["−1 vind", "−2 tidevann"]] and s33["ingen"] == [0, 0, 0, 0, 0] and s33["gammel"] == ["−1"], s33
+                    # M3 (feiljegeren 24.11.2026): tallet leses opp med samme oppdeling som timestripa. Eldre varsel uten delingen som før.
+                    assert s33["aria"] == ["1 av 5, 1 tapt på tidevann", "2 av 5, 1 tapt på vind, 2 tapt på tidevann", "1 av 5, 1 tapt på vind eller tidevann", "2 av 5", "3 av 5"], s33
+                    # vilkår 1 (fysikk-kontrolløren 24.11.2026): når tidevannet får poenget, er low_reason tom og ordet poengets ord, også i
+                    # fralandsvind 10,2-12 m/s med surfehøyde fra 0,8 m på Breivikeidet (wind_calm_ms 8). Aldri «Blåst ut» der.
+                    ord33 = page.evaluate("""() => [10.2, 11, 11.99].map(v => ratingWord({stars: 1, low_reason: null, wind_type: 'offshore', wind_speed: v, wind_calm_ms: 8, surf_height: 1.35, period: 8,
+                        light: 'dag', faded: 0, faded_wind: 0, faded_tide: 0, zero_losses: {energy: 0, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {stars_lost: 1}})).concat([STR.starWords[1], LOW_REASON_WORD.blown_out])""")
+                    assert ord33[:3] == [ord33[3]] * 3 and ord33[3] != ord33[4], ord33
                     assert kol["12"]["mork"] and kol["12"]["n"] == 0, f"en mørk time har ingen segmenter: {kol['12']}"
                     assert kol["13"]["cls"] == "miss" and kol["13"]["n"] == 0, f"en time uten data er skravert, aldri 0: {kol['13']}"
                     assert kol["14"]["cls"] == "forbud" and kol["14"]["n"] == 0, f"en time i forbudsperioden har ingen vurdering: {kol['14']}"
@@ -1490,6 +1548,49 @@ def main():
                     assert sum(d["blaast"] for d in med_tall) >= 2, f"testdataene skal ha minst to dager med en blåst lys time: {dager}"
                     assert dom["ord"].lower() == "blåst ut", f"dagens ord skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}"
                 ctx.close()
+            # ---- S28 på skjermen (PC, «Om spotten»): en Breivikeidet laget av Lenangsøyra-timene i fiksturen med metaen fra
+            # spots.json (local_rules.tide_level) sier «Best på lavt vann». Grøtfjord (ingen regel) og Farstadsanden (tide_prefer)
+            # sier det samme som før. ----
+            fc_b = json.loads(json.dumps(FORECAST))
+            bre_cfg = next(x for x in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"] if x["id"] == "breivikeidet")
+            bre_fc = json.loads(json.dumps(next(x for x in fc_b["spots"] if x["id"] == "lenangsoyra")))
+            bre_fc.update({k: bre_cfg[k] for k in ("id", "name", "facing", "swell_window", "offshore_wind", "local_rules") if k in bre_cfg})
+            fc_b["spots"].append(bre_fc)
+            ov_b, det_b = publish.split(fc_b)
+            assert det_b["breivikeidet"]["tide_regel"] is None and det_b["breivikeidet"]["local_rules"]["tide_level"]
+            ctx = browser.new_context(viewport={"width": 1440, "height": 900}, locale="nb-NO", timezone_id="Europe/Oslo", color_scheme="light")
+            page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
+            page.on("pageerror", lambda e: errors.append(f"S28 Om spotten: {e}"))
+            route(page)
+            def b_route(rt, req, ov_b=ov_b, det_b=det_b):
+                path = req.url.split("?")[0]
+                if path.endswith("/data/oversikt.json"):
+                    return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_b, ensure_ascii=False))
+                rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_b[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
+            page.route("**/data/oversikt.json", b_route)
+            page.route("**/data/spots/*.json", b_route)
+            # Det brukeren faktisk ser (feiljegeren V1, 24.11.2026): ordene står ett sted på spotsiden, i «Om spotten» (#spOm) på 1440, for
+            # Breivikeidet og ikke for Unstad. Tidevannskortet og forklaringen tegnes ikke på spotsiden nå (designfase 2), så testene
+            # over som kaller funksjonene direkte, sier ikke at ordene synes. Skjermleseren får setningen i tidevannskurvens etikett.
+            om_b, sett_b, kurve_b = {}, {}, {}
+            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
+                page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}")
+                page.wait_for_selector("#viewSpot:not([hidden]) #spOm .spw-om")
+                om_b[sid_] = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))").get("Tidevann")
+                sett_b[sid_] = page.evaluate("[document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1, document.querySelector('#spOm').innerText.split('Best på lavt vann').length - 1]")
+                page.wait_for_selector("#tstripe .tsvg")
+                kurve_b[sid_] = page.get_attribute("#tstripe .tsvg", "aria-label")
+            assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
+            assert sett_b["breivikeidet"] == [1, 1], f"«Best på lavt vann» skal stå ett sted på Breivikeidets spotside på 1440, i «Om spotten»: {sett_b}"
+            assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
+            assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann."), kurve_b["breivikeidet"]
+            assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
+            # på 390 står ordene ingen steder ennå (plassen på mobil tas i designrevisjonen, S33 a) - låst her så det ikke glemmes
+            page.set_viewport_size({"width": 390, "height": 844}); page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload()
+            page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
+            assert page.evaluate("document.querySelector('#viewSpot').innerText.includes('Best på lavt vann')") is False, "«Best på lavt vann» synes på mobil: oppdater testen og STATUS.md (S33 a)"
+            assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann.")
+            ctx.close()
             browser.close()
     finally:
         srv.shutdown()

@@ -38,7 +38,7 @@
     const vinduTxt = vinduer.map(([a, b])=> STR.spot.vinduTil(a, b)).join(" og ");
     const vindOrd = h ? windLabel(h) : "";
     const etikett = STR.spot.skiveAria(s.name, hh,
-      svell!=null ? (vinduer.length ? STR.spot.skiveSvell(Math.round(svell), !!iVindu, vinduTxt) : `svell fra ${Math.round(svell)} grader`) : STR.spot.skiveSvellMangler,
+      svell!=null ? (vinduer.length ? (h.long_sea ? STR.spot.skiveLangSjo : STR.spot.skiveSvell)(Math.round(svell), !!iVindu, vinduTxt) : `${h.long_sea ? "lang sjø" : "svell"} fra ${Math.round(svell)} grader`) : STR.spot.skiveSvellMangler,
       vind!=null ? STR.spot.skiveVind(compass(vind), vindOrd) : "");
     const id = encodeURIComponent(s.id);
     // bildet ligger svakt under hele skiva; kopien i full styrke er klippet til vinduet (og mangler uten vindu)

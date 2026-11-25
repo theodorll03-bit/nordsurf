@@ -2226,7 +2226,7 @@ print("36: Breivikeidet 22.11 - gap-grensa med myk kant gir 2 poeng kl. 07-13Z (
 # 37: S27 (Theodor 23.11.2026, fysikk-kontrolløren 23.11.2026; kilder: observasjonene 17.11 og 22.11.2026). Breivikeidet:
 # andelen er låst til observasjonene (0,22 langs fjordaksen, 0,165 ved 350°), reserven bruker samme andel og
 # retningsfaktor som gap-grensa, og vinden tar ingen poeng under 8 m/s middelvind. Gjelder bare Breivikeidet.
-from rating import _wind_raw, _wind_eff, wind_curve_penalty, blown_out_wind_ms, local_wind, effective_wind, wind_penalty_parts
+from rating import _wind_raw, _wind_eff, wind_curve_penalty, blown_out_wind_ms, local_wind, effective_wind, wind_penalty_parts, wind_ms_text
 B37 = spots["breivikeidet"]
 # 37.1: låst andel har de tre fjord-spotene (Breivikeidet, og fra 23.11.2026 Russelv og Lenangsøyra, svar.md kl. 14.05),
 # myk kant har alle tre (Russelv fra 24.11.2026, S34 a). Egen vindkurve har bare Breivikeidet og Unstad (S29 a, test 38).
@@ -2815,6 +2815,142 @@ assert "share_height" not in k41 and gap41(k41) == [] and k41["low_reason"] == "
 # reserven og BarentsWatch-sonen er like også i 0,20-greina
 assert rate(dict(v41), R)["height"] == rate(dict(v41, bw_height=0.3, bw_dir=350.0, bw_period=4.0), R)["height"] == 0.48
 print(f"41: S36 b - Russelvs andel er den største av Breivikeidets kurve og 0,20 i 348-19 (±2°), aldri under Breivikeidet, og aldri lavere surfehøyde eller poeng enn RH i {n41} testtimer med 0,3 m ved punktet (340-35°, 7,9 og 10 s, begge soner; utenfor 346-21° i BarentsWatch-sonen kan mer ved punktet gi lavere, S39), share_height, anslag-linja «andel 0,20», retningsordet og «treffer ikke» som ellers - OK")
+# 42: S28 (ja fra Theodor i svar.md 23.11.2026; feiljegeren 22.11.2026). Bokføringen av tapte poeng: når verken vinden
+# eller tidevannet ALENE tar poenget, får det største fradraget skylda. Uavgjort: vinden, som før. Poengene, høydene og
+# er de samme. faded_wind, faded_tide, faded, local_rules.stars_lost, zero_losses.local og «(N uten vind)» i
+# regnestykket flytter seg, og low_reason følger den samme bokføringen (fysikk-kontrolløren 24.11.2026, vilkår 1):
+# en time der tidevannet får poenget, er ikke «blown_out» på grunn av det poenget.
+B41_s19 = {k: v for k, v in B36.items() if k != "wind_local"}   # Breivikeidet slik den sto 22.11 (før vindkurven i S27)
+# 42.1: den konkrete timen. Breivikeidet 22.11 kl. 09Z: potensial 2, vinden −0,3 (5,2 m/s skrått pålands, kast 9,7) og
+# tidevannsregelen −0,45 (2,7 m over sjøkartnull). Hver for seg tar de ingenting, sammen ett poeng.
+r42 = rate(dict(bre_2211[9]), B41_s19)
+show("42: Breivikeidet 22.11 kl. 09Z (før S27-vinden)", r42)
+assert "Vind 5 m/s side-onshore, kast 10 (teller som 6,5): −0,3" in r42["breakdown"], r42["breakdown"]
+assert "Tidevann (2,7 m over sjøkartnull): jo lavere vann, jo bedre her (vektet −0,45)" in r42["breakdown"], r42["breakdown"]
+assert r42["stars"] == 1 and rate(dict(bre_2211[9], wind_speed=1.0, gust=2.0), B41_s19)["stars"] == 2 and rate(dict(bre_2211[9], tide=None), B41_s19)["stars"] == 2
+# før: faded_wind 1 og «(2 uten vind)». Nå: tidevannsregelen (lokal regel) får poenget.
+assert (r42["faded"], r42["faded_wind"], r42["faded_tide"], r42["local_rules"]["stars_lost"]) == (0, 0, 0, 1), (r42["faded"], r42["faded_wind"], r42["local_rules"])
+assert r42["zero_losses"] == {"energy": 0, "wind": 0, "tide": 0, "local": 1, "cap": 0}, r42["zero_losses"]
+assert r42["breakdown"][-1] == "Totalt: 1 av 5 stjerner" and not any("uten vind" in l for l in r42["breakdown"]), r42["breakdown"][-1]
+# fysikk-kontrolløren 24.11.2026 (vilkår 1): ordet følger bokføringen. Før S28 var timen «blown_out» (vinden fikk poenget).
+assert r42["low_reason"] is None, r42["low_reason"]
+import publish as _publish42, vakthund as _vakthund42
+assert not _publish42.wind_blamed(dict(bre_2211[9], **r42)) and _vakthund42.lyngen_ord(dict(bre_2211[9], **r42)) is None
+# 42.2: det samme på Breivikeidet i dag (med vindkurven): fralandsvind 11,2 m/s tar 0,3, tidevannet 0,45 og 0,48 (kl. 09Z og 10Z)
+for t in (9, 10):
+    r = rate(dict(bre_2211[t], wind_speed=11.2, gust=None, wind_dir=200.0), B36)
+    assert any(l.startswith("Vind 11 m/s offshore") and l.endswith("−0,3") for l in r["breakdown"]), r["breakdown"]
+    assert r["stars"] == 1 and (r["faded_wind"], r["faded"], r["local_rules"]["stars_lost"]) == (0, 0, 1), (t, r["stars"], r["faded_wind"], r["local_rules"])
+    assert rate(dict(bre_2211[t], wind_speed=11.2, gust=None, wind_dir=200.0, tide=None), B36)["stars"] == 2
+# 42.3: vinden er størst (−0,45 mot −0,30 ved 2,49 m): vinden får poenget, som før
+tide42 = lambda cm: dict(bre_2211[9]["tide"], cm=cm)
+r = rate(dict(bre_2211[9], wind_speed=11.8, gust=None, wind_dir=200.0, tide=tide42(249)), B36)
+assert r["stars"] == 1 and (r["faded_wind"], r["faded"], r["local_rules"]["stars_lost"]) == (1, 1, 0) and r["breakdown"][-1] == "Totalt: 1 av 5 stjerner (2 uten vind)", (r["faded_wind"], r["breakdown"][-1])
+# 42.4: uavgjort (0,375 mot 0,375, tall som er eksakte i flyttall): vinden, som før. Litt mer tidevann: tidevannet.
+B41_lik = dict(B36, local_rules=dict(B36["local_rules"], weight=1.0, tide_level=dict(B36["local_rules"]["tide_level"], penalty=0.75)))
+lik42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(240)), B41_lik)
+assert "(vektet −0,38)" in " ".join(lik42["breakdown"]) and any(l.startswith("Vind 12 m/s offshore") and l.endswith("−0,4") for l in lik42["breakdown"]), lik42["breakdown"]
+assert lik42["stars"] == 1 and (lik42["faded_wind"], lik42["local_rules"]["stars_lost"]) == (1, 0), (lik42["faded_wind"], lik42["local_rules"])
+mer42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(241)), B41_lik)
+assert mer42["stars"] == 1 and (mer42["faded_wind"], mer42["local_rules"]["stars_lost"]) == (0, 1), (mer42["faded_wind"], mer42["local_rules"])
+# 42.5: tar vinden poenget alene (−0,55), får vinden det, også når tidevannet er med (−0,45)
+r = rate(dict(bre_2211[9], wind_speed=12.2, gust=None, wind_dir=200.0), B36)
+assert r["stars"] == 1 and (r["faded_wind"], r["local_rules"]["stars_lost"]) == (1, 0), (r["faded_wind"], r["local_rules"])
+# 42.6: Unstad (lokal tidevannsregel fra Lofoten Surfsenter, −0,35 på høyvann). Sidevind 15,2 m/s (−0,3): tidevannet.
+# 15,6 m/s (−0,4): vinden, som før. Poengene er de samme.
+t41u = {"height_offshore": 1.2, "swell_offshore": 1.0, "swell_model": "standard", "dir_offshore": 300.0, "period": 11.0,
+        "bw_height": 0.8, "bw_dir": 300.0, "bw_period": 10.0, "wind_dir": 30.0, "tide": {"level": 0.9, "state": "høy", "rising": True}}
+u0, u1, u2 = (rate(dict(t41u, wind_speed=v, gust=v), U38) for v in (1.0, 15.2, 15.6))
+assert u0["stars"] == 2 and u1["stars"] == u2["stars"] == 1 and u1["wind_type"] == "side", (u0["stars"], u1["stars"], u2["stars"])
+assert (u1["faded_wind"], u1["local_rules"]["stars_lost"]) == (0, 1) and (u2["faded_wind"], u2["local_rules"]["stars_lost"]) == (1, 0), (u1["faded_wind"], u2["faded_wind"])
+# 42.7: spots uten tidevannsregel (alle unntatt Unstad, Farstadsanden og Breivikeidet): vinden får alt den tar, som før.
+# Uten tidevannsfradrag er «uten vind» potensialet (timen i svak vind). Bare timer der vinden ikke endrer høyden.
+uten42 = [i for i, sp in spots.items() if sp.get("status") != "hemmelig" and not sp.get("tide") and not (sp.get("local_rules") or {}).get("tide_prefer")
+          and not (sp.get("local_rules") or {}).get("tide_level")]
+assert len(uten42) >= 20 and not {"unstad", "farstadsanden", "breivikeidet"} & set(uten42)
+n42 = 0
+for sid42 in uten42:
+    sp42 = spots[sid42]
+    for sv42 in (1.0, 2.0, 3.5):
+        base42 = {"height_offshore": sv42 + 0.3, "swell_offshore": sv42, "swell_model": "standard", "dir_offshore": float(sp42["facing"]), "period": 11.0,
+                  "bw_height": sv42 * 0.6, "bw_dir": float(sp42["facing"]), "bw_period": 10.0, "tide": {"level": 0.9, "state": "høy", "rising": True}}
+        ro42 = rate(dict(base42, wind_speed=0.0, gust=0.0, wind_dir=0.0), sp42)
+        for vd42 in range(0, 360, 45):
+            for v42 in (2.0, 5.0, 7.0, 9.0, 11.0, 13.0, 16.0):
+                r = rate(dict(base42, wind_speed=v42, gust=v42 * 1.4, wind_dir=float(vd42)), sp42)
+                if r["height"] != ro42["height"]:
+                    continue
+                n42 += 1
+                assert r["faded_wind"] == ro42["stars"] - r["stars"] and r["faded_tide"] == 0 and r["faded"] == r["faded_wind"], (sv42, vd42, v42, r["faded_wind"])
+assert n42 > 3000, n42
+# 42.8 (fysikk-kontrolløren 24.11.2026, vilkår 1; Theodor S15 a, 17.11.2026: fralandsvind heter ikke «Blåst ut»).
+# Breivikeidet, fralandsvind 10,2-12 m/s, 1 poeng og surfehøyde fra 0,8 m: timen er bare «blown_out» når vinden har
+# fått et poeng (da sier appen «For mye vind», windLossWord() i app.js). Får tidevannet poenget, er low_reason None
+# (appen: poengets ord), og publish.wind_blamed() og vakthund.lyngen_ord() sier det samme. Poengene er som uten S28:
+# de avhenger ikke av bokføringen (samme timer med vinden alene og tidevannet alene gir aldri mer enn 2).
+n41_tide = n41_vind = 0
+for mult42 in (1.5, 2.0, 2.5, 3.0):
+    for v41b in (10.2, 10.6, 11.0, 11.4, 11.8, 11.99, 12.0):
+        for cm42 in range(200, 321, 10):
+            h42 = dict(bre_2211[9], wind_speed=v41b, gust=None, wind_dir=200.0, tide=tide42(cm42),
+                       swell_offshore=bre_2211[9]["swell_offshore"] * mult42, height_offshore=bre_2211[9]["height_offshore"] * mult42)
+            r = rate(dict(h42), B36)
+            if r["stars"] != 1 or r["surf_height"] < 0.8:
+                continue
+            ut42 = dict(h42, **r)
+            vind42 = max(r["zero_losses"]["wind"], r["faded_wind"])
+            assert r["wind_type"] == "offshore" and r["faded_wind"] + r["faded_tide"] + r["local_rules"]["stars_lost"] >= 1, (mult42, v41b, cm42)
+            if r["local_rules"]["stars_lost"] and not r["faded_wind"]:
+                n41_tide += 1
+                assert r["low_reason"] is None and not _publish42.wind_blamed(ut42) and not any("uten vind" in l for l in r["breakdown"]), (mult42, v41b, cm42, r["low_reason"])
+            else:
+                n41_vind += 1
+            # «Blåst ut» i appen krever blown_out uten poeng tapt på vind og uten sterk vind: det skal aldri skje her
+            assert r["low_reason"] is None or (r["low_reason"] == "blown_out" and vind42 > 0), (mult42, v41b, cm42, r["low_reason"], vind42)
+            assert _publish42.wind_blamed(ut42) == (r["low_reason"] == "blown_out") and _vakthund42.lyngen_ord(ut42) is None, (mult42, v41b, cm42)
+assert n41_tide >= 20 and n41_vind >= 20, (n41_tide, n41_vind)
+# 42.9 (fysikk-kontrolløren 24.11.2026, vilkår 2): en spot med lokal regel på flo og fjære (local_rules.tide_prefer,
+# Farstadsanden og Unstad) sier ikke «tåler alt» i regnestykket. Linja er den lokale regelens, med desimalkomma og
+# det vektede fradraget med to desimaler (feiljegeren V2, 24.11.2026: Unstads 0,35 sto som «−0,3»).
+# Mangler tidevannet: «ukjent». Poengene er de samme som linja i local_rules sier.
+for sid42, hoy42 in (("farstadsanden", "Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,70)"),
+                     ("unstad", "Tidevann (høy): ikke blant det lokale favoriserer - −0,5 stjerne (vektet −0,35)")):
+    sp41b = spots[sid42]
+    assert sp41b["local_rules"]["tide_prefer"] == ["lav", "middels"] and not sp41b.get("tide")
+    for st42, linje42 in (("høy", hoy42), ("lav", "Tidevann (lav): foretrukket lokalt, ingen straff"), ("middels", "Tidevann (middels): foretrukket lokalt, ingen straff"), (None, "Tidevann: ukjent")):
+        h42 = {"height_offshore": 2.2, "swell_offshore": 2.0, "swell_model": "standard", "dir_offshore": float(sp41b["facing"]), "period": 12.0,
+               "bw_height": 1.4, "bw_dir": float(sp41b["facing"]), "bw_period": 11.0, "wind_speed": 2.0, "wind_dir": 100.0, "gust": 3.0,
+               "tide": {"level": 0.9, "state": st42, "rising": True} if st42 else None}
+        r = rate(h42, sp41b)
+        assert [l for l in r["breakdown"] if l.startswith("Tidevann")] == [linje42], (sid42, st42, r["breakdown"])
+        assert r["local_rules"]["lines"] == ([linje42] if st42 else []) and "." not in linje42, (sid42, st42, r["local_rules"])
+assert sorted(i for i, sp in spots.items() if (sp.get("local_rules") or {}).get("tide_prefer")) == ["farstadsanden", "unstad"]
+# en spot uten tidevannsregel sier det samme som før
+assert "Tidevann: spoten tåler alt" in rate(dict(h42), spots["grotfjord"])["breakdown"]
+print("42: S28 bokføringen - tidevannet får poenget når det er størst og ingen tar det alene (Breivikeidet 22.11 kl. 09Z: −0,45 mot −0,3), vinden ved uavgjort og ellers som før - OK")
+
+# 43: S28 (Theodor 23.11.2026; feiljegeren 23.11.2026). Vindtallet i regnestykket rett under spotens egen grense: én
+# desimal, rundet ned, når avrundingen ellers ville vist grensa (7,5-7,99 m/s på Breivikeidet, 13,5-13,99 på Unstad).
+# Alle andre tall og spots som før. Samme regel som windMsText() i docs/js/app.js (test_spotside_browser.py).
+assert [wind_ms_text(v, 8.0) for v in (7.0, 7.49, 7.5, 7.95, 7.99, 7.999999, 8.0, 8.49, 12.6)] == ["7", "7", "7,5", "7,9", "7,9", "7,9", "8", "8", "13"]
+assert [wind_ms_text(v, 14.0) for v in (7.6, 13.49, 13.5, 13.99, 14.0, 14.6)] == ["8", "13", "13,5", "13,9", "14", "15"]
+assert [wind_ms_text(v) for v in (7.5, 7.99, 13.5, 13.99)] == ["8", "8", "14", "14"]
+def vindlinje43(sp, v, vdir):
+    r = rate(dict(lav37, swell_offshore=0.6, wind_speed=v, gust=None, wind_dir=vdir), sp)
+    return next(l for l in r["breakdown"] if l.startswith("Vind ")), r
+for v43, tall43 in ((7.4, "7"), (7.5, "7,5"), (7.96, "7,9"), (8.0, "8"), (8.6, "9")):
+    l43, r43 = vindlinje43(B37, v43, 20.0)
+    assert l43.startswith(f"Vind {tall43} m/s onshore"), (v43, l43)
+# poengene følger grensa og ikke tallet som vises: Breivikeidet 22.11 kl. 09Z uten tidevann, pålandsvind uten kast. Under
+# 8 m/s tar vinden ingenting (2 poeng, også ved 7,96 og 7,999 som vises «7,9»), fra 8,0 er timen blåst ut (0 poeng).
+p43 = {v43: rate(dict(bre_2211[9], wind_speed=v43, gust=None, wind_dir=20.0, tide=None), B37) for v43 in (7.4, 7.5, 7.96, 7.999, 8.0, 8.6)}
+assert [r["stars"] for r in p43.values()] == [2, 2, 2, 2, 0, 0], [r["stars"] for r in p43.values()]
+assert [next(l for l in r["breakdown"] if l.startswith("Vind ")).split(" m/s")[0] for r in p43.values()] == ["Vind 7", "Vind 7,5", "Vind 7,9", "Vind 7,9", "Vind 8", "Vind 9"]
+for v43, tall43 in ((12.6, "13"), (13.5, "13,5"), (13.99, "13,9"), (14.0, "14")):
+    assert vindlinje43(U38, v43, 295.0)[0].startswith(f"Vind {tall43} m/s"), (v43, vindlinje43(U38, v43, 295.0)[0])
+# en spot uten egen grense: som før (Grøtfjord og Breivikeidet uten kurven)
+assert vindlinje43(spots["grotfjord"], 7.6, 20.0)[0].startswith("Vind 8 m/s") and vindlinje43(B41_s19, 7.96, 20.0)[0].startswith("Vind 8 m/s")
+print("43: S28 vindtallet - 7,5-7,99 m/s på Breivikeidet og 13,5-13,99 på Unstad vises med én desimal rundet ned, alt annet som før - OK")
 
 # ---------- 44: S29 c del 2 (24.11.2026) - lang sjø fra havsiden som GFS kaller vindsjø. PÅ for Unstad fra S40 (svar.md 24.11.2026 kl. 22.25) ----------
 # Observasjon 21.11.2026, Theodor (story fra Lofoten Surfsenter, dagslys, klokkeslett ukjent): Unstad «litt under

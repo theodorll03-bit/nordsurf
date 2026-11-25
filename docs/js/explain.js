@@ -64,14 +64,17 @@
       title: "Svell ute",
       what: "Det ekte, lange svellet ute på havet, skilt fra den lokale vindsjøen. Det er svellet som gir surfbare bølger. Eksempel: 1,6 m svell med 13 s periode er en god dag, 1,6 m vindsjø med 5 s er rot.",
       numbers: (h) => [
-        ["Svell ute", m(h.swell_offshore)],
+        [h.long_sea ? STR.spot.langSjo : "Svell ute", m(h.swell_offshore)],
         ["Fra", h.dir_offshore!=null ? `${compass(h.dir_offshore)} (${deg(h.dir_offshore)})` : "mangler"],
+        // S40: timen er regnet med lang sjø (long_sea). Svelldelen slik værmodellen skilte den ut, står for seg.
+        ...(h.long_sea ? [[STR.spot.langSjoRegnet, STR.spot.langSjoRegnetV]] : []),
+        ...(h.long_sea && h.long_sea.gfs_swell && h.long_sea.gfs_swell.swell_offshore!=null ? [[STR.spot.langSjoGfs, `${m(h.long_sea.gfs_swell.swell_offshore)}${h.long_sea.gfs_swell.dir_offshore!=null ? ` fra ${compass(h.long_sea.gfs_swell.dir_offshore)}` : ""}${h.long_sea.gfs_swell.period!=null ? `, ${s(h.long_sea.gfs_swell.period)}` : ""}`]] : []),
         ["Periode", s(h.period)],
         ["Totalhøyde ute", m(h.height_offshore)],
         ["Svellandel", h.swell_model==="total_fallback" ? "ikke skilt ut (bruker total, dempet)" : pct(h.swell_share)],
         ["Sekundært svell (Open-Meteo)", h.secondary_swell_height!=null ? `${m(h.secondary_swell_height)} fra ${compass(h.secondary_swell_dir)}, ${s(h.secondary_swell_period)}` : "mangler"],
       ],
-      how: () => ["Open-Meteo, GFS Wave-modellen, på spotens havpunkt. Høyde, retning og periode kommer alltid fra samme modell.",
+      how: (h) => [...(h && h.long_sea ? [STR.spot.langSjoHow] : []), "Open-Meteo, GFS Wave-modellen, på spotens havpunkt. Høyde, retning og periode kommer alltid fra samme modell.",
                   "Mangler svellfeltet, brukes totalhøyden som tydelig merket reserve - aldri stille, aldri 0."],
     },
     period: {
@@ -93,7 +96,7 @@
       what: "Hvor godt svellets retning passer spotens vindu - sektoren av retninger med fri linje fra stranda til åpent hav. Svell rett i vinduet når inn med full høyde; svell utenfor må bøye seg rundt land (diffraksjon) og mister det meste. Eksempel: Grøtfjord 25.09.2026, svell 3 grader utenfor vinduet, helt flatt.",
       numbers: (h, spot) => [
         ["Retningstreff", pct(vinduTreff(h, spot))],
-        ["Svell fra", h.dir_offshore!=null ? `${compass(h.dir_offshore)} (${deg(h.dir_offshore)})` : "mangler"],
+        [h.long_sea ? STR.spot.langSjoFra : "Svell fra", h.dir_offshore!=null ? `${compass(h.dir_offshore)} (${deg(h.dir_offshore)})` : "mangler"],
         ["Spotens vindu", visVindu(spot) ? (Array.isArray(visVindu(spot)[0]) ? visVindu(spot) : [visVindu(spot)]).map(w=>`${w[0]}–${w[1]}°`).join(", ") : "mangler"],
         ["Ved punktet (BarentsWatch)", h.bw_dir!=null ? `fra ${compass(h.bw_dir)}, ${h.spot_direction_diff!=null ? h.spot_direction_diff + "° skrått" : ""}` : "mangler"],
         ["BarentsWatch bekrefter treff", h.bw_confirms==null ? "mangler" : (h.bw_confirms ? "ja" : "nei")],
@@ -114,7 +117,7 @@
       title: "Vind",
       what: "Fralandsvind (fra land) holder bølgene rene og glatte; pålandsvind (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett fralandsvind - lange, rene linjer.",
       numbers: (h) => [
-        ["Vind", h.wind_speed!=null ? `${nf0.format(h.wind_speed)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
+        ["Vind", h.wind_speed!=null ? `${windMsText(h)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
         ["Kast", h.gust!=null ? `${nf0.format(h.gust)} m/s` : "mangler"],
         ["Type", WIND_WORD[h.wind_type] || "mangler"],
         ["Poeng tapt på vind", h.faded_wind!=null ? String(h.faded_wind) : (h.faded!=null ? String(h.faded) : "mangler")],
@@ -128,8 +131,8 @@
       what: "Flo og fjære flytter hvor og hvordan bølgene brekker. Noen spots liker lavvann (Farstadsanden, ifølge lokale surfere), andre tåler alt.",
       numbers: (h, spot) => [
         ["Nå", h.tide ? `${h.tide.rising?"stigende":"fallende"}, ${h.tide.state}${h.tide.level!=null?` (${nf1.format(h.tide.level)})`:""}` : "mangler"],
-        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : "tåler alt tidevann"],
-        ["Poeng tapt på tidevann", h.faded_tide!=null ? String(h.faded_tide) : "mangler"],
+        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : spot && spot.local_rules && spot.local_rules.tide_prefer && spot.local_rules.tide_prefer.length ? `liker ${spot.local_rules.tide_prefer.join(" og ")} vann` : (typeof tideLowBest === "function" && tideLowBest(spot) ? STR.tideLowBest : "tåler alt tidevann")],
+        ["Poeng tapt på tidevann", h.faded_tide!=null ? String(typeof tideLost === "function" ? tideLost(h) : h.faded_tide) : "mangler"],
       ],
       how: () => ["Kartverket sin tidevannsvarsel for nærmeste punkt. Lokale regler (med navngitt kilde) kan trekke ett poeng ved feil tidevann, dempet med regelens vekt."],
     },
