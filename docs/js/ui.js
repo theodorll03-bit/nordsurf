@@ -438,7 +438,7 @@
     return `<tr class="s r-${n!=null ? n : 0}" data-spot="${esc(s.id)}" data-href="${esc(href)}">
       <td class="fs-nr">${esc(STR.web.nr(nr))}</td>
       <td class="fs-nm"><a class="t-navn${s.name.length > 12 ? " lang" : ""}" href="${esc(href)}" aria-label="${esc(aria)}">${esc(s.name)}</a><span class="etikett">${esc([regionOf(s), kj, ...merker(s)].filter(Boolean).join(" · "))}</span></td>
-      <td class="fs-dom">${n!=null ? `<span class="vurd vurd-l t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></td>
+      <td class="fs-dom"><span class="fs-domv">${n!=null ? `<span class="vurd vurd-l t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></span></td>
       <td class="fs-bst">${esc(vindu)}</td>
       <td class="fs-sv">${esc(n!=null ? fsSurf(h) : "–")}</td>
       <td class="fs-tim">${fsStripe(s, key, b)}</td></tr>`;
