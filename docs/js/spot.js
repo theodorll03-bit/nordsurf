@@ -232,13 +232,13 @@
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
-    const maal = (ikon, key, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
+    const maal = (ikon, key, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small class="enhet">${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
     // Surfehøyden ved spoten er det store tallet (fase 3 punkt 1), med kroppsmålet under. Høyden er den samme som
     // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
     // time: tallet står i grått, som tallene i timestripa, og under «–» står bare årsaken («Treffer ikke»), ikke karakteren («Flatt»): ingen vurdering i mørket (SPEC §5).
     const hoyde = H.heightText(h), mork = !!h && H.mork(h);
     const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : mork ? karakter(h).aarsak : ratingWord(h);
-    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
+    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small class="enhet">m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
       : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
       : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
     const surf = `<div class="svell surf"><div class="etikett">${forklar("surf_height", `${PIL("", null, IK_SURF)}${esc(STR.spot.surf)}`)}</div>${stort}</div>`;
@@ -308,7 +308,7 @@
     const tilbakeNa = ()=> S.idx!=null ? `<button type="button" class="tilbakena" id="tilbakeNa">${esc(STR.spot.tilbakeNa)}</button>` : "";
     root.innerHTML = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="sp-hode${foto ? "" : " uten"}">
         ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async">` : ""}
-        <div class="sp-knapper"><button type="button" class="sp-tilbake" id="spotBack" aria-label="${esc(fra ? STR.spot.tilbakeTil(fra) : STR.spot.tilbake)}"><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>${esc(fra || STR.spot.tilbake)}</span></button><span class="sp-fav">${favBtnHtml(s.id, false)}</span></div>
+        <div class="sp-knapper"><button type="button" class="sp-tilbake" id="spotBack" aria-label="${esc(fra ? STR.spot.tilbakeTil(fra) : STR.spot.tilbake)}"><span>${vinkel(16)}${esc(fra || STR.spot.tilbake)}</span></button><span class="sp-fav">${favBtnHtml(s.id, false)}</span></div>
         <div class="sp-navn"><h1 class="t-hero${lengsteOrd(s.name) > 8 ? " lang" : ""}" style="--n:${lengsteOrd(s.name)}">${esc(s.name)}</h1></div>
       </div>
       <div class="sp-inn">

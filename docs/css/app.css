@@ -53,8 +53,8 @@ header.top{padding:var(--s2) 0 0}
 .logrow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 .logrow:first-child{border-top:0}
 .logrow .m{color:var(--muted);font-size:var(--fs-secondary);grid-column:1/-1}
-.del{all:unset;color:var(--ink);min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
-.form label{display:block;margin:var(--s3) 0 var(--s1);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
+.del{all:unset;color:var(--ink);min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700}
+.form label{display:block;margin:var(--s3) 0 var(--s1);line-height:var(--lh-etikett);font-weight:500;color:var(--muted)}
 .form input:not([type=checkbox]):not([type=radio]){font:inherit;font-size:1rem;min-height:44px;width:100%;padding:0 2px;border:0;border-radius:var(--radius);box-shadow:inset 0 -2px 0 var(--ink);background:transparent;color:var(--ink)}
 .form input::placeholder{color:var(--muted)}
 .row-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
@@ -69,7 +69,7 @@ header.top{padding:var(--s2) 0 0}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;min-height:44px;gap:var(--s2)}
 .sheet-head h2{font-size:var(--fs-title);margin:0;flex:1;text-align:center}
 .sheet-head .spacer{width:60px}
-.link{all:unset;min-height:44px;min-width:44px;padding:0 var(--s1);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
+.link{all:unset;min-height:44px;min-width:44px;padding:0 var(--s1);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;font-weight:700}
 .field{margin:18px 0 0}
 .field > .lbl{font-size:var(--fs-secondary);color:var(--muted);margin:0 0 var(--s2)}
 .field .hint{margin:6px 0 0;font-size:var(--fs-secondary);color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.2em}

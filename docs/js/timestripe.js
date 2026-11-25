@@ -121,8 +121,8 @@
       <div class="ring" aria-hidden="true" style="left:${(kSel / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>
       ${harNaa ? `<div class="naalinje" aria-hidden="true" style="left:${(xAv(cols, naa) * 100).toFixed(2)}%"></div>` : ""}`;
     const R = STR.web ? STR.web.rader : null;
-    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.surf)} <small>m</small></span>
-      <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small>m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
+    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.surf)} <small class="enhet">m</small></span>
+      <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small class="enhet">m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
     return `<div class="tstripe${bred ? " bred" : ""}${ideal!=null ? " med-ideal" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
       ${etiketter}<div class="tflate">${inni}</div>
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>

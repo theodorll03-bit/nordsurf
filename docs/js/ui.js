@@ -331,7 +331,7 @@
     const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
     const hoyde = v.rute==="mork" ? null : v.oh.hoyde;
     return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${hoyde} m` : ""}`,
-      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : v.rute==="mork" ? "" : ` <span class="num">–</span>`}`};
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh enhet">m</span>` : v.rute==="mork" ? "" : ` <span class="num">–</span>`}`};
   }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
@@ -725,7 +725,7 @@
         $("#loggForste").onclick = ()=> openSheet();
       }
     } else {
-      bar.innerHTML = `<button type="button" class="back" id="sideBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>Hjem</button>`;
+      bar.innerHTML = `<button type="button" class="back" id="sideBack">${vinkel()}Hjem</button>`;
       $("#sideBack").onclick = ()=> go("hjem");
       renderSettings();
     }
