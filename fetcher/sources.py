@@ -191,7 +191,7 @@ def _openmeteo_fetch(lat, lon, model=None):
 # 24.11.2026 (S29 c del 1, Theodors ja i svar.md 23.11.2026): GFS Wave sin VINDSJØ-del (høyde, retning,
 # middelperiode) hentes i det samme kallet som svellet. Unstad 21.-22.11.2026: GFS la en lang nordsjø (2,5-2,9 m
 # fra 357-1 grader med 9,7-10,2 s) i vindsjø-delen, og ingenting av det var lagret. Bare lagring: ratingen bruker
-# ikke feltene (se rating.LONG_SEA_AS_SWELL, som står av). Bare GFS-kallet: standardmodellen brukes bare som
+# ikke feltene (se rating.LONG_SEA_AS_SWELL, på for Unstad fra S40). Bare GFS-kallet: standardmodellen brukes bare som
 # reserve for svellfeltet, og kallet dit teller da som før (10 variabler). GFS-kallet går fra 10 til 13 variabler
 # (vekt 1,3 i stedet for 1,0, se tools/kallregnskap.py). wind_wave_peak_period er alltid null for GFS Wave
 # (sjekket live 24.11.2026) og hentes ikke.

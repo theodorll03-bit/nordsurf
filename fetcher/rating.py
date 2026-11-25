@@ -387,9 +387,12 @@ def bw_swell_dominates(hour, spot):
     return True
 
 
-# ---------- Lang sjø som GFS kaller vindsjø (S29 c del 2, 24.11.2026) - FORSLAG, STÅR AV ----------
-# Krever Theodors ja før den slås på (nytt S-spørsmål, se STATUS.md 24.11.2026). Med LONG_SEA_AS_SWELL = False er
-# rate() uendret for alle timer (test 44 i test_rating.py).
+# ---------- Lang sjø som GFS kaller vindsjø (S29 c del 2, 24.11.2026) - PÅ for Unstad fra S40 ----------
+# Slått på 24.11.2026 etter svar.md 24.11.2026 kl. 22.25 (S40: «a, med vilkår»): variant A' («vindu», 7 s ved
+# stranda), bare Unstad, etter at M3 og M4 er rettet og appen viser den lange sjøen. Variant B er nei («den løfter
+# krapp sjø»). Sier Theodor at han har sett Unstad flat med lang sjø rett fra nord, slås regelen av igjen
+# (LONG_SEA_AS_SWELL = False) til den er sett på på nytt. Med False er rate() uendret for alle timer (test 44.1).
+# Krever Theodors ja: å endre bryteren, LONG_SEA_SPOTS, variantene eller tallene under.
 #
 # Observasjon 21.11.2026, Theodor (story fra Lofoten Surfsenter): Unstad «litt under hodehøyt og rent». Appen viste
 # 0 poeng og 0,0 m i alle lyse timer. GFS Wave la nordsjøen i VINDSJØ-delen: 2,5-2,9 m fra 357-1 grader med
@@ -408,7 +411,7 @@ def bw_swell_dominates(hour, spot):
 # samme spørsmålet (min() i barentswatch_height()), og regelen setter begge til 1,0 - en dobbel oppheving, ikke
 # en dobbel telling. Svellandelens nevner byttes samtidig fra met.no sin totalhøyde til GFS sin egen (samme
 # modell som delene), ellers ville andelen blitt ca. 0,84 og ikke 1,0 av ren modellforskjell.
-LONG_SEA_AS_SWELL = False
+LONG_SEA_AS_SWELL = True
 # Bare Unstad: den eneste spoten med en observasjon av dette (21.11.2026). None betyr alle kyst-spots - prøvd
 # 24.11.2026 på fem lagrede varsler: timer på andre spots (Vikten, Kvalvika, Bøvær, Bunes, Skagsanden, Persfjord,
 # Grøtfjord) flyttet seg 2 poeng eller mer uten noen observasjon. Se STATUS.md.
@@ -458,7 +461,7 @@ LONG_SEA_SHORT_PEAK_ENERGY_SHARE = 0.5
 
 
 def long_sea(hour, spot):
-    """S29 c del 2 (FORSLAG, av): er GFS sin vindsjø-del ute egentlig lang sjø fra havsiden som skal regnes som
+    """S29 c del 2 (på for Unstad fra S40): er GFS sin vindsjø-del ute egentlig lang sjø fra havsiden som skal regnes som
     svell? Returnerer None (nei, eller noe mangler) eller en dict med den omregnede timen:
     {"swell_offshore", "height_offshore", "period", "dir_offshore", "swell_peak_period", "_long_sea"}.
 
@@ -544,7 +547,7 @@ def bw_period_factor_for(hour, spot):
     dominerer, se bw_swell_dominates()) eller None når BarentsWatch-perioden
     mangler. Regelen kan bare ta bort en vindsjø-straff, aldri legge til en.
     Største løft: 0,3 til 1,0."""
-    # S29 c del 2 (forslag, av): lang sjø fra havsiden (long_sea()). Kurven under er laget for å ta ned vindsjø
+    # S29 c del 2 (S40: på for Unstad): lang sjø fra havsiden (long_sea()). Kurven under er laget for å ta ned vindsjø
     # (0,3 under 6 s, 0,45-0,6 for 7-8 s), og her er sjøen ute 9 s eller mer. Står foran «mangler periode»: i
     # variant A' og B kan regelen slå til uten toppperiode ved punktet i selve timen.
     # M4 (S40): er toppen ved punktet kort i selve timen (eller mangler den), er den lange sjøen høyst halve
@@ -2049,7 +2052,7 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
 
 def rate(hour, spot, _long_sea=True):
     """Stjerner for én time. Blasse stjerner = det vind og tidevann tar."""
-    # S29 c del 2 (forslag, AV - LONG_SEA_AS_SWELL): lang sjø fra havsiden som GFS kaller vindsjø, regnes som svell
+    # S29 c del 2 (LONG_SEA_AS_SWELL, på for Unstad fra S40): lang sjø fra havsiden som GFS kaller vindsjø, regnes som svell
     # i ALLE ledd under (svellandel, energi, periode, retning). Timen selv (det som lagres og vises) røres ikke.
     # Regelen kan bare løfte: gir omregningen ikke FLERE poeng enn den vanlige regningen (taket på 3 for en usikker
     # time, flat-sperren, eller surfehøyde over ideal_height), gjelder den vanlige (long_sea_base under, brukt helt til slutt).
@@ -2219,7 +2222,7 @@ def rate(hour, spot, _long_sea=True):
     # Tegnet gjør bare timen usikker (S32 e), det er ikke «kildene uenige».
     if source == "barentswatch" and fjord_chop(hour, spot):
         uncertain = True
-    # S29 c del 2 (forslag, av): omregningen er et anslag, ikke modellens egen deling - høyst 3 poeng.
+    # S29 c del 2 (S40: på for Unstad): omregningen er et anslag, ikke modellens egen deling - høyst 3 poeng.
     if long_sea_hour is not None:
         uncertain = True
     if sources_disagree:
@@ -2404,7 +2407,7 @@ def rate(hour, spot, _long_sea=True):
         "bw_period_basis": bw_detail.get("bw_period_basis") if bw_detail else None,
         # Sann når høyden er løftet til gap-grensa (se gap_floor()).
         "gap_floor": gap_used,
-        # S29 c del 2 (forslag, av): feltet finnes bare når regelen har regnet om timen (long_sea()) - det
+        # S29 c del 2 (S40: på for Unstad): feltet finnes bare når regelen har regnet om timen (long_sea()) - det
         # svellet ratingen faktisk brukte, så appen og læringen (exposure_learn) kan se det. Aldri med bryteren av.
         # S40: height_offshore er GFS sin totalhøyde (nevneren i svellandelen), short_peak sier at toppen ved punktet
         # var kort i timen (M4), og gfs_swell er svell-delen slik GFS skilte den ut (det timen selv har lagret).

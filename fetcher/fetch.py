@@ -777,7 +777,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             "bw_interpolated": bwk.get("interpolated") if bwk else None,
             # 24.11.2026 (S29 c, fysikk-kontrollørens variant A'): lengste toppperiode ved punktet i en EKTE
             # modelltime (ikke interpolert) innen ±3 timer. Bare lagring: ratingen leser den ikke så lenge
-            # rating.LONG_SEA_AS_SWELL står av. None når BarentsWatch mangler i timen eller i hele vinduet.
+            # rating.LONG_SEA_AS_SWELL er av (på for Unstad fra S40). None når BarentsWatch mangler i timen eller i hele vinduet.
             "bw_period_real_max_3h": sources.bw_real_period_max(bw_hourly, k) if bwk else None,
             # Maks bølgehøyde fra BarentsWatch - bare til visning, se
             # sources.barentswatch_point sin docstring for hvorfor.
@@ -813,7 +813,7 @@ def build_spot(spot, now, learned, bw_calib, run_id, exposure_data, exposure_lea
             # 24.11.2026 (S29 c del 1, Theodors ja i svar.md 23.11.2026): den samlede sjøen ute (høyde, retning,
             # middelperiode, samme Open-Meteo-kilde som svellet) og GFS sin vindsjø-del. BARE LAGRING, så en regel
             # for lang sjø som GFS kaller vindsjø kan prøves bakover (Unstad 21.11.2026). Ratingen leser dem ikke
-            # så lenge rating.LONG_SEA_AS_SWELL står av. height_offshore over er met.no først, derfor egen totalhøyde.
+            # der regelen for lang sjø ikke slår til (rating.long_sea(), på for Unstad fra S40). height_offshore over er met.no først, derfor egen totalhøyde.
             # Mangler: None, aldri 0 (sources._total_and_wind_wave()).
             # total_model: "gfs" eller "standard" - vindsjø-delen er alltid GFS (se sources._total_and_wind_wave()).
             # Svellhøyden over skaleres og glattes etter skjøten, vindsjø-høyden gjør ikke det: ikke legg dem sammen der.
