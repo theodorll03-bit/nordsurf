@@ -356,9 +356,9 @@ function loggSeksjon(deler){
 // Vinkelen til venstre («tilbake»). Størrelsen styres av CSS, eller settes her i px.
 function vinkel(px){ return `<svg viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ""} aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>`; }
 function ruteHtml(n, cls){
-  if(cls) return `<span class="rute ${cls}" aria-hidden="true"></span>`;
+  if(cls) return `<span class="vurd vurd-m rute ${cls}" aria-hidden="true"></span>`;
   const v = Math.min(5, n||0);
-  return `<span class="rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
+  return `<span class="vurd vurd-m rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
 }
 function windArrowHtml(h){
   if(!h || h.wind_dir==null) return "";

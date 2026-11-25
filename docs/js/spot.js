@@ -184,7 +184,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="vurd vurd-xl t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
@@ -219,7 +219,7 @@
     if(!h || !H.known(h)) return `<p class="sub">${esc(STR.hjem.mangler)}</p>`;
     if(H.mork(h)) return `<p class="sub">${esc(STR.lightOnly)}</p>`;
     const st = Math.min(5, H.stars(h));
-    return `<p class="sub tdom r-${st}"><span class="rute r-${st}" role="img" aria-label="${esc(starsAriaLost(st, h))}">${st}</span><span class="to">${esc(karakter(h).ord)}</span></p>`;
+    return `<p class="sub tdom r-${st}"><span class="vurd vurd-m rute r-${st}" role="img" aria-label="${esc(starsAriaLost(st, h))}">${st}</span><span class="to">${esc(karakter(h).ord)}</span></p>`;
   }
   function timeGrunnHtml(s, h, t){
     // årsaken og hvert tap med sitt stiplede poeng i blekk (fase 3 punkt 4: tapte poeng i blekk, ikke korall).
@@ -282,7 +282,7 @@
       const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null;
       const cls = n!=null ? `r-${n}` : b.cls==="dark" ? "mork" : b.cls;
       const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) : domOrd(b).toLowerCase()}`;
-      return `<button type="button" class="dagknapp" data-day="${x.key}" aria-pressed="${x.key===d.key}" aria-label="${esc(aria)}"><span class="ud">${esc(ukedagKort(at))}</span><span class="rute ${cls}">${n!=null ? n : ""}</span><span class="dt">${at.getUTCDate()}</span></button>`;
+      return `<button type="button" class="dagknapp" data-day="${x.key}" aria-pressed="${x.key===d.key}" aria-label="${esc(aria)}"><span class="ud">${esc(ukedagKort(at))}</span><span class="vurd vurd-m rute ${cls}">${n!=null ? n : ""}</span><span class="dt">${at.getUTCDate()}</span></button>`;
     }).join("")}</div>`;
   }
   function renderMobil(root, s, S){
@@ -386,7 +386,7 @@
     const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${STR.spot.surf.toLowerCase()} ${surf}` : ""}`;
     return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
         <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
-        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
+        <span class="dk-v">${n!=null ? `<span class="vurd dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
         ${grunn ? `<span class="dk-grunn">${esc(grunn)}</span>` : ""}<span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
         <span class="dk-sub">${esc(surf)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
   }

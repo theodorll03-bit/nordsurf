@@ -118,15 +118,25 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .h1{font-size:1.875rem;font-weight:600;line-height:1.133}   /* 30/34; web-størrelsen (60/64) kommer med skjermene i steg 6 */
 .h2{font-size:var(--fs-title);font-weight:600;line-height:1.2}
 /* ---------- B 4.0: skriftroller (SPEC §3) og seksjonsstart (SPEC §4) ---------- */
-.t-hero,.t-tall,.t-vindu,.t-svell,.t-navn,.t-listetall{font-family:var(--mono);font-weight:800;font-stretch:87.5%;font-variant-numeric:tabular-nums;letter-spacing:0}
+.t-hero,.t-vindu,.t-svell,.t-navn{font-family:var(--mono);font-weight:800;font-stretch:87.5%;font-variant-numeric:tabular-nums;letter-spacing:0}
 .t-hero{font-size:var(--t-hero);line-height:var(--lh-hero);text-transform:uppercase}
 .t-hero.lang{font-stretch:75%}   /* navn over 12-13 tegn */
-.t-tall{font-size:var(--t-tall);line-height:var(--lh-tall)}
+/* Vurderingen 0-5 (SPEC §5) er alltid .vurd: Martian Mono 87,5 %, vekt 800, korall fra 4 (--rc-tall). Størrelsen er en egen klasse:
+   xl dommen på spotsiden, l tallet i listene, m ruta på 24 px, s rutene på 14 px uten tall. Unntakene har størrelsen sin der de
+   brukes (.fs-tall 76 px, .dk-tall 48 px, .mx 18/30/48 px). Verdiene er de samme som før (fase 4, PR 1). Kartmerkene er ikke med. */
+.vurd{font-family:var(--mono);font-stretch:87.5%;font-weight:800;font-variant-numeric:tabular-nums;color:var(--rc-tall)}
+.vurd-xl{font-size:var(--t-tall);line-height:var(--lh-tall);letter-spacing:0}
+.vurd-l{font-size:var(--t-listetall);line-height:var(--lh-listetall);letter-spacing:0}
+.vurd-m{place-items:center;font-stretch:75%;font-size:1.1875rem;line-height:1;box-shadow:inset 0 0 0 1px var(--outline)}
+.vurd-m.r-4,.vurd-m.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.vurd-m.r-0{font-weight:500;box-shadow:inset 0 0 0 1px var(--hair)}   /* nullene roligere: dempet, vekt 500, tynn ramme. Aldri strek, strek betyr «mangler» */
+.vurd-s i{display:block;width:14px;height:14px;background:var(--rc,transparent)}
+.vurd-s i.r-0{background:transparent;box-shadow:inset 0 0 0 1px var(--outline)}
+.vurd-s i.r-3{background:var(--ink)}
 .t-vindu{font-size:var(--t-vindu);line-height:var(--lh-vindu);color:var(--signal)}
 .t-svell{font-size:var(--t-svell);line-height:var(--lh-svell)}
 .des{display:inline-block;margin:0 -.2em;line-height:inherit}   /* desimalkommaet i store mono-tall: uten hullet midt i tallet */
 .t-navn{font-size:var(--t-navn);line-height:var(--lh-navn);text-transform:uppercase}
-.t-listetall{font-size:var(--t-listetall);line-height:var(--lh-listetall)}
 .t-overskrift{font-family:var(--display);font-size:var(--t-overskrift);line-height:var(--lh-overskrift);font-weight:600;letter-spacing:-.02em}
 /* Etikettstilen står i to regler: her uten egen bredde, og lenger ned («Etikettstil, smal») for alt som er 87,5 % bredt.
    Vekt, linjehøyde og farge står på hver. */
@@ -210,7 +220,6 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .sekknapp[aria-pressed="true"]{color:var(--ink);font-weight:700}
 .favliste{display:grid;gap:var(--s4)}
 .favlinje{display:grid;grid-template-columns:2.75rem minmax(0,1fr);column-gap:var(--s3);align-items:start;color:var(--ink);text-decoration:none}
-.favlinje .t-listetall{color:var(--rc-tall)}
 .favtekst{display:block;min-width:0}
 .favtekst > span{display:block}
 .favlinje .t-navn.lang{font-stretch:75%}
@@ -234,9 +243,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* vurderingen som tall (SPEC §5).
    .rute: tallet i en 24 px rute - korall fylt fra 4, ellers 1 px omriss med tallet i blekk. Tomme ruter:
    .miss = data mangler (skravur), .mork = mørk time (skygge, ingen vurdering), .forbud = surfing forbudt. */
-.rute{flex:none;display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1;color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
-.rute.r-4,.rute.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
-.rute.r-0,.uke i.r-0{font-weight:500;box-shadow:inset 0 0 0 1px var(--hair)}   /* nullene roligere: dempet, vekt 500, tynn ramme. Aldri strek, strek betyr «mangler» */
+.rute{flex:none;display:inline-grid;width:1.5rem;height:1.5rem}
 .rute.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
 .rute.mork{background:var(--night);box-shadow:none}
 .rute.forbud{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--hair)}
@@ -245,9 +252,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
    12 px ekstra luft etter dag 3 (den fjerde kolonnen er 12 px bredere). Mangler = skravur, mørkt hele dagen = skygge. */
 .uke{--uw:1.5rem;display:grid;grid-template-columns:repeat(3,var(--uw)) calc(var(--uw) + 12px) repeat(3,var(--uw));gap:2px}
 .uke > :nth-child(7n+4){margin-left:12px}
-.uke i,.uke b{display:grid;place-items:center;width:var(--uw);height:var(--uw);font-style:normal;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1}
-.uke i{color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
-.uke i.r-4,.uke i.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.uke i,.uke b{display:grid;place-items:center;width:var(--uw);height:var(--uw);font-style:normal;line-height:1}
 .uke i.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);color:transparent;box-shadow:inset 0 0 0 1px var(--hair)}
 .uke i.dark{background:var(--night);color:transparent;box-shadow:none}
 .uke i.over{background:transparent;color:transparent;box-shadow:none}
@@ -306,7 +311,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .kartkort .topp{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:44px}
 .kartkort .navn{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-navn);line-height:var(--lh-navn);font-weight:800;text-transform:uppercase}
 .kartkort .omr{margin-top:var(--s1);line-height:var(--lh-etikett);font-weight:500;color:var(--muted)}
-.kartkort .vurd{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) 10px;margin-top:var(--s2)}
+.kartkort .kk-vurd{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1) 10px;margin-top:var(--s2)}
 .kartkort .ord{font-weight:800;color:var(--ink)}
 .kartkort .fakta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);margin-top:10px}
 .kartkort .fakta div{line-height:var(--lh-etikett);font-weight:500;color:var(--muted)}
@@ -496,7 +501,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-navn{display:block;font-size:min(7.5rem, calc((100vw - 64px) * .6 / (var(--n, 8) * .66)));line-height:.9}
   .fs-navn.lang{font-stretch:75%}
   .fs-rad{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) 20px;margin-top:var(--s2)}
-  .fs-tall{font-family:var(--mono);font-stretch:87.5%;font-size:4.75rem;line-height:.84;font-weight:800;color:var(--rc-tall)}
+  .fs-tall{font-size:4.75rem;line-height:.84}
   .fs-ord{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .fs-fakta{font-size:1.125rem}
   .fs-best{position:relative;display:inline-flex;align-items:center;padding:10px 0;font-family:var(--mono);font-stretch:87.5%;font-size:1.75rem;line-height:1;font-weight:800;text-transform:uppercase;white-space:nowrap}
@@ -520,18 +525,15 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-tabell .fs-nm .t-navn.lang{font-stretch:75%}
   .fs-tabell .fs-nm .etikett{display:block;margin-top:var(--s1)}
   .fs-tabell .fs-dom{white-space:nowrap}
-  .fs-tabell .fs-dom .t-listetall{display:inline-block;min-width:1.6ch;margin-right:10px;vertical-align:middle;color:var(--rc-tall)}
+  .fs-tabell .fs-dom .t-listetall{display:inline-block;min-width:1.6ch;margin-right:10px;vertical-align:middle}
   .fs-tabell .fs-dom .ord{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle}
   .fs-tabell .fs-dom b{font-weight:800}
   .fs-tabell .fs-bst{font-family:var(--mono);font-stretch:87.5%;font-size:1rem;font-weight:800;white-space:nowrap}
   .fs-tabell .fs-sv{white-space:nowrap}
   .fs-tabell .fs-tim{width:250px}
   .fs-stripe{display:grid;grid-template-columns:repeat(13,14px);gap:5px}
-  .fs-stripe i,.fs-tegn i{display:block;width:14px;height:14px;background:var(--rc,transparent)}
-  .fs-stripe i.r-0,.fs-tegn i.r-0{background:transparent;box-shadow:inset 0 0 0 1px var(--outline)}
-  .fs-stripe i.r-3,.fs-tegn i.r-3{background:var(--ink)}
-  .fs-stripe i.mork,.fs-tegn i.mork{background:var(--night)}
-  .fs-stripe i.miss,.fs-tegn i.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
+  .vurd-s i.mork{background:var(--night)}
+  .vurd-s i.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
   .fs-stripe i.vaert{background:transparent}
   .fs-bunn{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--s3);margin-top:var(--s3)}
   .fs-tegn{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0}
@@ -543,7 +545,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-matrise thead th.idag{color:var(--ink);font-weight:800}
   .fs-matrise tbody th{padding:0 12px 0 0;height:76px;text-align:left;font-family:var(--mono);font-stretch:87.5%;font-size:.875rem;font-weight:800;text-transform:uppercase;border-bottom:1px solid var(--hair)}
   .fs-matrise td{text-align:center;border-bottom:1px solid var(--hair);font-family:var(--mono);font-stretch:87.5%;font-weight:800;color:var(--muted)}
-  .fs-matrise .mx{font-size:1.125rem;line-height:1}
+  .fs-matrise .mx{font-size:1.125rem;line-height:1;color:var(--muted)}
   .fs-matrise .r-0 .mx{font-weight:500}
   .fs-matrise .mx.tre{font-size:1.875rem;color:var(--ink)}
   .fs-matrise .mx.hoy{font-size:3rem;color:var(--signal)}
@@ -598,7 +600,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .dagknapp.stor .ud{color:var(--muted);font-size:var(--t-etikett)}
   .dagknapp.stor[aria-pressed="true"] .ud{color:var(--ink);font-weight:800}
   .dk-v{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px var(--s2);margin-top:6px}
-  .dk-tall{font-family:var(--mono);font-stretch:87.5%;font-size:3rem;line-height:.84;font-weight:800;color:var(--rc-tall)}
+  .dk-tall{font-size:3rem;line-height:.84}
   .dk-ord{line-height:1.2;font-weight:800}
   .dagknapp.stor.miss .dk-ord,.dagknapp.stor.dark .dk-ord,.dagknapp.stor.over .dk-ord,.dagknapp.stor.forbud .dk-ord{color:var(--muted);font-weight:500}
   .dk-best{font-weight:800}
@@ -734,7 +736,6 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .maal .forklar{max-width:100%;overflow-wrap:anywhere}   /* med 200 % tekst er «TIDEVANN» bredere enn kolonnen: brytes i stedet for å gå inn i tallet */
 .dom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:20px}
 .dom-v{display:flex;align-items:flex-end;gap:12px;min-width:0}
-.dom .t-tall{color:var(--rc-tall)}
 .dom-ord{display:flex;flex-direction:column;gap:3px;min-width:0}
 .dom-ord b{font-family:var(--mono);font-stretch:87.5%;font-size:.8125rem;line-height:1.23;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
 .dom-h{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
