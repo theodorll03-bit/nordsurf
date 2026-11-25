@@ -406,11 +406,13 @@ def ta(repo, ut, oppsett, datasett, dekning):
 
 
 def sammenlikn(a, b):
-    """{bilde: (området som skiller eller «mangler», [elementer med andre stiler])} for bildene som er ulike."""
+    """{bilde: (området som skiller eller «mangler», [elementer med andre stiler])} for bildene som er ulike. Bare oppsett
+    og datasett som finnes i begge mappene. Elementer uten boks (0 x 0, f.eks. skjult toppmeny på mobil) telles ikke."""
     a, b = Path(a), Path(b)
     ha, hb = (json.loads((x / "hash.json").read_text()) for x in (a, b))
     ulike = {}
-    for k in sorted(set(ha) | set(hb)):
+    begge = {"_".join(k.split("_")[:2]) for k in ha} & {"_".join(k.split("_")[:2]) for k in hb}
+    for k in sorted(k for k in set(ha) | set(hb) if "_".join(k.split("_")[:2]) in begge):
         if k not in ha or k not in hb:
             ulike[k] = ("mangler i den ene", [])
             continue
@@ -423,13 +425,19 @@ def sammenlikn(a, b):
                 for sti in list(da) + [x for x in db if x not in da]:
                     if da.get(sti) != db.get(sti):
                         x, y = da.get(sti), db.get(sti)
+                        if "::" not in sti and all(not e or (e[3] == 0 and e[4] == 0) for e in (x, y)):
+                            continue
                         navn = ("element", "x", "y", "bredde", "høyde") + STILER
                         stil.append((sti, (x or y)[0], [f"{navn[i]}: {x[i]} -> {y[i]}" for i in range(len(x)) if x[i] != y[i]] if x and y else ["bare i den ene"]))
         if ha[k] != hb[k]:
             try:
                 from PIL import Image, ImageChops
                 A, B = (Image.open(x / f"{k}.png").convert("RGB") for x in (a, b))
-                omr = "ulik størrelse %s %s" % (A.size, B.size) if A.size != B.size else str(ImageChops.difference(A, B).getbbox())
+                if A.size != B.size:
+                    omr = "ulik størrelse %s %s" % (A.size, B.size)
+                else:
+                    d = ImageChops.difference(A, B)
+                    omr = f"{d.getbbox()}, {sum(d.convert('L').histogram()[1:])} piksler, største forskjell {max(hi for _, hi in d.getextrema())} av 255"
             except ImportError:
                 omr = "ulikt"
             ulike[k] = (omr, stil)
@@ -448,11 +456,14 @@ def sml(mapper):
         pk = [k for k in u if u[k][0]]
         st = [k for k in u if u[k][1]]
         print(f"par {nr + 1}: {n} bilder i begge, {len(pk)} ulike i piksler, {len(st)} med andre stiler eller mål")
-        for k in u:
-            omr, stil = u[k]
-            print("  ", k, omr or "like piksler", f"{len(stil)} elementer" if stil else "")
-            for sti, tag, hva in stil[:3]:
-                print("       ", tag, sti, "; ".join(hva[:4]))
+        for k in pk:
+            print("  ", k, u[k][0], f"{len(u[k][1])} elementer med andre stiler eller mål" if u[k][1] else "")
+        felles = {}   # samme forskjell på mange bilder skrives én gang
+        for k in st:
+            for sti, tag, hva in u[k][1]:
+                felles.setdefault((tag, "; ".join(h for h in hva if not h.startswith(("x:", "y:"))) or "bare flyttet"), []).append((k, sti))
+        for (tag, hva), hvor in sorted(felles.items(), key=lambda e: -len(e[1]))[:40]:
+            print(f"   stil: {len(hvor)} ganger <{tag}> {hva[:300]}  (f.eks. {hvor[0][0]} {hvor[0][1]})")
     if len(par) == 2:
         begge = sorted(k for k in par[0][0] if par[0][0][k][0] and k in par[1][0] and par[1][0][k][0])
         print(f"ulike piksler i begge parene: {len(begge)}", *begge, sep="\n   ")
