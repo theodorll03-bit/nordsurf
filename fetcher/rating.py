@@ -1592,7 +1592,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         if bw_detail["spot_direction_offshore"]:
             items.append("Bølgene ved spoten går ut fra land. Trolig vindsjø fra land, ikke svell inn.")
         elif bw_detail.get("spot_direction_overridden"):
-            items.append("Retning ved spoten: ikke brukt - svellet ute treffer godt")
+            items.append("Retning ved spoten: ikke brukt, svellet ute treffer godt")
         else:
             items.append(f"Retning ved spoten: {_spot_dir_word(bw_detail['spot_direction_factor'])}")
         if h is not None and bw_h is not None and not gap_used and fjord_h is None:
@@ -1664,7 +1664,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             # Bare tekst, ingen poeng eller høyder.
             strong_wind = blown_out_wind_strong(wind_speed, gust, wt, wind_calm_ms(spot)) is True
             cause = "mye vindsjø og sterk vind" if (wind_took_points and wind_speed is not None) or strong_wind else "mye vindsjø"
-            items.append(f"Surfehøyde: blåst ut - {cause}, ikke surfbart "
+            items.append(f"Surfehøyde: blåst ut, {cause}, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
         elif low_hs:
             items.append(f"Surfehøyde: flatt (signifikant høyde under {_fmt_m(FLAT_HS_THRESHOLD)})")
@@ -1740,7 +1740,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         items.append(f"Usikkert varsel: kappet fra {capped_from} til maks 3 stjerner ({grunn})")
     # 15.10.2026: 5-stjerners-porten
     if five_open:
-        items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter - 5 mulig")
+        items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter: 5 mulig")
         if five_lost == "wind":
             items.append("Femte stjerne holdes tilbake: vinden er ikke ren (fralands eller nesten blank uten straff)")
         elif five_lost == "tide":
@@ -2031,7 +2031,7 @@ def tide_level_penalty(hour, spot):
     pen = rules.get("weight", 1.0) * level_rule["penalty"] * share
     m = f"{cm / 100:.1f}".replace(".", ",").replace("-0,0", "0,0")
     if pen > 0:
-        return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her " + f"(vektet −{pen:.2f})".replace(".", ",")
+        return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her" + f": −{pen:.2f} poeng".replace(".", ",")
     return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
 
 
@@ -2047,7 +2047,9 @@ def local_tide_prefer_line(spot, lines):
 
 
 # S42 a (svar.md 24.11.2026 kl. 22.25): ordene i linja for den lokale regelen på flo og fjære. Bare tekst.
-TIDE_STATE_WORD = {"høy": "Høyvann", "middels": "Middels vannstand", "lav": "Lavvann"}
+# 25.11.2026 (feiljegeren på designfase 2, funn 2): «Høyt vann», ikke «Høyvann». Ordet følger tide.state, som er «høy» i
+# hele den øverste tredelen av syklusen, også når vannet faller to timer etter flo. «Høyvann» er et tidspunkt.
+TIDE_STATE_WORD = {"høy": "Høyt vann", "middels": "Middels vann", "lav": "Lavt vann"}
 TIDE_PREFER_WORD = {"lav": "lavt", "middels": "middels", "høy": "høyt"}
 
 
@@ -2103,7 +2105,7 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
         if strict_hit:
             local_wind = weight * 1
             lines.append(f"Vind {wind_speed:.0f} m/s {WIND_TYPE_WORD.get(wind_type_, wind_type_)}: "
-                         f"strengere lokal grense (over 4 m/s) - −1 stjerne (vektet −{local_wind:.1f}), "
+                         f"strengere lokal grense (over 4 m/s): −" + f"{local_wind:.1f}".replace(".", ",") + " poeng, "
                          f"erstatter den generelle vindstraffen hvis strengere")
 
     # 15.10.2026 (Theodors regel 4): det lokale VINDfradraget legges ikke oppå den generelle

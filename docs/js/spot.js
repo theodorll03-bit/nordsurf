@@ -106,7 +106,7 @@
     if(!h || !h.breakdown) return "";
     const ex = ratingWordExplain(h);
     return `<details class="hvorfor" id="hvorfor"><summary aria-expanded="false">Hvorfor denne vurderingen?<svg class="chev" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-      <div class="body">${ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : ""}${breakdownTabellHtml(h.breakdown)}</div></details>`;
+      <div class="body">${ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b>: ${esc(ex)}</p>` : ""}${breakdownTabellHtml(h.breakdown)}</div></details>`;
   }
 
   /* ---------- mobil (design B 4.0, SPEC §6B) ---------- */
