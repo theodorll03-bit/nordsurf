@@ -965,6 +965,14 @@ def main():
                     assert page.text_content("#exTitle").strip() == "Vind"
                     page.click("#exClose"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
                     page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(100)
+                    # S42 (feiljegeren, fase 2 runde 5): ingen tankestrek (« - » eller « – ») i arkene eller i tekstene i strings.js
+                    strek = page.evaluate("""(h) => { const spot = DATA.spots.find(x => x.id === 'unstad'), ut = [], re = / [-–] /;
+                        for(const k of Object.keys(EXPLAIN)){ openExplain(k, h, spot); const t = document.getElementById('exSheet').textContent; if(re.test(t)) ut.push(k + ': ' + t.match(/.{0,30} [-–] .{0,30}/)[0]); }
+                        closeExplain();
+                        const gaa = (o, sti) => { for(const [k, v] of Object.entries(o)){ if(typeof v === 'string' && re.test(v)) ut.push(sti + k + ': ' + v); else if(v && typeof v === 'object') gaa(v, sti + k + '.'); } };
+                        gaa(STR, 'STR.'); ut.push(...[STR.witness.sub('A', 'i dag', '10', 3)].filter(x => re.test(x))); return ut; }""", h)
+                    assert not strek, f"tankestrek i tekster brukeren ser: {strek}"
+                    page.evaluate("window.scrollTo(0, 0)")
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
                         .filter(el => el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
                     assert not hoye, f"tall brutt over flere linjer ({scheme}): {hoye}"
@@ -1229,6 +1237,14 @@ def main():
                         assert [r["sist"] for r in naa_sett["i lys"]] != [r["sist"] for r in naa_sett["før det lysner"]], "raden før det lysner skal ikke være lik raden midt på dagen"
                         page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
                         assert page.query_selector("#viewHjem #hjemMerk"), "linja skal stå igjen når klokka er tilbake på 22:10"
+                        # feiljegeren (fase 2 runde 5): «usikkert» står også på dagens ord i regionraden (lang sjø), som på nå-leddet
+                        usk = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag, rader = [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')];
+                            const s = rader.map(r => DATA.spots.find(x => r.getAttribute('href') === '#spot=' + x.id)).find(x => { const b = H.dayBest(x, key); return b.st != null && b.h && !b.h.long_sea; });
+                            if(!s) return null;
+                            const h = H.dayBest(s, key).h; h.long_sea = true; Front.refresh();
+                            const r = document.querySelector(`#viewHjem .regionliste a.favlinje[href="#spot=${s.id}"]`), ut = {navn: s.name, meta: r.querySelector('.etikett').textContent.replace(/\\s+/g, ' '), aria: r.getAttribute('aria-label')};
+                            delete h.long_sea; Front.refresh(); return ut; }""")
+                        assert usk and ", usikkert" in usk["meta"] and ", usikkert" in usk["aria"] and "Nå " not in usk["meta"], f"«usikkert» mangler på dagens ord i regionraden: {usk}"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     if not mobile:

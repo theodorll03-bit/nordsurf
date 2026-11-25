@@ -17,7 +17,7 @@
     staleMore: "Henteren har trolig feilet. Tallene kan være utdaterte.",
     staleHours: (n) => `Varselet er ${n} ${n === 1 ? "time" : "timer"} gammelt`,
     staleFormat: "Varselet har et eldre format enn appen.",
-    staleFormatMore: "Henteren har trolig feilet etter en oppdatering - tallene vises når neste varsel er hentet.",
+    staleFormatMore: "Henteren har trolig feilet etter en oppdatering: tallene vises når neste varsel er hentet.",
     exampleSub: "Eksempel, ikke ekte data",
 
     /* rating: ord for 0-5 stjerner, og de fire ordene for 0-1 stjerne */
@@ -274,8 +274,8 @@
       source:"Kilde (valgfritt)", sourcePh:"f.eks. Instagram, Lofoten Surfsenter", howGood:"Hvor bra var det?", size:"Størrelse (valgfritt)",
       wind:"Vind (valgfritt)", save:"Lagre økt", photoHint:"Velg et bilde, så fylles tidspunktet inn fra bildet.", photoBtn:"Hent tidspunkt fra bilde"},
     toast: {logged:"Økt logget", logFail:"Kunne ikke lagre. Sjekk at nettleseren tillater lagring.", loginForFav:"Logg inn for å lagre favoritter", login:"Logg inn",
-      favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet - sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
-    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
+      favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet: sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
+    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour}: varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
     // Logger (designrevisjonen fase 2 punkt 3): tom tilstand står én gang per seksjon. Gjelder setningen bare noen av
     // spotene, står navnene (eller antallet) foran
     logger: {noen: (navn) => `${navn}:`, antall: (n) => `${n} spots:`},

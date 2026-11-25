@@ -1063,7 +1063,7 @@ function renderLogs(){
     const surfSrcTxt = cal.surf_factor_source==="logs"
       ? `Lært fra ${surfLogs} logger/observasjoner du har lagt inn`
       : cal.surf_factor_source==="prior"
-      ? `Startverdi${cal.surf_factor_prior_n!=null?` fra ${cal.surf_factor_prior_n} observasjoner`:""} (ikke lært fra logger ennå - ${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn så overstyrer det)`
+      ? `Startverdi${cal.surf_factor_prior_n!=null?` fra ${cal.surf_factor_prior_n} observasjoner`:""} (ikke lært fra logger ennå: ${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn så overstyrer det)`
       : `Standardverdi (${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn før den læres automatisk)`;
     return `<div class="calib"><div class="t">${esc(s.name)}</div>
       <p><b>Transfer ${transferPct} %</b>: hvor mye av svellet ute som når stranda ved direkte treff, modell mot modell (reservemodellen mot BarentsWatch). ${transferSrcTxt}.</p>
@@ -1084,11 +1084,11 @@ function renderLogs(){
     const bucketsLang = cal.exposure_buckets_learned_lang ?? 0;
     const bucketsKort = cal.exposure_buckets_learned_kort ?? 0;
     const sugg = (cal.exposure_override_suggestions || []).map(o=>
-      `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren - fjernes aldri automatisk.</div>`
+      `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren: fjernes aldri automatisk.</div>`
     ).join("");
     return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
       <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
-      ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå - ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
+      ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå: ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
         <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>
@@ -1642,7 +1642,7 @@ $("#saveLog").onclick = async ()=>{
     energySwellKj: f ? f.energy_swell_kj : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
-  toast(!ok ? "Kunne ikke lagre. Sjekk at nettleseren tillater lagring." : full ? "Økt logget" : "Økt logget - uten varselets tall for timen (fikk ikke hentet dem)");
+  toast(!ok ? "Kunne ikke lagre. Sjekk at nettleseren tillater lagring." : full ? "Økt logget" : "Økt logget: uten varselets tall for timen (fikk ikke hentet dem)");
   syncLogs();
   Front.refresh();
 };
@@ -1739,7 +1739,7 @@ function maybeShowWitnessPrompt(){
   const spot = DATA.spots.find(s=>s.id===entry.spot);
   if(!spot) return;
   const when = new Date(entry.t);
-  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 poeng.`;
+  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)}: varselet viste ${entry.stars} av 5 poeng.`;
   $("#witnessPick").innerHTML = PICK_WORDS.map((w,n)=>`<button data-n="${n}"><b>${n}</b>${w}</button>`).join("");
   $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=async ()=>{
     const stars = +b.dataset.n;
@@ -1755,7 +1755,7 @@ function maybeShowWitnessPrompt(){
     saveLogs([...loadLogs(), log]);
     markWitnessAsked(entry);
     closeWitness();
-    toast(full ? "Takk! Lagret som økt." : "Takk! Lagret som økt - uten varselets tall for timen (fikk ikke hentet dem).");
+    toast(full ? "Takk! Lagret som økt." : "Takk! Lagret som økt: uten varselets tall for timen (fikk ikke hentet dem).");
     syncLogs();
     Front.refresh();
   });

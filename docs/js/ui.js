@@ -332,16 +332,18 @@
     const k = h && b.st!=null ? karakter(h) : null, grunn = k ? k.aarsak : null;
     const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : k ? k.ord : ratingWord(h);
     const tapt = h && b.st!=null ? (lostParts(h).map(p=> p.tekst).join(" · ") || null) : null;
+    // «usikkert» på dagens ord som på nå-leddet og i overskriften (feiljegeren, fase 2 runde 5): lang sjø gir et usikkert tall
+    const ordU = b.st!=null ? ord + usikkertTillegg(h) : ord;
     // merkene («Foreløpig», forbudet) står etter stedet i alle rader, også favorittene (runde 3, 24.11.2026)
     const stedDeler = [s.area || regionOf(s), ...merker(s)], sted = stedDeler.join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
     // regionradene (kort): dagens tall til venstre, og i metalinja «Nå» med ordet og høyden for nå-timen i stedet for
     // dagens ord (S38 1 b). Bare når raden viser i dag og har et tall: i morgen-radene og rader uten tall er som før.
     const naa = kort && b.st!=null && dagOrd(d0)==="i dag" ? naaLedd(s) : null;
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
-      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ord}${grunn ? ", " + grunn.toLowerCase() : ""}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
+      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ordU}${grunn ? ", " + grunn.toLowerCase() : ""}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
-        <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ord, naa ? null : grunn, naa ? null : tapt])}</span>
+        <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ordU, naa ? null : grunn, naa ? null : tapt])}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
         ${obs ? `<span class="etikett obs">${esc(obs)}</span>` : ""}
         ${ukeHtml(s, days, "under")}</span>`;

@@ -31,7 +31,7 @@
   const EXPLAIN = {
     surf_height: {
       title: "Surfehøyde",
-      what: "Høyden der bølgene brekker - det du faktisk ser fra stranda. Langt svell reiser seg mye mer på grunt vann enn kort svell med samme høyde ute. Eksempel: 0,9 m signifikant høyde med 15 s periode gir rundt 1,7 m med formelen alene; med Unstads surf-faktor (ca. 1,4, lært fra observasjonene) rundt 2,4 m (Unstad 26.09.2026, over hodet).",
+      what: "Høyden der bølgene brekker: det du faktisk ser fra stranda. Langt svell reiser seg mye mer på grunt vann enn kort svell med samme høyde ute. Eksempel: 0,9 m signifikant høyde med 15 s periode gir rundt 1,7 m med formelen alene; med Unstads surf-faktor (ca. 1,4, lært fra observasjonene) rundt 2,4 m (Unstad 26.09.2026, over hodet).",
       numbers: (h) => [
         ["Surfehøyde", h.surf_height!=null ? m(h.surf_height) : (h.low_reason ? "ikke beregnet (" + (h.low_reason==="blown_out" && typeof windLossWord === "function" ? windLossWord(h) : lowWord(h.low_reason)) + ")" : "mangler")],
         ["Sett", m(h.surf_height_sets)],
@@ -47,7 +47,7 @@
     },
     hs: {
       title: "Signifikant høyde",
-      what: "Gjennomsnittet av den høyeste tredjedelen av bølgene ute i vannet - tallet bølgemodeller oppgir. Ikke det samme som surfehøyden: 1,0 m signifikant med lang periode kan gi hodehøye bølger på stranda.",
+      what: "Gjennomsnittet av den høyeste tredjedelen av bølgene ute i vannet: tallet bølgemodeller oppgir. Ikke det samme som surfehøyden: 1,0 m signifikant med lang periode kan gi hodehøye bølger på stranda.",
       numbers: (h) => [
         ["På spoten", m(h.height)],
         ["BarentsWatch ved punktet", m(h.bw_height)],
@@ -75,7 +75,7 @@
         ["Sekundært svell (Open-Meteo)", h.secondary_swell_height!=null ? `${m(h.secondary_swell_height)} fra ${compass(h.secondary_swell_dir)}, ${s(h.secondary_swell_period)}` : "mangler"],
       ],
       how: (h) => [...(h && h.long_sea ? [STR.spot.langSjoHow] : []), "Open-Meteo, GFS Wave-modellen, på spotens havpunkt. Høyde, retning og periode kommer alltid fra samme modell.",
-                  "Mangler svellfeltet, brukes totalhøyden som tydelig merket reserve - aldri stille, aldri 0."],
+                  "Mangler svellfeltet, brukes totalhøyden som tydelig merket reserve: aldri stille, aldri 0."],
     },
     period: {
       title: "Periode",
@@ -88,12 +88,12 @@
       title: "Energi (kJ)",
       what: "Energi i bølgene ute. Lang periode gir mye mer energi og kraft, selv med samme høyde. Eksempel: 3 m med 11 s topperiode er ca. 2 100 kJ, 3 m med 14 s ca. 3 500 kJ.",
       numbers: (h) => [["Svellenergi", kj(h.energy_swell_kj)], ["Energi med totalhøyde", kj(h.energy_total_kj)]],
-      how: () => ["E = ρ g² H² T² / (16π) ≈ 1,96 × H² × T² kJ per meter bølgefront, samme mål som surf-forecast. T er topperioden; mangler den (GFS Wave gir den ikke), brukes middelperioden × 1,25 - derfor gir «11 s» i appen rundt 3 300 kJ ved 3 m, ikke 2 100.",
+      how: () => ["E = ρ g² H² T² / (16π) ≈ 1,96 × H² × T² kJ per meter bølgefront, samme mål som surf-forecast. T er topperioden; mangler den (GFS Wave gir den ikke), brukes middelperioden × 1,25: derfor gir «11 s» i appen rundt 3 300 kJ ved 3 m, ikke 2 100.",
                   "Ratingen bruker alltid svellenergien (ekte svell), aldri totalhøyden med vindsjø. Full uttelling fra 2 000 kJ, gradvis ned til 500 kJ (spots med lokale regler har egne grenser)."],
     },
     direction: {
       title: "Retningstreff",
-      what: "Hvor godt svellets retning passer spotens vindu - sektoren av retninger med fri linje fra stranda til åpent hav. Svell rett i vinduet når inn med full høyde; svell utenfor må bøye seg rundt land (diffraksjon) og mister det meste. Eksempel: Grøtfjord 25.09.2026, svell 3 grader utenfor vinduet, helt flatt.",
+      what: "Hvor godt svellets retning passer spotens vindu: sektoren av retninger med fri linje fra stranda til åpent hav. Svell rett i vinduet når inn med full høyde; svell utenfor må bøye seg rundt land (diffraksjon) og mister det meste. Eksempel: Grøtfjord 25.09.2026, svell 3 grader utenfor vinduet, helt flatt.",
       numbers: (h, spot) => [
         ["Retningstreff", pct(vinduTreff(h, spot))],
         [h.long_sea ? STR.spot.langSjoFra : "Svell fra", h.dir_offshore!=null ? `${compass(h.dir_offshore)} (${deg(h.dir_offshore)})` : "mangler"],
@@ -111,11 +111,11 @@
       // S37 c: når høyden er andelshøyden, er det andelen gjennom gapet som er brukt i timen, ikke eksponeringskurven
       numbers: (h) => [["Eksponering denne timen", andelsHoyde(h) ? (andelBrukt(h) ? `${andelBrukt(h)} · ${STR.gapAndel}` : "mangler") : pct(h.directness)], ["Transfer (direkte treff)", h.transfer!=null ? pct(h.transfer) : "mangler"]],
       how: () => ["Geometrisk kurve per 10 grader (del C), blandet med lært kurve fra BarentsWatch (del B) der det finnes nok par.",
-                  "Transfer er hvor mye av svellet ute som når stranda ved direkte treff - modell mot modell, lært fra BarentsWatch, aldri fra loggene."],
+                  "Transfer er hvor mye av svellet ute som når stranda ved direkte treff: modell mot modell, lært fra BarentsWatch, aldri fra loggene."],
     },
     wind: {
       title: "Vind",
-      what: "Fralandsvind (fra land) holder bølgene rene og glatte; pålandsvind (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett fralandsvind - lange, rene linjer.",
+      what: "Fralandsvind (fra land) holder bølgene rene og glatte; pålandsvind (fra havet) bryter dem ned. Sidevind er midt imellom. Eksempel: Unstad 28.09.2026, lett fralandsvind: lange, rene linjer.",
       numbers: (h) => [
         ["Vind", h.wind_speed!=null ? `${windMsText(h)} m/s fra ${compass(h.wind_dir)} (${deg(h.wind_dir)})` : "mangler"],
         ["Kast", h.gust!=null ? `${nf0.format(h.gust)} m/s` : "mangler"],
@@ -124,7 +124,7 @@
         ["Kilde", h.wind_source==="openmeteo" ? "Open-Meteo GFS (langtid)" : h.wind_source==="metno" ? "met.no" + (h.wind_interpolated ? ", jevnet ut mellom 6-timersverdier" : "") : "mangler"],
       ],
       how: () => ["Fralands avgjøres av spotens fralandssektor. Ellers måles vinden mot retningen stranda vender: innenfor 45° er rett pålands, 45–80° skrått pålands, over 80° sidevind.",
-                  "Vindtabellen trekker poeng etter styrke og type - vist som stiplede ruter i timestripa."],
+                  "Vindtabellen trekker poeng etter styrke og type: vist som stiplede ruter i timestripa."],
     },
     tide: {
       title: "Tidevann",
@@ -176,9 +176,9 @@
         ["Dager frem", h.day!=null ? String(h.day) : "mangler"],
         ["Sikkerhet", sikkerhetProsent(h, "mangler")],
       ],
-      how: () => ["\"Kildene er uenige\": BarentsWatch viser høyde ved punktet, men svellet ute treffer ikke vinduet eller er mest vindsjø - da er timen usikker og rates forsiktig.",
+      how: () => ["\"Kildene er uenige\": BarentsWatch viser høyde ved punktet, men svellet ute treffer ikke vinduet eller er mest vindsjø: da er timen usikker og rates forsiktig.",
                   "\"Blåst ut\": vinden tar poengene. \"For mye vind\": det samme i sterk fralandsvind. \"Stormsjø\": mye av totalhøyden er vindsjø, ikke svell. \"Treffer ikke\": svellet ute kommer fra en retning uten fri linje til stranda.",
-                  "Langt frem i tid (dag 8-16) er alt et anslag fra den globale modellen - derfor \"usikkert så langt frem\"."],
+                  "Langt frem i tid (dag 8-16) er alt et anslag fra den globale modellen: derfor \"usikkert så langt frem\"."],
     },
     shelter: {
       title: "Skjerming",
