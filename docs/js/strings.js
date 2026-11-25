@@ -47,12 +47,12 @@
       // egen forklaring (Theodor S21 b, 20.11.2026). Ikke «Fralandsvinden …»: ordet brukes også når retningen er ukjent
       "For mye vind": "Vinden er for sterk.",
       "Feil tidevann": "Bølgene er der, men tidevannet passer ikke spoten nå.",
-      "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak – se regnestykket under.",
+      "Ikke surfbart nå": "Bølgene er der, men flere ting trekker ned uten én tydelig hovedårsak. Se regnestykket under.",
     },
     mushyShort: "Bølgene er der, men kort periode og lite energi gjør dem svake.",
     mushyLong: "Bølgene er der, men for lite energi i svellet til å gi kraft.",
-    notNowCap: "Bølgene er der, men varselet er usikkert (f.eks. ingen BarentsWatch-retning, svell utenfor vinduet, stor dreining eller svellet anslått fra totalhøyden), så ratingen er kappet – se regnestykket under.",
-    notNowLow: "Bølgene er der, men svellet gir for lite til ett poeng – se regnestykket under.",
+    notNowCap: "Bølgene er der, men varselet er usikkert (f.eks. ingen BarentsWatch-retning, svell utenfor vinduet, stor dreining eller svellet anslått fra totalhøyden), så ratingen er kappet. Se regnestykket under.",
+    notNowLow: "Bølgene er der, men svellet gir for lite til ett poeng. Se regnestykket under.",
     // Kilden til en lokal regel, slik den står i spots.json (local_rules.source),
     // omskrevet til forklaringstekst. En kilde som ikke er en person skal aldri
     // skrives som en person (Theodor 09.10.2026).
@@ -81,8 +81,10 @@
     height: (a, b) => b!=null && b!==a ? `${a} til ${b} m` : `${a} m`,
     heightSets: "surfehøyde og sett",
     noHeight: "–",
-    // fralands, pålands og sidevind (SPEC §8, Theodor 16.11.2026). Skrå pålandsvind (45–80° fra stranda) sies som «pålands».
-    wind: {offshore:"fralands", side:"sidevind", sideonshore:"pålands", onshore:"pålands"},
+    // fralands, pålands og sidevind (SPEC §8, Theodor 16.11.2026). Skrå pålandsvind (45–80° fra stranda) heter «skrått pålands»
+    // overalt, også i «Hvorfor» (S42 b, svar.md 24.11.2026 kl. 22.25; før sto den som «pålands»). Samme ord som
+    // WIND_TYPE_WORD i fetcher/rating.py.
+    wind: {offshore:"fralands", side:"sidevind", sideonshore:"skrått pålands", onshore:"pålands"},
     // loggene lagrer fortsatt «Offshore»/«Onshore» (gamle økter skal leses likt); bare ordet på skjermen er byttet
     logWind: {"Offshore":"Fralands", "Onshore":"Pålands"},
     reportWind: {offshore:"Fralands", onshore:"Pålands", side:"Sidevind", stille:"Stille"},
@@ -131,6 +133,7 @@
       ord: (ord, dag) => `${ord} ${dag}.`,
       ingen: (dag) => `Ingen surf ${dag}.`,
       ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,
+      morktNeste: (n) => `Mørkt de neste ${n} dagene.`,   // mørketid: dagene har ingen lyse timer, så «ingen surf» er ikke kjent
       ingenRest: "Ingen surf resten av dagen.",
       morkt: (dag) => `Mørkt ${dag}.`,
       manglerDag: (dag) => `Mangler data ${dag}.`,
@@ -141,6 +144,11 @@
       ca: "ca.",   // foran kjøretiden: tallene er anslag (Theodors stedfortreder 16.11.2026)
       kartKilde: "Kart: GSHHS",   // kystlinja i det kompakte kartet (docs/geo/coast.json)
       innstillinger: "Innstillinger",
+      // «FRA TROMSØ ▾» øverst på mobil-Hjem åpner Innstillinger (designrevisjonen fase 2 punkt 5): det skjermleseren sier
+      fraAria: (sted) => `Fra ${sted}. Innstillinger`,
+      // lyset er over for alle spotene i lista: lista viser i morgen, og det står én gang over den (fase 2 punkt 1)
+      morktNa: "Mørkt nå. Tallene gjelder i morgen.",
+      spotsI: (region) => `Spots i ${region}`, ingenSpots: (region) => `Ingen spots i ${region} ennå.`, region: "Region",
       // ordet i metalinja når dagen ikke har noe tall, og det som er tapt på vind og tidevann
       forbud: "Surfing forbudt", morktOrd: "Mørkt", over: "Dagens lys er over", mangler: "Mangler data",
       taptVind: (n) => `−${n} vind`, taptTide: (n) => `−${n} tidevann`, apne: "Åpne spoten",
@@ -261,6 +269,9 @@
     toast: {logged:"Økt logget", logFail:"Kunne ikke lagre. Sjekk at nettleseren tillater lagring.", loginForFav:"Logg inn for å lagre favoritter", login:"Logg inn",
       favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet - sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
     witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
+    // Logger (designrevisjonen fase 2 punkt 3): tom tilstand står én gang per seksjon. Gjelder setningen bare noen av
+    // spotene, står navnene (eller antallet) foran
+    logger: {noen: (navn) => `${navn}:`, antall: (n) => `${n} spots:`},
     breakdownTitle: "Hvorfor denne ratingen?",
     explainClose: "Lukk",
     thisHour: "Denne timen", howComputed: "Slik regnes det ut",
