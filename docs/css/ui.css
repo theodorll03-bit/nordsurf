@@ -899,6 +899,15 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .kredit.linje + .dom{margin-top:6px}
 .kilder.foto{margin-top:8px}
 .kilder a{color:inherit;text-underline-offset:2px}
+/* S38 2 a: etiketter som åpner forklaringsarket. Trykkflaten er 44 px høy (14 px over og under en 16 px linje) uten å
+   flytte teksten, og prikkete strek under viser at de kan trykkes. Fokus: den felles ringen (:root :focus-visible). */
+.forklar{all:unset;box-sizing:border-box;display:inline-block;min-width:44px;padding:14px 0;margin:-14px 0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;text-decoration:underline dotted;text-decoration-color:var(--muted);text-decoration-thickness:1px;text-underline-offset:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.forklar:hover{text-decoration-style:solid;text-decoration-color:currentColor}
+.forklar:active{background:var(--trykk)}
+.kilder .forklar,.spw-om .forklar{line-height:16px}
+.forklar .fk{display:inline}   /* teksten selv: målt for seg, så den store trykkflaten ikke regnes som tekst som overlapper */
+.maal > .etikett{min-width:0}
+.maal .forklar{max-width:100%;overflow-wrap:anywhere}   /* med 200 % tekst er «TIDEVANN» bredere enn kolonnen: brytes i stedet for å gå inn i tallet */
 .dom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:20px}
 .dom-v{display:flex;align-items:flex-end;gap:12px;min-width:0}
 .dom .t-tall{color:var(--rc-tall)}
@@ -930,7 +939,6 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .svell-sub{margin-top:4px;font-size:1rem;line-height:1.375}
 .maalene{display:grid;gap:10px;margin-top:16px}
 .maal{display:grid;grid-template-columns:110px auto 1fr;align-items:baseline;column-gap:12px}
-.maal > .etikett{white-space:nowrap}   /* «Svell ute» er nå en rad (fase 3) og skal stå på én linje */
 .maal .mv{font-family:var(--mono);font-stretch:87.5%;font-size:1.375rem;line-height:1.1;font-weight:800;white-space:nowrap}
 .maal .mv small{margin-left:3px;font-size:.8125rem;font-weight:700}
 .maal .mv .ordv{font-size:.8125rem;letter-spacing:var(--sperr);text-transform:uppercase}
@@ -953,8 +961,9 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   /* fase 3: kroppsmålet ved siden av det store tallet, og tallet litt mindre, så tidevannsraden står over fanelinja */
   .sp-inn #spOver .svell.surf{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:var(--s3)}
   .sp-inn #spOver .svell.surf > .etikett{width:100%}
-  .sp-inn #spOver .svell.surf .t-surf{font-size:2.75rem;line-height:1}
+  .sp-inn #spOver .svell.surf .t-surf{font-size:2.5rem;line-height:1}
   .sp-inn #spOver .svell.surf .t-surf.spenn{font-size:2.25rem}
+  .sp-inn #spOver .maal .mu,.sp-inn #spOver .maal .mu-pref{font-size:.875rem;line-height:1.286}   /* 14/18: færre linjeskift i radene */
   .sp-inn #spOver .svell.surf .svell-sub{margin-top:0}
   .sp-inn #spOver .maalene{gap:var(--s1);margin-top:var(--s2)}   /* s1 fra 24.11.2026: «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer */
 }

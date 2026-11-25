@@ -941,6 +941,30 @@ def main():
                         assert etik[:5] == ["Kl.", "Vurdering", "Surf m", "Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
                         page.wait_for_selector("#miniKort .minikart path.land")
                     shot("unstad-na", scheme); audit("unstad-na")
+                    # S38 2 a: etikettene i KL.-blokka, skiva og kildelinja åpner forklaringsarket. Trykkflaten er minst 44 px høy,
+                    # fokus er synlig, og Escape lukker arket og gir fokus tilbake til etiketten
+                    fk = page.evaluate("""() => [...document.querySelectorAll('#viewSpot .forklar')].filter(e => e.getClientRects().length).map(e => { const b = e.getBoundingClientRect();
+                        return {key: e.dataset.explain, tag: e.tagName, h: Math.round(b.height), w: Math.round(b.width), finnes: !!EXPLAIN[e.dataset.explain]}; })""")
+                    nokler = {f_["key"] for f_ in fk}
+                    assert {"surf_height", "swell", "wind", "tide", "direction", "confidence"} <= nokler and (not mobile or "hs" in nokler), f"etikettene som skal kunne trykkes ({scheme}): {sorted(nokler)}"
+                    assert all(f_["tag"] == "BUTTON" and f_["finnes"] and f_["h"] >= 44 and f_["w"] >= 44 for f_ in fk), f"trykkflatene skal være knapper på minst 44 x 44 px: {[f_ for f_ in fk if f_['h'] < 44 or f_['w'] < 44]}"
+                    for key_, tittel_ in (("swell", "Svell ute"), ("confidence", "Sikkerhet"), ("exposure", "Eksponering"), ("hs", "Signifikant høyde")):
+                        if key_ not in nokler:
+                            continue
+                        page.keyboard.press("Tab")   # tastatur sist brukt: fokus satt fra skript regnes som synlig fokus
+                        fokus_ = page.evaluate("""(k) => { const e = [...document.querySelectorAll(`#viewSpot .forklar[data-explain="${k}"]`)].find(x => x.getClientRects().length); e.scrollIntoView({block: 'center'}); e.focus();
+                            const c = getComputedStyle(e); return [document.activeElement === e, c.outlineStyle, c.outlineWidth]; }""", key_)
+                        assert fokus_ == [True, "solid", "2px"], f"synlig fokus på etiketten {key_}: {fokus_}"
+                        page.keyboard.press("Enter"); page.wait_for_selector("#exSheet.open")
+                        assert page.text_content("#exTitle").strip() == tittel_ and page.get_attribute("#exSheet", "aria-hidden") == "false", (key_, page.text_content("#exTitle"))
+                        assert not re.search(r"(?<![a-zæøå])null|undefined|NaN", page.text_content("#exBody")), page.text_content("#exBody")[:200]
+                        page.keyboard.press("Escape"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
+                        assert page.evaluate("(k) => document.activeElement && document.activeElement.dataset.explain === k", key_), f"fokus skal tilbake til etiketten {key_} når arket lukkes"
+                    # med musa eller fingeren
+                    page.click("#spOver .forklar[data-explain='wind']"); page.wait_for_selector("#exSheet.open")
+                    assert page.text_content("#exTitle").strip() == "Vind"
+                    page.click("#exClose"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
+                    page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(100)
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
                         .filter(el => el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
                     assert not hoye, f"tall brutt over flere linjer ({scheme}): {hoye}"
@@ -1861,7 +1885,7 @@ def main():
                             ut.push({dag: d, valgt: document.querySelector('#viewSpot .dagknapp[aria-pressed="true"]').dataset.day, fane: Math.round(document.querySelector('.tabbar').getBoundingClientRect().top), dv: r('.dagvelger'),
                                      tall: r('.dom .t-tall') || r('.dom-ord b'), ord: r('.dom-ord b'), kl: r('#spOver .sek-spot'), stort: r('#spOver .t-svell') || r('#spOver .svell'), blokk: r('#spOver'), y: Math.round(scrollY)}); }
                         return ut; }"""
-                    for bw_, bh_ in ((360, 640), (390, 663)):
+                    for bw_, bh_ in ((360, 640), (375, 548), (390, 663)):   # 375 x 548: iPhone SE med verktøylinja i Safari (S38 2 a)
                         page.set_viewport_size({"width": bw_, "height": bh_})
                         for sid_ in ("unstad", "farstadsanden"):
                             go("#hjem", HJEM_KLAR); go(f"#spot={sid_}", SPOT_KLAR)

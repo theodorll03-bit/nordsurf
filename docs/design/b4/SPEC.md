@@ -248,3 +248,8 @@ Fase 3 (25.11.2026, «riktig tall størst», godkjent av Theodor 21.11). Der det
 - **Overskriften gir råd på dårlige dager:** har ingen favoritt 2 eller mer den første dagen, og en senere dag har det, blir overskriften «Lite å hente i dag. Unstad er best, lørdag.» Mangler data, mørke dager, forbud og «lyset er over» sies som før.
 - **Søk er lik Hjem** (S44 3): er timen mørk, står «Mørkt» uten tall.
 - **Regel 3 er uendret.** Havfargen (`--god` for 3) er bare prøvd i fase 3, med skjermbilder til Theodor. Den er ikke i appen.
+
+S38 2 a (25.11.2026): forklaringsarkene.
+
+- **Etikettene som forklarer** (SURF, SVELL UTE, VIND og TIDEVANN i KL.-blokka, SVELL FRA, VIND FRA og VINDU ved skiva, sikkerheten og «kystmodell 100 m» i kildelinja, og sikkerheten under Data i «Om spotten» på web) er knapper som åpner forklaringsarket. Prikkete strek under ordet, 44 px høy trykkflate uten at teksten flytter seg, og den felles fokusringen. Escape lukker arket, og fokus går tilbake til etiketten.
+- **Lave skjermer (under 700 px):** kroppsmålet står ved siden av det store tallet (40 px, et spenn 36 px), og teksten til høyre i radene er 14/18. Da står KL.-blokka over fanelinja etter dagbytte også på 375 × 548 (iPhone SE med verktøylinja i Safari).

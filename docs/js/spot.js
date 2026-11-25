@@ -206,7 +206,9 @@
   const IK_VIND = `<path d="M12 3 V19 M7.5 14.5 L12 20 L16.5 14.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
   const IK_TIDE = `<path d="M2 18 C8 18 10 6 22 6" fill="none" stroke="currentColor" stroke-width="2"/><circle class="pk" cx="9.75" cy="12" r="3.5" stroke="currentColor" stroke-width="2"/>`;
   const IK_SURF = `<path d="M2 18 C7 18 8 7 14 7 C18.5 7 18.5 12.5 15 13.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
-  const forklar = (key, inni)=> inni;
+  // S38 2 a: etikettene i KL.-blokka, skiva og kildelinja åpner forklaringsarket (explain.js). Trykkflaten er 44 px høy
+  // uten å flytte teksten (ui.css .forklar), og fokusringen er den felles ringen.
+  const forklar = (key, inni)=> `<button type="button" class="forklar" data-explain="${key}" aria-haspopup="dialog"><span class="fk">${inni}</span></button>`;
   // svellpila er korall bare når timen har 4 eller mer (designrevisjon fase 3 punkt 4): KL.-blokka, skiva og minikartet
   const fire = (h)=> !!h && !h._forbud && H.known(h) && !H.mork(h) && H.stars(h) >= 4;
   function timeDomHtml(s, h, t){
@@ -291,7 +293,7 @@
       const {h, t} = timen(), hh = fmtHour.format(t), sikk = h ? sikkerhet(h) : "–";
       return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh, {hoy: fire(h)}) : ""}${hvorforHtml(h)}
         <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
-        <p class="kilder">${sikk!=="–" ? esc(sikk) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
+        <p class="kilder">${sikk!=="–" ? forklar("confidence", esc(sikk)) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (${forklar("hs", "kystmodell 100 m")}), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
     };
     const id = encodeURIComponent(s.id);
     const fra = STR.spot.fra[S.from] || null, K = window.KJORETID, kj = H.kjoreText(s.id);
@@ -338,6 +340,7 @@
     };
     const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
     const kobleUnder = ()=>{
+      if(window.wireExplain) wireExplain(root, timen().h, s);
       $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
       const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
     };
@@ -386,7 +389,7 @@
   function omSpottenHtml(s, h){
     // det spoten selv har i spots.json, og sikkerheten for timen som er valgt - ingen beskrivelse finnes i dataene
     const sek = (w)=> !w ? [] : Array.isArray(w[0]) ? w : [w];
-    const rad = (k, v)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${esc(v)}</dd></div>` : "";
+    const rad = (k, v, html)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${html || esc(v)}</dd></div>` : "";
     const sikk = h ? sikkerhet(h) : "–";
     return `<dl class="spw-om">
         ${rad(STR.spot.vindu, sek(visVindu(s)).map(([a, b])=> `${a}–${b}°`).join(", "))}
@@ -394,7 +397,7 @@
         ${rad(STR.web.om.vender, s.facing!=null ? `${compass(s.facing)} ${Math.round(s.facing)}°` : "")}
         ${rad(STR.spot.tidevann, window.Tidevann ? Tidevann.prefTekst(s) : "")}
         ${rad(STR.web.om.hoyde, s.ideal_height ? `${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "")}
-        ${rad(STR.web.om.data, `${sikk!=="–" ? sikk + ". " : ""}${STR.web.varselFra(relDay(new Date(DATA.generated)), fmtTime.format(new Date(DATA.generated)))}. ${STR.web.usikre}.`)}
+        ${rad(STR.web.om.data, "–", `${sikk!=="–" ? forklar("confidence", esc(sikk)) + ". " : ""}${esc(STR.web.varselFra(relDay(new Date(DATA.generated)), fmtTime.format(new Date(DATA.generated))))}. ${esc(STR.web.usikre)}.`)}
       </dl>`;
   }
   function renderWeb(root, s, S){
@@ -444,7 +447,8 @@
       </div></div>`;
     const heleSiden = (etter)=>{ const y = window.scrollY; renderWeb(root, s, S); window.scrollTo(0, y); if(etter) etter(); };
     const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
-    const kobleHvorfor = ()=>{ const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open))); };
+    const kobleHvorfor = ()=>{ const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
+      if(window.wireExplain) wireExplain(root, timen().h, s); };   // forklaringsarkene (S38 2 a) for timen som er valgt
     $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
     $("#spotRegion", root).onclick = ()=>{ S.utforskView = reg; S.utforskViewSatt = true; };   // Utforsk åpner på spotens region
     wireFavButtons(); kobleTilbakeNa(); kobleHvorfor();

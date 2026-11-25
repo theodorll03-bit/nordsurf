@@ -60,11 +60,12 @@
         <g class="hr"><text x="80" y="9">N</text><text x="155" y="84">Ø</text><text x="80" y="159">S</text><text x="5" y="84">V</text></g>
       </svg>`;
     const vs = h ? vinduStatus(h, s) : null;
-    const linje = (k, v, sub)=> `<span><span class="etikett">${esc(k)}</span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
+    // etiketten åpner forklaringsarket (S38 2 a): svell fra = retningstreff, vind fra = vind, vindu = eksponering
+    const linje = (k, key, v, sub)=> `<span><span class="etikett"><button type="button" class="forklar" data-explain="${key}" aria-haspopup="dialog"><span class="fk">${esc(k)}</span></button></span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
     const forkl = [
-      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
-      linje(STR.spot.vindFra, vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
-      vinduer.length ? linje(STR.spot.vindu, esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
+      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, "direction", svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
+      linje(STR.spot.vindFra, "wind", vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
+      vinduer.length ? linje(STR.spot.vindu, "exposure", esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");
     return `<div class="skive-rad${stor ? " stor" : ""}"><div class="skive" role="img" aria-label="${esc(etikett)}">${harBilde(s.id) ? bilde("trykk") + bilde("lodd") : ""}${svg}</div><div class="skive-forkl">${forkl}</div></div>
       ${harBilde(s.id) ? `<p class="kredit liten">${esc(window.SPOTBILDER.kort)}</p>` : ""}`;
