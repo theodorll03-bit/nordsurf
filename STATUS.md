@@ -110,6 +110,19 @@ Ingen andre glipper funnet. «Usikkert» er et vurderingsord og står som ord i 
 Tester: `test_spotside_browser.py` låser «Foreløpig» én gang i metalinja for Bøvær, Breivikeidet, Russelv og Lenangsøyra (feltene leses fra spots.json) i favorittradene, regionradene og søket på mobil, og i forsidetabellen og lista på Utforsk på PC, og at Unstad ikke har det. Den låser også at metalinja bare brytes mellom leddene.
 
 
+### Runde 5, 25.11.2026: `origin/main` med PR 56 flettet inn, og feiljegerens funn
+
+Lokalt, ikke pushet (`296ceac`). Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase2-r4-2026-11-25.md`.
+
+- **Flettingen:** `fetcher/rating.py` og `fetcher/test_rating.py` er mains i sin helhet (S42 i henteren gikk inn med PR 56, med «Høyt vann», «Lavt vann» og «Middels vann»). Grenen har ingen forskjell mot main i de filene, og `test_display_only.py` er grønn igjen. I `docs/js/app.js` gjelder mains `TIDEVANN_LINJE`, `breakdownDeler()` og `zeroCause()`. Det som står om «Høyvann» og om den røde testen i runde 4 under, er dermed historie.
+- **«Usikkert» i regionraden:** nå-leddet sier «Nå Dårlig, usikkert 1,2–1,5 m» for en time regnet med lang sjø (`long_sea`, S40), som resten av Hjem.
+- **Tankestrek i notatene (funn 3):** «… uten én tydelig hovedårsak. Se regnestykket under.» og de to andre i `docs/js/strings.js`.
+- **Funn 6, hengende « · »:** skilletegnet står nå først i leddet det hører til, i luften til venstre for teksten. Brytes linja, følger det leddet ned og klippes bort der, så ingen linje slutter eller starter med « · ». Teksten i raden er den samme. Den felles klippesjekken i `test_spotside_browser.py` har unntak for selve tegnet (`.sk`), ikke for leddene, og en egen sjekk låser hvor tegnet står.
+- **Funn 9, to ord om samme spot:** ordene var ulike fordi favorittraden viser dagens ord og regionraden nå-timens. Favorittraden sier nå «I dag:» foran («LYNGEN · FORELØPIG · I DAG: SMÅTT»), og regionraden «NÅ SMÅTT 0,6–0,8 m». Viser lista i morgen, står ordet uten merke under «Mørkt nå. Tallene gjelder i morgen.» som før. Mitt valg av ord, ikke bestilt slik.
+- **Funn 12, mørketid:** er alle de neste dagene uten lyse timer, sier overskriften «Mørkt de neste 6 dagene.» Er bare noen av dem mørke, sier den ingenting om de neste dagene. Ellers som før («Ingen surf de neste …», også når alle har forbud). Låst i nettlesertesten med tre tilfeller.
+- **Ikke rørt:** høyde i mørke timer og «−1 vind» i regionradene (S44 1 og 3), iPhone SE 375 × 548, funn 8 (uten nå-time står dagens ord uten merke i regionraden), funn 11 og 13.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-2/etter/s38b/`, filene med `_r5` (regionlista i lyst og før det lysner, og favorittene sammen med regionlista).
+
 ### Runde 4, 25.11.2026: `fiks/tidevann-s28` flettet inn, S38 1 b og S42
 
 Ja i svar.md 24.11.2026 kl. 22.25 (S38 1: b, og S42: ja til a, b, c og d). Lokalt, ikke pushet.
