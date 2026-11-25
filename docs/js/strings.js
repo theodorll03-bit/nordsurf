@@ -35,6 +35,9 @@
     wordTide: "Feil tidevann",
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
+    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js). Ordet
+    // finnes ikke i planen: nærmeste ord appen har, «Ikke surfbart nå» uten «nå» (som overskriften alt bruker). Til Theodor.
+    karakter0: "Ikke surfbart",
     wordUncertain: "Usikkert",
     // Sterk fralandsvind som tar poengene heter ikke «Blåst ut» (Theodor S15 a, 17.11.2026) - se windLossWord() i app.js
     wordTooMuchWind: "For mye vind",
@@ -135,6 +138,9 @@
       ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,
       morktNeste: (n) => `Mørkt de neste ${n} dagene.`,   // mørketid: dagene har ingen lyse timer, så «ingen surf» er ikke kjent
       ingenRest: "Ingen surf resten av dagen.",
+      // dårlig dag (under 2 poeng) med en bedre dag senere: overskriften gir råd (designrevisjonen fase 3 punkt 5,
+      // ordlyden fra planen: «Lite å hente i morgen. Tromvik er best, onsdag.»)
+      lite: (dag) => `Lite å hente ${dag}.`, bestSpot: (spot, dag) => `${spot} er best, ${dag}.`,
       morkt: (dag) => `Mørkt ${dag}.`,
       manglerDag: (dag) => `Mangler data ${dag}.`,
       best: (a, b) => `Best kl. ${a}–${b}.`,
@@ -174,7 +180,7 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ute ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
@@ -207,7 +213,8 @@
       varselFra: (dag, kl) => `Varsel fra ${dag} kl. ${kl}`,
       antall: (n) => `${n} ${n === 1 ? "spot" : "spots"}`,
       tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
-      kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell ute", timer: "06–18", region: "Region"},
+      // «Surf»: surfehøyden ved spoten (fase 3 punkt 3, før «Svell ute»). Samme ord som raden på spotsiden (STR.spot.surf)
+      kol: {nr: "#", spot: "Spot", best: "Best", surf: "Surf", timer: "06–18", region: "Region"},
       nr: (n) => String(n).padStart(2, "0"),
       // overskriften over tabellen og linja på hovedbildet følger dagen som er valgt (Theodor S20 b, 20.11.2026): tallene er
       // dagens beste, ikke nå-timen. «Beste» for alle dager, også «Beste fredag» (Theodor S25, 22.11.2026).

@@ -106,7 +106,8 @@ function relDayShort(d){
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 // Store mono-tall («0,7»): desimalkommaet pakkes i .des, som trekker sifrene sammen (ui.css). Bare visning.
-function desTall(txt){ return esc(txt).replace(",", '<span class="des">,</span>'); }
+// Et spenn («1,4–1,7», surfehøyden og settene i KL.-blokka, fase 3) har to komma: begge pakkes.
+function desTall(txt){ return esc(txt).replace(/,/g, '<span class="des">,</span>'); }
 // Krediteringen for kornfotoene (docs/js/spotbilder.js): under bildet står bare kortformen på én linje, hele
 // henvisningen står under Kilder nederst. Lisensnavnet er lenke begge steder (CC BY 4.0 punkt 3a).
 function fotoKreditHtml(hele){
@@ -306,6 +307,19 @@ function ratingWord(h){
   if(h.low_reason==="blown_out"){ const svak = calmWindWord(h); return svak!=null ? svak : windLossWord(h); }
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
+}
+// Karakteren og årsaken (designrevisjonen fase 3 punkt 5): ordet etter tallet er alltid karakteren, og årsaken
+// («Blåst ut», «Treffer ikke», «Stormsjø» …) står på egen linje. Fra 1 poeng er karakteren ordet for tallet
+// (STR.starWords). Ved 0 er «Flatt» og «Smått» karakteren (det er ingen bølger å snakke om). Ellers er karakteren
+// «Ikke surfbart» (STR.karakter0), og ordet ratingWord() gir, er årsaken. Bare visning: tallet er det samme.
+// {ord, aarsak}: aarsak er null når ordet alene sier alt.
+function karakter(h){
+  const w = ratingWord(h);
+  if(!h || h._forbud || w==="–") return {ord: w, aarsak: null};
+  const st = Math.min(5, h.stars || 0);
+  if(st >= 1){ const k = STAR_WORDS[st]; return {ord: k, aarsak: w!==k ? w : null}; }
+  if(w===STR.starWords[0] || w===STR.wordSmall) return {ord: w, aarsak: null};
+  return {ord: STR.karakter0, aarsak: w===STR.wordNotNow ? null : w};
 }
 // Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
 function ratingWordExplain(h){
