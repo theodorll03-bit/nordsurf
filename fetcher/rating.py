@@ -1244,7 +1244,8 @@ def wind_label(speed, wind_type_):
     return wind_type_
 
 
-WIND_TYPE_WORD = {"offshore": "offshore", "side": "sidevind", "sideonshore": "side-onshore", "onshore": "onshore"}
+# S42 b (svar.md 24.11.2026 kl. 22.25): de samme ordene som resten av appen (STR.wind i docs/js/strings.js). Bare tekst.
+WIND_TYPE_WORD = {"offshore": "fralands", "side": "sidevind", "sideonshore": "skrått pålands", "onshore": "pålands"}
 
 
 def tide_penalty(tide, spot):
@@ -1370,7 +1371,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      energy_swell_kj=None, energy_factor_value=1.0,
                      energy_period_value=None, energy_period_source=None,
                      five_open=False, five_fails=None, five_lost=None, wind_took_points=True, tide_level_line=None,
-                     fjord_wind_block=False):
+                     fjord_wind_block=False, tide_lost_local=0):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -1457,8 +1458,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             else:
                 period_note = ""
             if energy_factor_value < 0.999:
-                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: faktor {energy_factor_value:.2f} "
-                              f"(potensial ganget ned)")
+                # S42 c (svar.md 24.11.2026 kl. 22.25): «teller 65 %» i stedet for «faktor 0.65 (potensial ganget ned)».
+                # Bare tekst: tallet er energy_factor_value, rundet til hele prosent (aldri 100 her, minst 99,9 % går over)
+                items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}: "
+                              f"teller {min(99, round(energy_factor_value * 100))} %")
             elif energy_thresholds_used(spot) is None:
                 # 17.11.2026: spoten er unntatt energiregelen - bare tallet
                 items.append(f"Energi (svell) {round(energy_swell_kj)} kJ{period_note}")
@@ -1549,14 +1552,19 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
     if five_open:
         items.append("Rått-svell: høyden midt i spotens beste spenn, 13 s eller lengre, kraftig svell midt i vinduet, BarentsWatch bekrefter - 5 mulig")
         if five_lost == "wind":
-            items.append("Femte stjerne holdes tilbake: vinden er ikke ren (offshore eller nesten blank uten straff)")
+            items.append("Femte stjerne holdes tilbake: vinden er ikke ren (fralands eller nesten blank uten straff)")
         elif five_lost == "tide":
             items.append("Femte stjerne holdes tilbake: tidevannet er ikke det spoten liker")
     elif five_fails:
         items.append("Ikke Rått: " + ", ".join(five_fails[:3]))
     without_wind = min(potential, solid + lost_wind)
     total = f"Totalt: {solid} av 5 stjerner"
-    if lost_wind > 0:
+    tide_lost = lost_tide + tide_lost_local   # som tideLost() i docs/js/app.js: faded_tide og local_rules.stars_lost
+    if lost_wind > 0 and tide_lost > 0:
+        # S42 d (svar.md 24.11.2026 kl. 22.25): har både vinden og tidevannet tatt poeng, sier parentesen begge.
+        # Tallet er det faste pluss det de to tok (faded_wind, faded_tide og local_rules.stars_lost). Bare tekst.
+        total += f" ({min(potential, solid + lost_wind + tide_lost)} uten vind og tidevann)"
+    elif lost_wind > 0:
         total += f" ({without_wind} uten vind)"
     items.append(total)
     return items
@@ -1844,7 +1852,19 @@ def local_tide_prefer_line(spot, lines):
     rules = spot.get("local_rules") or {}
     if "tide_penalty_high" not in rules or "tide_prefer" not in rules:
         return None
-    return next((l for l in lines if l.startswith("Tidevann (") and ("ikke blant det lokale" in l or "foretrukket lokalt" in l)), None)
+    return next((l for l in lines if (l.startswith("Tidevann (") and "foretrukket lokalt" in l)
+                 or (l.split(". ")[0] in TIDE_STATE_WORD.values() and "Lokale sier" in l)), None)
+
+
+# S42 a (svar.md 24.11.2026 kl. 22.25): ordene i linja for den lokale regelen på flo og fjære. Bare tekst.
+TIDE_STATE_WORD = {"høy": "Høyvann", "middels": "Middels vannstand", "lav": "Lavvann"}
+TIDE_PREFER_WORD = {"lav": "lavt", "middels": "middels", "høy": "høyt"}
+
+
+def tide_prefer_words(prefer):
+    """«lavt og middels» av ["lav", "middels"], i fast rekkefølge (lavt, middels, høyt)."""
+    ord_ = [TIDE_PREFER_WORD[k] for k in ("lav", "middels", "høy") if k in prefer]
+    return " og ".join([", ".join(ord_[:-1]), ord_[-1]]) if len(ord_) > 1 else "".join(ord_)
 
 
 def local_rules_penalty(hour, spot, wind_type_, wind_speed):
@@ -1872,8 +1892,12 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
                 # 24.11.2026 (fysikk-kontrolløren, vilkår 2): desimalkomma, som resten av regnestykket. To desimaler,
                 # som linja for vannstanden (tide_level_penalty(), «−0,49»): med én sto Unstads 0,35 som «−0,3», og
                 # vind −0,2 og tidevann «−0,3» så ikke ut som ett poeng (feiljegeren V2 og kontrolløren 24.11.2026).
-                lines.append(f"Tidevann ({state}): ikke blant det lokale favoriserer - "
-                             + f"−{rules['tide_penalty_high']} stjerne (vektet −{pen:.2f})".replace(".", ","))
+                # S42 a (svar.md 24.11.2026 kl. 22.25): «Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.»
+                # i stedet for «Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,70)». Tallet er
+                # det vektede fradraget (det som faktisk trekkes), med to desimaler når det trengs (Unstad: −0,35).
+                tall = f"{pen:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+                lines.append(f"{TIDE_STATE_WORD.get(state, f'Tidevann ({state})')}. Lokale sier "
+                             f"{tide_prefer_words(rules['tide_prefer'])} vann er best her: −{tall} poeng.")
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
 
@@ -2213,7 +2237,7 @@ def rate(hour, spot):
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
         wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
         tide_level_line=tide_level_penalty(hour, spot)[1] or local_tide_prefer_line(spot, local_rules_lines),
-        fjord_wind_block=fjord_wind_block,
+        fjord_wind_block=fjord_wind_block, tide_lost_local=local_extra_stars,
     )
 
     return {
