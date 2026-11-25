@@ -1562,3 +1562,129 @@ assert sources._secondary({"secondary_swell_height": 0.66, "secondary_swell_dir"
 src = open(Path(__file__).parent / "fetch.py", encoding="utf-8").read()
 assert '"swell_despiked": (mar or {}).get("swell_despiked")' in src and '"despiked_hours"' in src, "erstattede timer må merkes i timen og kilderapporten"
 print("16: robust svell ute (enkelttimes svelloppdeling rettes fra naboene, ikke over modellbytte/None/ekte endring), sekundærsvell 0,0/0° = None - OK")
+
+# ---------- 17: S29 c del 1 (24.11.2026) - samlet sjø og vindsjø-del ute LAGRES per time (bare lagring) ----------
+# Tallene er GFS Wave for Unstads havpunkt 21.11.2026 kl. 12Z og 22.11 kl. 18Z (ett kall til Open-Meteo 24.11.2026):
+# kl. 12Z lå nordsjøen (2,64 m fra 358 grader med 10,15 s) i vindsjø-delen, kl. 18Z hadde GFS selv flyttet den til svell.
+_raw17 = {"time": ["2026-11-21T12:00", "2026-11-22T18:00", "2026-11-22T19:00"],
+          "wave_height": [2.7, 2.02, 0.0], "wave_direction": [4, 4, 0], "wave_period": [10.2, 9.45, 0.0],
+          "swell_wave_height": [0.58, 1.98, 0.0], "swell_wave_direction": [250, 1, 0], "swell_wave_period": [11.95, 9.4, 0.0],
+          "swell_wave_peak_period": [None, None, None],
+          "secondary_swell_wave_height": [0.0, 0.36, 0.0], "secondary_swell_wave_direction": [0, 252, 0],
+          "secondary_swell_wave_period": [0.0, 10.9, 0.0],
+          "wind_wave_height": [2.64, 0.0, 0.0], "wind_wave_direction": [358, 0, 0], "wind_wave_period": [10.15, 0.0, 0.0]}
+_p17 = sources._parse_marine_hourly(_raw17)
+assert _p17["2026-11-21T12:00Z"]["wind_wave_height"] == 2.64 and _p17["2026-11-21T12:00Z"]["wind_wave_dir"] == 358
+# standardmodellen spørres ikke om vindsjø-delen: feltene mangler i svaret og blir None, ikke KeyError og ikke 0
+_p17std = sources._parse_marine_hourly({k: v for k, v in _raw17.items() if not k.startswith("wind_wave")})
+assert all(v["wind_wave_height"] is None and v["wind_wave_dir"] is None and v["wind_wave_period"] is None for v in _p17std.values())
+assert "wind_wave_height" in sources._marine_params([1], [2], sources.OPENMETEO_SWELL_MODEL)["hourly"]
+assert "wind_wave" not in sources._marine_params([1], [2], None)["hourly"], "vindsjø-delen hentes bare fra GFS (kallvekt)"
+_std17 = {"2026-11-21T12:00Z": {"height": 2.5, "swell_height": 0.9, "swell_dir": 255, "swell_period": 11.0, "total_dir": 350, "total_period": 8.8},
+          "2026-11-22T18:00Z": {"height": 2.1, "swell_height": 1.7, "swell_dir": 2, "swell_period": 9.0, "total_dir": 3, "total_period": 9.1},
+          "2026-11-22T19:00Z": {"height": 1.9, "swell_height": 1.6, "swell_dir": 3, "swell_period": 9.0, "total_dir": 5, "total_period": 9.0}}
+sources._openmeteo_fetch = lambda lat, lon, model=None: _p17 if model == sources.OPENMETEO_SWELL_MODEL else _std17
+sources.ROBUST_SWELL, _robust17 = False, sources.ROBUST_SWELL
+r17 = real_openmeteo_marine(68.3134, 13.3148, apply_ratio_correction=False)
+sources._openmeteo_fetch, sources.ROBUST_SWELL = real_openmeteo_fetch, _robust17
+a17, b17, c17 = r17["2026-11-21T12:00Z"], r17["2026-11-22T18:00Z"], r17["2026-11-22T19:00Z"]
+# lang nordsjø i vindsjø-delen: alt lagres, og svellet (det ratingen bruker) er uendret
+assert (a17["total_height"], a17["total_dir"], a17["total_period"]) == (2.7, 4, 10.2)
+assert (a17["wind_wave_height"], a17["wind_wave_dir"], a17["wind_wave_period"]) == (2.64, 358, 10.15)
+assert (a17["swell_height"], a17["dir"], a17["period"], a17["swell_model"], a17["height"]) == (0.58, 250, 11.95, "gfs", 2.7)
+# GFS svarer 0,0 m fra 0 grader med 0,0 s når den ikke har skilt ut vindsjø: «mangler», aldri 0 (grunnregelen)
+assert (b17["wind_wave_height"], b17["wind_wave_dir"], b17["wind_wave_period"]) == (None, None, None)
+assert (b17["total_height"], b17["total_dir"], b17["total_period"]) == (2.02, 4, 9.45)
+# GFS dekker ikke timen (0/0/0 på alt): totalen kommer fra samme kilde som totalhøyden (standardmodellen), vindsjø mangler
+assert c17["swell_model"] == "standard" and (c17["total_height"], c17["total_dir"], c17["total_period"]) == (1.9, 5, 9.0)
+assert c17["wind_wave_height"] is None
+# rett fra nord (0 grader) er en ekte retning når høyden og perioden er over 0
+assert sources._total_and_wind_wave({"height": 2.0, "total_dir": 0, "total_period": 9.0, "wind_wave_height": 1.5, "wind_wave_dir": 0,
+                                     "wind_wave_period": 8.0}, {})["wind_wave_dir"] == 0
+assert sources._total_and_wind_wave({"height": 2.0, "total_dir": 0, "total_period": 9.0}, {})["total_dir"] == 0
+# ingen kilde har noe: None over hele linja
+assert set(sources._total_and_wind_wave({"height": 0.0, "total_dir": 0, "total_period": 0.0}, {}).values()) == {None}
+assert set(sources._total_and_wind_wave({}, {"height": None}).values()) == {None}
+import backtest_inputs, publish as _publish17
+# total_model: hvilken modell totalen er fra (vindsjø-delen er alltid GFS) - None når ingen har en totalhøyde
+assert (a17["total_model"], b17["total_model"], c17["total_model"]) == ("gfs", "gfs", "standard")
+assert sources._total_and_wind_wave({"height": 0.0}, {})["total_model"] is None and sources._total_and_wind_wave({}, {"height": None})["total_model"] is None
+# A' (fysikk-kontrolløren 24.11.2026): lengste toppperiode ved BarentsWatch-punktet i en EKTE modelltime innen ±3 timer.
+# Unstad 21.11.2026: modelltimer kl. 09, 12, 15, 18Z med 4,3, 9,4, 4,3 og 8,5 s - timene imellom er interpolert.
+_bw17 = sources.bw_interpolate({"2026-11-21T09:00Z": {"height": 0.63, "dir": 324.0, "period": 4.3}, "2026-11-21T12:00Z": {"height": 0.37, "dir": 312.0, "period": 9.4},
+                                "2026-11-21T15:00Z": {"height": 0.55, "dir": 324.0, "period": 4.3}, "2026-11-21T18:00Z": {"height": 0.73, "dir": 310.0, "period": 8.5},
+                                "2026-11-21T21:00Z": {"height": 0.69, "dir": 324.0, "period": 4.3}, "2026-11-22T00:00Z": {"height": 0.54, "dir": 324.0, "period": None}})
+assert _bw17["2026-11-21T11:00Z"]["interpolated"] is True and abs(_bw17["2026-11-21T11:00Z"]["period"] - 7.7) < 0.01
+_m17 = lambda t: sources.bw_real_period_max(_bw17, t)
+assert [_m17(f"2026-11-21T{h:02d}:00Z") for h in (9, 10, 11, 12, 13, 15, 16, 21, 22)] == [9.4, 9.4, 9.4, 9.4, 9.4, 9.4, 8.5, 8.5, 4.3]
+assert _m17("2026-11-22T03:00Z") is None and _m17("2026-11-22T04:00Z") is None and sources.bw_real_period_max({}, "2026-11-21T12:00Z") is None   # periode mangler / utenfor serien: None, aldri 0
+assert '"bw_period_real_max_3h": sources.bw_real_period_max(bw_hourly, k) if bwk else None' in src and '"total_model": (mar or {}).get("total_model")' in src
+for _f in ("total_model", "bw_period_real_max_3h"):
+    assert _f in backtest_inputs.INPUT_KEYS and _f in _publish17.DETAIL_EXCLUDE, _f
+# feltene står i timen (fetch.py), i inndata-arkivet (backtest_inputs.py) og er utelatt fra detaljfilene i docs/ (publish.py)
+_felt17 = ("total_height_offshore", "total_dir_offshore", "total_period_offshore",
+           "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore")
+for _f in _felt17:
+    assert f'"{_f}": (mar or {{}}).get("{_f[:-9]}")' in src, _f
+    assert _f in backtest_inputs.INPUT_KEYS and _f in _publish17.DETAIL_EXCLUDE, _f
+print("17: samlet sjø (med modellmerke) og vindsjø-del ute lagres per time (None når de mangler, aldri 0), og lengste toppperiode ved punktet i en ekte modelltime innen ±3 t - OK")
+
+# ---------- 18: S40 (24.11.2026) - inndata-bildet lagres hver dag: døgnets første varsel, aldri «hemmelig»-spots ----------
+import tempfile as _tmp18
+with _tmp18.TemporaryDirectory() as _d18:
+    _d18 = Path(_d18)
+    _h18 = [{"t": f"2026-11-21T{i % 24:02d}:00:00Z", "bw_height": 0.4, "wind_wave_height_offshore": 2.6, "wind_wave_period_offshore": None,
+             "stars": 3, "tide": None, "swell_despiked": {"swell_height": 0.5, "dir": 250, "period": 12.0} if i % 24 == 7 else None} for i in range(80)]
+    _fc18 = lambda gen: {"generated": gen, "spots": [{"id": "unstad", "hours": _h18},
+                                                     {"id": "skjult", "status": "hemmelig", "hours": _h18},
+                                                     {"id": "ny", "status": "forelopig", "hours": _h18[:5]}]}
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-21T03:00:00+00:00")), encoding="utf-8")
+    _p18 = backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn")
+    assert _p18 is not None and _p18.name == "2026-11-21T03.json"
+    _o18 = json.loads(_p18.read_text(encoding="utf-8"))
+    assert set(_o18["spots"]) == {"unstad", "ny"}, "en hemmelig spot skal aldri i inndata-arkivet"
+    assert "skjult" not in _p18.read_text(encoding="utf-8")
+    _t18 = _o18["spots"]["unstad"]["2026-11-21T05:00:00Z"]
+    # bare inndata (ikke resultatet), og det som mangler lagres ikke - aldri som 0
+    assert _t18 == {"bw_height": 0.4, "wind_wave_height_offshore": 2.6}, _t18
+    assert len(_h18[:backtest_inputs.INPUT_HOURS]) == 72
+    # K3 (fysikk-kontrolløren 25.11.2026): merket for glattet svell følger med (regelen for lang sjø hopper over slike timer),
+    # og fila har time_axis_verified, så testlaben faktisk leser den (uten merket hoppet load_inputs_archive() over alt)
+    assert _o18["spots"]["unstad"]["2026-11-21T07:00:00Z"]["swell_despiked"] == {"swell_height": 0.5, "dir": 250, "period": 12.0}
+    assert "swell_despiked" not in _t18 and _o18["time_axis_verified"] is True
+    import backtest as _backtest18
+    _gml18 = _backtest18.INPUTS_DIR
+    _backtest18.INPUTS_DIR = _d18 / "inn"
+    try:
+        _ark18 = _backtest18.load_inputs_archive()
+    finally:
+        _backtest18.INPUTS_DIR = _gml18
+    assert set(_ark18) == {"unstad", "ny"} and _ark18["unstad"]["2026-11-21T05:00:00Z"] == _t18, "testlaben skal lese inndata-bildet"
+    # senere kjøring samme døgn: ingenting skrives. Nytt døgn: ny fil. Uten --daglig (mandagens testlab): skriver alltid.
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-21T09:00:00+00:00")), encoding="utf-8")
+    assert backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn") is None
+    assert sorted(f.name for f in (_d18 / "inn").iterdir()) == ["2026-11-21T03.json"]
+    assert backtest_inputs.main([], _d18 / "fc.json", _d18 / "inn").name == "2026-11-21T09.json"
+    (_d18 / "fc.json").write_text(json.dumps(_fc18("2026-11-22T03:00:00+00:00")), encoding="utf-8")
+    assert backtest_inputs.main(["--daglig"], _d18 / "fc.json", _d18 / "inn").name == "2026-11-22T03.json"
+# «Hent varsel» kjører det daglige bildet i begge veier (matrise og sekvensiell), ETTER publish.py (som tar ut hemmelige
+# spots av forecast.json), og fila går i den samme commiten som læringsdataene (ingen ekstra commit fra boten)
+_wf18 = (Path(__file__).resolve().parent.parent / ".github" / "workflows" / "forecast.yml").read_text(encoding="utf-8")
+assert _wf18.count("python fetcher/backtest_inputs.py --daglig") == 2 and _wf18.count("git add -A data/backtest/inputs") == 2
+for _del18 in _wf18.split("\n  sekvensiell:"):
+    assert _del18.index("run: python fetcher/publish.py") < _del18.index("backtest_inputs.py --daglig") < _del18.index('git commit -m "Nytt varsel (læringsdata)"')
+assert _wf18.count('git commit -m') == 2, "det daglige bildet skal ikke ha sin egen commit"
+# V5 (feiljegeren 25.11.2026): steget står foran opplastingen, så verken en feil eller tidsgrensa får stoppe jobben
+for _del18 in _wf18.split("\n  sekvensiell:"):
+    _steg18 = _del18[_del18.index("- name: Inndata-bilde, døgnets første varsel"):_del18.index("- name: Last opp varselet")]
+    assert "continue-on-error: true" in _steg18 and "timeout-minutes: 2" in _steg18, _steg18
+# V2 (feiljegeren 25.11.2026): push-varselet for et vindu der regelen for lang sjø slo til, bruker den lange sjøens periode
+# (timen i forecast.json har svell-delens 12 s urørt) og sier at varselet er usikkert. Andre vinduer er som før.
+_now19 = dt.datetime(2026, 11, 21, 8, 0, tzinfo=dt.timezone.utc)
+_t19 = {"stars": 3, "surf_height": 1.15, "surf_height_sets": 1.46, "period": 12.0, "wind_type": "sideonshore"}
+_w19 = lambda h: {"start": dt.datetime(2026, 11, 21, 11, tzinfo=dt.timezone.utc), "end": dt.datetime(2026, 11, 21, 13, tzinfo=dt.timezone.utc), "best": 3, "hours": [h]}
+_tit19, _txt19 = notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359})), _now19)
+assert _txt19 == "1,1 m (sett 1,5 m), 10 s, sideonshore, lang sjø regnet som svell, usikkert varsel", _txt19
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19)), _now19)[1] == "1,1 m (sett 1,5 m), 12 s, sideonshore"
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": None})), _now19)[1].startswith("1,1 m (sett 1,5 m), 12 s"), "mangler perioden i long_sea: timens egen, aldri 0"
+print("18: inndata-bildet lagres daglig (døgnets første varsel, uten hemmelige spots, mangler lagres ikke), i samme commit som læringsdataene - OK")

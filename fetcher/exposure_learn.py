@@ -84,6 +84,11 @@ def exposure_pairs_for_run(hours, run_id, spot, stats=None):
             continue
         if h.get("sources_disagree"):
             rej("uenige"); continue
+        # S29 c del 2 (rating.LONG_SEA_AS_SWELL, på for Unstad fra S40): i en time der ratingen har regnet lang sjø som
+        # svell, er swell_share regnet med en annen svellhøyde enn swell_offshore i timen. Paret ville blitt feil.
+        # K2 (25.11.2026): også når regelen traff, men vanlig regning vant (long_sea_seen).
+        if h.get("long_sea") or h.get("long_sea_seen"):
+            rej("lang_sjo"); continue
         swell = h.get("swell_offshore")
         share = h.get("swell_share")
         dir_off = h.get("dir_offshore")

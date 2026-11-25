@@ -218,8 +218,11 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .favtekst{display:block;min-width:0}
 .favtekst > span{display:block}
 .favlinje .t-navn.lang{font-stretch:75%}
-.favlinje .etikett{margin-top:var(--s1);text-wrap:balance}   /* to jevne linjer i stedet for ett ledd alene på linje to */
-.favlinje .etikett .ledd{display:inline-block;max-width:100%}   /* et ledd brytes bare hvis det alene er bredere enn raden */
+.favlinje .etikett{margin-top:var(--s1);overflow:hidden}
+.favlinje .etikett .meta{display:block;margin-left:-1.2em;text-wrap:balance}   /* to jevne linjer i stedet for ett ledd alene på linje to */
+/* skilletegnet står i luften til venstre for leddet: først på en linje ligger det utenfor .etikett og klippes bort */
+.favlinje .etikett .ledd{display:inline-block;max-width:calc(100% - 1.2em);margin-left:1.2em}   /* et ledd brytes bare hvis det alene er bredere enn raden */
+.favlinje .etikett .sk{display:inline-block;width:1.2em;margin-left:-1.2em;white-space:pre}
 .favlinje .etikett .enh{text-transform:none}   /* «m» i nå-leddet («Nå Smått 0,6–0,8 m») står ikke i versaler */
 .favlinje .etikett.obs{color:var(--ink)}
 .favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
@@ -550,7 +553,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .hvorfor .body{padding:4px 0 0}
 /* regnestykket som en liten tabell (etikett, verdi, virkning), samme form som «Om spotten» */
 .hv-tab{margin:0}
-.hv-tab > div{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--hair)}
+/* 7,5rem (før 7): «BARENTSWATCH-» med bindestreken får plass på første linje (feiljegeren 25.11.2026: linje to startet med bindestrek) */
+.hv-tab > div{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--hair)}
 .hv-tab dt{grid-row:1 / span 2;margin:0;padding-top:3px;overflow-wrap:anywhere}
 .hv-tab dd{grid-column:2;margin:0;font-size:1rem;line-height:1.375}
 .hv-tab dd.hv-e{color:var(--muted)}
@@ -740,6 +744,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-time{grid-column:7/10}
   .spw-time > .sek-spot{margin-top:0}
   .spw-time .svell{margin-top:12px}
+  .spw-time .svell > .svell-sub.lang-sjo{margin-top:4px}   /* S40: merknaden står rett under periodelinja */
   .spw-time .svell > .svell-sub{margin-top:16px}   /* kommaet i 96 px går under linja */
   .spw-time .maal{grid-template-columns:96px auto 1fr}
   @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */

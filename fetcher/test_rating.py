@@ -812,8 +812,8 @@ def blown_line(**wind):
     lines = [line for line in r["breakdown"] if "blåst ut" in line]
     assert len(lines) == 1, r["breakdown"]
     return lines[0]
-STERK = "Surfehøyde: blåst ut - mye vindsjø og sterk vind, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
-SVAK = "Surfehøyde: blåst ut - mye vindsjø, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
+STERK = "Surfehøyde: blåst ut, mye vindsjø og sterk vind, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
+SVAK = "Surfehøyde: blåst ut, mye vindsjø, ikke surfbart (BarentsWatch 1,2 m totalt ved punktet)"
 assert blown_line(wind_speed=14, wind_dir=301, gust=21) == STERK      # den ekte timen: uendret tekst
 assert blown_line(wind_speed=1, wind_dir=301, gust=2) == SVAK         # 1 m/s er ikke sterk vind
 assert blown_line(wind_speed=7.9, wind_dir=301) == SVAK               # rett under grensa, pålands, uten kast: middelvinden alene
@@ -2828,7 +2828,7 @@ B41_s19 = {k: v for k, v in B36.items() if k != "wind_local"}   # Breivikeidet s
 r42 = rate(dict(bre_2211[9]), B41_s19)
 show("42: Breivikeidet 22.11 kl. 09Z (før S27-vinden)", r42)
 assert "Vind 5 m/s skrått pålands, kast 10 (teller som 6,5): −0,3" in r42["breakdown"], r42["breakdown"]
-assert "Tidevann (2,7 m over sjøkartnull): jo lavere vann, jo bedre her (vektet −0,45)" in r42["breakdown"], r42["breakdown"]
+assert "Tidevann (2,7 m over sjøkartnull): jo lavere vann, jo bedre her: −0,45 poeng" in r42["breakdown"], r42["breakdown"]
 assert r42["stars"] == 1 and rate(dict(bre_2211[9], wind_speed=1.0, gust=2.0), B41_s19)["stars"] == 2 and rate(dict(bre_2211[9], tide=None), B41_s19)["stars"] == 2
 # før: faded_wind 1 og «(2 uten vind)». Nå: tidevannsregelen (lokal regel) får poenget.
 assert (r42["faded"], r42["faded_wind"], r42["faded_tide"], r42["local_rules"]["stars_lost"]) == (0, 0, 0, 1), (r42["faded"], r42["faded_wind"], r42["local_rules"])
@@ -2851,7 +2851,7 @@ assert r["stars"] == 1 and (r["faded_wind"], r["faded"], r["local_rules"]["stars
 # 42.4: uavgjort (0,375 mot 0,375, tall som er eksakte i flyttall): vinden, som før. Litt mer tidevann: tidevannet.
 B41_lik = dict(B36, local_rules=dict(B36["local_rules"], weight=1.0, tide_level=dict(B36["local_rules"]["tide_level"], penalty=0.75)))
 lik42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(240)), B41_lik)
-assert "(vektet −0,38)" in " ".join(lik42["breakdown"]) and any(l.startswith("Vind 12 m/s fralands") and l.endswith("−0,4") for l in lik42["breakdown"]), lik42["breakdown"]
+assert "jo bedre her: −0,38 poeng" in " ".join(lik42["breakdown"]) and any(l.startswith("Vind 12 m/s fralands") and l.endswith("−0,4") for l in lik42["breakdown"]), lik42["breakdown"]
 assert lik42["stars"] == 1 and (lik42["faded_wind"], lik42["local_rules"]["stars_lost"]) == (1, 0), (lik42["faded_wind"], lik42["local_rules"])
 mer42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(241)), B41_lik)
 assert mer42["stars"] == 1 and (mer42["faded_wind"], mer42["local_rules"]["stars_lost"]) == (0, 1), (mer42["faded_wind"], mer42["local_rules"])
@@ -2917,8 +2917,8 @@ assert n41_tide >= 20 and n41_vind >= 20, (n41_tide, n41_vind)
 # Mangler tidevannet: «ukjent». Poengene er de samme som linja i local_rules sier.
 # S42 a (svar.md 24.11.2026 kl. 22.25): linja sier vannstanden, hva lokale sier, og det vektede fradraget (det som faktisk
 # trekkes: 0,7 × 1 på Farstadsanden, 0,7 × 0,5 på Unstad). Ingen tankestrek, ingen «stjerne», ingen «vektet».
-for sid42, hoy42 in (("farstadsanden", "Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng."),
-                     ("unstad", "Høyvann. Lokale sier lavt og middels vann er best her: −0,35 poeng.")):
+for sid42, hoy42 in (("farstadsanden", "Høyt vann. Lokale sier lavt og middels vann er best her: −0,7 poeng."),
+                     ("unstad", "Høyt vann. Lokale sier lavt og middels vann er best her: −0,35 poeng.")):
     sp41b = spots[sid42]
     assert sp41b["local_rules"]["tide_prefer"] == ["lav", "middels"] and not sp41b.get("tide")
     for st42, linje42 in (("høy", hoy42), ("lav", "Tidevann (lav): foretrukket lokalt, ingen straff"), ("middels", "Tidevann (middels): foretrukket lokalt, ingen straff"), (None, "Tidevann: ukjent")):
@@ -2926,7 +2926,7 @@ for sid42, hoy42 in (("farstadsanden", "Høyvann. Lokale sier lavt og middels va
                "bw_height": 1.4, "bw_dir": float(sp41b["facing"]), "bw_period": 11.0, "wind_speed": 2.0, "wind_dir": 100.0, "gust": 3.0,
                "tide": {"level": 0.9, "state": st42, "rising": True} if st42 else None}
         r = rate(h42, sp41b)
-        assert [l for l in r["breakdown"] if l.startswith(("Tidevann", "Høyvann", "Lavvann", "Middels vannstand"))] == [linje42], (sid42, st42, r["breakdown"])
+        assert [l for l in r["breakdown"] if l.startswith(("Tidevann", "Høyt vann", "Lavt vann", "Middels vann", "Høyvann", "Lavvann"))] == [linje42], (sid42, st42, r["breakdown"])
         # desimalkomma: ingen tall med punktum (setningene i S42 a har punktum etter ordene)
         assert r["local_rules"]["lines"] == ([linje42] if st42 else []) and not re.search(r"\d\.\d", linje42), (sid42, st42, r["local_rules"])
         assert not any(x in linje42 for x in (" - ", "–", "—", "favoriserer", "vektet", "stjerne")), linje42
@@ -2935,7 +2935,7 @@ for sid42, hoy42 in (("farstadsanden", "Høyvann. Lokale sier lavt og middels va
     assert hoy42.endswith(f": −{w42:.2f}".rstrip("0").rstrip(".").replace(".", ",") + " poeng."), (sid42, hoy42, w42)
 # andre vannstander og andre regler får sine egne ord (ingen spot har dem i dag): aldri «Høyvann» når det er noe annet
 sp42a = dict(spots["unstad"], local_rules=dict(spots["unstad"]["local_rules"], tide_prefer=["høy"]))
-for st42, vent42 in (("lav", "Lavvann. Lokale sier høyt vann er best her: −0,35 poeng."), ("middels", "Middels vannstand. Lokale sier høyt vann er best her: −0,35 poeng.")):
+for st42, vent42 in (("lav", "Lavt vann. Lokale sier høyt vann er best her: −0,35 poeng."), ("middels", "Middels vann. Lokale sier høyt vann er best her: −0,35 poeng.")):
     assert rate(dict(h42, tide={"level": 0.9, "state": st42, "rising": True}), sp42a)["local_rules"]["lines"] == [vent42], (st42, rate(dict(h42, tide={"level": 0.9, "state": st42, "rising": True}), sp42a)["local_rules"])
 assert rating.tide_prefer_words(["middels", "lav"]) == "lavt og middels" and rating.tide_prefer_words(["lav", "middels", "høy"]) == "lavt, middels og høyt" and rating.tide_prefer_words(["høy"]) == "høyt"
 assert sorted(i for i, sp in spots.items() if (sp.get("local_rules") or {}).get("tide_prefer")) == ["farstadsanden", "unstad"]
@@ -2965,44 +2965,294 @@ for v43, tall43 in ((12.6, "13"), (13.5, "13,5"), (13.99, "13,9"), (14.0, "14"))
 # en spot uten egen grense: som før (Grøtfjord og Breivikeidet uten kurven)
 assert vindlinje43(spots["grotfjord"], 7.6, 20.0)[0].startswith("Vind 8 m/s") and vindlinje43(B41_s19, 7.96, 20.0)[0].startswith("Vind 8 m/s")
 print("43: S28 vindtallet - 7,5-7,99 m/s på Breivikeidet og 13,5-13,99 på Unstad vises med én desimal rundet ned, alt annet som før - OK")
-# 44: S42 (svar.md 24.11.2026 kl. 22.25). Fire tekster i regnestykket («Hvorfor»). Bare tekst: tallene og poengene er
+
+# ---------- 44: S29 c del 2 (24.11.2026) - lang sjø fra havsiden som GFS kaller vindsjø. PÅ for Unstad fra S40 (svar.md 24.11.2026 kl. 22.25) ----------
+# Observasjon 21.11.2026, Theodor (story fra Lofoten Surfsenter, dagslys, klokkeslett ukjent): Unstad «litt under
+# hodehøyt og rent». Appen viste 0 poeng og 0,0 m i alle lyse timer. Timene er fra det lagrede varselet 21.11 kl. 11Z.
+# Feltene for den samlede sjøen og vindsjø-delen ute ble ikke lagret den gang: de er GFS Wave sine egne tall for de
+# samme timene, hentet med ett kall til Open-Meteo 24.11.2026 (past_days). Slått på for Unstad etter svaret på S40
+# (variant A' «vindu» med 7 s ved stranda, M3 og M4 rettet). Å slå den av, på for flere spots eller bytte variant krever Theodors ja.
+import rating as _rating44
+from rating import long_sea, exposure_override_cap, blocked_by_near_obstacle
+assert _rating44.LONG_SEA_AS_SWELL is True, "regelen for lang sjø står PÅ for Unstad (S40, svar.md 24.11.2026 kl. 22.25)"
+assert _rating44.LONG_SEA_SPOTS == {"unstad"}
+U44 = dict(spots["unstad"])
+_sm44, _raw44, _warn44 = _fetch.resolve_exposure(U44, _exposure_baseline_real, "Unstad")
+U44["exposure_smoothed"], U44["exposure_raw"] = _sm44, _raw44
+U44["exposure_distance_km"], U44["exposure_width_km"] = _fetch.resolve_obstacle_geometry(U44, _exposure_baseline_real)
+U44["transfer"], U44["surf_factor"] = 0.6, 1.45
+H44 = {
+    11: {"t": "2026-11-21T11:00Z", "bw_period_real_max_3h": 9.4, "total_model": "gfs", "height_offshore": 3.2, "swell_offshore": 0.58, "swell_model": "gfs", "dir_offshore": 250, "period": 12.0, "swell_peak_period": None, "turn": 92.2, "wind_speed": 7.2, "wind_dir": 5.0, "gust": 12.7, "tide": {"level": 0.63, "state": "middels", "rising": False}, "light": "dag", "daylight": True, "bw_interpolated": True, "bw_height": 0.43, "bw_height_max": 0.817, "bw_period": 7.7, "bw_dir": 316.0, "height_spot_model": 2.7, "dir_spot": 342.2, "total_height_offshore": 2.76, "total_dir_offshore": 3, "total_period_offshore": 10.15, "wind_wave_height_offshore": 2.7, "wind_wave_dir_offshore": 359, "wind_wave_period_offshore": 10.15},
+    12: {"t": "2026-11-21T12:00Z", "bw_period_real_max_3h": 9.4, "total_model": "gfs", "height_offshore": 3.1, "swell_offshore": 0.56, "swell_model": "gfs", "dir_offshore": 250, "period": 11.95, "swell_peak_period": None, "turn": 91.5, "wind_speed": 7.0, "wind_dir": 357.0, "gust": 11.7, "tide": {"level": 0.38, "state": "middels", "rising": False}, "light": "skumring", "daylight": True, "bw_interpolated": False, "bw_height": 0.37, "bw_height_max": 0.703, "bw_period": 9.4, "bw_dir": 312.0, "height_spot_model": 2.6, "dir_spot": 341.5, "total_height_offshore": 2.7, "total_dir_offshore": 4, "total_period_offshore": 10.2, "wind_wave_height_offshore": 2.64, "wind_wave_dir_offshore": 358, "wind_wave_period_offshore": 10.15},
+    13: {"t": "2026-11-21T13:00Z", "bw_period_real_max_3h": 9.4, "total_model": "gfs", "height_offshore": 2.9, "swell_offshore": 0.52, "swell_model": "gfs", "dir_offshore": 250, "period": 11.9, "swell_peak_period": None, "turn": 90.8, "wind_speed": 6.0, "wind_dir": 351.0, "gust": 11.4, "tide": {"level": 0.15, "state": "lav", "rising": False}, "light": "skumring", "daylight": True, "bw_interpolated": True, "bw_height": 0.43, "bw_height_max": 0.817, "bw_period": 7.7, "bw_dir": 316.0, "height_spot_model": 2.5, "dir_spot": 340.8, "total_height_offshore": 2.6, "total_dir_offshore": 4, "total_period_offshore": 10.15, "wind_wave_height_offshore": 2.54, "wind_wave_dir_offshore": 358, "wind_wave_period_offshore": 10.1},
+    # 22.11.2026 kl. 12Z (samme varsel): toppperioden ved punktet er 4,3 s. Støtte: surfbart ca. kl. 13Z (Theodor 23.11.2026)
+    36: {"t": "2026-11-22T12:00Z", "bw_period_real_max_3h": 4.3, "total_model": "gfs", "height_offshore": 2.7, "swell_offshore": 0.38, "swell_model": "gfs", "dir_offshore": 251, "period": 11.1, "swell_peak_period": None, "turn": 90.9, "wind_speed": 8.1, "wind_dir": 355.0, "gust": 13.1, "tide": {"level": 0.57, "state": "middels", "rising": False}, "light": "skumring", "daylight": True, "bw_interpolated": False, "bw_height": 0.53, "bw_height_max": 1.007, "bw_period": 4.3, "bw_dir": 324.0, "height_spot_model": 2.4, "dir_spot": 341.9, "total_height_offshore": 2.44, "total_dir_offshore": 4, "total_period_offshore": 9.75, "wind_wave_height_offshore": 2.42, "wind_wave_dir_offshore": 0, "wind_wave_period_offshore": 9.75},
+}
+_FELT44 = ("bw_period_real_max_3h", "total_model", "total_height_offshore", "total_dir_offshore", "total_period_offshore", "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore")
+def _av44(h, spot):
+    """rate() med regelen slått AV bare inni kallet (slik ratingen var før S40)."""
+    old = _rating44.LONG_SEA_AS_SWELL
+    _rating44.LONG_SEA_AS_SWELL = False
+    try:
+        return rate(dict(h), spot)
+    finally:
+        _rating44.LONG_SEA_AS_SWELL = old
+
+
+# 44.1 AV (bryteren på False): feltene fra del 1 endrer ingenting i ratingen - samme svar med og uten dem, og timene står på 0.
+# Og uten feltene (eldre varsler, alle faste observasjoner fra september og oktober) gjør regelen ingenting når den er på.
+for _t, _h in H44.items():
+    _uten_felt = {k: v for k, v in _h.items() if k not in _FELT44}
+    _med, _uten = _av44(_h, U44), _av44(_uten_felt, U44)
+    assert _med == _uten, f"feltene fra S29 c del 1 skal ikke endre ratingen ({_t})"
+    assert _med["stars"] == 0 and _med["surf_height"] == 0.0 and "long_sea" not in _med
+    assert rate(dict(_uten_felt), U44) == _uten, "uten feltene gjør regelen ingenting"
+    _rating44.LONG_SEA_AS_SWELL = False
+    try:
+        assert long_sea(_h, U44) is None
+    finally:
+        _rating44.LONG_SEA_AS_SWELL = True
+# bryteren selv (ikke bare _med_regel44): rate() gir 3, 2 og 3 poeng 21.11 kl. 11-13Z slik koden står
+assert [rate(dict(H44[t]), U44)["stars"] for t in (11, 12, 13)] == [3, 2, 3]
+
+
+def _med_regel44(h, spot, spots=frozenset({"unstad"}), variant="vindu"):
+    """rate() med regelen slått på bare inni kallet. variant: "vindu" (A'), "time" (A) eller None (B)."""
+    old = (_rating44.LONG_SEA_AS_SWELL, _rating44.LONG_SEA_SPOTS, _rating44.LONG_SEA_BW_CONFIRM)
+    _rating44.LONG_SEA_AS_SWELL, _rating44.LONG_SEA_SPOTS, _rating44.LONG_SEA_BW_CONFIRM = True, spots, variant
+    try:
+        return rate(dict(h), spot)
+    finally:
+        _rating44.LONG_SEA_AS_SWELL, _rating44.LONG_SEA_SPOTS, _rating44.LONG_SEA_BW_CONFIRM = old
+
+
+# 44.2 PÅ (A', grunnvalget): målet for 21.11 (minst 2 poeng i minst én lys time, helst 3). Surfehøyden blir
+# 1,02-1,15 m, litt under «ca. 1,2-1,6 m» (BarentsWatch-høyden 0,37-0,43 m tatt for god, 10,1 s). Usikker (høyst 3).
+# Kl. 11 og 13Z er 7,7 s ved punktet interpolert; det er den ekte modelltimen kl. 12Z (9,4 s) som bekrefter.
+assert _rating44.LONG_SEA_BW_CONFIRM == "vindu" and _rating44.LONG_SEA_BW_PERIOD_MIN_S == 7.0
+r44 = {t: _med_regel44(h, U44) for t, h in H44.items()}
+for _t in (11, 12, 13, 36):
+    show(f"44.2: Unstad {H44[_t]['t'][5:13]}Z med regelen (A')", r44[_t])
+assert [r44[t]["stars"] for t in (11, 12, 13)] == [3, 2, 3], [r44[t]["stars"] for t in (11, 12, 13)]
+assert [r44[t]["surf_height"] for t in (11, 12, 13)] == [1.15, 1.02, 1.14], [r44[t]["surf_height"] for t in (11, 12, 13)]
+assert all(r44[t]["uncertain"] and not r44[t]["sources_disagree"] and r44[t]["low_reason"] is None for t in (11, 12, 13))
+assert r44[11]["long_sea"] == {"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359, "height_offshore": 2.76, "short_peak": False,
+                               "gfs_swell": {"swell_offshore": 0.58, "period": 12.0, "dir_offshore": 250}} and r44[11]["bw_period_basis"] == "lang_sjo"
+# S40: «Hvorfor» sier det først - den lange sjøen med høyde, retning og periode, at den er regnet som svell, og at det er usikkert
+assert r44[11]["breakdown"][0] == "Lang sjø ute 2,8 m fra N, 10 s: regnet som svell, usikkert", r44[11]["breakdown"][0]
+assert "Svellandel: 100 % (lang sjø regnet som svell)" in r44[11]["breakdown"]
+# K1 (fysikk-kontrolløren 25.11.2026): 7,7 s kl. 11Z er jevnet ut mellom to modelltimer (4,3 og 9,4 s). Regelen leser tallet
+# i selve timen, og «Hvorfor» sier at det er jevnet ut. Kl. 12Z er en ekte modelltime (9,4 s): ingen merknad.
+assert H44[11]["bw_interpolated"] is True and H44[12]["bw_interpolated"] is False
+assert "BarentsWatch-periode 8 s (jevnet ut mellom to modelltimer): lang, hele høyden ved punktet regnes som lang sjø" in r44[11]["breakdown"], r44[11]["breakdown"]
+assert "BarentsWatch-periode 9 s: lang, hele høyden ved punktet regnes som lang sjø" in r44[12]["breakdown"], r44[12]["breakdown"]
+assert not any("–" in l or " - " in l for l in r44[11]["breakdown"] if "sjø" in l.lower()), "ingen tankestreker i de nye linjene"
+assert not any("Lang sjø" in l or "lang sjø" in l for l in _av44(H44[11], U44)["breakdown"])   # av: ingen slike linjer
+assert r44[11]["energy_swell_kj"] > 2000 and r44[11]["swell_share"] == 1.0 and r44[11]["bw_confirms"]
+# 22.11 kl. 12Z i varselet fra 21.11 (4,3 s i de ekte modelltimene kl. 09, 12 og 15Z): A' og A rører den ikke,
+# B (ingen periodegrense ved punktet, svaret på S40: nei) løfter den. Etter M4 (44.7) til 2 poeng og 1,01 m, før 3 og 1,34 m
+assert r44[36]["stars"] == 0 and "long_sea" not in r44[36]
+rB44 = {t: _med_regel44(h, U44, variant=None) for t, h in H44.items()}
+assert [rB44[t]["stars"] for t in (11, 12, 13, 36)] == [3, 2, 3, 2] and rB44[36]["surf_height"] == 1.01
+rA44 = {t: _med_regel44(h, U44, variant="time") for t, h in H44.items()}
+assert [rA44[t]["stars"] for t in (11, 12, 13, 36)] == [3, 2, 3, 0] and "long_sea" not in rA44[36]
+# forskjellen på A og A': en time med 4,3 s ved punktet, men 8,4 s i en ekte modelltime to timer senere
+# (22.11 kl. 13Z i varselet fra 22.11 kl. 01Z: 5,7 s interpolert, 8,4 s kl. 15Z) - og omvendt en interpolert 7,7 s
+# uten noen ekte modelltime over 7 s i vinduet
+_h44v = dict(H44[36], bw_period=5.7, bw_dir=320.0, bw_height=0.5, bw_interpolated=True, bw_period_real_max_3h=8.4)
+assert _med_regel44(_h44v, U44)["stars"] == 2 and "long_sea" not in _med_regel44(_h44v, U44, variant="time")
+_h44i = dict(H44[11], bw_period_real_max_3h=6.9)
+assert "long_sea" not in _med_regel44(_h44i, U44) and "long_sea" in _med_regel44(_h44i, U44, variant="time")
+assert "long_sea" not in _med_regel44(dict(H44[11], bw_period_real_max_3h=None), U44), "mangler perioden i vinduet: regelen gjør ingenting"
+# 44.3 hvert vilkår for seg: uten det slår regelen ikke til, og timen er som på main
+for _navn, _endring in (
+        ("vindsjø-delen er kort (8,9 s)", {"wind_wave_period_offshore": 8.9}),
+        ("vinden er for sterk for så kort sjø (13,5 m/s mot 10,15 s)", {"wind_speed": 13.5}),
+        ("vinden mangler", {"wind_speed": None}),
+        ("sjøen kommer mer enn 30° utenfor vinduet (10°)", {"wind_wave_dir_offshore": 10}),
+        ("sjøen kommer fra land (120°)", {"wind_wave_dir_offshore": 120}),
+        ("bølgene ved punktet kommer ikke inn (350°, 55° fra facing)", {"bw_dir": 350.0}),
+        ("retningen ved punktet mangler", {"bw_dir": None}),
+        ("svellet er ikke et GFS-felt", {"swell_model": "standard"}),
+        ("svellet er et anslag fra totalhøyden", {"swell_model": "total_fallback"}),
+        ("vindsjø-høyden mangler", {"wind_wave_height_offshore": None}),
+        ("vindsjø-retningen mangler", {"wind_wave_dir_offshore": None}),
+        ("vindsjø-perioden mangler", {"wind_wave_period_offshore": None}),
+        ("ingen ekte modelltime med minst 7 s ved punktet innen ±3 timer", {"bw_period_real_max_3h": 6.9}),
+        ("svellet i timen er glattet av despike_swell() (M3, 44.6)", {"swell_despiked": {"swell_height": 2.4, "dir": 355, "period": 9.8}}),
+        ("totalhøyden ute mangler (M3)", {"total_height_offshore": None}),
+        ("totalhøyden ute er ikke GFS sin egen (M3)", {"total_model": "standard"}),
+        ("totalhøyden ute har ikke noe modellmerke (M3)", {"total_model": None}),
+        ("ingen BarentsWatch-høyde (reserven)", {"bw_height": None, "bw_dir": None, "bw_period": None, "bw_period_real_max_3h": None})):
+    _h = dict(H44[11], **_endring)
+    assert _med_regel44(_h, U44) == _av44(dict(_h), U44), _navn
+# andre spots er ikke med (bare Unstad har en observasjon), fjord-spots aldri, og taket Theodor har satt (exposure_override) gjelder
+_K44 = dict(spots["kvalvika"], transfer=0.6, surf_factor=1.0)
+_hk44 = dict(H44[11], bw_dir=_K44["facing"], wind_wave_dir_offshore=_K44["facing"])
+assert _med_regel44(_hk44, _K44) == _av44(dict(_hk44), _K44), "regelen gjelder bare Unstad"
+assert "long_sea" in _med_regel44(_hk44, _K44, spots=None), "med alle kyst-spots (ikke foreslått) ville den slått til"
+for _sid in ("breivikeidet", "russelv", "lenangsoyra"):
+    _f = dict(spots[_sid]); _hf = dict(H44[11], bw_dir=_f["facing"], wind_wave_dir_offshore=_f["facing"], dir_offshore=_f["facing"])
+    assert is_fjord(_f) and _med_regel44(_hf, _f, spots=None) == _av44(dict(_hf), _f), _sid
+_G44 = dict(spots["grotfjord"], transfer=0.6, surf_factor=1.0)
+_hg44 = dict(H44[11], bw_dir=_G44["facing"], bw_height=0.8, wind_wave_dir_offshore=320)   # 320° ligger under Grøtfjords tak (311-330)
+assert exposure_override_cap(320, _G44) is not None and _med_regel44(_hg44, _G44, spots=None) == _av44(dict(_hg44), _G44)
+_F44 = dict(F27)
+_hf44 = dict(H27, wind_wave_height_offshore=5.06, wind_wave_period_offshore=9.5, wind_wave_dir_offshore=338, total_height_offshore=6.6, total_model="gfs")
+_uten_merke44 = lambda r: {k: v for k, v in r.items() if k != "long_sea_seen"}
+assert blocked_by_near_obstacle(338, _F44) and _med_regel44(_hf44, _F44, spots=None, variant=None) == r27, "Nordneset: lang sjø fra 338° løfter aldri Farstadsanden"
+# 44.4 regelen kan bare løfte. Verste fall for Unstads faste observasjoner: hele resten av totalhøyden ute lagt inn
+# som lang sjø (10 s) rett inn mot stranda. 27.09 kl. 08 gir 4 på main og ville fått 3 med taket for usikre timer:
+# da gjelder main sitt svar. Alle kravene i CLAUDE.md holder (27.09 kl. 06-08 minst 2, 28.09 kl. 12-15 minst 3).
+import backtest as _backtest44
+_n44 = 0
+for _c in _backtest44.fixed_cases():
+    if _c["spot"] != "unstad":
+        continue
+    _h = dict(_c["hour"])
+    _ww = max(0.0, _h["height_offshore"] ** 2 - _h["swell_offshore"] ** 2) ** 0.5
+    _h.update(swell_model="gfs", total_model="gfs", total_height_offshore=_h["height_offshore"], wind_wave_height_offshore=_ww or None,
+              wind_wave_period_offshore=10.0 if _ww else None, wind_wave_dir_offshore=294.8 if _ww else None)
+    _for, _etter = _av44(_c["hour"], U44), _med_regel44(_h, U44)
+    assert _etter["stars"] >= _for["stars"] and _etter["stars"] >= _c["expect"].get("stars_min", 0), (_c["id"], _for["stars"], _etter["stars"])
+    _n44 += 1
+assert _n44 == 8
+# Farstadsanden 15.10 kl. 17 (test 27 og 28): vindsjø-delen den dagen er ikke lagret. Var den lang og fra vinduet
+# (antatt her: 5,06 m fra 300° med 9,5 s), ville omregningen gitt 2 poeng i stedet for 4 (den bytter 17 s svell
+# mot 9,5 s sjø som hovedsvell, og tar hele BarentsWatch-høyden for god). Fordi regelen bare kan løfte, gjelder da
+# det vanlige svaret - testen holder også om regelen en gang skulle gjelde alle kyst-spots.
+_hf44b = dict(_hf44, wind_wave_dir_offshore=300)
+assert long_sea(dict(_hf44b), _F44) is None   # Farstadsanden er ikke med (LONG_SEA_SPOTS)
+_rf44b = _med_regel44(_hf44b, _F44, spots=None, variant=None)
+assert _uten_merke44(_rf44b) == r27 and _rf44b.get("long_sea_seen") is True and "long_sea" not in _rf44b   # K2: treffet er merket, svaret ellers urørt
+# 44.5 læringen: en time der regelen har slått til (feltet long_sea) gir aldri et transfer-par (calibrate) eller et
+# eksponeringspar (exposure_learn) - svellet i timen er fortsatt det lille GFS skilte ut, høyden ved punktet er den lange sjøen
+import calibrate as _calibrate44, exposure_learn as _exposure_learn44
+_par44 = {"t": "2026-11-21T12:00Z", "height_source": "barentswatch", "bw_interpolated": False, "sources_disagree": False,
+          "spot_direction_factor": 1.0, "bw_height": 0.9, "swell_offshore": 2.0, "directness": 1.0, "dir_offshore": 290,
+          "height_offshore": 2.2, "swell_share": 0.91, "period": 12.0}
+assert len(_calibrate44.bw_pairs_for_run([dict(_par44)], "x", U44)) == 1
+assert _calibrate44.bw_pairs_for_run([dict(_par44, long_sea={"swell_offshore": 2.7, "period": 10.15, "dir_offshore": 358})], "x", U44) == []
+_e44 = _exposure_learn44.exposure_pairs_for_run
+assert len(_e44([dict(_par44)], "x", U44)) == 1 and _e44([dict(_par44, long_sea={"swell_offshore": 2.7})], "x", U44) == []
+_h44l = {**H44[12], **r44[12]}
+assert _h44l["height_source"] == "barentswatch"
+assert "long_sea" in _h44l and _calibrate44.bw_pairs_for_run([_h44l], "x", U44) == [] and _e44([_h44l], "x", U44) == []
+from rating import _compass16
+assert [_compass16(d) for d in (0, 11, 12, 250, 348.7, 348.8, 359, 360)] == ["N", "N", "NNØ", "VSV", "NNV", "N", "N", "N"]
+# 44.6 M3 (fysikk-kontrolløren 24.11.2026, S40): svellet i en time kan være byttet mot snittet av nabotimene
+# (sources.despike_swell(), originalen i swell_despiked). Vindsjø-delen og totalen er timens rå GFS-tall. Lagt sammen
+# ville de telt den samme sjøen to ganger. Eksempel: GFS la sjøen i svell-delen i nabotimene (2,5 m) og i vindsjø-delen
+# i denne timen (svell 0,56 m, vindsjø 2,64 m, total 2,70 m). Glattet svell er 2,5 m: kvadratsummen med 2,64 m er 3,64 m,
+# 35 % over GFS sin egen totalhøyde. (a) En glattet time er aldri med i regelen. (b) Uansett grunn blir svell og lang sjø
+# lagt sammen aldri mer enn GFS sin totalhøyde i timen, og totalhøyden i svellandelen er GFS sin egen.
+import math
+_h44d = dict(H44[12], swell_offshore=2.5, period=9.8, dir_offshore=355, swell_despiked={"swell_height": 0.56, "dir": 250, "period": 11.95})
+assert math.sqrt(2.5 ** 2 + H44[12]["wind_wave_height_offshore"] ** 2) > 1.3 * H44[12]["total_height_offshore"]
+assert _med_regel44(_h44d, U44) == _av44(dict(_h44d), U44) and "long_sea" not in _med_regel44(_h44d, U44), "M3: glattet svell skal ikke legges sammen med rå vindsjø"
+_old44 = _rating44.LONG_SEA_AS_SWELL
+_rating44.LONG_SEA_AS_SWELL = True
+try:
+    _ls44 = long_sea(dict(H44[12], swell_offshore=2.5), U44)          # ikke merket som glattet, men delene er mer enn helheten
+    _ls44n = long_sea(dict(H44[12]), U44)
+finally:
+    _rating44.LONG_SEA_AS_SWELL = _old44
+assert _ls44["swell_offshore"] == H44[12]["total_height_offshore"] == _ls44["height_offshore"], "M3: aldri mer enn GFS sin totalhøyde"
+assert abs(_ls44n["swell_offshore"] - math.sqrt(0.56 ** 2 + 2.64 ** 2)) < 1e-9 and _ls44n["height_offshore"] == 2.7
+for _t in (11, 12, 13):   # de tre lyse timene 21.11: kvadratsummen er alt innenfor totalen (høyst 0,01 m over), så svaret er som før M3
+    assert r44[_t]["long_sea"]["swell_offshore"] <= H44[_t]["total_height_offshore"]
+# 44.7 M4 (fysikk-kontrolløren 24.11.2026, S40): H i surfehøyde-formelen var hele BarentsWatch-høyden ved punktet, også
+# når toppen der er kort. Nå: er toppperioden ved punktet i selve timen under 7 s (eller mangler), regnes høyst halve
+# energien ved punktet som lang sjø (H / √2). Er den 7 s eller mer i timen, brukes hele høyden som før.
+assert _rating44.LONG_SEA_SHORT_PEAK_ENERGY_SHARE == 0.5
+# 21.11 kl. 15Z i varselet fra 21.11 kl. 11Z: 0,55 m fra 324° med 4,3 s ved punktet, 9,4 s i modelltimen kl. 12Z
+_h44k = dict(H44[13], t="2026-11-21T15:00Z", bw_height=0.55, bw_dir=324.0, bw_period=4.3, bw_interpolated=False, bw_period_real_max_3h=9.4,
+             wind_speed=7.3, wind_dir=0.0, light="mørkt", daylight=False)
+_rk44 = _med_regel44(_h44k, U44)
+show("44.7: Unstad 21.11 kl. 15Z, kort topp ved punktet (4,3 s)", _rk44)
+assert _rk44["bw_period_basis"] == "lang_sjo_kort_topp" and abs(_rk44["height"] - 0.55 / math.sqrt(2)) < 0.006, _rk44["height"]
+_rk44l = _med_regel44(dict(_h44k, bw_period=7.0), U44)     # samme time med 7,0 s i timen: hele høyden
+assert _rk44l["bw_period_basis"] == "lang_sjo" and _rk44l["height"] == 0.55
+assert 0 < _rk44["surf_height"] < _rk44l["surf_height"] and _rk44["stars"] <= _rk44l["stars"] <= 3 and _rk44["uncertain"]
+assert _rk44["long_sea"]["short_peak"] is True and _rk44l["long_sea"]["short_peak"] is False
+assert "BarentsWatch-periode 4 s: kort, høyst halve energien regnes som lang sjø" in _rk44["breakdown"], _rk44["breakdown"]
+assert "Etter justering 0,4 m (kort BarentsWatch-periode)" in _rk44["breakdown"]
+# surfehøyden følger H^0,8 (Komar og Gaughan): (1/√2)^0,8 = 0,758
+assert abs(_rk44["surf_height"] / _rk44l["surf_height"] - 0.5 ** 0.4) < 0.01, (_rk44["surf_height"], _rk44l["surf_height"])
+# mangler perioden i timen (A' kan slå til på modelltimen ved siden av): som kort topp, aldri som lang
+assert _med_regel44(dict(_h44k, bw_period=None), U44)["bw_period_basis"] == "lang_sjo_kort_topp"
+# flat-sperren gjelder den reduserte høyden: 0,49 m med kort topp er 0,346 m lang sjø, under 0,35 m. Da gir regelen
+# ingenting, og timen står som uten regelen (0 poeng)
+_rk44f = _med_regel44(dict(_h44k, bw_height=0.49), U44)
+assert _uten_merke44(_rk44f) == _av44(dict(_h44k, bw_height=0.49), U44) and _rk44f["stars"] == 0
+# K2 (fysikk-kontrolløren 25.11.2026): regelen traff, men vanlig regning vant. Timen er merket long_sea_seen (ikke long_sea),
+# og læringen hopper over den: svellet i timen er det lille GFS skilte ut, høyden ved punktet er den lange sjøen.
+assert _rk44f.get("long_sea_seen") is True and "long_sea" not in _rk44f
+assert "long_sea_seen" not in r44[11] and "long_sea_seen" not in _av44(dict(_h44k, bw_height=0.49), U44) and "long_sea_seen" not in r44[36]
+assert _calibrate44.bw_pairs_for_run([dict(_par44, long_sea_seen=True)], "x", U44) == [] and _e44([dict(_par44, long_sea_seen=True)], "x", U44) == []
+import publish as _publish44
+assert "long_sea_seen" in _publish44.DETAIL_EXCLUDE
+# V4 (feiljegeren 25.11.2026): en time med mer sjø ved punktet kappes fra 4 til 3. Grunnen i «Hvorfor» er omregningen,
+# ikke «ingen BarentsWatch». Uten regelen står den gamle grunnen der den hører hjemme (reserven uten retning).
+_rk44c = _med_regel44(dict(H44[12], bw_height=1.2, wind_speed=2.0, gust=3.0), U44)
+_kapp44 = [l for l in _rk44c["breakdown"] if l.startswith("Usikkert varsel: kappet")]
+assert _rk44c["stars"] == 3 and _kapp44 == ["Usikkert varsel: kappet fra 4 til maks 3 stjerner (lang sjø regnet som svell er et anslag)"], (_rk44c["stars"], _kapp44, _rk44c["breakdown"])
+# perioden i formelen er fortsatt sjøens periode ute (CLAUDE.md «Konvensjoner»), ikke toppen ved punktet
+assert _rk44["long_sea"]["period"] == H44[13]["wind_wave_period_offshore"]
+print(f"44: S29 c del 2 står PÅ for Unstad (S40) - med bryteren av endrer feltene fra del 1 ingenting; med regelen på (A') gir Unstad 21.11 kl. 11-13Z 3, 2 og 3 poeng (1,15, 1,02 og 1,14 m, usikker), A, A' og B skiller seg som beskrevet, hvert vilkår kan stoppe den, bare Unstad, aldri fjord-spots, tak og Nordneset gjelder, den kan bare løfte, læringen hopper over timene, M3 (glattet svell er aldri med, aldri mer enn GFS sin total) og M4 (kort topp ved punktet: høyst halve energien) - OK")
+# 45: S42 (het 44 på design/revisjon-fase2; 44 er S29 c/S40 her) (svar.md 24.11.2026 kl. 22.25). Fire tekster i regnestykket («Hvorfor»). Bare tekst: tallene og poengene er
 # de samme (test_display_only.py sin faste tabell og avspillingen i STATUS.md).
-F44 = spots["farstadsanden"]
-# 44 b: ordene for vinden er appens (fralands, sidevind, skrått pålands, pålands), aldri de engelske
+F45 = spots["farstadsanden"]
+# 45 b: ordene for vinden er appens (fralands, sidevind, skrått pålands, pålands), aldri de engelske
 assert rating.WIND_TYPE_WORD == {"offshore": "fralands", "side": "sidevind", "sideonshore": "skrått pålands", "onshore": "pålands"}
-n44 = 0
-for sv44, per44 in ((4.0, 14.0), (3.0, 13.0), (1.2, 9.0)):
-    for ws44 in (3.0, 7.0, 8.0, 10.0, 12.0):
-        for wd44 in (float(F44["facing"]), (F44["facing"] + 60.0) % 360, (F44["facing"] + 100.0) % 360, (F44["facing"] + 180.0) % 360):
-            h44 = {"height_offshore": sv44 + 0.3, "swell_offshore": sv44, "swell_model": "standard", "dir_offshore": float(F44["facing"]), "period": per44,
-                   "bw_height": sv44 * 0.5, "bw_dir": float(F44["facing"]), "bw_period": per44 - 1, "wind_speed": ws44, "wind_dir": wd44, "gust": ws44,
+n45 = 0
+for sv45, per45 in ((4.0, 14.0), (3.0, 13.0), (1.2, 9.0)):
+    for ws45 in (3.0, 7.0, 8.0, 10.0, 12.0):
+        for wd45 in (float(F45["facing"]), (F45["facing"] + 60.0) % 360, (F45["facing"] + 100.0) % 360, (F45["facing"] + 180.0) % 360):
+            h45 = {"height_offshore": sv45 + 0.3, "swell_offshore": sv45, "swell_model": "standard", "dir_offshore": float(F45["facing"]), "period": per45,
+                   "bw_height": sv45 * 0.5, "bw_dir": float(F45["facing"]), "bw_period": per45 - 1, "wind_speed": ws45, "wind_dir": wd45, "gust": ws45,
                    "tide": {"level": 0.9, "state": "høy", "rising": True}}
-            r44 = rate(dict(h44), F44)
-            tekst44 = " | ".join(r44["breakdown"] + r44["local_rules"]["lines"])
-            assert not re.search(r"\b(offshore|onshore|side-onshore)\b", tekst44), tekst44
-            vind44 = next(l for l in r44["breakdown"] if l.startswith("Vind "))
-            assert f" m/s {rating.WIND_TYPE_WORD[r44['wind_type']]}" in vind44, (r44["wind_type"], vind44)
-            # 44 d: har både vinden og tidevannet tatt poeng, sier parentesen begge, og tallet er timen med svak vind og lavt vann
-            tide44 = r44["faded_tide"] + r44["local_rules"]["stars_lost"]
-            if r44["faded_wind"] > 0 and tide44 > 0:
-                uten44 = rate(dict(h44, wind_speed=1.0, gust=1.0, tide={"level": 0.2, "state": "lav", "rising": True}), F44)["stars"]
-                assert r44["breakdown"][-1] == f"Totalt: {r44['stars']} av 5 stjerner ({uten44} uten vind og tidevann)", (r44["breakdown"][-1], uten44)
-                assert uten44 == r44["stars"] + r44["faded_wind"] + tide44
-                n44 += 1
-            elif r44["faded_wind"] > 0:
-                assert re.fullmatch(r"Totalt: \d av 5 stjerner \(\d uten vind\)", r44["breakdown"][-1]), r44["breakdown"][-1]
+            r45 = rate(dict(h45), F45)
+            tekst45 = " | ".join(r45["breakdown"] + r45["local_rules"]["lines"])
+            assert not re.search(r"\b(offshore|onshore|side-onshore)\b", tekst45), tekst45
+            vind45 = next(l for l in r45["breakdown"] if l.startswith("Vind "))
+            assert f" m/s {rating.WIND_TYPE_WORD[r45['wind_type']]}" in vind45, (r45["wind_type"], vind45)
+            # 45 d: har både vinden og tidevannet tatt poeng, sier parentesen begge, og tallet er timen med svak vind og lavt vann
+            tide45 = r45["faded_tide"] + r45["local_rules"]["stars_lost"]
+            if r45["faded_wind"] > 0 and tide45 > 0:
+                uten45 = rate(dict(h45, wind_speed=1.0, gust=1.0, tide={"level": 0.2, "state": "lav", "rising": True}), F45)["stars"]
+                assert r45["breakdown"][-1] == f"Totalt: {r45['stars']} av 5 stjerner ({uten45} uten vind og tidevann)", (r45["breakdown"][-1], uten45)
+                assert uten45 == r45["stars"] + r45["faded_wind"] + tide45
+                n45 += 1
+            elif r45["faded_wind"] > 0:
+                assert re.fullmatch(r"Totalt: \d av 5 stjerner \(\d uten vind\)", r45["breakdown"][-1]), r45["breakdown"][-1]
             else:
-                assert re.fullmatch(r"Totalt: \d av 5 stjerner", r44["breakdown"][-1]), r44["breakdown"][-1]
-assert n44 >= 5, n44
-# 44 c: «teller 65 %» der energien ganger ned, med samme tall som faktoren (hele prosent)
-G44 = spots["grotfjord"]
-h44c = {"height_offshore": 1.3, "swell_offshore": 1.1, "swell_model": "standard", "dir_offshore": float(G44["facing"]), "period": 9.0,
-        "bw_height": 0.7, "bw_dir": float(G44["facing"]), "bw_period": 8.0, "wind_speed": 2.0, "wind_dir": 100.0, "gust": 3.0}
-r44c = rate(dict(h44c), G44)
-ef44 = rating.energy_factor(G44, r44c["energy_swell_kj"])
-linje44 = next(l for l in r44c["breakdown"] if l.startswith("Energi (svell)"))
-assert 0.05 < ef44 < 0.95 and linje44.endswith(f": teller {round(ef44 * 100)} %") and "faktor" not in linje44 and "potensial" not in linje44, (ef44, linje44)
-print(f"44: S42 - «Høyvann. Lokale sier …: −0,7 poeng.», fralands/pålands/skrått pålands, «teller {round(ef44 * 100)} %» og «(N uten vind og tidevann)» i {n44} timer der begge tok poeng - OK")
+                assert re.fullmatch(r"Totalt: \d av 5 stjerner", r45["breakdown"][-1]), r45["breakdown"][-1]
+assert n45 >= 5, n45
+# 45 c: «teller 65 %» der energien ganger ned, med samme tall som faktoren (hele prosent)
+G45 = spots["grotfjord"]
+h44c = {"height_offshore": 1.3, "swell_offshore": 1.1, "swell_model": "standard", "dir_offshore": float(G45["facing"]), "period": 9.0,
+        "bw_height": 0.7, "bw_dir": float(G45["facing"]), "bw_period": 8.0, "wind_speed": 2.0, "wind_dir": 100.0, "gust": 3.0}
+r44c = rate(dict(h44c), G45)
+ef45 = rating.energy_factor(G45, r44c["energy_swell_kj"])
+linje45 = next(l for l in r44c["breakdown"] if l.startswith("Energi (svell)"))
+assert 0.05 < ef45 < 0.95 and linje45.endswith(f": teller {round(ef45 * 100)} %") and "faktor" not in linje45 and "potensial" not in linje45, (ef45, linje45)
+# 25.11.2026 (feiljegeren på designfase 2, funn 2, 3): «Høyt vann», aldri «Høyvann» (ordet følger tide.state, også på fallende
+# vann), og ingen tankestrek eller «vektet» i noen linje. Søkt over alle timene denne fila har ratet til nå i testene
+# 42, 44 og 45, og over linjene som bare finnes i koden (Rått-svell, den lokale vindgrensa på Farstadsanden).
+assert rating.TIDE_STATE_WORD == {"høy": "Høyt vann", "middels": "Middels vann", "lav": "Lavt vann"}
+_F45 = dict(spots["farstadsanden"])
+_r45v = rate({"height_offshore": 3.3, "swell_offshore": 3.0, "swell_model": "standard", "dir_offshore": float(_F45["facing"]), "period": 13.0,
+              "bw_height": 1.5, "bw_dir": float(_F45["facing"]), "bw_period": 12.0, "wind_speed": 6.0, "wind_dir": (_F45["facing"] + 100.0) % 360, "gust": 6.0,
+              "tide": {"level": 0.2, "state": "lav", "rising": True}}, _F45)
+_lok45 = [l for l in _r45v["local_rules"]["lines"] if l.startswith("Vind ")]
+assert _lok45 == ["Vind 6 m/s sidevind: strengere lokal grense (over 4 m/s): −0,7 poeng, erstatter den generelle vindstraffen hvis strengere"], _r45v["local_rules"]["lines"]
+_src45 = open(rating.__file__, encoding="utf-8").read()
+assert "BarentsWatch bekrefter: 5 mulig" in _src45 and "ikke brukt, svellet ute treffer godt" in _src45
+for _navn45, _r45 in (("44.2 kl. 11", r44[11]), ("44.7", _rk44), ("44 kappet", _rk44c), ("42 lik", lik42), ("45 lokal vind", _r45v), ("45 c", r44c), ("STERK", {"breakdown": [STERK, SVAK], "local_rules": {"lines": []}})):
+    for _l45 in list(_r45["breakdown"]) + list((_r45.get("local_rules") or {}).get("lines") or []):
+        assert not re.search(r" - | – |—|vektet|Høyvann|Lavvann", _l45), (_navn45, _l45)
+print(f"45: S42 - «Høyt vann. Lokale sier …: −0,7 poeng.», fralands/pålands/skrått pålands, «teller {round(ef45 * 100)} %» og «(N uten vind og tidevann)» i {n45} timer der begge tok poeng - OK")
 
 
 print("Alle tester ok")

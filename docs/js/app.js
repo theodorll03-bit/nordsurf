@@ -242,6 +242,8 @@ function lowReasonNotice(h){
   if(!h || !h.low_reason || !STR.notice[h.low_reason] || calmWindWord(h)!=null) return null;
   return STR.notice[h.low_reason] + ".";
 }
+// S42 a: den lokale tidevannslinja fra henteren (rating.TIDE_STATE_WORD), nye og eldre ord for vannstanden
+const TIDEVANN_LINJE = /^(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?$/;
 function zeroCause(h){
   const per = h.period;
   const shortPer = per!=null && per < MUSHY_PERIOD_MAX_S;
@@ -275,8 +277,12 @@ function zeroCause(h){
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
   if(pen.length!==1) return notNow;
   const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
-  // S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyvann. Lokale sier …»), eldre varsler med «Tidevann (høy)»
-  if(/^(Tidevann|Høyvann\.|Lavvann\.|Middels vannstand\.)/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
+  // S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyt vann. Lokale sier lavt og middels vann er best
+  // her: −0,7 poeng.»; «Høyvann.» i varsler fra før 25.11.2026). Linja nevner kilden selv, så den står alene, med fradraget i
+  // parentes: ett kolon i «Feil tidevann: Høyt vann. Lokale sier … (−0,7 poeng).» (feiljegeren 25.11.2026, funn 10).
+  // Eldre varsler («Tidevann (høy): …») leses som før.
+  if(TIDEVANN_LINJE.test(line)) return {word: STR.wordTide, explain: line.replace(/: (−[\d,]+ poeng)\.?$/, " ($1).")};
+  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
   if(/^Vind/.test(line)){
     // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger fralandsvind, nå 5 m/s sidevind
     const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
@@ -1538,9 +1544,9 @@ function breakdownDeler(line){
     // det er høyden på spoten, så den får det ordet som etikett (STR.cell.hs), tallet er verdien og resten forklaringen
     return {etikett: STR.cell.hs, verdi: lead.trim(), virkning: eff};
   }
-  // S42 a (svar.md 24.11.2026 kl. 22.25): «Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.» I tabellen
+  // S42 a (svar.md 24.11.2026 kl. 22.25): «Høyt vann. Lokale sier lavt og middels vann er best her: −0,7 poeng.» I tabellen
   // er vannstanden verdien og resten virkningen, under etiketten «Tidevann» som de andre tidevannslinjene.
-  const tv = l.match(/^(Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?$/);
+  const tv = l.match(TIDEVANN_LINJE);
   if(tv) return {etikett: STR.spot.tidevann, verdi: tv[1], virkning: tv[2]};
   if(m <= 0){
     // ingen tallverdi foran kolon: «Tidevann (høy): …» har verdien i parentesen, ellers står resten i verdikolonnen.

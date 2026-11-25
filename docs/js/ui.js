@@ -101,6 +101,9 @@
     const a = nf1.format(v.a), b = v.b!=null ? nf1.format(v.b) : null;
     return b!=null && b!==a ? `${a}–${b}` : a;
   }
+  // S40 (V1): timer regnet med lang sjø (long_sea, i dag bare Unstad) er usikre (høyst 3 poeng). Ordet får «, usikkert»
+  // der det står alene (overskrift, rad, tabell, kart-kort), og setningen med tallene får «Usikkert varsel.»
+  const usikkertTillegg = (h)=> h && h.long_sea ? `, ${STR.hjem.usikkert}` : "";
   function ordOgHoyde(h){
     if(!h) return {ord:"–", hoyde:null};
     const ord = ratingWord(h);
@@ -212,7 +215,7 @@
     const alle = (rs, cls)=> rs.every(r=> r.b.cls===cls), noen = (rs, cls)=> rs.some(r=> r.b.cls===cls);
     const d0 = days[0], r0 = rader(d0), t0 = topp(r0), st0 = t0 ? t0.b.st : 0, dag0 = dagOrd(d0);
     let s1;
-    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0);
+    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0 + usikkertTillegg(t0.b.h));
     else if(noen(r0, "miss")) s1 = alle(r0, "miss") ? `${STR.bestNoLight}.` : H.manglerDag(dag0);
     else if(alle(r0, "over")) s1 = `${H.over}.`;
     else if(alle(r0, "forbud")) s1 = H.ord(H.forbud, dag0);
@@ -231,8 +234,14 @@
     const apent = !!t0 && st0 >= 1 && new Date(t0.b.slutt).getTime() + 36e5 > Date.now();   // dagens vindu er ikke over
     let s2 = null;
     if(apent && (!neste || neste.t.b.st <= st0)) s2 = H.best(...vinduKl(t0.b.start, t0.b.slutt));
-    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d));
-    else if(st0 < 1 && !surfSenere && rest.length && rest.every(x=> !noen(x.rs, "miss"))) s2 = rest.length===1 ? H.ingen(dagOrd(rest[0].d)) : H.ingenNeste(rest.length);
+    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d) + usikkertTillegg(neste.t.b.h));
+    else if(st0 < 1 && !surfSenere && rest.length && rest.every(x=> !noen(x.rs, "miss"))){
+      // Dager uten lyse timer (mørketid) har ingen vurdering, så «Ingen surf» er ikke kjent for dem: er alle dagene
+      // mørke, sier setningen det, og er bare noen det, sies ingenting (feiljegeren 25.11.2026, funn 12). Ellers som før.
+      const morke = rest.filter(x=> alle(x.rs, "dark")).length;
+      if(!morke) s2 = rest.length===1 ? H.ingen(dagOrd(rest[0].d)) : H.ingenNeste(rest.length);
+      else if(morke===rest.length) s2 = rest.length===1 ? H.morkt(dagOrd(rest[0].d)) : H.morktNeste(rest.length);
+    }
     return [s1, s2].filter((l, i, a)=> l && a.indexOf(l)===i);
   }
   function overskriftHtml(spots, days, egne){
@@ -260,9 +269,11 @@
     }
     const hoyde = heightText(h);
     const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
+    const us = h.long_sea ? STR.notice.uncertain + "." : "";   // S40 (V1): timen er regnet med lang sjø
+    const tall = [deler.length ? cap(deler.join(", ")) + "." : null, us || null].filter(Boolean).join(" ");
     // et vindu som er over, er ikke et råd (fysikk-kontrolløren 19.11.2026): da står bare tallene, som i fsApent på PC-forsiden
-    if(utenVindu || !fsApent(b)) return deler.length ? cap(deler.join(", ")) + "." : null;
-    return `${deler.length ? cap(deler.join(", ")) + ". " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
+    if(utenVindu || !fsApent(b)) return tall || null;
+    return `${tall ? tall + " " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
   }
   function favObs(s){
     // siste egne logg på spoten de siste 7 dagene (lokale logger har ingen fritekst - bare feltene fra loggarket)
@@ -279,15 +290,18 @@
     return spots.map(s=> ({s, st: dayBest(s, key).st})).sort((a, b)=> (b.st!=null ? b.st : -1) - (a.st!=null ? a.st : -1) || kj(a.s) - kj(b.s) || a.s.name.localeCompare(b.s.name, "nb")).map(x=> x.s);
   }
   // Metalinja i radene: hvert ledd («ca. 1 t 20 min», «Treffer ikke») holdes samlet, så linja bare brytes mellom leddene
-  // og aldri midt i et ledd. Skilletegnet står sist i leddet foran. Teksten er den samme som før: «Lyngen · Foreløpig · …».
+  // og aldri midt i et ledd. Skilletegnet står først i leddet det hører til (`.sk`), i luften til venstre for teksten, så
+  // det følger leddet ned når linja brytes og klippes bort der (feiljegeren 25.11.2026, funn 6: « · » hang sist på linja).
+  // Teksten er den samme som før: «Lyngen · Foreløpig · …».
   // Et ledd kan være {html}: ferdig HTML (nå-leddet, der enheten «m» ikke skal stå i versaler).
-  const metaHtml = (deler)=>{ const d = deler.filter(Boolean); return d.map((x, i)=> `<span class="ledd">${x.html != null ? x.html : esc(x)}${i < d.length - 1 ? " ·" : ""}</span>`).join(" "); };
+  const metaHtml = (deler)=>{ const d = deler.filter(Boolean); return `<span class="meta">${d.map((x, i)=> `<span class="ledd">${i ? `<span class="sk">· </span>` : ""}${x.html != null ? x.html : esc(x)}</span>`).join(" ")}</span>`; };
   // «Nå» i regionradene (S38 1 b, svar.md 24.11.2026 kl. 22.25; Theodors ønske 17.11.2026, S15 b): ordet for nå-timen og
   // høyden nå, «Nå Smått 0,6–0,8 m». Er nå-timen mørk, sier raden «Nå Mørkt» uten høyde. Uten nå-time (varselet er for
   // gammelt): null, og raden viser dagens ord som favorittene. Tallet til venstre er fortsatt dagens.
   function naaLedd(s){
-    const v = naaVisning(s, naaOf(s)), ord = v.oh.ord.replace(/\s+nå$/, "");
-    if(ord==="–" || v.rute==="forbud" || v.rute==="miss") return null;
+    const hn = naaOf(s), v = naaVisning(s, hn), ord0 = v.oh.ord.replace(/\s+nå$/, "");
+    if(ord0==="–" || v.rute==="forbud" || v.rute==="miss") return null;
+    const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
     const hoyde = v.rute==="mork" ? null : v.oh.hoyde;
     return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${hoyde} m` : ""}`,
       html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};
@@ -297,7 +311,9 @@
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
     // lista starter i morgen (lyset er over): dagen står én gang over lista («Mørkt nå. Tallene gjelder i morgen.»),
     // ikke på hver rad. Skjermleseren får den fortsatt per rad
-    const dag = d0.idag ? "" : `${cap(dagOrd(d0))}: `, dagSynlig = d0.idag || S.hjemMorgen ? "" : dag;
+    // Favorittradene sier «I dag:» foran ordet (feiljegeren 25.11.2026, funn 9): ordet der er dagens, mens regionraden for
+    // samme spot sier «Nå …». Uten merket sto «Smått» og «Nå Treffer ikke» om samme spot på samme skjerm.
+    const dag = d0.idag && kort ? "" : `${cap(dagOrd(d0))}: `, dagSynlig = S.hjemMorgen || (d0.idag && kort) ? "" : dag;
     const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : ratingWord(h);
     const tapt = h && b.st!=null ? (lostParts(h).map(p=> p.tekst).join(" · ") || null) : null;
     // merkene («Foreløpig», forbudet) står etter stedet i alle rader, også favorittene (runde 3, 24.11.2026)
@@ -367,7 +383,7 @@
     const med = rader.filter(r=> r.b.st!=null && r.b.st >= 1);
     return med.find(r=> iBesteOkt(r.s, r.b.t)) || med[0] || null;
   }
-  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "");
+  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "") + usikkertTillegg(b.h);
   const fsTapt = (h)=> !h ? "" : lostParts(h).map(p=> p.tekst).join(" · ");
   const fsSvell = (h)=> h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "–";
   // «Best hh–hh» vises bare mens vinduet er åpent (fysikk-kontrolløren 15.10 og 16.11.2026) - samme test som «apent»
@@ -777,6 +793,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

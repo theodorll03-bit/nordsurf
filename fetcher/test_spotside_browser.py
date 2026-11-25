@@ -255,6 +255,9 @@ AUDIT_JS = r"""() => {
   const clipped = [];
   for(let a of leaves){
     if(a.el.ownerSVGElement) continue;
+    // skilletegnet « · » i metalinja på Hjem (.sk) skal klippes bort når leddet står først på en linje (feiljegeren 25.11.2026,
+    // funn 6). Bare tegnet er unntatt: selve leddene sjekkes som all annen tekst, og tegnets plass låses i fase 2-delen.
+    if(a.el.classList.contains('sk') && a.el.closest('.favlinje .etikett')) continue;
     const ar = a.el.getBoundingClientRect(); a = {...a, r: ar};
     let p = a.el.parentElement, done = false;
     while(p && p !== document.body){
@@ -1086,6 +1089,16 @@ def main():
                         # (før det lysner, etter midnatt), sier raden «Nå Mørkt», uten tall. Tallet til venstre er fortsatt dagens.
                         # «i lys»: dag 1 i testfila er «over» og nå-timene er fra kl. 21, så dagssammendraget lånes fra dag 2, og nå-timen
                         # er ukas beste time for spoten flyttet til klokka. «før det lysner»: samme dag, men nå-timen er mørk.
+                        # feiljegeren 25.11.2026, funn 12: mørketid uten lyse timer. Overskriften sier at det er mørkt, aldri «Ingen surf»
+                        # om dager uten vurdering. Med tall (0) alle dagene sier den «Ingen surf de neste …» som før.
+                        ovs_ = page.evaluate("""() => { const H = Front.helpers, sp = DATA.spots.slice(0, 3), days = H.weekDays(sp), null0 = {stars: 0, surf_height: 0.1, low_reason: 'flat', t: days[0].key + 'T10:00Z', light: 'dag'};
+                            const gml = sp.map(s => s.dager), sett = (f) => { for(const s of sp) s.dager = days.map((d, i) => f(d, i)); const o = H.overskrift(sp, days, true); return o; };
+                            const mork = sett((d) => ({d: d.key, status: 'dark'})), blandet = sett((d, i) => i % 2 ? {d: d.key, status: 'dark'} : {d: d.key, status: 'ok', h: {...null0, t: d.key + 'T10:00Z'}, start: d.key + 'T10:00Z', slutt: d.key + 'T10:00Z'}),
+                                  null_ = sett((d) => ({d: d.key, status: 'ok', h: {...null0, t: d.key + 'T10:00Z'}, start: d.key + 'T10:00Z', slutt: d.key + 'T10:00Z'}));
+                            sp.forEach((s, i) => { s.dager = gml[i]; }); return {mork, blandet, null_, n: days.length - 1}; }""")
+                        assert ovs_["mork"][-1] == f"Mørkt de neste {ovs_['n']} dagene." and not any("Ingen surf" in l for l in ovs_["mork"]), f"mørketid: overskriften skal si at det er mørkt, ikke «Ingen surf»: {ovs_['mork']}"
+                        assert not any("neste" in l for l in ovs_["blandet"]), f"noen dager mørke og noen med 0: ingen setning om de neste dagene: {ovs_['blandet']}"
+                        assert ovs_["null_"][-1] == f"Ingen surf de neste {ovs_['n']} dagene.", f"alle dager med tall og 0: som før: {ovs_['null_']}"
                         naa_sett = {}
                         for nar_, tid_ in (("i lys", T0 - dt.timedelta(hours=10)), ("før det lysner", T0 - dt.timedelta(hours=15)), ("etter midnatt", T0 + dt.timedelta(hours=3))):
                             page.clock.set_fixed_time(tid_)
@@ -1110,8 +1123,8 @@ def main():
                             lys_ = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag; return {merk: !!document.querySelector('#viewHjem #hjemMerk'), dag: key, tekst: document.querySelector('#viewHjem').textContent.includes('Tallene gjelder i morgen'),
                                 rader: [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')].map(r => { const s = DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id), h = H.naaOf(s), b = H.dayBest(s, key), oh = h ? H.ordOgHoyde(h) : null;
                                     const e = r.querySelector('.etikett'), ledd = [...e.querySelectorAll('.ledd')], sist = ledd[ledd.length - 1], enh = sist.querySelector('.enh');
-                                    return {navn: s.name, st: b.st, tall: r.querySelector('.t-listetall').textContent.trim(), meta: e.textContent, sist: sist.textContent.replace(/\s+/g, ' ').trim(), aria: r.getAttribute('aria-label'),
-                                      mork: !!h && H.mork(h), kjent: !!h && H.known(h), forbud: H.forbudNa(s), ord: oh ? oh.ord.replace(/\s+nå$/, '') : null, hoyde: oh ? oh.hoyde : null, dagord: b.h ? ratingWord(b.h) : null,
+                                    return {navn: s.name, st: b.st, tall: r.querySelector('.t-listetall').textContent.trim(), meta: e.textContent, sist: sist.textContent.replace(/\s+/g, ' ').trim().replace(/^· /, ''), aria: r.getAttribute('aria-label'),
+                                      mork: !!h && H.mork(h), kjent: !!h && H.known(h), forbud: H.forbudNa(s), ord: oh ? oh.ord.replace(/\s+nå$/, '') + (H.mork(h) ? '' : H.usikkertTillegg(h)) : null, hoyde: oh ? oh.hoyde : null, dagord: b.h ? ratingWord(b.h) : null,
                                       enhStil: enh ? getComputedStyle(enh).textTransform : null, hoyreUt: Math.round(sist.getBoundingClientRect().right - r.getBoundingClientRect().right), overflyt: e.scrollWidth - e.clientWidth}; })}; }""")
                             assert not lys_["merk"] and not lys_["tekst"], f"«Mørkt nå. Tallene gjelder i morgen.» skal ikke stå {nar_}: {lys_}"
                             assert lys_["dag"] == tid_.astimezone(OSLO).date().isoformat(), f"radene skal vise dagen i dag {nar_}: {lys_['dag']}"
@@ -1635,8 +1648,18 @@ def main():
                     page.evaluate("() => { const u = DATA.spots.find(s => s.id === 'unstad'); u.region = u.__region; delete u.__region; }")
                     # metalinja: leddene står med « · » mellom seg som før, og ingen ledd er brutt midt i (bare mellom leddene)
                     ledd = page.evaluate("""() => [...document.querySelectorAll('#viewHjem .favlinje .etikett')].map(e => { const lh = parseFloat(getComputedStyle(e).lineHeight), d = [...e.querySelectorAll('.ledd')];
-                        return {tekst: e.textContent.trim(), ledd: d.map(x => x.textContent.trim().replace(/ ·$/, '')), hoye: d.filter(x => x.getBoundingClientRect().height > lh * 1.5).length, utenfor: d.filter(x => x.getBoundingClientRect().right > innerWidth - 15).length}; })""")
+                        return {tekst: e.textContent.trim(), ledd: d.map(x => x.textContent.trim().replace(/^· /, '')), forst: d.filter((x, i) => i === 0 && x.querySelector('.sk')).length, sk: d.slice(1).filter(x => !x.querySelector('.sk')).length, hoye: d.filter(x => x.getBoundingClientRect().height > lh * 1.5).length, utenfor: d.filter(x => x.getBoundingClientRect().right > innerWidth - 15).length}; })""")
                     assert ledd and all(l_["ledd"] and l_["tekst"] == " · ".join(l_["ledd"]) and l_["hoye"] == 0 and l_["utenfor"] == 0 for l_ in ledd), f"metalinja skal bare brytes mellom leddene: {[l_ for l_ in ledd if l_['hoye'] or l_['utenfor'] or l_['tekst'] != ' · '.join(l_['ledd'])][:2]}"
+                    # feiljegeren 25.11.2026, funn 6: skilletegnet hører til leddet etter (aldri hengende sist på linja): det står i
+                    # luften til venstre for leddet, og et ledd som står først på en linje har det utenfor .etikett (klippet bort)
+                    assert all(l_["forst"] == 0 and l_["sk"] == 0 for l_ in ledd), "hvert ledd utenom det første skal ha skilletegnet sitt foran seg"
+                    heng = page.evaluate("""() => { let brutt = 0, synlig = 0, etter = 0; for(const e of document.querySelectorAll('#viewHjem .favlinje .etikett:not(.obs)')){ const eb = e.getBoundingClientRect(), d = [...e.querySelectorAll('.ledd')];
+                        if(d.length && getComputedStyle(e).overflow !== 'hidden') synlig += 100;
+                        d.forEach((x, i) => { if(!i) return; const sk = x.querySelector('.sk').getBoundingClientRect(), forrige = d[i - 1].getBoundingClientRect(), ny = x.getBoundingClientRect().top > forrige.top + 2;
+                            if(ny){ brutt++; if(sk.right > eb.left + 0.5) synlig++; } else if(sk.left < forrige.right - 0.5 || sk.right > eb.right) etter++; }); }
+                        return {brutt, synlig, etter}; }""")
+                    assert heng["synlig"] == 0 and heng["etter"] == 0, f"skilletegnet skal være klippet bort der linja brytes, og stå mellom leddene ellers: {heng}"
+                    assert heng["brutt"] >= 1, f"testdataene skal ha minst én metalinje over to linjer: {heng}"
                     assert mr["lenangsoyra"].startswith("Lyngen · Foreløpig · ca. 1 t 20 min · "), f"Lenangsøyra: sted, merke og kjøretid i metalinja: {mr['lenangsoyra']!r}"
                     go("#sok", "#viewSok:not([hidden]) #sokM")
                     merke_sjekk("søket", "#viewSok .srad", ".nm small")

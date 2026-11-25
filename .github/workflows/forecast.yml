@@ -165,6 +165,14 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
       - name: Lag appens datafiler (oversikt + én fil per spot)
         run: python fetcher/publish.py
+      # S40 (svar.md 24.11.2026): inndataene lagres varig hver dag, ikke bare mandager (backtest.yml). Døgnets første
+      # varsel (UTC), 72 timer per spot, ca. 1,2 MB. Går i samme commit som læringsdataene under: ingen ekstra commit.
+      # Står ETTER publish.py, som skriver forecast.json uten «hemmelig»-spots. Feiler steget, går kjøringen videre.
+      - name: Inndata-bilde, døgnets første varsel (S40)
+        if: ${{ github.event.inputs.proeve != 'true' }}
+        continue-on-error: true   # heller ikke tidsgrensa skal kunne stoppe opplastingen og publiseringen (feiljegeren 25.11.2026, V5)
+        timeout-minutes: 2
+        run: python fetcher/backtest_inputs.py --daglig || echo "Inndata-bildet feilet - varselet lagres likevel"
       - name: Last opp varselet
         id: varsel
         uses: actions/upload-artifact@v4
@@ -199,6 +207,7 @@ jobs:
           git add data/exposure.json 2>/dev/null || true
           git add -A data/forecast_archive 2>/dev/null || true
           git add data/forecast_accuracy.json 2>/dev/null || true
+          git add -A data/backtest/inputs 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel (læringsdata)"
           git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push
@@ -240,6 +249,14 @@ jobs:
           BW_DEBUG: ${{ vars.BW_DEBUG }}
       - name: Lag appens datafiler (oversikt + én fil per spot)
         run: python fetcher/publish.py
+      # S40 (svar.md 24.11.2026): inndataene lagres varig hver dag, ikke bare mandager (backtest.yml). Døgnets første
+      # varsel (UTC), 72 timer per spot, ca. 1,2 MB. Går i samme commit som læringsdataene under: ingen ekstra commit.
+      # Står ETTER publish.py, som skriver forecast.json uten «hemmelig»-spots. Feiler steget, går kjøringen videre.
+      - name: Inndata-bilde, døgnets første varsel (S40)
+        if: ${{ github.event.inputs.proeve != 'true' }}
+        continue-on-error: true   # heller ikke tidsgrensa skal kunne stoppe opplastingen og publiseringen (feiljegeren 25.11.2026, V5)
+        timeout-minutes: 2
+        run: python fetcher/backtest_inputs.py --daglig || echo "Inndata-bildet feilet - varselet lagres likevel"
       - name: Last opp varselet
         id: varsel
         uses: actions/upload-artifact@v4
@@ -272,6 +289,7 @@ jobs:
           git add data/exposure.json 2>/dev/null || true
           git add -A data/forecast_archive 2>/dev/null || true
           git add data/forecast_accuracy.json 2>/dev/null || true
+          git add -A data/backtest/inputs 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Nytt varsel (læringsdata)"
           git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push
