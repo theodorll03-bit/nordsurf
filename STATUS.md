@@ -1,5 +1,26 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 3: riktig tall størst, 25.11.2026
+
+Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Tre lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a) og `f68304e` (feiljegerens funn). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
+
+- **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått.
+- **2.** Dommen har dagen under ordet («I DAG»), KL.-blokka har «KL. hh».
+- **3. Lister og dagkolonner** viser surfehøyden, med «–» ved Flatt og Treffer ikke: mobil-Hjem, PC-forsiden (kolonnen heter SURF), Søk, Utforsk og «Neste 7 dager» på PC-spotsiden.
+- **4. Timestripa:** surfehøyden som stolper i blekk, fast skala 0 til `max_height`, stiplet linje ved nedre grense i `ideal_height`. Tapte poeng stiplet blekk, bare på valgt time. Svellpila (KL.-blokka, skiva, minikartet) er korall bare når timen har 4 eller mer.
+- **5.** Ordet etter tallet er karakteren (ved 0: «Ikke surfbart», utenom Flatt og Smått), årsaken står på egen linje. Overskriften gir råd på dårlige dager: «Lite å hente i dag. Unstad er best, lørdag.»
+- **S44 3:** Søk og Utforsk viser «Mørkt» uten tall i mørke timer.
+- **S38 2 a:** etikettene i KL.-blokka, ved skiva og i kildelinja åpner forklaringsarkene (44 px trykkflate, fokusring, Escape). På 375 × 548 står KL.-blokka 8 px over fanelinja etter dagbytte på alle dager (før under på 13 av 14 for Unstad, verst 53 px).
+- **Feiljegerens funn:** «usikkert» på dagens ord i regionraden, og ingen « - » som tankestrek i tekster brukeren ser (strings.js, app.js, utforsk.js og alle forklaringsarkene).
+- **Havfargen** (`--god` for 3) er bare prøvd med injisert CSS og skjermbilder i `fase-3/havfarge/`. Den er ikke i appen.
+
+Tester: `fetcher/test_spotside_browser.py` oppdatert (det store tallet, «–» ved Flatt og Treffer ikke, karakteren og årsaken, stolpene, tapt bare på valgt time, overskriftsrådet, Søk i mørket, forklaringsarkene, 375 × 548, «usikkert», tankestreker). Hele suiten: `SUM: alle ok (17 filer)`.
+
+Gjenstår:
+- Ikke pushet. Fysikk-kontrolløren og feiljegeren har ikke sett endringen.
+- Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
+- Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
+
 ## Designrevisjonen fase 2: B 4.0 ferdig på mobil, 24.11.2026
 
 Gren `design/revisjon-fase2` fra main `30eefa3`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 2, punkt 1 til 7. Ja i svar.md 21.11.2026 kl. 18.30. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-2/` (mobil-Hjem, Utforsk, Søk, Logger, Innstillinger og Unstad på 390 × 663, Hjem og Unstad på 1440 × 900, dag og mørketid, varselet 24.11 kl. 13Z med klokka på 15.20).
