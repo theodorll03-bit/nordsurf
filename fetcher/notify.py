@@ -81,9 +81,14 @@ def describe(spot, w, now):
         height_txt = f"{surf:.1f} m".replace(".", ",")
         if sets is not None:
             height_txt += f" (sett {sets:.1f} m)".replace(".", ",")
+    # S40 (feiljegeren 25.11.2026, V2): i en time regnet med lang sjø (long_sea fra rating.rate()) er perioden den
+    # lange sjøens, ikke svell-delens (timen i forecast.json har svell-delen urørt), og varselet sier at det er usikkert.
+    ls = top.get("long_sea") if isinstance(top.get("long_sea"), dict) else None
+    period = ls["period"] if ls and ls.get("period") is not None else top.get("period")
+    usikkert = "lang sjø regnet som svell, usikkert varsel" if any(isinstance(h.get("long_sea"), dict) for h in w["hours"]) else None
     parts = [height_txt,
-             f"{top['period']:.0f} s" if top.get("period") else None,
-             top.get("wind_type")]
+             f"{period:.0f} s" if period else None,
+             top.get("wind_type"), usikkert]
     return f"{spot['name']}: {w['best']} stjerner {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)
 
 

@@ -7,7 +7,8 @@ Vilkår (lest 16.10.2026):
   covering more than 10 weather variables or extending over a period of more than 2 weeks for a single location
   are considered multiple API calls … fractional counts are used» (2 uker og 15 variabler = 1,5 kall; 4 uker = 3,0).
   Et samlekall med flere koordinater teller per punkt. Vår vekt per punkt: max(1, variabler/10) × max(1, dager/14)
-  = 1,0 × 16/14 = 1,14 for både svell (10 variabler) og vind (4 variabler).
+  = 1,0 × 16/14 = 1,14 for svell fra standardmodellen (10 variabler) og vind (4 variabler). Svell fra GFS Wave har
+  13 variabler fra 24.11.2026 (S29 c del 1: vindsjø-delens høyde, retning og periode i samme kall): 1,3 × 16/14 = 1,49.
 - met.no (api.met.no/doc/TermsOfService): ingen tallfestet grense - «ikke overbelast», identifiser deg (User-Agent),
   maks 4 desimaler i koordinatene, respekter Expires; uformelt ca. 20 kall/s før 429.
 - BarentsWatch (bølgevarsel): ingen formelle grenser; NLOD, kreditering i appen («data via BarentsWatch»).
@@ -27,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RUNS_PER_DAY = 8
 OM_DAYS, OM_MARINE_VARS, OM_WIND_VARS = 16, 10, 4
+OM_MARINE_VARS_GFS = 13       # 10 + vindsjø-delen (sources.MARINE_WIND_WAVE_VARS), bare GFS-kallet
 OM_MARINE_MODELS = 2          # GFS Wave + standardmodellen (sources.openmeteo_prefetch)
 OM_BATCH = 10                 # punkter per samlekall (sources.OPENMETEO_BATCH)
 LIMITS = {"Open-Meteo": {"minutt": 600, "time": 5000, "døgn": 10000, "måned": 300000}}
@@ -46,7 +48,9 @@ def regnskap(spots, jobs=1):
     marine = {_key(s["offshore"]) for s in spots} | {_key(s["offshore_longrange"]) for s in spots if s.get("offshore_longrange")}
     wind = {_key(s["spot"]) for s in spots}
     om_points = len(marine) * OM_MARINE_MODELS + len(wind)
-    om_weighted = len(marine) * OM_MARINE_MODELS * om_weight(OM_MARINE_VARS) + len(wind) * om_weight(OM_WIND_VARS)
+    # ett GFS-kall (13 variabler) og ett til standardmodellen (10) per havpunkt
+    om_weighted = (len(marine) * (om_weight(OM_MARINE_VARS_GFS) + (OM_MARINE_MODELS - 1) * om_weight(OM_MARINE_VARS))
+                   + len(wind) * om_weight(OM_WIND_VARS))
     om_http = OM_MARINE_MODELS * math.ceil(len(marine) / OM_BATCH) + math.ceil(len(wind) / OM_BATCH)
     bw = sum(1 for s in spots for k in ("barentswatch_point", "barentswatch_point_near", "barentswatch_point_shadow") if s.get(k))
     return {

@@ -125,6 +125,9 @@
       lys: (a, b) => `Lys ${a}–${b}`, lysHele: "Lys hele døgnet",   // midnattssol (Theodor 16.11.2026)
       fra: (sted) => `Fra ${sted}`,
       ordSpot: (ord, spot, dag) => `${ord} på ${spot} ${dag}.`,
+      // S40 (feiljegeren 25.11.2026, V1): en time regnet med lang sjø (long_sea) er usikker. Ordet følger med ut av
+      // spotsiden: «Bra på Unstad i dag, usikkert.», «Nå Bra, usikkert», og «Usikkert varsel.» etter tallene i setningen.
+      usikkert: "usikkert",
       ord: (ord, dag) => `${ord} ${dag}.`,
       ingen: (dag) => `Ingen surf ${dag}.`,
       ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,
@@ -152,6 +155,10 @@
       bildet: "Bildet",   // foran hele krediteringen for kornfotoet, nederst under Kilder
       // «Svell ute» og ikke «Svell»: tallet er svellet ute (swell_offshore), ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
       kl: (hh) => `Kl. ${hh}`, svell: "Svell ute", surf: "Surf", vind: "Vind", tidevann: "Tidevann",
+      // S40 (svar.md 24.11.2026): timer der ratingen har regnet lang sjø som svell (feltet long_sea, i dag bare Unstad).
+      // Tallet er da den lange sjøen værmodellen kaller vindsjø, ikke svell-delen. Timen er usikker (høyst 3 poeng).
+      langSjo: "Lang sjø ute", langSjoFra: "Lang sjø fra", langSjoNote: "Regnet som svell. Usikkert varsel.",
+      timeLangSjo: (m) => `Lang sjø ute ${m} m, regnet som svell, usikkert`,
       mangler: "mangler data", hoy: "høy", lav: "lav", snur: "snur",
       svellSub: (s, retning, grader) => `${s} s · fra ${retning} ${grader}°`,
       timeForTime: "Time for time", naa: "Nå", velgTime: "Velg time", velgDag: "Velg dag", tilbakeNa: "Tilbake til nå",
@@ -165,6 +172,10 @@
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
       tideLav: (kl, m) => `lavvann ${kl}, ${m} meter`, tideHoy: (kl, m) => `høyvann ${kl}, ${m} meter`,
       skiveAria: (spot, hh, svell, vind) => `${spot} kl. ${hh}: ${svell}.${vind ? " " + vind + "." : ""}`,
+      // S40: timen er regnet med lang sjø (long_sea) - skjermleseren skal ikke kalle den svell
+      skiveLangSjo: (grader, inne, vindu) => `lang sjø fra ${grader} grader, regnet som svell, ${inne ? "innenfor" : "utenfor"} svellvinduet ${vindu}`,
+      langSjoRegnet: "Regnet som svell", langSjoRegnetV: "ja, usikkert (høyst 3 poeng)", langSjoGfs: "Svelldelen i værmodellen",
+      langSjoHow: "Værmodellen (GFS Wave) kaller denne sjøen vindsjø. Den er lang, kommer fra havsiden, og kystmodellen ved stranda viser lange bølger rett inn. Derfor er den regnet som svell her. Det er et anslag, så timen er usikker.",
       skiveSvell: (grader, inne, vindu) => `svell fra ${grader} grader, ${inne ? "innenfor" : "utenfor"} svellvinduet ${vindu}`,
       skiveSvellMangler: "svell mangler data", skiveVind: (retning, ord) => `Vind fra ${retning}${ord ? ", " + ord : ""}`,
       vinduTil: (a, b) => `${a} til ${b}`,

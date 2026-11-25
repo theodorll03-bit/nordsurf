@@ -101,6 +101,9 @@
     const a = nf1.format(v.a), b = v.b!=null ? nf1.format(v.b) : null;
     return b!=null && b!==a ? `${a}–${b}` : a;
   }
+  // S40 (V1): timer regnet med lang sjø (long_sea, i dag bare Unstad) er usikre (høyst 3 poeng). Ordet får «, usikkert»
+  // der det står alene (overskrift, rad, tabell, kart-kort), og setningen med tallene får «Usikkert varsel.»
+  const usikkertTillegg = (h)=> h && h.long_sea ? `, ${STR.hjem.usikkert}` : "";
   function ordOgHoyde(h){
     if(!h) return {ord:"–", hoyde:null};
     const ord = ratingWord(h);
@@ -206,7 +209,7 @@
     const alle = (rs, cls)=> rs.every(r=> r.b.cls===cls), noen = (rs, cls)=> rs.some(r=> r.b.cls===cls);
     const d0 = days[0], r0 = rader(d0), t0 = topp(r0), st0 = t0 ? t0.b.st : 0, dag0 = dagOrd(d0);
     let s1;
-    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0);
+    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0 + usikkertTillegg(t0.b.h));
     else if(noen(r0, "miss")) s1 = alle(r0, "miss") ? `${STR.bestNoLight}.` : H.manglerDag(dag0);
     else if(alle(r0, "over")) s1 = `${H.over}.`;
     else if(alle(r0, "forbud")) s1 = H.ord(H.forbud, dag0);
@@ -225,7 +228,7 @@
     const apent = !!t0 && st0 >= 1 && new Date(t0.b.slutt).getTime() + 36e5 > Date.now();   // dagens vindu er ikke over
     let s2 = null;
     if(apent && (!neste || neste.t.b.st <= st0)) s2 = H.best(...vinduKl(t0.b.start, t0.b.slutt));
-    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d));
+    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d) + usikkertTillegg(neste.t.b.h));
     else if(st0 < 1 && !surfSenere && rest.length && rest.every(x=> !noen(x.rs, "miss"))) s2 = rest.length===1 ? H.ingen(dagOrd(rest[0].d)) : H.ingenNeste(rest.length);
     return [s1, s2].filter((l, i, a)=> l && a.indexOf(l)===i);
   }
@@ -254,9 +257,11 @@
     }
     const hoyde = heightText(h);
     const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
+    const us = h.long_sea ? STR.notice.uncertain + "." : "";   // S40 (V1): timen er regnet med lang sjø
+    const tall = [deler.length ? cap(deler.join(", ")) + "." : null, us || null].filter(Boolean).join(" ");
     // et vindu som er over, er ikke et råd (fysikk-kontrolløren 19.11.2026): da står bare tallene, som i fsApent på PC-forsiden
-    if(utenVindu || !fsApent(b)) return deler.length ? cap(deler.join(", ")) + "." : null;
-    return `${deler.length ? cap(deler.join(", ")) + ". " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
+    if(utenVindu || !fsApent(b)) return tall || null;
+    return `${tall ? tall + " " : ""}${STR.hjem.best(...vinduKl(b.start, b.slutt))}`;
   }
   function favObs(s){
     // siste egne logg på spoten de siste 7 dagene (lokale logger har ingen fritekst - bare feltene fra loggarket)
@@ -306,7 +311,7 @@
   function radHtml(s, days){
     const h = naaOf(s), {st, oh} = naaVisning(s, h);
     // ordet og høyden gjelder nå-timen, ukerutene ved siden av er dagens beste (Theodor S15 b, 17.11.2026): «Nå» står foran
-    const ord = oh.ord.replace(/\s+nå$/, ""), naa = ord==="–" ? "" : STR.spot.naa;   // uten time er det ikke noe ord å merke
+    const ord = oh.ord.replace(/\s+nå$/, "") + usikkertTillegg(h), naa = ord==="–" ? "" : STR.spot.naa;   // uten time er det ikke noe ord å merke
     return `<a class="rad r-${min5(st)}" href="#spot=${esc(s.id)}" aria-label="${esc(`Åpne ${s.name}: ${naa ? naa.toLowerCase() + " " : ""}${ord.toLowerCase()}${oh.hoyde ? ", " + oh.hoyde + " m" : ""}. ${ukeAria(s, days)}`)}">
       <span class="nm"><b>${esc(s.name)}</b><small>${esc(omrMerker(s))}</small><span class="na">${naa ? `<span class="na-tid">${esc(naa)}</span> ` : ""}${esc(ord)}${oh.hoyde ? ` <span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></span>
       ${ukeHtml(s, days, false)}</a>`;
@@ -345,7 +350,7 @@
     const med = rader.filter(r=> r.b.st!=null && r.b.st >= 1);
     return med.find(r=> iBesteOkt(r.s, r.b.t)) || med[0] || null;
   }
-  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "");
+  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "") + usikkertTillegg(b.h);
   const fsTapt = (h)=> !h ? "" : lostParts(h).map(p=> p.tekst).join(" · ");
   const fsSvell = (h)=> h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "–";
   // «Best hh–hh» vises bare mens vinduet er åpent (fysikk-kontrolløren 15.10 og 16.11.2026) - samme test som «apent»
@@ -746,6 +751,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

@@ -38,7 +38,7 @@
     const vinduTxt = vinduer.map(([a, b])=> STR.spot.vinduTil(a, b)).join(" og ");
     const vindOrd = h ? windLabel(h) : "";
     const etikett = STR.spot.skiveAria(s.name, hh,
-      svell!=null ? (vinduer.length ? STR.spot.skiveSvell(Math.round(svell), !!iVindu, vinduTxt) : `svell fra ${Math.round(svell)} grader`) : STR.spot.skiveSvellMangler,
+      svell!=null ? (vinduer.length ? (h.long_sea ? STR.spot.skiveLangSjo : STR.spot.skiveSvell)(Math.round(svell), !!iVindu, vinduTxt) : `${h.long_sea ? "lang sjø" : "svell"} fra ${Math.round(svell)} grader`) : STR.spot.skiveSvellMangler,
       vind!=null ? STR.spot.skiveVind(compass(vind), vindOrd) : "");
     const id = encodeURIComponent(s.id);
     // bildet ligger svakt under hele skiva; kopien i full styrke er klippet til vinduet (og mangler uten vindu)
@@ -62,7 +62,7 @@
     const vs = h ? vinduStatus(h, s) : null;
     const linje = (k, v, sub)=> `<span><span class="etikett">${esc(k)}</span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
     const forkl = [
-      linje(STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
+      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
       linje(STR.spot.vindFra, vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
       vinduer.length ? linje(STR.spot.vindu, esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");
