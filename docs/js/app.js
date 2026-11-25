@@ -275,7 +275,8 @@ function zeroCause(h){
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
   if(pen.length!==1) return notNow;
   const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
-  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
+  // S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyvann. Lokale sier …»), eldre varsler med «Tidevann (høy)»
+  if(/^(Tidevann|Høyvann\.|Lavvann\.|Middels vannstand\.)/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
   if(/^Vind/.test(line)){
     // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger fralandsvind, nå 5 m/s sidevind
     const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
@@ -1537,6 +1538,10 @@ function breakdownDeler(line){
     // det er høyden på spoten, så den får det ordet som etikett (STR.cell.hs), tallet er verdien og resten forklaringen
     return {etikett: STR.cell.hs, verdi: lead.trim(), virkning: eff};
   }
+  // S42 a (svar.md 24.11.2026 kl. 22.25): «Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.» I tabellen
+  // er vannstanden verdien og resten virkningen, under etiketten «Tidevann» som de andre tidevannslinjene.
+  const tv = l.match(/^(Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?$/);
+  if(tv) return {etikett: STR.spot.tidevann, verdi: tv[1], virkning: tv[2]};
   if(m <= 0){
     // ingen tallverdi foran kolon: «Tidevann (høy): …» har verdien i parentesen, ellers står resten i verdikolonnen.
     // En hel setning uten kolon («Bølgene ved spoten går ut fra land. …») er ikke en etikett: den får hele bredden
@@ -1565,7 +1570,7 @@ function breakdownRowHtml(line, isTotal){
 function openBreakdown(h){
   if(!h.breakdown || !h.breakdown.length) return;
   const ex = ratingWordExplain(h);
-  $("#bdBody").innerHTML = (ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b> – ${esc(ex)}</p>` : "") + h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
+  $("#bdBody").innerHTML = (ex ? `<p class="bd-note"><b>${esc(ratingWord(h))}</b>: ${esc(ex)}</p>` : "") + h.breakdown.map((line,i)=>breakdownRowHtml(line, i===h.breakdown.length-1)).join("");
   $("#bdSheet").classList.add("open"); $("#bdScrim").classList.add("open"); $("#bdSheet").setAttribute("aria-hidden","false");
 }
 function closeBreakdown(){

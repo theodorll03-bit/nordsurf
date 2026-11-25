@@ -196,7 +196,7 @@ Theodor liker kornet godt, og det skal beholdes som det er. Behandlingen er besk
 - Farge er aldri eneste bærer av mening. Tallene står i rutene, og grunnen står som tekst.
 - VoiceOver-etiketter finnes i malene: skiva, timestripa, ukeoversikten og tidevannet. Ta dem med.
 - Tekst i appen er på norsk. Enheter skrives med små bokstaver (1,7 m · 12 s · 5 m/s).
-- Vinden beskrives som fralands, pålands eller sidevind.
+- Vinden beskrives som fralands, pålands, skrått pålands eller sidevind, med de samme ordene i «Hvorfor» (S42 b, svar.md 24.11.2026 kl. 22.25).
 - Ingen pseudo-presise ord («MODELL 00Z» bare under Data/Kilder).
 - Overskrifter og setninger lages av dataene og skal aldri si noe som lista motsier.
 
@@ -234,3 +234,4 @@ Fase 2 (24.11.2026, «B 4.0 ferdig på mobil»). Der dette avsnittet og resten a
 - **Lave skjermer (under 700 px i høyden) på mobil-spotsiden:** luften mellom dom, faktalinje og KL.-blokk er 4, 8 og 16 px, og setningen under dommen er 16/22 (§3 sier 16–18/22–26). Da får dag, dom og time plass over fanelinja etter dagbytte på 360 × 640 og 390 × 663. Høyere skjermer har luften fra §6B.
 - **Nedtrekkslister** tegnes av appen (44 px, 2 px strek under, vinkel i blekk), ikke med nettleserens egen form.
 - **Metalinja i radene på mobil-Hjem** er «STED · FORELØPIG · KJØRETID · ORD · −N ÅRSAK» (§6A sier «REGION · KJØRETID · ORD · −N ÅRSAK»): merkene «Foreløpig» og forbudet står etter stedet, i favorittene og i regionradene. Linja brytes bare mellom leddene.
+- **Regionradene på mobil-Hjem har «Nå» sist i metalinja** (S38 1 b, svar.md 24.11.2026 kl. 22.25): «STED · FORELØPIG · KJØRETID · NÅ ORD HØYDE», for eksempel «Kvaløya · ca. 45 min · Nå Smått 0,6–0,8 m». Ordet og høyden gjelder nå-timen, tallet til venstre er dagens. Er nå-timen mørk, står «Nå Mørkt» uten tall. Leddet erstatter dagens ord og «−N årsak» i regionradene. Favorittradene er som før. Viser lista i morgen («Mørkt nå. Tallene gjelder i morgen.» over lista), står dagens ord uten «Nå».

@@ -220,6 +220,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .favlinje .t-navn.lang{font-stretch:75%}
 .favlinje .etikett{margin-top:var(--s1);text-wrap:balance}   /* to jevne linjer i stedet for ett ledd alene på linje to */
 .favlinje .etikett .ledd{display:inline-block;max-width:100%}   /* et ledd brytes bare hvis det alene er bredere enn raden */
+.favlinje .etikett .enh{text-transform:none}   /* «m» i nå-leddet («Nå Smått 0,6–0,8 m») står ikke i versaler */
 .favlinje .etikett.obs{color:var(--ink)}
 .favlinje .setn{margin-top:6px;font-size:1rem;line-height:1.375}
 .favlinje .uke{display:grid;margin-top:12px}
@@ -935,7 +936,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .sp-inn #spOver .sek-spot{margin:var(--s3) 0 var(--s2)}
   .sp-inn #spOver .svell{margin-top:var(--s2)}
   .sp-inn #spOver .svell .t-svell{margin-top:var(--s1)}
-  .sp-inn #spOver .maalene{gap:var(--s2);margin-top:var(--s2)}
+  .sp-inn #spOver .maalene{gap:var(--s1);margin-top:var(--s2)}   /* s1 fra 24.11.2026: «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer */
 }
 @media (max-width: 379px){ .sp-inn .maal{grid-template-columns:92px auto 1fr} }
 .dagvelger::-webkit-scrollbar{display:none}

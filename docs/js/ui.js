@@ -280,7 +280,18 @@
   }
   // Metalinja i radene: hvert ledd («ca. 1 t 20 min», «Treffer ikke») holdes samlet, så linja bare brytes mellom leddene
   // og aldri midt i et ledd. Skilletegnet står sist i leddet foran. Teksten er den samme som før: «Lyngen · Foreløpig · …».
-  const metaHtml = (deler)=>{ const d = deler.filter(Boolean); return d.map((x, i)=> `<span class="ledd">${esc(x)}${i < d.length - 1 ? " ·" : ""}</span>`).join(" "); };
+  // Et ledd kan være {html}: ferdig HTML (nå-leddet, der enheten «m» ikke skal stå i versaler).
+  const metaHtml = (deler)=>{ const d = deler.filter(Boolean); return d.map((x, i)=> `<span class="ledd">${x.html != null ? x.html : esc(x)}${i < d.length - 1 ? " ·" : ""}</span>`).join(" "); };
+  // «Nå» i regionradene (S38 1 b, svar.md 24.11.2026 kl. 22.25; Theodors ønske 17.11.2026, S15 b): ordet for nå-timen og
+  // høyden nå, «Nå Smått 0,6–0,8 m». Er nå-timen mørk, sier raden «Nå Mørkt» uten høyde. Uten nå-time (varselet er for
+  // gammelt): null, og raden viser dagens ord som favorittene. Tallet til venstre er fortsatt dagens.
+  function naaLedd(s){
+    const v = naaVisning(s, naaOf(s)), ord = v.oh.ord.replace(/\s+nå$/, "");
+    if(ord==="–" || v.rute==="forbud" || v.rute==="miss") return null;
+    const hoyde = v.rute==="mork" ? null : v.oh.hoyde;
+    return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${hoyde} m` : ""}`,
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};
+  }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
     const d0 = days[0], b = dayBest(s, d0.key), h = b.h, K = window.KJORETID;
@@ -291,11 +302,14 @@
     const tapt = h && b.st!=null ? (lostParts(h).map(p=> p.tekst).join(" · ") || null) : null;
     // merkene («Foreløpig», forbudet) står etter stedet i alle rader, også favorittene (runde 3, 24.11.2026)
     const stedDeler = [s.area || regionOf(s), ...merker(s)], sted = stedDeler.join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
+    // regionradene (kort): dagens tall til venstre, og i metalinja «Nå» med ordet og høyden for nå-timen i stedet for
+    // dagens ord (S38 1 b). Bare når raden viser i dag og har et tall: i morgen-radene og rader uten tall er som før.
+    const naa = kort && b.st!=null && dagOrd(d0)==="i dag" ? naaLedd(s) : null;
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
-      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ord}`, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
+      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ord}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
-        <span class="etikett">${metaHtml([...stedDeler, kj, dagSynlig + ord, tapt])}</span>
+        <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ord, naa ? null : tapt])}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
         ${obs ? `<span class="etikett obs">${esc(obs)}</span>` : ""}
         ${ukeHtml(s, days, "under")}</span>`;

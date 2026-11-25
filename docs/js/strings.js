@@ -81,8 +81,10 @@
     height: (a, b) => b!=null && b!==a ? `${a} til ${b} m` : `${a} m`,
     heightSets: "surfehøyde og sett",
     noHeight: "–",
-    // fralands, pålands og sidevind (SPEC §8, Theodor 16.11.2026). Skrå pålandsvind (45–80° fra stranda) sies som «pålands».
-    wind: {offshore:"fralands", side:"sidevind", sideonshore:"pålands", onshore:"pålands"},
+    // fralands, pålands og sidevind (SPEC §8, Theodor 16.11.2026). Skrå pålandsvind (45–80° fra stranda) heter «skrått pålands»
+    // overalt, også i «Hvorfor» (S42 b, svar.md 24.11.2026 kl. 22.25; før sto den som «pålands»). Samme ord som
+    // WIND_TYPE_WORD i fetcher/rating.py.
+    wind: {offshore:"fralands", side:"sidevind", sideonshore:"skrått pålands", onshore:"pålands"},
     // loggene lagrer fortsatt «Offshore»/«Onshore» (gamle økter skal leses likt); bare ordet på skjermen er byttet
     logWind: {"Offshore":"Fralands", "Onshore":"Pålands"},
     reportWind: {offshore:"Fralands", onshore:"Pålands", side:"Sidevind", stille:"Stille"},

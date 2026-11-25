@@ -1057,9 +1057,10 @@ def main():
                         return rad ? [...rad.querySelectorAll('.uke i, td')].map(c => ({cls: c.className, txt: c.textContent.trim()})) : null; }""")
                     assert miss_cells, "fant ikke Steinkrøssa på Hjem"
                     if mobile:
-                        # Designrevisjonen fase 2 punkt 1 (erstatter S15 b, «Nå» foran ordet): regionradene har samme form som
-                        # favorittradene. Tallet og ordet er dagens (dayBest), ikke nå-timen, og «Mørkt nå. Tallene gjelder
-                        # i morgen.» står én gang over lista i stedet for «Nå Mørkt» på hver rad. Sortert etter dagens tall.
+                        # Designrevisjonen fase 2 punkt 1: regionradene har samme form som favorittradene, og tallet er dagens
+                        # (dayBest). «Mørkt nå. Tallene gjelder i morgen.» står én gang over lista når radene viser i morgen (T0 er
+                        # kl. 22:10): da står dagens ord uten «Nå». Sortert etter dagens tall. «Nå» med ordet og høyden for
+                        # nå-timen (S38 1 b) prøves under, i lys, før det lysner og etter midnatt.
                         reg_r = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag;
                             return [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')].map(r => { const s = DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id), b = H.dayBest(s, key);
                                 return {navn: s.name, tall: r.querySelector('.t-listetall').textContent.trim(), st: b.st, meta: r.querySelector('.etikett').textContent, setn: !!r.querySelector('.setn'), uke: r.querySelectorAll('.uke i').length}; }); }""")
@@ -1080,19 +1081,62 @@ def main():
                         assert not any(r["meta"].startswith("I morgen:") or " · I morgen:" in r["meta"] for r in reg_r), f"«I morgen:» skal ikke stå på hver rad når linja står over lista: {reg_r[:2]}"
                         # ... og der den IKKE skal stå: midt på dagen (lyst), og etter midnatt før nattas første varsel (da er radene «i dag»)
                         # (varselet i testfila er laget kl. 21, så dag 1 er «over» i dataene selv: for «i lys» lånes sammendraget fra dag 2)
-                        for nar_, tid_, vent_ in (("i lys", T0 - dt.timedelta(hours=10), ""), ("etter midnatt", T0 + dt.timedelta(hours=3), "I dag: ")):
+                        # S38 1 b (svar.md 24.11.2026 kl. 22.25; Theodors ønske 17.11.2026, S15 b): når radene viser i dag, står «Nå» med
+                        # ordet og høyden for nå-timen sist i metalinja («Kvaløya · ca. 45 min · Nå Smått 0,6–0,8 m»). Er nå-timen mørk
+                        # (før det lysner, etter midnatt), sier raden «Nå Mørkt», uten tall. Tallet til venstre er fortsatt dagens.
+                        # «i lys»: dag 1 i testfila er «over» og nå-timene er fra kl. 21, så dagssammendraget lånes fra dag 2, og nå-timen
+                        # er ukas beste time for spoten flyttet til klokka. «før det lysner»: samme dag, men nå-timen er mørk.
+                        naa_sett = {}
+                        for nar_, tid_ in (("i lys", T0 - dt.timedelta(hours=10)), ("før det lysner", T0 - dt.timedelta(hours=15)), ("etter midnatt", T0 + dt.timedelta(hours=3))):
                             page.clock.set_fixed_time(tid_)
-                            if nar_ == "i lys":
-                                page.evaluate("""() => { window.__dag0 = DATA.spots.map(s => s.dager[0]); for(const s of DATA.spots){ const d0 = s.dager[0], d1 = s.dager[1];
-                                    s.dager[0] = {...d1, d: d0.d, lys_til: d0.d + 'T16:00Z', h: d1.h ? {...d1.h, t: d0.d + 'T10:00Z'} : d1.h, start: d0.d + 'T10:00Z', slutt: d0.d + 'T10:00Z'}; } }""")
+                            if nar_ == "etter midnatt":
+                                # testfilas nå-timer rekker ikke over midnatt: uten nå-time står dagens ord med «I dag:» foran, som før S38 1 b
+                                page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
+                                uten_ = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag; return [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')].map(r => { const s = DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id);
+                                    return {naa: !!H.naaOf(s), st: H.dayBest(s, key).st, meta: r.querySelector('.etikett').textContent}; }); }""")
+                                assert uten_ and not any(r["naa"] for r in uten_) and any(r["st"] is not None for r in uten_), f"etter midnatt skal testfila ikke ha noen nå-time: {uten_[:3]}"
+                                assert all("I dag: " in r["meta"] and "Nå " not in r["meta"] for r in uten_ if r["st"] is not None), f"uten nå-time skal raden vise dagens ord med «I dag:» foran: {uten_[:3]}"
+                                # ... og med en (mørk) nå-time, som i et ferskt varsel: «Nå Mørkt»
+                                page.evaluate("""(iso) => { window.__naa0 = DATA.spots.map(s => s.naa); for(const s of DATA.spots){ const h = (s.dager[1] && s.dager[1].h) || s.naa[0]; s.naa = h ? [{...h, t: iso, light: 'mørkt', daylight: false}] : []; } }""",
+                                              tid_.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:00Z"))
+                            else:
+                                page.evaluate("""([lys, iso]) => { window.__dag0 = DATA.spots.map(s => s.dager[0]); window.__naa0 = DATA.spots.map(s => s.naa); for(const s of DATA.spots){ const d0 = s.dager[0], d1 = s.dager[1];
+                                    s.dager[0] = {...d1, d: d0.d, lys_til: d0.d + 'T16:00Z', h: d1.h ? {...d1.h, t: d0.d + 'T10:00Z'} : d1.h, start: d0.d + 'T10:00Z', slutt: d0.d + 'T10:00Z'};
+                                    // nå-timen: ukas beste time for spoten (så noen rader får høyde i meter), flyttet til klokka
+                                    const h = s.dager.map(d => d.h).filter(Boolean).sort((a, b) => (b.stars || 0) - (a.stars || 0) || (b.surf_height || 0) - (a.surf_height || 0))[0] || s.naa[0];
+                                    s.naa = h ? [{...h, t: iso, light: lys ? 'dag' : 'mørkt', daylight: lys}] : []; } }""",
+                                              [nar_ == "i lys", tid_.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:00Z")])
                             page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
-                            lys_ = page.evaluate("""() => ({merk: !!document.querySelector('#viewHjem #hjemMerk'), dag: Front.state.hjemDag, tekst: document.querySelector('#viewHjem').textContent.includes('Tallene gjelder i morgen'),
-                                meta: [...document.querySelectorAll('#viewHjem .regionliste a.favlinje .etikett')].map(e => e.textContent)})""")
+                            lys_ = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag; return {merk: !!document.querySelector('#viewHjem #hjemMerk'), dag: key, tekst: document.querySelector('#viewHjem').textContent.includes('Tallene gjelder i morgen'),
+                                rader: [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')].map(r => { const s = DATA.spots.find(s => r.getAttribute('href') === '#spot=' + s.id), h = H.naaOf(s), b = H.dayBest(s, key), oh = h ? H.ordOgHoyde(h) : null;
+                                    const e = r.querySelector('.etikett'), ledd = [...e.querySelectorAll('.ledd')], sist = ledd[ledd.length - 1], enh = sist.querySelector('.enh');
+                                    return {navn: s.name, st: b.st, tall: r.querySelector('.t-listetall').textContent.trim(), meta: e.textContent, sist: sist.textContent.replace(/\s+/g, ' ').trim(), aria: r.getAttribute('aria-label'),
+                                      mork: !!h && H.mork(h), kjent: !!h && H.known(h), forbud: H.forbudNa(s), ord: oh ? oh.ord.replace(/\s+nå$/, '') : null, hoyde: oh ? oh.hoyde : null, dagord: b.h ? ratingWord(b.h) : null,
+                                      enhStil: enh ? getComputedStyle(enh).textTransform : null, hoyreUt: Math.round(sist.getBoundingClientRect().right - r.getBoundingClientRect().right), overflyt: e.scrollWidth - e.clientWidth}; })}; }""")
                             assert not lys_["merk"] and not lys_["tekst"], f"«Mørkt nå. Tallene gjelder i morgen.» skal ikke stå {nar_}: {lys_}"
                             assert lys_["dag"] == tid_.astimezone(OSLO).date().isoformat(), f"radene skal vise dagen i dag {nar_}: {lys_['dag']}"
-                            assert lys_["meta"] and all((vent_ in m) if vent_ else ("I dag:" not in m and "I morgen:" not in m) for m in lys_["meta"]), f"metalinja {nar_}: {lys_['meta'][:3]}"
-                            if nar_ == "i lys":
-                                page.evaluate("() => { DATA.spots.forEach((s, i) => { s.dager[0] = window.__dag0[i]; }); delete window.__dag0; }")
+                            assert lys_["rader"] and all("I dag:" not in r["meta"] and "I morgen:" not in r["meta"] or r["st"] is None or not r["kjent"] for r in lys_["rader"]), f"metalinja {nar_}: {lys_['rader'][:3]}"
+                            med = [r for r in lys_["rader"] if r["st"] is not None and r["kjent"] and not r["forbud"]]
+                            assert med, f"ingen regionrader med tall og nå-time {nar_}"
+                            for r in med:
+                                assert r["tall"] == str(min(5, r["st"])), f"tallet til venstre skal være dagens, også med «Nå» i metalinja ({nar_}): {r}"
+                                assert r["hoyreUt"] <= 0 and r["overflyt"] <= 0, f"nå-leddet går ut av raden ({label}, {nar_}): {r}"
+                                if r["mork"]:
+                                    assert r["sist"] == "Nå Mørkt" and not re.search(r"\d", r["sist"]) and ". Nå mørkt." in r["aria"], f"mørk nå-time skal stå som «Nå Mørkt» uten tall ({nar_}): {r}"
+                                else:
+                                    vent_ = f"Nå {r['ord']}" + (f" {r['hoyde']} m" if r["hoyde"] else "")
+                                    assert r["sist"] == vent_ and f". Nå {r['ord'].lower()}" in r["aria"], f"«Nå» med ordet og høyden for nå-timen skal stå sist i metalinja ({nar_}): {r} (ventet «{vent_}»)"
+                                    assert not r["hoyde"] or r["enhStil"] == "none", f"enheten «m» i nå-leddet skal ikke stå i versaler: {r}"
+                            for r in lys_["rader"]:
+                                if r["st"] is None:
+                                    assert not r["sist"].startswith("Nå "), f"en rad uten tall skal ikke ha «Nå» ({nar_}): {r}"
+                            naa_sett[nar_] = med
+                            page.evaluate("() => { DATA.spots.forEach((s, i) => { if(window.__dag0) s.dager[0] = window.__dag0[i]; s.naa = window.__naa0[i]; }); delete window.__dag0; delete window.__naa0; }")
+                        # prøven er ikke tom: i lys finnes rader med høyde i meter og rader uten, og ingen er mørke; før det lysner og
+                        # etter midnatt er alle mørke
+                        assert any(r["hoyde"] and re.fullmatch(r"Nå .+ \d+,\d(–\d+,\d)? m", r["sist"]) for r in naa_sett["i lys"]) and not any(r["mork"] for r in naa_sett["i lys"]), f"i lys: {[r['sist'] for r in naa_sett['i lys']]}"
+                        assert all(r["mork"] for r in naa_sett["før det lysner"]) and all(r["mork"] for r in naa_sett["etter midnatt"]), "nå-timen skal være mørk før det lysner og etter midnatt i testdataene"
+                        assert [r["sist"] for r in naa_sett["i lys"]] != [r["sist"] for r in naa_sett["før det lysner"]], "raden før det lysner skal ikke være lik raden midt på dagen"
                         page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
                         assert page.query_selector("#viewHjem #hjemMerk"), "linja skal stå igjen når klokka er tilbake på 22:10"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
@@ -1439,11 +1483,31 @@ def main():
                 # punktum som desimaltegn vises med komma, og klokkeslett og datoer står som de er
                 hv_ = page.evaluate("""() => ({gap: breakdownDeler('0,1 m: svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall'),
                     loft: breakdownDeler('Løftet til 0,4 m: svell ute 1,8 m gjennom gapet, andel 0,22. Anslag, ikke kystmodellens tall'),
-                    energi: breakdownDeler('Energi (svell) 243 kJ (periode omregnet til 7,6 s, ×1,25): faktor 0.65 (potensial ganget ned)'),
+                    energi: breakdownDeler('Energi (svell) 243 kJ (periode omregnet til 7,6 s, ×1,25): teller 65 %'),
+                    energiGml: breakdownDeler('Energi (svell) 243 kJ (periode omregnet til 7,6 s, ×1,25): faktor 0.65 (potensial ganget ned)'),
+                    tide: ['Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.', 'Lavvann. Lokale sier høyt vann er best her: −0,35 poeng.', 'Middels vannstand. Lokale sier lavt vann er best her: −1 poeng.'].map(breakdownDeler),
+                    tideLik: breakdownDeler('Tidevann (lav): foretrukket lokalt, ingen straff'), vind: breakdownDeler('Vind 5 m/s skrått pålands, kast 10 (teller som 6,5): −0,3'),
+                    total: breakdownDeler('Totalt: 1 av 5 stjerner (3 uten vind og tidevann)'), vindord: STR.wind,
+                    nullord: ['Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.', 'Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,70)'].map(l =>
+                        zeroCause({stars: 0, surf_height: 0.8, zero_losses: {energy: 0, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {lines: [l], stars_lost: 1}}).word), tideord: STR.wordTide,
                     komma: ['faktor 0.65', '−0.5 stjerne (vektet −0.3)', 'faktor 1.00', 'kl. 08.02', '17.11.2026', 'observasjonene 17.11 og 22.11', 'kl. 09.30-09.50Z', '5.10', '0,65'].map(breakdownKomma), hs: STR.cell.hs})""")
                 assert hv_["hs"] == "Høyde på spoten" and hv_["gap"] == {"etikett": "Høyde på spoten", "verdi": "0,1 m", "virkning": "svell ute 0,8 m gjennom gapet, andel 0,12. Anslag, ikke kystmodellens tall"}, hv_["gap"]
                 assert hv_["loft"]["etikett"] == "Løftet til" and hv_["loft"]["verdi"] == "0,4 m", hv_["loft"]
-                assert hv_["energi"]["virkning"] == "faktor 0,65 (potensial ganget ned)" and hv_["energi"]["verdi"] == "243 kJ (periode omregnet til 7,6 s, ×1,25)", hv_["energi"]
+                # S42 (svar.md 24.11.2026 kl. 22.25): c) «teller 65 %» står som virkning, a) tidevannslinja «Høyvann. Lokale sier …: −0,7 poeng.»
+                # får etiketten «Tidevann», vannstanden som verdi og resten som virkning (uten punktum til slutt), b) vindordene er
+                # appens, og «skrått pålands» er eget ord, d) «(3 uten vind og tidevann)» står i totalen. Et eldre varsel med de gamle
+                # ordene leses som før.
+                assert hv_["energi"] == {"etikett": "Energi (svell)", "verdi": "243 kJ (periode omregnet til 7,6 s, ×1,25)", "virkning": "teller 65 %"}, hv_["energi"]
+                assert hv_["energiGml"]["virkning"] == "faktor 0,65 (potensial ganget ned)" and hv_["energiGml"]["verdi"] == "243 kJ (periode omregnet til 7,6 s, ×1,25)", hv_["energiGml"]
+                assert hv_["tide"] == [{"etikett": "Tidevann", "verdi": "Høyvann", "virkning": "Lokale sier lavt og middels vann er best her: −0,7 poeng"},
+                                       {"etikett": "Tidevann", "verdi": "Lavvann", "virkning": "Lokale sier høyt vann er best her: −0,35 poeng"},
+                                       {"etikett": "Tidevann", "verdi": "Middels vannstand", "virkning": "Lokale sier lavt vann er best her: −1 poeng"}], hv_["tide"]
+                assert hv_["tideLik"] == {"etikett": "Tidevann", "verdi": "lav", "virkning": "foretrukket lokalt, ingen straff"}, hv_["tideLik"]
+                assert hv_["vind"] == {"etikett": "Vind", "verdi": "5 m/s skrått pålands, kast 10 (teller som 6,5)", "virkning": "−0,3"}, hv_["vind"]
+                # fysikk-kontrolløren 25.11.2026: ordet ved 0 poeng («tidevannsordet») leser den samme linja, ny og gammel form
+                assert hv_["nullord"] == [hv_["tideord"], hv_["tideord"]] and hv_["tideord"], f"0 poeng tatt av den lokale tidevannsregelen skal få tidevannsordet: {hv_['nullord']}"
+                assert hv_["total"]["etikett"] == "Totalt" and hv_["total"]["verdi"] == "1 av 5 poeng (3 uten vind og tidevann)", hv_["total"]
+                assert hv_["vindord"] == {"offshore": "fralands", "side": "sidevind", "sideonshore": "skrått pålands", "onshore": "pålands"} and hv_["vindord"] == rating.WIND_TYPE_WORD, hv_["vindord"]
                 assert hv_["komma"] == ["faktor 0,65", "−0,5 stjerne (vektet −0,3)", "faktor 1,00", "kl. 08.02", "17.11.2026", "observasjonene 17.11 og 22.11", "kl. 09.30-09.50Z", "5.10", "0,65"], hv_["komma"]
                 # S37 a, b og c (svar.md 24.11.2026 kl. 10.25): når høyden er andelshøyden (share_height eller gap_floor), står «–» i stedet
                 # for prosenttallet under Sikkerhet, «Slik regnes det ut» for høyden er teksten fra svaret, og «Eksponering denne timen»
@@ -1845,10 +1909,23 @@ def main():
             assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
             assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann."), kurve_b["breivikeidet"]
             assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
-            # på 390 står ordene ingen steder ennå (plassen på mobil tas i designrevisjonen, S33 a) - låst her så det ikke glemmes
-            page.set_viewport_size({"width": 390, "height": 844}); page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload()
-            page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
-            assert page.evaluate("document.querySelector('#viewSpot').innerText.includes('Best på lavt vann')") is False, "«Best på lavt vann» synes på mobil: oppdater testen og STATUS.md (S33 a)"
+            # på 390 (S33 a, plassen kom med designrevisjonen fase 2): ordene står ett sted, under raden TIDEVANN i KL.-blokka
+            # (Tidevann.prefKort() leser Tidevann.prefTekst()), på én linje og innenfor skjermen. De andre spotene har sin egen
+            # setning eller ingen, aldri Breivikeidets.
+            page.set_viewport_size({"width": 390, "height": 844})
+            mob_b = {}
+            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
+                page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}"); page.reload()
+                page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
+                mob_b[sid_] = page.evaluate("""() => { const p = [...document.querySelectorAll('#viewSpot .maal .mu-pref')], b = p[0] ? p[0].getBoundingClientRect() : null;
+                    return {pref: p.map(e => e.textContent.trim()), antall: document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1,
+                            linjer: b ? Math.round(b.height / parseFloat(getComputedStyle(p[0]).lineHeight)) : 0, hoyre: b ? Math.round(b.right) : 0, bredde: innerWidth}; }""")
+            assert mob_b["breivikeidet"]["pref"] == ["Best på lavt vann"] and mob_b["breivikeidet"]["antall"] == 1, f"«Best på lavt vann» skal stå ett sted på mobil, under raden TIDEVANN: {mob_b['breivikeidet']}"
+            assert mob_b["breivikeidet"]["linjer"] == 1 and mob_b["breivikeidet"]["hoyre"] <= mob_b["breivikeidet"]["bredde"] - 16, f"«Best på lavt vann» skal stå på én linje innenfor skjermen: {mob_b['breivikeidet']}"
+            # (Unstad har ingen tidevannsregel i testfila fra 14.10.2026: ingen linje der. Regelen kom 10.11.2026.)
+            assert mob_b["grotfjord"]["pref"] == [] and mob_b["farstadsanden"]["pref"] == ["Best på lav til middels vannstand"] and mob_b["unstad"]["pref"] in ([], ["Best på lav til middels vannstand"]), mob_b
+            assert mob_b["grotfjord"]["antall"] == mob_b["farstadsanden"]["antall"] == mob_b["unstad"]["antall"] == 0, f"«Best på lavt vann» står bare for Breivikeidet: {mob_b}"
+            page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload(); page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
             assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann.")
             ctx.close()
             browser.close()
