@@ -2,7 +2,7 @@
 
 ## Designrevisjonen fase 3: riktig tall størst, 25.11.2026
 
-Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2) og `a8f3da5` (runde 2, feiljegerens funn i fase 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
+Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2) `a8f3da5` (runde 2, feiljegerens funn i fase 3) og `6e7255d` (runde 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
 
 - **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått, og ordet «Flatt» står ikke der.
 - **2.** Dommen har dagen under ordet («I DAG»), KL.-blokka har «KL. hh».
@@ -19,13 +19,14 @@ Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11
   - 5: rådet «Lite å hente i dag» vises ikke når lyset er over på én av spotene.
   - 6: svell ute som mangler, gir raden «–» og «Mangler data». 7: skravur i stripa når høyden mangler i en kjent time.
   - 8, 9, 10, 14, 15, 16, 17, 18 og 20: tankestreker, teksten i arket, tallet ved streken (nå i margen), skjermlesertekst, Tab i arkene, rader på minst 44 px, «usikkert», 200 % tekst og 320 × 568. Unntak: under 380 × 600 er radene lavere (minst 28 px), ellers går KL.-blokka under fanelinja på 375 × 548.
+- **Runde 3 (`6e7255d`):** sikkerheten på spotsiden (mobil) står på egen linje. Trykk midt i og 20 px over og under «Høy sikkerhet · kystmodell 100 m» og «kystmodell 100 m» åpner hvert sitt ark (målt på 320, 375 × 548, 390, 393, 402, 412, 430 og 768 px). «Mangler data» står under «–» når høyden mangler. Dommen sier «usikkert» ved lang sjø. Ved 200 % tekst på PC er surfetallet klart størst (129 px mot 44 px i radene på 1024), og tabellen på forsiden er ikke bredere enn på main (1242 mot 1246 px). Nettlesere uten `cqi` får 40 px.
 - **Havfargen** (`--god` for 3) er bare prøvd med injisert CSS og skjermbilder i `fase-3/havfarge/`. Den er ikke i appen.
 
 Tester: `fetcher/test_spotside_browser.py` oppdatert (det store tallet, «–» ved Flatt og Treffer ikke, karakteren og årsaken, stolpene, tapt bare på valgt time, overskriftsrådet, Søk i mørket, forklaringsarkene, 375 × 548, «usikkert», tankestreker). Hele suiten: `SUM: alle ok (17 filer)`.
 
 Gjenstår:
-- Ikke pushet. Feiljegeren har sett runde 1, men ikke runde 2. Fysikk-kontrolløren har ikke sett endringen.
-- Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
+- Ikke pushet. Feiljegeren har sett runde 1 og 2, men ikke runde 3. Fysikk-kontrolløren har ikke sett endringen.
+- Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19, og runde 2 d, g og h. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
 - Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
 - Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
 
