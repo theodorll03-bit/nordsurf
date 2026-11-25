@@ -104,10 +104,11 @@
 html{font:-apple-system-body;font-family:var(--body);font-size:100%;height:auto;overflow:auto;background:var(--surface)}
 /* body har ikke egen overflow på mobil: da ville position:sticky (dagvelgeren på spotsiden, søkefeltet) festet seg til body, som
    ikke ruller, og aldri blitt stående (målt 24.11.2026). På nettsiden settes overflow:auto lenger ned, som før. */
-body{margin:0;min-height:100dvh;background:var(--surface);color:var(--ink);font-family:var(--body);font-size:var(--fs-body);line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100dvh;background:var(--surface);color:var(--ink);font-family:var(--body);font-size:var(--fs-body);line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
 *,*::before,*::after{box-sizing:inherit}
 button,input,a{font:inherit;color:inherit}
 .num{font-family:var(--mono);font-stretch:87.5%}
+.num,table,input,select,textarea,.ex-v{font-variant-numeric:tabular-nums}   /* like brede tall der tall står under hverandre eller skrives inn. Løpende tekst har skriftens egne tall */
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skip{position:absolute;left:-200vw;top:8px;padding:var(--s2) 12px;background:var(--raised);z-index:100}
 .skip:focus{left:16px}
