@@ -184,7 +184,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b) + (n!=null ? H.usikkertTillegg(b.h) : ""))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
@@ -237,7 +237,7 @@
     // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
     // time: tallet står i grått, som tallene i timestripa, og under «–» står bare årsaken («Treffer ikke»), ikke karakteren («Flatt»): ingen vurdering i mørket (SPEC §5).
     const hoyde = H.heightText(h), mork = !!h && H.mork(h);
-    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : mork ? karakter(h).aarsak : ratingWord(h);
+    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : H.hoydeMangler(h) ? cap(STR.spot.mangler) : mork ? karakter(h).aarsak : ratingWord(h);
     const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
       : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
       : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
@@ -297,7 +297,7 @@
       const {h, t} = timen(), hh = fmtHour.format(t), sikk = h ? sikkerhet(h) : "–";
       return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh, {hoy: fire(h)}) : ""}${hvorforHtml(h)}
         <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
-        <p class="kilder">${sikk!=="–" ? forklar("confidence", esc(sikk)) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (${forklar("hs", "kystmodell 100 m")}), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
+        ${sikk!=="–" ? `<p class="kilder sikk">${forklar("confidence", esc(sikk))}</p>` : ""}<p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (${forklar("hs", "kystmodell 100 m")}), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
     };
     const id = encodeURIComponent(s.id);
     const fra = STR.spot.fra[S.from] || null, K = window.KJORETID, kj = H.kjoreText(s.id);

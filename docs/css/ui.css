@@ -699,9 +699,13 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-tabell .fs-dom{white-space:nowrap}
   .fs-tabell .fs-dom .t-listetall{display:inline-block;min-width:1.6ch;margin-right:10px;vertical-align:middle;color:var(--rc-tall)}
   .fs-tabell .fs-dom .ord{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle}
+  .fs-domv{display:flex;align-items:center}   /* årsaken og tapet brytes ved stor tekst («Blåst ut · −1 vind»), tallet gjør ikke (runde 2 a) */
+  .fs-domv .t-listetall{flex:none}
+  .fs-domv .ord{min-width:0;white-space:normal}
   .fs-tabell .fs-dom b{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .fs-tabell .fs-bst{font-family:var(--mono);font-stretch:87.5%;font-size:1rem;font-weight:800;white-space:nowrap}
   .fs-tabell .fs-sv{white-space:nowrap}
+  .fs-tabell :is(.fs-dom,.fs-sv){padding-right:calc(16px - .25rem)}   /* 12 px, 8 ved 200 % tekst: tabellen er ikke bredere enn før surfehøyden kom inn (runde 2 a) */
   .fs-tabell .fs-tim{width:250px}
   .fs-stripe{display:grid;grid-template-columns:repeat(13,14px);gap:5px}
   .fs-stripe i,.fs-tegn i{display:block;width:14px;height:14px;background:var(--rc,transparent)}
@@ -761,6 +765,16 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
     .spw-time .maal .mv .ordv{white-space:normal}   /* «Surfing forbudt» er bredere enn kolonnen ved 1024 px (målt 135 mot 114 px) */
   }
   .spw-skive{grid-column:10/13}
+  /* stor tekst (200 % på 1024 til 1440 px): dommen får hele bredden, og timen står bredt ved siden av skiva, så surfetallet
+     er klart størst og ordene i radene ikke brytes midt i (feiljegeren, runde 2 b) */
+  .spw-inn{container:spw / inline-size}
+  @container spw (max-width: 45rem){
+    .spw-dom{grid-column:1/-1}
+    .spw-time{grid-column:1/8;margin-top:var(--s5)}
+    .spw-skive{grid-column:8/13;margin-top:var(--s5)}
+    .spw-time .maal{grid-template-columns:8rem minmax(0,1fr)}
+    .spw-time .maal .mu{grid-column:2}
+  }
   .skive-rad.stor{flex-direction:column;align-items:flex-start;margin-top:0}
   .skive-rad.stor .skive{width:min(300px, 100%);height:auto;aspect-ratio:1}
   .skive-rad.stor .skive svg{width:100%;height:100%}
@@ -906,6 +920,11 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .kredit.linje a{display:inline-flex;align-items:center;min-height:44px}
 .kredit.linje + .dom{margin-top:6px}
 .kilder.foto{margin-top:8px}
+/* sikkerheten på egen linje på 44 px, og 14 px til neste linje, så trykkflatene til sikkerheten og «kystmodell 100 m» ikke ligger
+   oppå hverandre (feiljegeren, runde 2 viktig 1) */
+.sp-inn .kilder.sikk{margin-top:18px;line-height:0}   /* 32 px til teksten */
+.kilder.sikk + .kilder{margin-top:14px}
+.kilder.sikk .forklar{margin:0}
 .kilder a{color:inherit;text-underline-offset:2px}
 /* S38 2 a: etiketter som åpner forklaringsarket. Trykkflaten er 44 px høy (14 px over og under en 16 px linje) uten å
    flytte teksten, og prikkete strek under viser at de kan trykkes. Fokus: den felles ringen (:root :focus-visible). */
@@ -945,7 +964,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* Tallet står alltid på én linje («3,0–3,7 m» ble «3,0–3,» og «7 m» ved 1024 til 1280 px, feiljegeren 25.11.2026 funn 1).
    Skriften følger kolonnen: --n er antall tegn (spot.js), et tegn er høyst .54 em (målt .45 til .53), og «m» tar 2 rem. */
 .svell.surf{container-type:inline-size}
-.t-surf{white-space:nowrap;--surf:var(--t-svell);font-size:var(--surf);font-size:min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))}
+.t-surf{white-space:nowrap;--surf:var(--t-svell);font-size:40px}   /* 40 px: reserve for nettlesere uten cqi (Safari før 16) */
+@supports (width: 1cqi){ .t-surf{font-size:min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))} }
 .t-surf.spenn{--surf:calc(var(--t-svell) * .75)}   /* et spenn («1,4–1,7») har dobbelt så mange tegn */
 .t-surf.mork,.t-surf.ingen{color:var(--muted)}
 .svell-sub{margin-top:4px;font-size:1rem;line-height:1.375}

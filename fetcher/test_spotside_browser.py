@@ -968,7 +968,7 @@ def main():
                     inne = any(rating.in_sector(h["dir_offshore"], sec) for sec in rating.window_sectors(SP["unstad"]))
                     assert sa.startswith(f"Unstad kl. {v['hh']}: svell fra {r0(h['dir_offshore'])} grader, {'innenfor' if inne else 'utenfor'} svellvinduet"), sa
                     if mobile:
-                        assert tekst("#spUnder .kilder").startswith(sikkerhet(h["confidence"], h["zone"]) + ". "), tekst("#spUnder .kilder")
+                        assert tekst("#spUnder .kilder.sikk") == sikkerhet(h["confidence"], h["zone"]) and tekst("#spUnder .kilder.sikk + .kilder").startswith("Varsel fra "), tekst("#spUnder .kilder")
                     else:   # PC: sikkerheten står i «Om spotten» (Data)
                         om = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))")
                         assert om.get("Data", "").startswith(sikkerhet(h["confidence"], h["zone"])), om
@@ -1220,6 +1220,31 @@ def main():
                     # funn 7: en time med vurdering, men uten høyde, er skravert i stripa
                     for e_ in ({"stars": 1, "low_reason": None, "surf_height": None, "surf_height_sets": None}, {"stars": 0, "low_reason": "stormsjo", "surf_height": None, "surf_height_sets": None, "bw_height": None}):
                         mh_ = med(e_); assert mh_["stort"] == "–" and mh_["skravur"] and not mh_["stolpe"], f"time uten høyde: {e_} {mh_}"
+                        # runde 2 e: ordet for at høyden mangler under «–», ikke karakteren («– Dårlig»), også i en mørk time
+                        assert mh_["under"] == "Mangler data", f"under «–» når høyden mangler: {mh_}"
+                        mm_ = med({**e_, "light": "mørkt", "daylight": False}); assert mm_["stort"] == "–" and mm_["under"] == "Mangler data", f"mørk time uten høyde: {mm_}"
+                    if mobile:   # runde 2, viktig 1: trykk på sikkerheten og «kystmodell 100 m» åpner hvert sitt ark, midt i og 20 px over og under
+                        med({"stars": 1, "low_reason": None, "confidence": 90, "zone": "barentswatch", "uncertain": False})
+                        for bw_, bh_ in ((375, 548), (390, 663), (393, 700), (402, 720), (412, 732), (430, 780)):
+                            page.set_viewport_size({"width": bw_, "height": bh_}); page.wait_for_timeout(150)
+                            for key_, ord_, tittel_ in (("confidence", "Høy sikkerhet · kystmodell 100 m", "Sikkerhet"), ("hs", "kystmodell 100 m", "Signifikant høyde")):
+                                for dy_ in (-20, 0, 20):
+                                    x_, y_, to_ = page.evaluate("""(k) => { const e = document.querySelector(`#viewSpot .kilder .forklar[data-explain="${k}"]`); e.scrollIntoView({block: 'center', behavior: 'instant'}); const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2, e.textContent]; }""", key_)
+                                    assert to_ == ord_, to_
+                                    page.mouse.click(x_, y_ + dy_); page.wait_for_selector("#exSheet.open")
+                                    assert page.text_content("#exTitle").strip() == tittel_, f"trykk {dy_} px fra midten av «{ord_}» ({bw_} x {bh_}) åpnet «{page.text_content('#exTitle')}»"
+                                    page.keyboard.press("Escape"); page.wait_for_selector("#exSheet:not(.open)", state="attached"); page.wait_for_timeout(50)
+                        page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(150)
+                    else:   # runde 2 b: 200 % tekst på nettsiden: surfetallet er klart størst, og ordene i radene brytes ikke midt i
+                        med({"stars": 1, "low_reason": None, "surf_height": 3.0, "surf_height_sets": 3.7})
+                        page.evaluate("document.documentElement.style.fontSize = '200%'")
+                        for bw_ in (1024, 1060, 1280, 1440):
+                            page.set_viewport_size({"width": bw_, "height": vp[1]}); page.wait_for_timeout(150)
+                            b2 = page.evaluate("""() => { const brutt = [], w = document.createTreeWalker(document.querySelector('#spOver .maalene'), NodeFilter.SHOW_TEXT);
+                                while(w.nextNode()){ const t = w.currentNode; for(const m of t.textContent.matchAll(/[A-Za-zÆØÅæøå0-9:,°]{3,}/g)){ const r = document.createRange(); r.setStart(t, m.index); r.setEnd(t, m.index + m[0].length); if(new Set([...r.getClientRects()].filter(x => x.width > 0).map(x => Math.round(x.top))).size > 1) brutt.push(m[0]); } }
+                                return {brutt, px: parseFloat(getComputedStyle(document.querySelector('#spOver .t-surf')).fontSize), rad: parseFloat(getComputedStyle(document.querySelector('#spOver .maal .mv')).fontSize)}; }""")
+                            assert not b2["brutt"] and b2["px"] >= 2 * b2["rad"], f"200 % tekst på {bw_} px: {b2}"
+                        page.evaluate("document.documentElement.style.fontSize = ''"); page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
                     # funn 1 (stopper): det store tallet står på én linje og i kolonnen sin, også på smale nettsider
                     for bredder_, e_ in (((1024, 1200, 1280, 1300, 1440) if not mobile else (320, 360, 390), x) for x in ({"surf_height": 3.0, "surf_height_sets": 3.7}, {"surf_height": 10.2, "surf_height_sets": 13.0}, {"surf_height": 10.2, "surf_height_sets": None})):
                         med({"stars": 3, "low_reason": None, **e_})
@@ -1229,11 +1254,15 @@ def main():
                                 return {tekst: e.textContent, linjer: Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)), ut: Math.round(b.right - k.right), px: Math.round(parseFloat(getComputedStyle(e).fontSize))}; }""")
                             assert t1["linjer"] == 1 and t1["ut"] <= 0 and t1["px"] >= 28, f"det store tallet skal stå på én linje og i kolonnen ({bw_} px): {t1}"
                         page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
-                    if not mobile:   # funn 17: «, usikkert» (lang sjø) står i dagkolonnene også
-                        dk_ = page.evaluate("""() => { const s = DATA.spots.find(x => x.id === 'unstad'), kn = document.querySelector('.dagknapp.stor[aria-pressed="true"]'), o = s.dager.find(x => x.d === kn.dataset.day), gml = o.h;
-                            o.h = {...o.h, stars: Math.max(1, o.h.stars || 0), low_reason: null, long_sea: true}; Front.refresh();
-                            const k2 = document.querySelector('.dagknapp.stor[aria-pressed="true"]'), ut = [k2.querySelector('.dk-ord').textContent, k2.getAttribute('aria-label')]; o.h = gml; Front.refresh(); return ut; }""")
-                        assert all(", usikkert" in x for x in dk_), f"«, usikkert» i dagkolonnen: {dk_}"
+                    # runde 2 c: nettlesere uten cqi (Safari før 16) får en reserve i px, ikke brødtekststørrelsen
+                    res_ = page.evaluate("""() => { for(const ark of document.styleSheets){ let rr; try { rr = ark.cssRules; } catch(e){ continue; }
+                        for(let i = rr.length - 1; i >= 0; i--) if(rr[i] instanceof CSSSupportsRule && /cqi/.test(rr[i].conditionText)){ const t = rr[i].cssText; ark.deleteRule(i); const px = getComputedStyle(document.querySelector('#spOver .t-surf')).fontSize; ark.insertRule(t, i); return px; } } return null; }""")
+                    assert res_ == "40px", f"reserven for det store tallet: {res_}"
+                    # funn 17 og runde 2 f: «, usikkert» (lang sjø) står i dommen, og i dagkolonnene på nettsiden
+                    dk_ = page.evaluate("""() => { const s = DATA.spots.find(x => x.id === 'unstad'), kn = document.querySelector('.dagvelger .dagknapp[aria-pressed="true"]'), o = s.dager.find(x => x.d === kn.dataset.day), gml = o.h, foer = document.querySelector('#viewSpot .dom-ord b').textContent;
+                        o.h = {...o.h, stars: Math.max(1, o.h.stars || 0), low_reason: null, long_sea: true}; Front.refresh();
+                        const k2 = document.querySelector('.dagknapp.stor[aria-pressed="true"]'), ut = [foer, document.querySelector('#viewSpot .dom-ord b').textContent, ...(k2 ? [k2.querySelector('.dk-ord').textContent, k2.getAttribute('aria-label')] : [])]; o.h = gml; Front.refresh(); return ut; }""")
+                    assert "usikkert" not in dk_[0] and len(dk_) == (2 if mobile else 4) and all(", usikkert" in x for x in dk_[1:]), f"«, usikkert» i dommen og dagkolonnen: {dk_}"
                     page.evaluate("(i) => { const s = DATA.spots.find(x => x.id === 'unstad'); s.hours[i] = s.__gml; delete s.__gml; Front.refresh(); }", i_)
 
                 for scheme in ("mork", "lys"):

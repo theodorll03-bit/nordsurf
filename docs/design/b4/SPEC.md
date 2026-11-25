@@ -138,7 +138,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
    - Ringen er brutt ved vinduet, og offshore-buen er markert.
    - Svellpila er korall når svellet er i vinduet.
    - Forklaring til høyre: SVELL FRA / VIND FRA / VINDU.
-9. **Kilder** i ett avsnitt i muted.
+9. **Kilder** i ett avsnitt i muted. Sikkerheten står på egen linje over, med 44 px trykkflate.
 
 ### C. Web, spotside (`5-web-spot.png`, kilde `kilde/B4-web.dc.html`)
 
