@@ -2,22 +2,30 @@
 
 ## Designrevisjonen fase 3: riktig tall størst, 25.11.2026
 
-Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Tre lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a) og `f68304e` (feiljegerens funn). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
+Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2) og `a8f3da5` (runde 2, feiljegerens funn i fase 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
 
-- **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått.
+- **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått, og ordet «Flatt» står ikke der.
 - **2.** Dommen har dagen under ordet («I DAG»), KL.-blokka har «KL. hh».
 - **3. Lister og dagkolonner** viser surfehøyden, med «–» ved Flatt og Treffer ikke: mobil-Hjem, PC-forsiden (kolonnen heter SURF), Søk, Utforsk og «Neste 7 dager» på PC-spotsiden.
 - **4. Timestripa:** surfehøyden som stolper i blekk, fast skala 0 til `max_height`, stiplet linje ved nedre grense i `ideal_height`. Tapte poeng stiplet blekk, bare på valgt time. Svellpila (KL.-blokka, skiva, minikartet) er korall bare når timen har 4 eller mer.
 - **5.** Ordet etter tallet er karakteren (ved 0: «Ikke surfbart», utenom Flatt og Smått), årsaken står på egen linje. Overskriften gir råd på dårlige dager: «Lite å hente i dag. Unstad er best, lørdag.»
 - **S44 3:** Søk og Utforsk viser «Mørkt» uten tall i mørke timer.
-- **S38 2 a:** etikettene i KL.-blokka, ved skiva og i kildelinja åpner forklaringsarkene (44 px trykkflate, fokusring, Escape). På 375 × 548 står KL.-blokka 8 px over fanelinja etter dagbytte på alle dager (før under på 13 av 14 for Unstad, verst 53 px).
-- **Feiljegerens funn:** «usikkert» på dagens ord i regionraden, og ingen « - » som tankestrek i tekster brukeren ser (strings.js, app.js, utforsk.js og alle forklaringsarkene).
+- **S38 2 a:** etikettene i KL.-blokka, ved skiva og i kildelinja åpner forklaringsarkene (44 px trykkflate, fokusring, Escape). På 375 × 548 står KL.-blokka 8 px over fanelinja etter dagbytte (målt med varselet 24.11 kl. 21Z for de 27 spotene, 378 bytter per størrelse, også 320 × 568 og 390 × 663: 0 under fanelinja). Før var Unstad under på 13 av 14 på 375 × 548, verst 53 px.
+- **Feiljegerens funn:** «usikkert» på dagens ord i regionraden, og « - » som tankestrek er byttet ut. Runde 1 overså fire steder i app.js (kalibreringen i Logger). De er rettet i runde 2, og testen leser nå filene i `docs/js` og HTML-filene i `docs/`. Tekster fra henteren er ikke sjekket.
+- **Runde 2 (`a8f3da5`), feiljegerens funn:**
+  - 1: det store tallet står på én linje, og skrifta følger kolonnebredden (målt på 17 bredder fra 320 til 1440 px).
+  - 2: kortet i Utforsk viser «–» under SURF i mørke timer.
+  - 3: lista, KL.-blokka og stripa bruker samme funksjon (`hoydeVist` i `ui.js`). 5400 timer, 27 spots: 0 ulike.
+  - 5: rådet «Lite å hente i dag» vises ikke når lyset er over på én av spotene.
+  - 6: svell ute som mangler, gir raden «–» og «Mangler data». 7: skravur i stripa når høyden mangler i en kjent time.
+  - 8, 9, 10, 14, 15, 16, 17, 18 og 20: tankestreker, teksten i arket, tallet ved streken (nå i margen), skjermlesertekst, Tab i arkene, rader på minst 44 px, «usikkert», 200 % tekst og 320 × 568. Unntak: under 380 × 600 er radene lavere (minst 28 px), ellers går KL.-blokka under fanelinja på 375 × 548.
 - **Havfargen** (`--god` for 3) er bare prøvd med injisert CSS og skjermbilder i `fase-3/havfarge/`. Den er ikke i appen.
 
 Tester: `fetcher/test_spotside_browser.py` oppdatert (det store tallet, «–» ved Flatt og Treffer ikke, karakteren og årsaken, stolpene, tapt bare på valgt time, overskriftsrådet, Søk i mørket, forklaringsarkene, 375 × 548, «usikkert», tankestreker). Hele suiten: `SUM: alle ok (17 filer)`.
 
 Gjenstår:
-- Ikke pushet. Fysikk-kontrolløren og feiljegeren har ikke sett endringen.
+- Ikke pushet. Feiljegeren har sett runde 1, men ikke runde 2. Fysikk-kontrolløren har ikke sett endringen.
+- Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
 - Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
 - Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
 
