@@ -35,9 +35,16 @@
     wordTide: "Feil tidevann",
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
-    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js). Ordet
-    // finnes ikke i planen: nærmeste ord appen har, «Ikke surfbart nå» uten «nå» (som overskriften alt bruker). Til Theodor.
+    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js):
+    // «Ikke surfbart», med årsaken (Blåst ut, Stormsjø …) på linja under. «Usikkert» kan stå på årsakslinja
+    // (S45 1 a, svar.md 26.11.2026 kl. 13.10).
     karakter0: "Ikke surfbart",
+    // Etiketten i stedet for «Surf» når tallet er totalhøyden ved spoten og ikke surfehøyden: Stormsjø, og Blåst ut når
+    // surfehøyden er 0 (regel (c), visesSomSjo() i app.js). Foran tallet i lister og for skjermleser: «sjø 2,7 m».
+    // Uten kroppsmål (S45 2 a med tillegg, svar.md 26.11.2026 kl. 13.10).
+    sjo: "Sjø",
+    // bak navnet på en ny spot (status «forelopig») når overskriften på Hjem nevner den (S45 3 a, svar.md 26.11.2026 kl. 13.10)
+    spotForelopig: (navn) => `${navn} (foreløpig)`,
     wordUncertain: "Usikkert",
     // Sterk fralandsvind som tar poengene heter ikke «Blåst ut» (Theodor S15 a, 17.11.2026) - se windLossWord() i app.js
     wordTooMuchWind: "For mye vind",
@@ -180,7 +187,7 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeSjo: (m) => `sjø ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,

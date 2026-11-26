@@ -74,6 +74,15 @@ function heightMForDisplay(h){
   if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
   return null;
 }
+// Tallet heightMForDisplay() gir er totalhøyden ved spoten (BarentsWatch), ikke surfehøyden: «Stormsjø», og «Blåst ut»
+// når surfehøyden er 0 (regel (c)). De timene heter tallet «SJØ», ikke «SURF», og har ikke kroppsmål (S45 2,
+// svar.md 26.11.2026 kl. 13.10): 2,7 m sjø skal ikke leses som bølgene du surfer. Bare visning.
+function visesSomSjo(h){
+  if(!h || h._forbud || !h.low_reason || h.bw_height==null) return false;
+  if(h.low_reason==="stormsjo") return true;
+  if(h.low_reason==="blown_out") return !(h.surf_height!=null && h.surf_height>0) && !(!h.stars && calmWindWord(h)!=null);
+  return false;
+}
 const $ = s => document.querySelector(s);
 const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
 const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
@@ -582,7 +591,7 @@ function surfHeadline(h){
   // "Trolig flatt" som før.
   if(h.low_reason){
     const m = heightMForDisplay(h);
-    return m!=null ? `${ratingWord(h)} (${nf1.format(m)} m)` : ratingWord(h);
+    return m!=null ? `${ratingWord(h)} (${visesSomSjo(h) ? STR.sjo.toLowerCase() + " " : ""}${nf1.format(m)} m)` : ratingWord(h);   // «Stormsjø (sjø 2,7 m)»: totalhøyden, ikke surfehøyden (S45 2)
   }
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";

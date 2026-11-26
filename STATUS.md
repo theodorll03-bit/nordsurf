@@ -1,8 +1,24 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 3, runde 4: S45 kodet, 26.11.2026
+
+Gren `design/revisjon-fase3`, oppå `26f8b03`, med main flettet inn (bare botens varsler). Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 13.10 (S45). Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokalt, ikke pushet.
+
+- **1 a:** «Ikke surfbart» er ordet ved 0, med årsaken på linja under. Det var kodet fra før. Bare kommentaren i `strings.js` er rettet.
+- **2 a med tillegg:** der regel (c) viser totalhøyden ved spoten (Stormsjø med BarentsWatch-høyde, og Blåst ut når surfehøyden er 0), heter tallet «SJØ», ikke «SURF», og har ikke kroppsmål. Ny funksjon `visesSomSjo()` i `app.js`, brukt alle steder tallet står: KL.-blokka, lister («sjø 2,7 m»), regionraden («Nå Stormsjø, sjø 1,4 m»), dagkolonnene og tabellen på PC, kortet i Utforsk (feltet heter «Sjø»), «Hvorfor», skjermlesertekstene og timestripa (stolpen er et omriss, tallet på PC dempet). Etiketten «SJØ» åpner arket om signifikant høyde. Persfjord 25.11 kl. 12 viser nå «SJØ 2,7 m» uten kroppsmål (sett på skjerm, varselet 24.11 kl. 21Z).
+- **3 a:** en ny spot (foreløpig, første 14 dager) nevnes i overskriften på Hjem når den har minst 2 og alle andre er under 2. Spots med status foreløpig har «(foreløpig)» bak navnet i overskriften. Hovedbildet på PC-forsiden følger samme regel (fysikk-kontrollørens funn). En spot med forbud løftes ikke fram, og status hemmelig filtreres bort i `overskrift()`. Låst med 14 nye oppdiktede tilfeller i testen.
+- **4 a:** havfargen er fortsatt ikke i appen. Ny mørketidsfarge til prøve: #2F9BA2, 4,54:1 mot bakgrunnen #002941 (regnet med `tools/kontrast.py`). Bilder i `privat/design-b4/revisjon-2026-11-21/fase-3/havfarge-r2/`. Nytt spørsmål til Theodor.
+- **5 a:** mørke timer viser «SURF –» uten tall og uten ord under i KL.-blokka. Mangler høyden i dataene, står «Mangler data» også i en mørk time. Timestripa viser fortsatt høyden som dempet stolpe (småvalg 4 a). SPEC er rettet.
+- **Småvalgene** følger anbefalingene i rapporten, og alle fem var «som nå»: ingen kodeendring.
+- **Feiljegerens k til n:** k) oppsettet for stor tekst på PC slår inn fra 48rem (før 45), målt uten ordbrudd ved 175 % på 1360 og 1440 og 150 % på 1200. l) reserven uten `cqi` er 40 til 48 px (spenn 30 til 46), større enn radene og minst 12 px inne i kolonnen ved 100 til 200 % på 320 til 1440 px. m) raden «LANG SJØ UTE» er 11 px lavere på lave skjermer: med lang sjø i alle timer står KL.-blokka over fanelinja i 378 av 378 dagbytter på 375 × 548 og på 320 × 568 (før 1 av 378 under på 375 × 548). n) kommaet i STATUS.
+- **Fysikk-kontrolløren (26.11):** godkjent, ingen stoppere. Viktig funn rettet: hovedbildet på PC-forsiden hadde den gamle regelen for nye spots. Kosmetisk, ikke rettet: død kode (`SpotGraf.html`, `heightRangeText`, `detailsGrid`) viser høyde uten «sjø» hvis den tas i bruk igjen.
+- **Bilder:** `fase-3/etter/r4_*` (390 og 1280 px, dag og mørketid).
+
+Gjenstår: feiljegeren må se på rettingen før fletting. Åpent for Theodor: havfargen (nytt spørsmål med bilder), og funn 11, 12 og 19 fra runde 2, som ikke hadde noen anbefaling. Tvil står i rapporten under «Runde 4 (S45)».
+
 ## Designrevisjonen fase 3: riktig tall størst, 25.11.2026
 
-Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2) `a8f3da5` (runde 2, feiljegerens funn i fase 3) og `6e7255d` (runde 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
+Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2), `a8f3da5` (runde 2, feiljegerens funn i fase 3) og `6e7255d` (runde 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
 
 - **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått, og ordet «Flatt» står ikke der.
 - **2.** Dommen har dagen under ordet («I DAG»), KL.-blokka har «KL. hh».

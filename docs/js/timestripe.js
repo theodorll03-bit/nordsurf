@@ -54,7 +54,7 @@
     const h = s.hours[c.i]; const hh = String(c.hh).padStart(2, "0");
     const dom = h._forbud ? STR.hjem.forbud.toLowerCase() : !H.known(h) ? STR.spot.timeMangler : H.mork(h) ? STR.spot.timeMork : STR.spot.timeTall(H.stars(h), tapt(h));
     const lv = window.Tidevann ? Tidevann.nivaa(ev, c.ms) : null;
-    const surf = !h._forbud && H.known(h) && H.heightText && H.heightText(h) ? STR.spot.timeSurf(H.heightText(h)) : null;
+    const surf = !h._forbud && H.known(h) && H.heightText && H.heightText(h) ? (H.erSjo(h) ? STR.spot.timeSjo : STR.spot.timeSurf)(H.heightText(h)) : null;   // «sjø 2,7 m» når tallet er totalhøyden (S45 2)
     const rest = [surf, h.swell_offshore!=null ? (h.long_sea ? STR.spot.timeLangSjo : STR.spot.timeSvell)(nf1.format(h.swell_offshore)) : null,
       h.wind_speed!=null ? STR.spot.timeVind(windMsText(h), windLabel(h)) : null,
       lv ? STR.spot.timeTide(f1(lv.cm), lv.stiger) : null].filter(Boolean).join(", ");
@@ -94,9 +94,11 @@
       else if(mork || forbud) seg = `<div class="segs${forbud ? " forbud" : ""}"></div>`;
       else if(!kjent) seg = `<div class="segs miss"></div>`;
       else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lostTv ? "tapt tv" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
-      // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe
-      const v = hoydeAv(h);
-      const surf = `<div class="srf">${bred ? `<b>${v!=null ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
+      // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe.
+      // Er tallet totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde), er stolpen et omriss og tallet dempet:
+      // det er sjøen, ikke surfehøyden (S45 2)
+      const v = hoydeAv(h), sjo = v!=null && H.erSjo(h);
+      const surf = `<div class="srf${sjo ? " sjo" : ""}">${bred ? `<b>${v!=null ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
