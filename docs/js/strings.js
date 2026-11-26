@@ -17,7 +17,7 @@
     staleMore: "Henteren har trolig feilet. Tallene kan være utdaterte.",
     staleHours: (n) => `Varselet er ${n} ${n === 1 ? "time" : "timer"} gammelt`,
     staleFormat: "Varselet har et eldre format enn appen.",
-    staleFormatMore: "Henteren har trolig feilet etter en oppdatering - tallene vises når neste varsel er hentet.",
+    staleFormatMore: "Henteren har trolig feilet etter en oppdatering: tallene vises når neste varsel er hentet.",
     exampleSub: "Eksempel, ikke ekte data",
 
     /* rating: ord for 0-5 stjerner, og de fire ordene for 0-1 stjerne */
@@ -35,6 +35,16 @@
     wordTide: "Feil tidevann",
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
+    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js):
+    // «Ikke surfbart», med årsaken (Blåst ut, Stormsjø …) på linja under. «Usikkert» kan stå på årsakslinja
+    // (S45 1 a, svar.md 26.11.2026 kl. 13.10).
+    karakter0: "Ikke surfbart",
+    // Etiketten i stedet for «Surf» når tallet er totalhøyden ved spoten og ikke surfehøyden: Stormsjø, og Blåst ut når
+    // surfehøyden er 0 (regel (c), visesSomSjo() i app.js). Foran tallet i lister og for skjermleser: «sjø 2,7 m».
+    // Uten kroppsmål (S45 2 a med tillegg, svar.md 26.11.2026 kl. 13.10).
+    sjo: "Sjø",
+    // bak navnet på en ny spot (status «forelopig») når overskriften på Hjem nevner den (S45 3 a, svar.md 26.11.2026 kl. 13.10)
+    spotForelopig: (navn) => `${navn} (foreløpig)`,
     wordUncertain: "Usikkert",
     // Sterk fralandsvind som tar poengene heter ikke «Blåst ut» (Theodor S15 a, 17.11.2026) - se windLossWord() i app.js
     wordTooMuchWind: "For mye vind",
@@ -136,6 +146,9 @@
       ingenNeste: (n) => `Ingen surf de neste ${n} dagene.`,
       morktNeste: (n) => `Mørkt de neste ${n} dagene.`,   // mørketid: dagene har ingen lyse timer, så «ingen surf» er ikke kjent
       ingenRest: "Ingen surf resten av dagen.",
+      // dårlig dag (under 2 poeng) med en bedre dag senere: overskriften gir råd (designrevisjonen fase 3 punkt 5,
+      // ordlyden fra planen: «Lite å hente i morgen. Tromvik er best, onsdag.»)
+      lite: (dag) => `Lite å hente ${dag}.`, bestSpot: (spot, dag) => `${spot} er best, ${dag}.`,
       morkt: (dag) => `Mørkt ${dag}.`,
       manglerDag: (dag) => `Mangler data ${dag}.`,
       best: (a, b) => `Best kl. ${a}–${b}.`,
@@ -175,7 +188,10 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ute ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeSjo: (m) => `sjø ${m} m`,
+      // Raden over stolpene på nettsiden når tallene er sjø (S45 2): «Sjø» når alle dagens lyse tall er totalhøyden,
+      // «Surf / sjø» når de er blandet. Linja under stripa forklarer omrisset, på mobil og nettside.
+      surfSjo: "Surf / sjø", sjoForklar: "Omriss: sjøen ved spoten, ikke surfehøyden", timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
@@ -208,7 +224,8 @@
       varselFra: (dag, kl) => `Varsel fra ${dag} kl. ${kl}`,
       antall: (n) => `${n} ${n === 1 ? "spot" : "spots"}`,
       tallFra: "Tall fra 0 til 5", bareLyse: "Bare lyse timer",
-      kol: {nr: "#", spot: "Spot", best: "Best", svell: "Svell ute", timer: "06–18", region: "Region"},
+      // «Surf»: surfehøyden ved spoten (fase 3 punkt 3, før «Svell ute»). Samme ord som raden på spotsiden (STR.spot.surf)
+      kol: {nr: "#", spot: "Spot", best: "Best", surf: "Surf", timer: "06–18", region: "Region"},
       nr: (n) => String(n).padStart(2, "0"),
       // overskriften over tabellen og linja på hovedbildet følger dagen som er valgt (Theodor S20 b, 20.11.2026): tallene er
       // dagens beste, ikke nå-timen. «Beste» for alle dager, også «Beste fredag» (Theodor S25, 22.11.2026).
@@ -271,8 +288,8 @@
       source:"Kilde (valgfritt)", sourcePh:"f.eks. Instagram, Lofoten Surfsenter", howGood:"Hvor bra var det?", size:"Størrelse (valgfritt)",
       wind:"Vind (valgfritt)", save:"Lagre økt", photoHint:"Velg et bilde, så fylles tidspunktet inn fra bildet.", photoBtn:"Hent tidspunkt fra bilde"},
     toast: {logged:"Økt logget", logFail:"Kunne ikke lagre. Sjekk at nettleseren tillater lagring.", loginForFav:"Logg inn for å lagre favoritter", login:"Logg inn",
-      favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet - sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
-    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour} - varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
+      favFail:(m)=>`Kunne ikke lagre favoritt: ${m}`, photoNoDate:"Fant ikke tidspunkt i bildet: sett tidspunktet selv.", photoDate:(d)=>`Tidspunkt hentet fra bildet: ${d}`},
+    witness: {title:"Var du der?", skip:"Ikke jeg", sub:(spot, day, hour, stars)=>`${spot}, ${day} kl. ${hour}: varselet viste ${stars} av 5 poeng.`, thanks:"Takk! Lagret som økt."},
     // Logger (designrevisjonen fase 2 punkt 3): tom tilstand står én gang per seksjon. Gjelder setningen bare noen av
     // spotene, står navnene (eller antallet) foran
     logger: {noen: (navn) => `${navn}:`, antall: (n) => `${n} spots:`},

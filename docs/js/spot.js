@@ -30,9 +30,10 @@
     return {a: v, b: sets};
   }
   function kroppshoyde(h){
-    // midtpunktet mellom høyden som vises og settene (Theodors tabell 14.10.2026)
+    // midtpunktet mellom høyden som vises og settene (Theodors tabell 14.10.2026). Er tallet totalhøyden ved spoten
+    // (Stormsjø, og Blåst ut når surfehøyden er 0), er det sjøen og ikke bølgene du surfer: ikke noe kroppsmål (S45 2)
     const v = visHoyde(h);
-    if(!v) return null;
+    if(!v || visesSomSjo(h)) return null;
     const m = v.b!=null ? (v.a + v.b) / 2 : v.a;
     if(m < 0.3) return "Nesten flatt";
     if(m < 0.6) return "Ankel- til knehøyt";
@@ -98,7 +99,7 @@
   function minikartHtml(s, h){
     const kyst = kystCache[s.id] && kystCache[s.id].land ? kystCache[s.id] : null;
     const vt = vinduTekst(h, s);
-    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null, vinduTekst: vt ? vt.txt : null});
+    const svg = Minikart.markup(s, h, kyst, {still: matchMedia("(prefers-reduced-motion: reduce)").matches, hit: vt ? vt.ikon=="ja" : null, vinduTekst: vt ? vt.txt : null, hoy: fire(h)});
     return `<figure class="spw-fig" id="miniKort">${svg}${!kyst ? `<p class="kredit">${s.id in kystCache ? "Kystlinje mangler for denne spoten" : "Henter kystlinjen …"}</p>` : ""}
       <figcaption class="kredit">${esc(STR.web.fig(1, s.name))} ${esc(STR.web.kartOsm)}.</figcaption></figure>`;
   }
@@ -174,7 +175,9 @@
     const a = Date.parse(b.start), z = Date.parse(b.slutt || b.start);
     return new Set(d.idxs.filter(i=>{ const ms = Date.parse(s.hours[i].t); return ms >= a && ms <= z; }));
   }
-  const domOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h);
+  // ordet etter tallet er karakteren (fase 3 punkt 5); årsaken («Blåst ut») står på egen linje (domGrunn)
+  const domOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : karakter(b.h).ord;
+  const domGrunn = (b)=> b.h && b.st!=null ? karakter(b.h).aarsak : null;
   function domHtml(s, d, b){
     const n = b.st!=null ? Math.min(5, b.st) : null;
     // beste vindu som klokkeslett; dager med seks timer mellom varslene har bare tidspunktet
@@ -182,7 +185,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b))}</b><span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b) + (n!=null ? H.usikkertTillegg(b.h) : ""))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
@@ -204,35 +207,64 @@
   const IK_VIND = `<path d="M12 3 V19 M7.5 14.5 L12 20 L16.5 14.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
   const IK_TIDE = `<path d="M2 18 C8 18 10 6 22 6" fill="none" stroke="currentColor" stroke-width="2"/><circle class="pk" cx="9.75" cy="12" r="3.5" stroke="currentColor" stroke-width="2"/>`;
   const IK_SURF = `<path d="M2 18 C7 18 8 7 14 7 C18.5 7 18.5 12.5 15 13.5" fill="none" stroke="currentColor" stroke-width="2.4"/>`;
+  // S38 2 a: etikettene i KL.-blokka, skiva og kildelinja åpner forklaringsarket (explain.js). Trykkflaten er 44 px høy
+  // uten å flytte teksten (ui.css .forklar), og fokusringen er den felles ringen.
+  const forklar = (key, inni)=> `<button type="button" class="forklar" data-explain="${key}" aria-haspopup="dialog"><span class="fk">${inni}</span></button>`;
+  // svellpila er korall bare når timen har 4 eller mer (designrevisjon fase 3 punkt 4): KL.-blokka, skiva og minikartet
+  const fire = (h)=> !!h && !h._forbud && H.known(h) && !H.mork(h) && H.stars(h) >= 4;
   function timeDomHtml(s, h, t){
-    // timens tall og ord til høyre i seksjonsstarten, med tapte poeng skrevet ut (SPEC §5: «−1 tidevann»).
-    // Tallet står i ruta fra ukeoversikten: korall er aldri liten tekst, ruta bærer fargen fra 4.
+    // timens tall og karakter til høyre i seksjonsstarten (fase 3 punkt 5). Årsaken og tapte poeng («Blåst ut · −2 vind»)
+    // står på egen linje under (timeGrunnHtml). Tallet står i ruta fra ukeoversikten: korall er aldri liten tekst, ruta
+    // bærer fargen fra 4.
     if((h && h._forbud) || (H.forbudInfo && H.forbudInfo(s, t.getTime()))) return `<p class="sub">${esc(STR.hjem.forbud)}</p>`;
     if(!h || !H.known(h)) return `<p class="sub">${esc(STR.hjem.mangler)}</p>`;
     if(H.mork(h)) return `<p class="sub">${esc(STR.lightOnly)}</p>`;
     const st = Math.min(5, H.stars(h));
-    // hvert tap med sitt stiplede poeng: vind i korall, tidevann i blekk (S33 c). Eldre varsel uten delingen: bare «−1».
-    const tapt = lostParts(h).map(p=> `<span class="tapt"><i${p.hva === "tidevann" ? ' class="tv"' : ""} aria-hidden="true"></i>${esc(p.tekst)}</span>`).join("");
-    return `<p class="sub tdom r-${st}">${tapt}<span class="rute r-${st}" role="img" aria-label="${esc(STR.starsAria(st, 0))}">${st}</span><span class="to">${esc(ratingWord(h))}</span></p>`;
+    return `<p class="sub tdom r-${st}"><span class="rute r-${st}" role="img" aria-label="${esc(starsAriaLost(st, h))}">${st}</span><span class="to">${esc(karakter(h).ord)}</span></p>`;
+  }
+  function timeGrunnHtml(s, h, t){
+    // årsaken og hvert tap med sitt stiplede poeng i blekk (fase 3 punkt 4: tapte poeng i blekk, ikke korall).
+    // Eldre varsel uten delingen: bare «−1».
+    if(!h || h._forbud || (H.forbudInfo && H.forbudInfo(s, t.getTime())) || !H.known(h) || H.mork(h)) return "";
+    const g = karakter(h).aarsak;
+    const tapt = lostParts(h).map(p=> `<span class="tapt"><i${p.hva === "tidevann" ? ' class="tv"' : ""} aria-hidden="true"></i>${esc(p.tekst)}</span>`);
+    const deler = [g ? `<span>${esc(g)}</span>` : null, ...tapt].filter(Boolean);
+    return deler.length ? `<p class="etikett tgrunn">${deler.join(`<span class="sk" aria-hidden="true"> · </span>`)}</p>` : "";
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
-    const maal = (ikon, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${ikon}${esc(k)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
-    const dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
-    const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
-    const sub = !h ? "" : h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
-      : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
-    const svell = `<div class="svell"><div class="etikett">${PIL("sv" + (inne ? " inne" : ""), dir, IK_SVELL)}${esc(h && h.long_sea ? STR.spot.langSjo : STR.spot.svell)}</div>
-        ${h && h.swell_offshore!=null ? `<div class="t-svell">${desTall(nf1.format(h.swell_offshore))}<small>m</small></div>` : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`}
-        ${sub ? `<div class="svell-sub">${esc(sub)}</div>` : ""}${h && h.long_sea ? `<div class="svell-sub lang-sjo">${esc(STR.spot.langSjoNote)}</div>` : ""}</div>`;
+    const maal = (ikon, key, k, v, enhet, sub, under, kl)=> `<div class="maal${kl ? " " + kl : ""}"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
+    // Surfehøyden ved spoten er det store tallet (fase 3 punkt 1), med kroppsmålet under. Høyden er den samme som
+    // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
+    // time: «–» uten tall og uten ord under (S45 5 a, svar.md 26.11.2026 kl. 13.10; som Hjem, Søk og Utforsk, S44 3):
+    // mørke timer får ikke tall, og ingen vurdering (SPEC §5). Timestripa viser fortsatt høyden som dempet stolpe.
+    // Mangler høyden i dataene, står «Mangler data» under streken, også i en mørk time, så streken alene betyr mørkt.
+    // Er tallet totalhøyden ved spoten (Stormsjø, og Blåst ut når surfehøyden er 0), heter det «SJØ», ikke «SURF», og
+    // har ikke kroppsmål (S45 2). Etiketten åpner da arket om signifikant høyde, der tallet står.
+    const mork = !!h && H.mork(h), hoyde = mork ? null : H.heightText(h), sjo = !!hoyde && H.erSjo(h);
+    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : H.hoydeMangler(h) ? cap(STR.spot.mangler) : mork ? null : ratingWord(h);
+    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
+      : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
+      : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
+    const surf = `<div class="svell surf${sjo ? " sjo" : ""}"><div class="etikett">${forklar(sjo ? "hs" : "surf_height", `${PIL("", null, IK_SURF)}${esc(sjo ? STR.sjo : STR.spot.surf)}`)}</div>${stort}</div>`;
     const rader = [];
-    // surf: høyden som vises og settene (regel (c), visHoyde); ordet når tallet er kjent, men ikke pålitelig
-    const hoyde = H.heightText(h), vh = visHoyde(h);
-    if(hoyde) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, esc(hoyde), "m", esc(kroppshoyde(h) || "")));
-    else if(h && h.surf_height!=null && (!vh || vh.a <= 0)) rader.push(maal(PIL("", null, IK_SURF), STR.spot.surf, `<span class="ordv">${esc(ratingWord(h))}</span>`, "", ""));
+    // svellet ute er en rad på linje med vind og tidevann (fase 3 punkt 1). Pila er korall bare når svellet er i
+    // vinduet og timen har 4 eller mer (fase 3 punkt 4), ellers blekk i vinduet og grå utenfor.
+    // Mangler svellet i en time med andre tall, står raden med ordet for det (feiljegeren, funn 6), og periode og retning
+    // står når de finnes.
+    if(h && (h.swell_offshore!=null || H.known(h))){
+      const dir = h.dir_offshore!=null ? h.dir_offshore : null;
+      const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
+      const hoy = inne && fire(h);
+      const sub = h.period!=null && dir!=null ? STR.spot.svellSub(nf0.format(h.period), compass(dir), Math.round(dir))
+        : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
+      rader.push(maal(PIL("sv" + (inne ? " inne" : "") + (hoy ? " hoy" : ""), dir, IK_SVELL), "swell", h.long_sea ? STR.spot.langSjo : STR.spot.svell,
+        h.swell_offshore!=null ? esc(nf1.format(h.swell_offshore)) : "–", h.swell_offshore!=null ? "m" : "",
+        esc([h.swell_offshore!=null ? null : cap(STR.spot.mangler), sub || null].filter(Boolean).join(" · ")), h.long_sea ? STR.spot.langSjoNote : "", h.long_sea ? "lang" : ""));
+    }
     if(h && h.wind_speed!=null){
       const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
-      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), STR.spot.vind, windMsText(h), "m/s",
+      rader.push(maal(PIL("", h.wind_dir, h.wind_dir!=null ? IK_VIND : ""), "wind", STR.spot.vind, windMsText(h), "m/s",
         esc([[windLabel(h), fra].filter(Boolean).join(" "), h.gust!=null ? STR.gust(nf0.format(h.gust)) : null].filter(Boolean).join(" · "))));
     }
     const lv = window.Tidevann ? Tidevann.nivaa(ev, t.getTime()) : null;
@@ -245,9 +277,9 @@
       // («Best på lav til middels vannstand», Tidevann.prefKort - bygger på Tidevann.prefTekst og s.tide_regel.prefer).
       // Spots uten regel har ingen linje. På nettsiden står setningen i «Om spotten».
       const pref = !H.isDesktop() && window.Tidevann && Tidevann.prefKort ? Tidevann.prefKort(s) : "";
-      rader.push(maal(PIL("", null, IK_TIDE), STR.spot.tidevann, nf1.format(lv.cm / 100), "m", vei, pref));
+      rader.push(maal(PIL("", null, IK_TIDE), "tide", STR.spot.tidevann, nf1.format(lv.cm / 100), "m", vei, pref));
     }
-    return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.kl(hh))}</h2>${timeDomHtml(s, h, t)}</div>${svell}${rader.length ? `<div class="maalene">${rader.join("")}</div>` : ""}`;
+    return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.kl(hh))}</h2>${timeDomHtml(s, h, t)}</div>${timeGrunnHtml(s, h, t)}${surf}${rader.length ? `<div class="maalene">${rader.join("")}</div>` : ""}`;
   }
   function dagvelgerHtml(s, dager, d){
     // én knapp per dag i varselet: ukedag, dagens tall i en rute (som ukeoversikten) og datoen
@@ -268,9 +300,9 @@
     const over = ()=>{ const {h, t} = timen(); return faktaHtml(s, h, t) + timeHtml(s, h, t, ev); };
     const under = ()=>{
       const {h, t} = timen(), hh = fmtHour.format(t), sikk = h ? sikkerhet(h) : "–";
-      return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh) : ""}${hvorforHtml(h)}
+      return `<div class="sek-spot"><h2 class="h2">${esc(STR.spot.retning(hh))}</h2></div>${window.Skive ? Skive.html(s, h, hh, {hoy: fire(h)}) : ""}${hvorforHtml(h)}
         <div class="logg-her"><button type="button" class="primary" id="loggHer">Logg en økt her</button></div>
-        <p class="kilder">${sikk!=="–" ? esc(sikk) + ". " : ""}Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (kystmodell 100 m), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
+        ${sikk!=="–" ? `<p class="kilder sikk">${forklar("confidence", esc(sikk))}</p>` : ""}<p class="kilder">Varsel fra ${esc(relDay(new Date(DATA.generated)))} kl. ${fmtTime.format(new Date(DATA.generated))}. Kilder: BarentsWatch (${forklar("hs", "kystmodell 100 m")}), MET Norge, Open-Meteo og Kartverket.</p>${foto ? `<p class="kilder foto">${esc(STR.spot.bildet)}: ${fotoKreditHtml(true)}</p>` : ""}`;
     };
     const id = encodeURIComponent(s.id);
     const fra = STR.spot.fra[S.from] || null, K = window.KJORETID, kj = H.kjoreText(s.id);
@@ -317,6 +349,7 @@
     };
     const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
     const kobleUnder = ()=>{
+      if(window.wireExplain) wireExplain(root, timen().h, s);
       $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
       const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
     };
@@ -349,22 +382,23 @@
   // navneplate, dom | kl. hh | skive, «Neste 7 dager», «Time for time» som tabell med etikettkolonne (hold musa over en
   // time for å velge den), «Spotten» (minikartet i kartstilen) og «Om spotten». Ren visning som resten av fila.
   function dagKolHtml(s, x, valgt){
-    // én stor kolonne i «Neste 7 dager»: dato, dagens tall (48 px) og ord, beste vindu, svell og vind i den beste timen
+    // én stor kolonne i «Neste 7 dager»: dato, dagens tall (48 px) og karakter, årsaken, beste vindu, surfehøyden ved
+    // spoten og vinden i den beste timen. Surfehøyden, ikke svellet ute (fase 3 punkt 3): «–» når ordet er Flatt eller Treffer ikke
     const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null, h = b.h;
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;   // som i domHtml: et vindu som er over, vises ikke
-    const svell = h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "";
+    const ht = n!=null && h ? H.hoydeMedMerke(h) : null, sjo = !!ht && H.erSjo(h), surf = n!=null ? (ht || "–") : "", grunn = domGrunn(b), ord = domOrd(b) + (n!=null ? H.usikkertTillegg(h) : "");   // «, usikkert» ved lang sjø (S40), som i listene
     const vind = h && h.wind_speed!=null ? windLabel(h) : "";
-    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + domOrd(b) : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}`;
+    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${sjo ? "" : STR.spot.surf.toLowerCase() + " "}${surf}` : ""}`;
     return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
         <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
-        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(domOrd(b))}</span></span>
-        <span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
-        <span class="dk-sub">${esc(svell)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
+        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
+        ${grunn ? `<span class="dk-grunn">${esc(grunn)}</span>` : ""}<span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
+        <span class="dk-sub">${esc(surf)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
   }
   function omSpottenHtml(s, h){
     // det spoten selv har i spots.json, og sikkerheten for timen som er valgt - ingen beskrivelse finnes i dataene
     const sek = (w)=> !w ? [] : Array.isArray(w[0]) ? w : [w];
-    const rad = (k, v)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${esc(v)}</dd></div>` : "";
+    const rad = (k, v, html)=> v ? `<div><dt class="etikett">${esc(k)}</dt><dd>${html || esc(v)}</dd></div>` : "";
     const sikk = h ? sikkerhet(h) : "–";
     return `<dl class="spw-om">
         ${rad(STR.spot.vindu, sek(visVindu(s)).map(([a, b])=> `${a}–${b}°`).join(", "))}
@@ -372,7 +406,7 @@
         ${rad(STR.web.om.vender, s.facing!=null ? `${compass(s.facing)} ${Math.round(s.facing)}°` : "")}
         ${rad(STR.spot.tidevann, window.Tidevann ? Tidevann.prefTekst(s) : "")}
         ${rad(STR.web.om.hoyde, s.ideal_height ? `${nf1.format(s.ideal_height[0])}–${nf1.format(s.ideal_height[1])} m` : "")}
-        ${rad(STR.web.om.data, `${sikk!=="–" ? sikk + ". " : ""}${STR.web.varselFra(relDay(new Date(DATA.generated)), fmtTime.format(new Date(DATA.generated)))}. ${STR.web.usikre}.`)}
+        ${rad(STR.web.om.data, "–", `${sikk!=="–" ? forklar("confidence", esc(sikk)) + ". " : ""}${esc(STR.web.varselFra(relDay(new Date(DATA.generated)), fmtTime.format(new Date(DATA.generated))))}. ${esc(STR.web.usikre)}.`)}
       </dl>`;
   }
   function renderWeb(root, s, S){
@@ -386,7 +420,7 @@
     const meta = ()=>{ const {h, t} = timen();
       return [kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, `${ukedagKort(at)} ${d.key.slice(8, 10)}.${d.key.slice(5, 7)}`, ...faktaDeler(s, h, t)].filter(Boolean).map(x=> `<span>${esc(x)}</span>`).join(" "); };   // mellomrom: skjermleseren leser delene hver for seg
     const over = ()=>{ const {h, t} = timen(); return timeHtml(s, h, t, ev); };
-    const under = ()=>{ const {h, t} = timen(), hh = fmtHour.format(t); return `<h2 class="sr">${esc(STR.spot.retning(hh))}</h2>${window.Skive ? Skive.html(s, h, hh, {stor: true}) : ""}`; };
+    const under = ()=>{ const {h, t} = timen(), hh = fmtHour.format(t); return `<h2 class="sr">${esc(STR.spot.retning(hh))}</h2>${window.Skive ? Skive.html(s, h, hh, {stor: true, hoy: fire(h)}) : ""}`; };
     const hvorfor = ()=> hvorforHtml(timen().h);
     const merker = H.merker(s);
     const morkeKol = Timestripe.kolonner(s, d, idx, H).some(c=> c.i >= 0 && H.mork(s.hours[c.i]));
@@ -422,7 +456,8 @@
       </div></div>`;
     const heleSiden = (etter)=>{ const y = window.scrollY; renderWeb(root, s, S); window.scrollTo(0, y); if(etter) etter(); };
     const kobleTilbakeNa = ()=>{ const tn = $("#tilbakeNa", root); if(tn) tn.onclick = ()=>{ S.idx = null; heleSiden(); }; };
-    const kobleHvorfor = ()=>{ const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open))); };
+    const kobleHvorfor = ()=>{ const hv = $("#hvorfor", root); if(hv) hv.addEventListener("toggle", ()=> hv.querySelector("summary").setAttribute("aria-expanded", String(hv.open)));
+      if(window.wireExplain) wireExplain(root, timen().h, s); };   // forklaringsarkene (S38 2 a) for timen som er valgt
     $("#loggHer", root).onclick = ()=> openSheet(s.id, timen().t);
     $("#spotRegion", root).onclick = ()=>{ S.utforskView = reg; S.utforskViewSatt = true; };   // Utforsk åpner på spotens region
     wireFavButtons(); kobleTilbakeNa(); kobleHvorfor();

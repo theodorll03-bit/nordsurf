@@ -1,20 +1,25 @@
 /* Nordsurf: timestripa på spotsiden (design B 4.0, SPEC §6B punkt 7).
 
    Én kolonne per time: strek over de beste timene, fem segmenter (fylt opp til timens tall - blekk til og med
-   3, korall fra 4 som SPEC §5 sier - og tapte poeng stiplet: vind i korall, tidevann i blekk), vindpil og vindstyrke, og under hele stripa tidevannskurven med spotens foretrukne nivå
-   som bånd og stiplet der tidevannet koster poeng. Mørke timer og timer i en forbudsperiode har ingen
-   segmenter (SPEC §5), og timer uten data er skravert - aldri 0.
+   3, korall fra 4 som SPEC §5 sier), surfehøyden ved spoten som stolpe, vindpil og vindstyrke, og under hele stripa
+   tidevannskurven med spotens foretrukne nivå som bånd og stiplet der tidevannet koster poeng. Mørke timer og timer
+   i en forbudsperiode har ingen segmenter (SPEC §5), og timer uten data er skravert - aldri 0.
+
+   Designrevisjonen fase 3 punkt 4: stolpene har fast skala per spot, fra 0 til spotens max_height (spots.json, i
+   detaljfila), og en tynn linje ved nedre grense i ideal_height, med tallet i margen utenfor stolpene. Høyden er den samme som det store tallet i KL.-blokka
+   (hoydeVist i ui.js): Flatt og Treffer ikke har ingen stolpe, bare grunnlinja. Mangler høyden i dataene, er stolpeplassen skravert. Tapte poeng stiples i blekk, ikke korall,
+   og bare for valgt time (klassen «valgt» på kolonnen, flyttes av velg()). Teksten («−2 vind») står i KL.-blokka.
 
    Ren visning: ingen tall regnes. Timen velges ved å dra eller trykke i stripa, eller med piltaster og
    VoiceOver gjennom den skjulte glidebryteren.
 
    Nettsiden (B4 steg 6, SPEC §6C punkt 5, valget {bred: true}): samme stripe som tabell med en etikettkolonne
-   (144 px) og to rader til - svellet ute (tallet og en stolpe i outline-farge) og retningen svellet kommer fra -
-   alle timene merket i KL.-raden, vind hver time, og timen velges også ved å holde musa over den. */
+   (144 px) og en rad til - retningen svellet kommer fra -, surfehøyden med tallet over stolpen, alle timene merket i
+   KL.-raden, vind hver time, og timen velges også ved å holde musa over den. */
 (function(){
   const $ = (s, r)=> (r||document).querySelector(s);
   const osloHour = (t)=> +fmtHour.format(t);
-  const TIME = 36e5, TIDE_H = 52, TIDE_H_BRED = 64;
+  const TIME = 36e5, TIDE_H = 52, TIDE_H_BRED = 64, SURF_H = 48;   // stolpene for surfehøyden: 48 px = max_height
   const f1 = (cm)=> nf1.format(cm / 100);
   let cur = null;   // {root, s, d, cols, H, best, onPick, ned}
 
@@ -49,7 +54,8 @@
     const h = s.hours[c.i]; const hh = String(c.hh).padStart(2, "0");
     const dom = h._forbud ? STR.hjem.forbud.toLowerCase() : !H.known(h) ? STR.spot.timeMangler : H.mork(h) ? STR.spot.timeMork : STR.spot.timeTall(H.stars(h), tapt(h));
     const lv = window.Tidevann ? Tidevann.nivaa(ev, c.ms) : null;
-    const rest = [h.swell_offshore!=null ? (h.long_sea ? STR.spot.timeLangSjo : STR.spot.timeSvell)(nf1.format(h.swell_offshore)) : null,
+    const surf = !h._forbud && H.known(h) && H.heightText && H.heightText(h) ? (H.erSjo(h) ? STR.spot.timeSjo : STR.spot.timeSurf)(H.heightText(h)) : null;   // «sjø 2,7 m» når tallet er totalhøyden (S45 2)
+    const rest = [surf, h.swell_offshore!=null ? (h.long_sea ? STR.spot.timeLangSjo : STR.spot.timeSvell)(nf1.format(h.swell_offshore)) : null,
       h.wind_speed!=null ? STR.spot.timeVind(windMsText(h), windLabel(h)) : null,
       lv ? STR.spot.timeTide(f1(lv.cm), lv.stiger) : null].filter(Boolean).join(", ");
     return STR.spot.timeAria(hh, dom + (best.has(c.i) ? ", " + STR.spot.timeBest : ""), rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "");
@@ -70,20 +76,30 @@
       const vis = bred ? Math.abs(k + 0.5 - xNaa) >= 0.5 : (d.step !== 1 || c.hh % 3 === 0) && (kNaa < 0 || Math.abs(k - kNaa) > 1);
       return `<span>${vis ? String(c.hh).padStart(2, "0") : ""}</span>`;
     }).join("");
-    // nettsiden: stolpen for svellet ute er en andel av dagens høyeste svell (bare tegning, tallet står over)
-    const svMaks = bred ? Math.max(0, ...cols.map(c=> c.i >= 0 && s.hours[c.i].swell_offshore!=null ? s.hours[c.i].swell_offshore : 0)) : 0;
+    // surfehøyden som stolpe med fast skala: 0 til spotens max_height. Mangler den, skaleres det mot den høyeste
+    // surfehøyden i varselet for spoten (aldri mot dagens egen topp, så dagene kan sammenlignes). Over skalaen: full stolpe.
+    const hoydeAv = (h)=>{ const v = h && !h._forbud && H.known(h) ? H.hoydeVist(h) : null; return v ? v.a : null; };
+    const maks = s.max_height > 0 ? s.max_height : Math.max(1, ...s.hours.map(h=> hoydeAv(h) || 0));
+    const ideal = Array.isArray(s.ideal_height) && s.ideal_height[0] > 0 && s.ideal_height[0] < maks ? s.ideal_height[0] : null;
+    const px = (v)=> Math.max(2, Math.round(Math.min(1, v / maks) * SURF_H));
     const skygge = cols.map(c=>{ const h = c.i >= 0 ? s.hours[c.i] : null; return `<i class="${h && h.light==="mørkt" ? "natt" : h && h.light==="skumring" ? "skum" : ""}"></i>`; }).join("");
     const kol = cols.map((c, k)=>{
       const h = c.i >= 0 ? s.hours[c.i] : null;
       const mork = !!h && H.mork(h), kjent = !!h && H.known(h), forbud = !!h && !!h._forbud;   // forbudsperiode: ingen vurdering, aldri «0»
       const st = kjent && !mork && !forbud ? Math.min(5, H.stars(h)) : 0, lost = kjent && !mork && !forbud ? Math.min(5 - st, lostAll(h)) : 0;
-      // tidevannets poeng står nærmest de hele (vinden bokføres først, øverst) og er stiplet i blekk, vindens i korall (S33 c)
+      // tidevannets poeng står nærmest de hele (vinden bokføres først, øverst) og er stiplet i blekk, som vindens (fase 3 punkt 4)
       const lostTv = Math.min(lost, kjent ? tideLost(h) : 0);
       let seg = "";
       if(!h) seg = `<div class="segs vaert"></div>`;
       else if(mork || forbud) seg = `<div class="segs${forbud ? " forbud" : ""}"></div>`;
       else if(!kjent) seg = `<div class="segs miss"></div>`;
       else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lostTv ? "tapt tv" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
+      // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe.
+      // Er tallet totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde), er stolpen et omriss og tallet dempet:
+      // det er sjøen, ikke surfehøyden (S45 2)
+      const v = hoydeAv(h), sjo = v!=null && H.erSjo(h);
+      // mørk time: «–» i tallraden, som i KL.-blokka (S45 5 a). Stolpen står, dempet (småvalg 4 a)
+      const surf = `<div class="srf${sjo ? " sjo" : ""}">${bred ? `<b>${v!=null && !mork ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
@@ -91,28 +107,35 @@
         : h && h.wind_speed==null && c.hh % hvert === 0 ? "<b>–</b>" : "";
       let ekstra = "";
       if(bred){
-        // svellet ute: tallet og en stolpe; retningen det kommer FRA som pil mot spoten - fylt når den er i vinduet
-        const sv = h && h.swell_offshore!=null ? h.swell_offshore : null, dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
+        // retningen svellet kommer FRA som pil mot spoten - fylt når den er i vinduet
+        const dir = h && h.dir_offshore!=null ? h.dir_offshore : null;
         const inne = dir!=null && visVindu(s) ? inSwellWindow(dir, s) : false;
-        ekstra = `<div class="svl">${sv!=null ? `<b>${nf1.format(sv)}</b><i style="height:${svMaks > 0 ? Math.max(2, Math.round(sv / svMaks * 20)) : 2}px"></i>` : h ? "<b>–</b>" : ""}</div>`
-          + `<div class="sfr">${dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${inne ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : h ? "<b>–</b>" : ""}</div>`;
+        ekstra = `<div class="sfr">${dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${inne ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : h ? "<b>–</b>" : ""}</div>`;
       }
-      return `<div class="tk${mork ? " mork" : ""}${!h ? " vaert" : ""}" data-k="${k}" data-i="${c.i}" data-hh="${String(c.hh).padStart(2, "0")}"><div class="bst${h && best.has(c.i) ? " pa" + (st >= 4 ? " k" : "") : ""}"></div>${seg}${ekstra}<div class="vnd">${vind}</div></div>`;
+      return `<div class="tk${mork ? " mork" : ""}${!h ? " vaert" : ""}${c.i === sel ? " valgt" : ""}" data-k="${k}" data-i="${c.i}" data-hh="${String(c.hh).padStart(2, "0")}"><div class="bst${h && best.has(c.i) ? " pa" + (st >= 4 ? " k" : "") : ""}"></div>${seg}${surf}${ekstra}<div class="vnd">${vind}</div></div>`;
     }).join("");
     const valgbare = cols.map((c, k)=> c.i >= 0 ? k : -1).filter(k=> k >= 0);
     const kSel = Math.max(0, cols.findIndex(c=> c.i === sel));
     const rute = `grid-template-columns:repeat(${n},minmax(0,1fr))`;
     const inni = `<div class="tikk" style="${rute}" aria-hidden="true">${tikk}${harNaa ? `<em style="left:${(xAv(cols, naa) * 100).toFixed(2)}%">${esc(STR.spot.naa)}</em>` : ""}</div>
       <div class="skygge" style="${rute}" aria-hidden="true">${skygge}</div>
-      <div class="kolonner" style="${rute}" aria-hidden="true">${kol}</div>
+      <div class="kolonner" style="${rute}" aria-hidden="true">${kol}${ideal!=null ? `<div class="ideal" style="--y:${px(ideal)}px"><span>${esc(nf1.format(ideal))} m</span></div>` : ""}</div>
       <div class="tide"></div>
       <div class="ring" aria-hidden="true" style="left:${(kSel / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>
       ${harNaa ? `<div class="naalinje" aria-hidden="true" style="left:${(xAv(cols, naa) * 100).toFixed(2)}%"></div>` : ""}`;
     const R = STR.web ? STR.web.rader : null;
-    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.svell)} <small>m</small></span>
+    // Raden over stolpene heter «SJØ» når alle dagens lyse tall er totalhøyden, og «SURF / SJØ» når de er blandet, så ingen
+    // sjøtall står under ordet «SURF» alene (S45 2; feiljegeren 26.11.2026, runde 4 viktig 1). Har dagen en sjø-stolpe,
+    // også i en mørk time, står forklaringen av omrisset under stripa, på mobil og nettside.
+    const medTall = cols.map(c=> c.i >= 0 ? s.hours[c.i] : null).filter(h=> h && !H.mork(h) && hoydeAv(h)!=null);
+    const nSjo = medTall.filter(h=> H.erSjo(h)).length;
+    const surfOrd = nSjo && nSjo===medTall.length ? STR.sjo : nSjo ? STR.spot.surfSjo : STR.spot.surf;
+    const harSjo = cols.some(c=> c.i >= 0 && hoydeAv(s.hours[c.i])!=null && H.erSjo(s.hours[c.i]));
+    const sjoNote = harSjo ? `<p class="tnote etikett"><i aria-hidden="true"></i>${esc(STR.spot.sjoForklar)}</p>` : "";
+    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span class="te-surf">${esc(surfOrd)} <small>m</small></span>
       <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small>m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
-    return `<div class="tstripe${bred ? " bred" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
-      ${bred ? `${etiketter}<div class="tflate">${inni}</div>` : inni}
+    return `<div class="tstripe${bred ? " bred" : ""}${ideal!=null ? " med-ideal" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
+      ${etiketter}<div class="tflate">${inni}</div>${sjoNote}
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>
       <input class="sr" type="range" id="tstripeVelg" min="${valgbare[0]}" max="${valgbare[valgbare.length-1]}" step="1" value="${kSel}" aria-valuetext="${esc(ariaTime(s, cols[kSel], H, best, ev))}">
     </div>`;
@@ -177,6 +200,9 @@
     // flytter ringen, sirkelen på kurven og glidebryteren til kolonne k - uten å tegne stripa på nytt
     if(!cur) return; const n = cur.cols.length; cur.k = k;
     const ring = $("#tstripe .ring", cur.root); if(ring) ring.style.left = (k / n * 100).toFixed(3) + "%";
+    // tapte poeng vises bare for valgt time (fase 3 punkt 4)
+    cur.root.querySelectorAll("#tstripe .tk.valgt").forEach(e=> e.classList.remove("valgt"));
+    const tk = $(`#tstripe .tk[data-k="${k}"]`, cur.root); if(tk) tk.classList.add("valgt");
     const inp = $("#tstripeVelg", cur.root);
     if(inp){ inp.value = String(k); inp.setAttribute("aria-valuetext", ariaTime(cur.s, cur.cols[k], cur.H, cur.best, cur.geo ? cur.geo.ev : (window.Tidevann ? Tidevann.hendelser(cur.s) : []))); }
     flyttTide();

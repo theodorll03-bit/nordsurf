@@ -32,13 +32,13 @@
     const linje = `x1="${f(from[0])}" y1="${f(from[1])}" x2="${f(hx)}" y2="${f(hy)}"`, spiss = `d="M${f(to[0])},${f(to[1])}L${f(hx+px*5)},${f(hy+py*5)}L${f(hx-px*5)},${f(hy-py*5)}Z"`;
     return `<g class="${cls}"${extra||""}><line class="u" ${linje}/><path class="u" ${spiss}/><line ${linje}/><path ${spiss}/></g>`;
   }
-  function arcs(bearing){
+  function arcs(bearing, hoy){
     // tre buer som ruller innover langs svellretningen (CSS-animasjon, slås av med prefers-reduced-motion)
     let out = "";
     for(let i=0;i<3;i++){
       out += `<path class="bue" style="animation-delay:-${(i*1.4).toFixed(1)}s" d="M-16,-62Q0,-70 16,-62"/>`;
     }
-    return `<g class="buer" transform="rotate(${f(bearing)})">${out}</g>`;
+    return `<g class="buer${hoy ? " hoy" : ""}" transform="rotate(${f(bearing)})">${out}</g>`;
   }
   /* kyst: {land: [sti...], coast: [sti...]} i viewBox -100..100 (tools/lag_minikart.py) */
   function markup(spot, h, kyst, opts){
@@ -70,7 +70,7 @@
       ${visVindu(spot) ? `<path class="vindu" d="${wedge(visVindu(spot), R)}"/>` : ""}
       <g class="ticks">${ticks.join("")}</g>
       <circle class="rand" r="${R}"/>${fra}
-      ${hasSwell ? (hit ? arcs(h.dir_offshore) : "") + arrowFromRim(h.dir_offshore, 40, hit ? "svell" : "svell miss") : ""}
+      ${hasSwell ? (hit ? arcs(h.dir_offshore, o.hoy) : "") + arrowFromRim(h.dir_offshore, 40, hit ? (o.hoy ? "svell hoy" : "svell") : "svell miss") : ""}
       ${hasWind ? arrowFromRim(h.wind_dir, 26, "vind") : ""}
       <circle class="spot" r="3.2"/>
       <g class="komp">${labels}</g>

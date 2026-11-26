@@ -5,8 +5,8 @@ Godkjent av Theodor 09.11.2026 («Det ser veldig bra ut»). Laget i samtale med 
 ## 1. Seks regler
 
 1. **Papir først.** Om dagen er bakgrunnen Skum (#F2EFE8), og marineblå (#002941) er blekk: tekst, land på kartet, streker og knapper. Det mørke temaet heter **mørketid**. Det er det samme designet med marineblå bakgrunn. Appen følger systemets lys/mørk-innstilling.
-2. **Korall betyr god surf, og bare det.** Korall brukes på tall fra 4 og opp, beste vindu og svell inne i vinduet. Det brukes aldri på tekst under 24 px i dagtema, og aldri i bilder.
-3. **Lyseblått (#B6DFED) er vann og data.** Det brukes på grunnvannsbåndet langs kysten på kartet og på tidevannsbåndet. Det er aldri tekstfarge.
+2. **Korall betyr god surf, og bare det.** Korall brukes på tall fra 4 og opp, beste vindu, og svellpila når svellet er inne i vinduet og timen har 4 eller mer. Tapte poeng er aldri korall. Det brukes aldri på tekst under 24 px i dagtema, og aldri i bilder.
+3. **Lyseblått (#B6DFED) er vann og data.** Det brukes på grunnvannsbåndet langs kysten på kartet og på tidevannsbåndet. Det er aldri tekstfarge. Surfehøyden (tallet og stolpene i timestripa) er blekk, ikke lyseblått.
 4. **Sekundærtekst er varm grå,** ikke blå.
 5. **Stor forskjell i størrelse.** Hver skjerm har ett stort tall eller navn. Etiketter er små (11–12 px). Mellomstørrelsene er tatt bort.
 6. **Ingen bokser.** Det er ingen kort og ingen omrissede merkelapper, og listene på mobil har ingen streker mellom radene. Seksjoner skilles med en dobbel strek som i en tidevannstabell. Tabeller på web har tynne radlinjer.
@@ -68,7 +68,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
 
 - **Tall fra 0 til 5 i stedet for stjerneikoner** i lister, på kart og i ukeoversikter. Tallet er det samme som dagens stjerner, så ingenting i modellen endres. Ordet etter tallet hentes fra ordene appen allerede har i strings.js. Ordene i skissene (FLATT, KNAPT, SURFBART, BRA, VELDIG BRA, TA FRI) er bare plassholdere, og Theodor velger.
 - **Korall fra 4 og opp:** tallet, ruta i ukeoversikten, ringen på kartet og beste vindu. Fra 0 til 3 er det ink.
-- **Tapte poeng:** stiplet korall-omriss i timestripa, og grunnen skrevet ut som tekst («−1 TIDEVANN», «−2 VIND»).
+- **Tapte poeng:** stiplet blekk-omriss i timestripa, bare for valgt time, og grunnen skrevet ut som tekst i KL.-blokka («−1 TIDEVANN», «−2 VIND»). Aldri korall (designrevisjonen fase 3).
 - **Data mangler:** skravur.
 - **Mørke timer** (sola lavere enn −6°, borgerlig skumring) får ingen vurdering på skjermen. Kolonnen skygges, piler og tall blir grå, og overskriften sier «BARE LYSE TIMER FÅR TALL». Modellen kan regne som før, dette er bare visning.
 - **Ukeoversikt per spot:**
@@ -124,8 +124,8 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
    - Under: setning i Familjen 18/26.
 5. **Faktalinje:** LYS · LUFT · FØLES · VANN · OPPDATERT. Vis bare det vi har data for.
 6. **KL. hh** (seksjonsstart, til høyre timens tall + ord + grunn):
-   - Svell stort: «1,7 m» + «12 s · fra VNV 301°».
-   - Under står to linjer: VIND (tall + «fralands · kast 7») og TIDEVANN (tall + «↑ høy 16:44»), med små piler og symboler.
+   - Surfehøyden ved spoten stort: «1,4–1,8 m» + kroppsmålet («Skulder- til hodehøyt»). Fase 3: før stod svellet ute her.
+   - Under står tre linjer: SVELL UTE (tall + «12 s · fra VNV 301°»), VIND (tall + «fralands · kast 7») og TIDEVANN (tall + «↑ høy 16:44»), med små piler og symboler.
 7. **TIME FOR TIME** (06–18). Samme interaksjon som i dag: dra, piltaster og skjult range-input for VoiceOver.
    - Bar på 4 px over beste timer.
    - Fem segmenter per time.
@@ -138,7 +138,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
    - Ringen er brutt ved vinduet, og offshore-buen er markert.
    - Svellpila er korall når svellet er i vinduet.
    - Forklaring til høyre: SVELL FRA / VIND FRA / VINDU.
-9. **Kilder** i ett avsnitt i muted.
+9. **Kilder** i ett avsnitt i muted. Sikkerheten står på egen linje over, med 44 px trykkflate.
 
 ### C. Web, spotside (`5-web-spot.png`, kilde `kilde/B4-web.dc.html`)
 
@@ -149,11 +149,11 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
    - KL. hh i kolonne 7–9, med svellhøyde i 96 px.
    - Skive på 300 px i kolonne 10–12.
 4. **NESTE 7 DAGER:**
-   - 7 kolonner med store tall (48 px), ord, beste vindu og svell.
+   - 7 kolonner med store tall (48 px), ord, årsak, beste vindu og surfehøyden ved spoten.
    - Valgt dag har en 4 px ink-strek over seg, de andre har hair.
 5. **TIME FOR TIME:**
    - Tabell for 06–19 med etikettkolonne på 144 px.
-   - Rader: KL / VURDERING / SVELL m (stolper i outline-farge) / SVELL FRA / VIND / TIDEVANN.
+   - Rader: KL / VURDERING / SURF m (tallet over en stolpe i blekk, fast skala per spot) / SVELL FRA / VIND / TIDEVANN.
    - Hold musa over en time for å velge den.
 6. **SPOTTEN:**
    - Kartfigur med svellvindu, fralandssektor, svellpil og TOPP.
@@ -207,7 +207,7 @@ Fase 1 (24.11.2026, plan i `privat/designrevisjon-2026-11-21/PLAN.md`). Der dett
 - **Toppbildet er kortere.** Mobil 160 px (§6B sa 220). Web 260 px (§6C sa 420), og spotnavnet på web er 96/84 (§3 sa 144/124). Dommen skal stå i første skjermbilde.
 - **Under toppbildet står én linje:** «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0», med lisensen som lenke (44 px trykkflate). Hele krediteringen står under Kilder nederst.
 - **Fyllet for 1 og 2** er et eget token, `--lav`: #8A8478 om dagen (3,24:1 mot papiret) og #8FA0A8 i mørketid (5,57:1). Før var det outline-fargen (1,83:1). Tallet oppå fyllet er `--paa-lav`.
-- **Nullene** står i muted med vekt 500 og tynn ramme (hair). Aldri strek, for strek betyr «mangler».
+- **Nullene** står i muted med vekt 500 og tynn ramme (hair). Aldri strek, for strek betyr at tallet ikke vises: det mangler, eller timen er mørk (S45 5 a, se «S45» nederst).
 - **Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers ren tekst.
 - **Etiketter** er 12/16 også på mobil (§3 sa 11/14), med sperring 0,02 em (§3 sa 0,04). 11 px brukes bare til kreditt.
 - **Faktalinja** (LYS, LUFT, VANN) og datoene i dagvelgeren står i ink.
@@ -235,3 +235,39 @@ Fase 2 (24.11.2026, «B 4.0 ferdig på mobil»). Der dette avsnittet og resten a
 - **Nedtrekkslister** tegnes av appen (44 px, 2 px strek under, vinkel i blekk), ikke med nettleserens egen form.
 - **Metalinja i radene på mobil-Hjem** er «STED · FORELØPIG · KJØRETID · ORD · −N ÅRSAK» (§6A sier «REGION · KJØRETID · ORD · −N ÅRSAK»): merkene «Foreløpig» og forbudet står etter stedet, i favorittene og i regionradene. Linja brytes bare mellom leddene.
 - **Regionradene på mobil-Hjem har «Nå» sist i metalinja** (S38 1 b, svar.md 24.11.2026 kl. 22.25): «STED · FORELØPIG · KJØRETID · NÅ ORD HØYDE», for eksempel «Kvaløya · ca. 45 min · Nå Smått 0,6–0,8 m». Ordet og høyden gjelder nå-timen, tallet til venstre er dagens. Er nå-timen mørk, står «Nå Mørkt» uten tall. Leddet erstatter dagens ord og «−N årsak» i regionradene. Favorittradene er som før. Viser lista i morgen («Mørkt nå. Tallene gjelder i morgen.» over lista), står dagens ord uten «Nå».
+
+Fase 3 (25.11.2026, «riktig tall størst», godkjent av Theodor 21.11). Der dette avsnittet og resten av fila spriker, gjelder dette.
+
+- **Det store tallet i KL.-blokka er surfehøyden ved spoten** (samme høyde som listene, regel (c) i `heightMForDisplay`), med kroppsmålet under. Et spenn («1,4–1,8») står i tre firedeler av størrelsen. Tallet står alltid på én linje, og skriften krymper når kolonnen er smal (PC 1024 til 1320 px). Er ordet Flatt eller Treffer ikke, står «–» stort og ordet under. Uten poeng vises høyden fra 0,3 m, likt i KL.-blokka, stripa og listene (`hoydeVist` i ui.js), aldri «0,0 m». I en mørk time står «–» uten tall og uten ord under (S45 5 a, se «S45» under). SVELL UTE er en rad over VIND og TIDEVANN. Mangler svellet i en time med andre tall, står raden med «–» og «Mangler data», og periode og retning når de finnes.
+- **To høyder står aldri umerket:** dommen har dagen under ordet («I DAG», «I MORGEN») og KL.-blokka har «KL. 09».
+- **Lister og dagkolonner viser surfehøyden ved spoten,** ikke svellet ute: favorittene og regionradene på mobil-Hjem, tabellen på PC-forsiden (kolonnen heter SURF), Søk, Utforsk (kortet og listene) og «Neste 7 dager» på PC-spotsiden. Er ordet Flatt eller Treffer ikke, står «–» der høyden skulle stått.
+- **Timestripa** har surfehøyden som stolper i blekk med fast skala per spot: 0 til `max_height` (spots.json). En tynn stiplet linje i muted står ved nedre grense i `ideal_height`, med tallet utenfor timene: i margen til høyre på mobil (44 px), i etikettkolonnen på PC. Tallet dekker aldri en stolpe. Med stor tekst på mobil står det over stripa. Mangler høyden i en time, også en time med vurdering, er stolpeplassen skravert, aldri tom eller lav. Flatt og Treffer ikke har ingen stolpe, bare grunnlinja. Mørke timer har stolpen i dim. På PC står tallet over stolpen, i raden SURF m (erstatter SVELL m).
+- **Tapte poeng** er stiplet blekk, bare på valgt time (§5). Teksten («BLÅST UT · −2 VIND») står på egen linje under «KL. hh».
+- **Svellpila** (KL.-blokka, skiva og minikartet) er korall bare når svellet er inne i vinduet og timen har 4 eller mer. Inne i vinduet ellers: blekk. Utenfor: grå som før. Buene på minikartet følger pila.
+- **Ordet etter tallet er karakteren** (Flatt, Dårlig, Ok, Bra, Veldig bra, Rått). Ved 0 er det «Ikke surfbart», bortsett fra Flatt og Smått. Årsaken (Blåst ut, Treffer ikke, Stormsjø, Grøtete) står på egen linje: i dommen, i KL.-blokka, i listeraden, på kortet i Utforsk og i dagkolonnene på PC.
+- **Overskriften gir råd på dårlige dager:** har ingen favoritt 2 eller mer den første dagen, og en senere dag har det, blir overskriften «Lite å hente i dag. Unstad er best, lørdag.» Mangler tallet hos én av spotene, eller er lyset over hos én av dem, står setningene som før («Ingen surf resten av dagen.»). Dager uten noe tall (mørkt, forbud) sies også som før.
+- **Søk er lik Hjem** (S44 3): er timen mørk, står «Mørkt» uten tall. På kortet i Utforsk står «–» under SURF, verken høyde eller ord.
+- **Skjermleseren** får det raden i Utforsk viser: karakteren, høyden, årsaken og poengene. «Nå Flatt» i regionraden på mobil-Hjem har «–» der høyden skulle stått. «, usikkert» (lang sjø) står i Søk, Utforsk-listene og dagkolonnene på PC også.
+- **Regel 3 er uendret.** Havfargen (`--god` for 3) er bare prøvd i fase 3, med skjermbilder til Theodor. Den er ikke i appen.
+
+S45 (26.11.2026, svar.md 26.11.2026 kl. 13.10). Der dette avsnittet og fase 3 over spriker, gjelder dette.
+
+- **«Ikke surfbart» er ordet ved 0** (1 a), med årsaken (Blåst ut, Stormsjø, Treffer ikke, Grøtete …) på linja under. «Usikkert» kan stå på årsakslinja.
+- **«SJØ», ikke «SURF», når tallet er totalhøyden ved spoten** (2 a med tillegg). Regel (c) står: Stormsjø viser totalhøyden fra kystmodellen, og Blåst ut gjør det når surfehøyden er 0. I akkurat de timene heter tallet «SJØ», og det har ikke kroppsmål, så «2,7 m» ikke leses som bølgene du surfer. Etiketten åpner arket om signifikant høyde. Blåst ut med ekte surfehøyde er fortsatt «SURF» med kroppsmål. Det samme gjelder overalt tallet står:
+  - KL.-blokka: «SJØ 2,7 m», ingen linje under.
+  - Lister (Søk, Utforsk, lista utenfor kartet), dagkolonnene og tabellen på PC-forsiden: «sjø 2,7 m».
+  - Regionraden på mobil-Hjem: «Nå Stormsjø, sjø 1,4 m». Uten høyde står bare ordet («Nå Treffer ikke»), uten strek etter.
+  - Kortet i Utforsk: feltet heter «Sjø».
+  - Timestripa: stolpen er et omriss, ikke fylt, og tallet over stolpen på PC er dempet. Raden over stolpene på PC heter «SJØ m» når alle dagens lyse tall er sjø, «SURF / SJØ m» når de er blandet, ellers «SURF m». Har dagen en sjø-stolpe, står «Omriss: sjøen ved spoten, ikke surfehøyden» under stripa, på mobil og PC.
+  - Skjermleseren: «sjø 2,7 m».
+- **Nye spots i overskriften** (3 a). En ny spot (status foreløpig, de første 14 dagene) nevnes når den har minst 2 og alle de andre er under 2. Fra før nevnes den når ingen av de andre er surfbare. En spot med merkelappen «Foreløpig» i raden (status foreløpig, eller en andel satt uten observasjon) har «(foreløpig)» bak navnet i overskriften: «Ok på Breivikeidet (foreløpig) i dag.» Hovedbildet på PC-forsiden har «Foreløpig» i linja over navnet. Er det forbud på den nye spoten den timen, løftes den ikke fram. Regelen gjelder overskriften på Hjem, mobil og PC, og hovedbildet på PC-forsiden følger samme regel, så de to aldri peker på hver sin spot. En spot med status hemmelig publiseres ikke. Som ekstra vern tas den også bort der appen leser inn spotlista.
+- **Mørke timer har «–»** (5 a): KL.-blokka viser «SURF –» uten tall og uten ord under, som Hjem, Søk og Utforsk (S44 3). Streken betyr altså at tallet ikke vises, enten fordi det mangler eller fordi timen er mørk. Mangler høyden i dataene, står «Mangler data» under streken, også i en mørk time. Timestripa viser fortsatt høyden i mørke timer, som dempet stolpe (høyden er data, ikke vurdering), men tallraden på PC har «–» i mørke timer. På PC er «–» i KL.-blokka en tynn strek (40 px, vekt 500), ikke en bjelke.
+- **Småvalgene** følger anbefalingene i utviklerens rapport: ordet (Flatt, Treffer ikke) i Surf-feltet på kortet i Utforsk, linja ved nedre grense i `ideal_height` uten ord, rådet i overskriften bare når første dag har under 2 og en senere dag 2 eller mer, og dempet stolpe i mørke timer.
+- **Stor tekst på PC:** oppsettet med dommen i full bredde slår inn når innholdet er smalere enn 48rem (før 45rem), så det gjelder også 175 % tekst på 1360 og 1440 px. Uten `cqi` (Safari før 16) er det store tallet 40 px, opptil 48 px ved stor tekst, og et spenn 30 til 46 px.
+- **Lang sjø på lave skjermer:** etiketten «LANG SJØ UTE» står øverst i raden og tallet på første linje (under 700 px høyde, fra 340 px bredde), så raden er 11 px lavere.
+
+S38 2 a (25.11.2026): forklaringsarkene.
+
+- **Etikettene som forklarer** (SURF, SVELL UTE, VIND og TIDEVANN i KL.-blokka, SVELL FRA, VIND FRA og VINDU ved skiva, sikkerheten og «kystmodell 100 m» i kildelinja, og sikkerheten under Data i «Om spotten» på web) er knapper som åpner forklaringsarket. Prikkete strek under ordet, 44 px høy trykkflate uten at teksten flytter seg, og den felles fokusringen. Escape lukker arket, og fokus går tilbake til etiketten. Tab og Shift+Tab blir i arket så lenge det er åpent (det gjelder også loggarket og regnestykket). Radene i KL.-blokka er minst 44 px, så trykkflatene ikke ligger oppå hverandre. Unntak: telefoner under 380 px bredde og 600 px høyde, der radene er så høye som teksten, for at KL.-blokka skal stå over fanelinja etter dagbytte.
+- **Lave skjermer (under 700 px):** kroppsmålet står ved siden av det store tallet (40 px, et spenn 36 px), og teksten til høyre i radene er 14/18. Da står KL.-blokka over fanelinja etter dagbytte også på 375 × 548 (iPhone SE med verktøylinja i Safari). Under 340 px bredde er tallet 32 px (spenn 30 px), setningen under dommen og kroppsmålet 14/18, og tidevannsregelen går over hele bredden (320 × 568).
+- **Stor tekst (200 %):** i smale lister (Søk, Utforsk) står ordet, høyden og årsaken under navnet.

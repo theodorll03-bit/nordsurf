@@ -74,6 +74,15 @@ function heightMForDisplay(h){
   if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
   return null;
 }
+// Tallet heightMForDisplay() gir er totalhøyden ved spoten (BarentsWatch), ikke surfehøyden: «Stormsjø», og «Blåst ut»
+// når surfehøyden er 0 (regel (c)). De timene heter tallet «SJØ», ikke «SURF», og har ikke kroppsmål (S45 2,
+// svar.md 26.11.2026 kl. 13.10): 2,7 m sjø skal ikke leses som bølgene du surfer. Bare visning.
+function visesSomSjo(h){
+  if(!h || h._forbud || !h.low_reason || h.bw_height==null) return false;
+  if(h.low_reason==="stormsjo") return true;
+  if(h.low_reason==="blown_out") return !(h.surf_height!=null && h.surf_height>0) && !(!h.stars && calmWindWord(h)!=null);
+  return false;
+}
 const $ = s => document.querySelector(s);
 const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
 const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
@@ -106,7 +115,8 @@ function relDayShort(d){
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 // Store mono-tall («0,7»): desimalkommaet pakkes i .des, som trekker sifrene sammen (ui.css). Bare visning.
-function desTall(txt){ return esc(txt).replace(",", '<span class="des">,</span>'); }
+// Et spenn («1,4–1,7», surfehøyden og settene i KL.-blokka, fase 3) har to komma: begge pakkes.
+function desTall(txt){ return esc(txt).replace(/,/g, '<span class="des">,</span>'); }
 // Krediteringen for kornfotoene (docs/js/spotbilder.js): under bildet står bare kortformen på én linje, hele
 // henvisningen står under Kilder nederst. Lisensnavnet er lenke begge steder (CC BY 4.0 punkt 3a).
 function fotoKreditHtml(hele){
@@ -306,6 +316,19 @@ function ratingWord(h){
   if(h.low_reason==="blown_out"){ const svak = calmWindWord(h); return svak!=null ? svak : windLossWord(h); }
   if(h.low_reason) return LOW_REASON_WORD[h.low_reason] || STAR_WORDS[0];
   return STAR_WORDS[Math.min(5, h.stars||0)];
+}
+// Karakteren og årsaken (designrevisjonen fase 3 punkt 5): ordet etter tallet er alltid karakteren, og årsaken
+// («Blåst ut», «Treffer ikke», «Stormsjø» …) står på egen linje. Fra 1 poeng er karakteren ordet for tallet
+// (STR.starWords). Ved 0 er «Flatt» og «Smått» karakteren (det er ingen bølger å snakke om). Ellers er karakteren
+// «Ikke surfbart» (STR.karakter0), og ordet ratingWord() gir, er årsaken. Bare visning: tallet er det samme.
+// {ord, aarsak}: aarsak er null når ordet alene sier alt.
+function karakter(h){
+  const w = ratingWord(h);
+  if(!h || h._forbud || w==="–") return {ord: w, aarsak: null};
+  const st = Math.min(5, h.stars || 0);
+  if(st >= 1){ const k = STAR_WORDS[st]; return {ord: k, aarsak: w!==k ? w : null}; }
+  if(w===STR.starWords[0] || w===STR.wordSmall) return {ord: w, aarsak: null};
+  return {ord: STR.karakter0, aarsak: w===STR.wordNotNow ? null : w};
 }
 // Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
 function ratingWordExplain(h){
@@ -660,7 +683,7 @@ function surfAdjustmentLine(h){
   if(!dirOk) reasons.push(h.spot_direction_diff!=null ? `retning ${Math.round(h.spot_direction_diff)}° skrått ved punktet` : "retning ved punktet");
   return `Etter justering ${nf1.format(h.height)} m (${reasons.join(", ")})`;
 }
-const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet - langt svell reiser seg mer når det treffer grunnen.";
+const SURF_HEIGHT_EXPLAINER = "Surfehøyde er høyden der bølgene brekker, regnet ut fra bølgehøyde og periode (Komar og Gaughan, 1972). Signifikant høyde er gjennomsnittet ute i vannet: langt svell reiser seg mer når det treffer grunnen.";
 // 06.10.2026, Theodors oppgave (andre runde): samme tekst Theodor selv
 // formulerte, ordrett - erstatter den første versjonen av denne teksten.
 const ENERGY_EXPLAINER = "Energi i bølgene ute. Lang periode gir mye mer energi og kraft, selv med samme høyde.";
@@ -975,6 +998,13 @@ function exposureChartSVG(spotId, curve, logs){
    til det). s._full === false betyr «bare oversikten ennå»; et varsel lagt
    inn helt (window.__FORECAST__, testene) har ikke feltet og regnes som fullt. */
 const _spotLoads = new Map();
+// En spot med status «hemmelig» skal aldri vises (CLAUDE.md). Det egentlige vernet er publiseringen
+// (publish.public_forecast() tar dem bort før fila skrives). Dette er et ekstra vern ett sted, der spotlista leses inn,
+// så overskrift, lister, kart og hovedbilde er like (feiljegeren 26.11.2026, runde 4 i).
+function utenHemmelige(o){
+  if(o && Array.isArray(o.spots)) o.spots = o.spots.filter(s=> s && s.status!=="hemmelig");
+  return o;
+}
 async function loadOverview(){
   const o = await (await fetch("data/oversikt.json", {cache:"no-cache"})).json();
   (o.spots||[]).forEach(s=>{ s._full = false; });
@@ -1059,7 +1089,7 @@ function renderLogs(){
     const surfSrcTxt = cal.surf_factor_source==="logs"
       ? `Lært fra ${surfLogs} logger/observasjoner du har lagt inn`
       : cal.surf_factor_source==="prior"
-      ? `Startverdi${cal.surf_factor_prior_n!=null?` fra ${cal.surf_factor_prior_n} observasjoner`:""} (ikke lært fra logger ennå - ${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn så overstyrer det)`
+      ? `Startverdi${cal.surf_factor_prior_n!=null?` fra ${cal.surf_factor_prior_n} observasjoner`:""} (ikke lært fra logger ennå: ${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn så overstyrer det)`
       : `Standardverdi (${Math.max(0,MIN_SIZE_LOGS-surfLogs)} til med størrelse og retning rett inn før den læres automatisk)`;
     return `<div class="calib"><div class="t">${esc(s.name)}</div>
       <p><b>Transfer ${transferPct} %</b>: hvor mye av svellet ute som når stranda ved direkte treff, modell mot modell (reservemodellen mot BarentsWatch). ${transferSrcTxt}.</p>
@@ -1080,11 +1110,11 @@ function renderLogs(){
     const bucketsLang = cal.exposure_buckets_learned_lang ?? 0;
     const bucketsKort = cal.exposure_buckets_learned_kort ?? 0;
     const sugg = (cal.exposure_override_suggestions || []).map(o=>
-      `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren - fjernes aldri automatisk.</div>`
+      `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren: fjernes aldri automatisk.</div>`
     ).join("");
     return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
-      <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
-      ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå - ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
+      <p>Eksponering per retning: hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
+      ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå: ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
       <div class="expo-legend">
         <span><i style="background:var(--muted);opacity:.6"></i>Geometri</span>
@@ -1111,7 +1141,7 @@ function renderLogs(){
     const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeightNear,l.forecastPeriod))));
     const better = dev250<=dev150 ? "250 m" : "150 m";
     return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
-      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`};
+      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet: bytt manuelt i spots.json om du vil.</p></div>`};
   }));
   // Hvor ofte timer der kildene var uenige (BarentsWatch-høyde, men trolig
   // vindsjø eller feil retning ved spoten - kappet til maks 1 stjerne)
@@ -1145,7 +1175,7 @@ function renderLogs(){
       // (var energyTotalKj, samme feil som selve regelen hadde).
       const broke = good.filter(l=>l.energySwellKj!=null && l.energySwellKj < zero);
       if(broke.length >= LOCAL_RULE_SUGGEST_MIN){
-        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) hadde under ${nf0.format(zero)} kJ svellenergi - under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
+        items.push(`<div class="sugg">${broke.length} gode økter (3+ poeng) hadde under ${nf0.format(zero)} kJ svellenergi: under "zero"-grensen i den lokale energiregelen. Vurder å senke den. Endres aldri automatisk.</div>`);
       }
     }
     if(lr.tide_prefer && lr.tide_penalty_high!=null){
@@ -1638,7 +1668,7 @@ $("#saveLog").onclick = async ()=>{
     energySwellKj: f ? f.energy_swell_kj : null};
   const ok = saveLogs([...loadLogs(), entry]);
   closeSheet();
-  toast(!ok ? "Kunne ikke lagre. Sjekk at nettleseren tillater lagring." : full ? "Økt logget" : "Økt logget - uten varselets tall for timen (fikk ikke hentet dem)");
+  toast(!ok ? "Kunne ikke lagre. Sjekk at nettleseren tillater lagring." : full ? "Økt logget" : "Økt logget: uten varselets tall for timen (fikk ikke hentet dem)");
   syncLogs();
   Front.refresh();
 };
@@ -1660,7 +1690,7 @@ async function start(){
   // forklaringer, Detaljer-rutenettet og formateringen.
   const wm = $("#wordmark"); if(wm) wm.innerHTML = wordmarkSvg();
   try{
-    DATA = window.__FORECAST__ || await loadOverview();
+    DATA = utenHemmelige(window.__FORECAST__ || await loadOverview());
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
     const gen = new Date(DATA.generated);
     $("#updated").textContent = DATA.sample ? STR.exampleSub : STR.updated(relDay(gen), fmtTime.format(gen));
@@ -1735,7 +1765,7 @@ function maybeShowWitnessPrompt(){
   const spot = DATA.spots.find(s=>s.id===entry.spot);
   if(!spot) return;
   const when = new Date(entry.t);
-  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)} - varselet viste ${entry.stars} av 5 poeng.`;
+  $("#witnessSub").textContent = `${spot.name}, ${relDay(when)} kl. ${fmtHour.format(when)}: varselet viste ${entry.stars} av 5 poeng.`;
   $("#witnessPick").innerHTML = PICK_WORDS.map((w,n)=>`<button data-n="${n}"><b>${n}</b>${w}</button>`).join("");
   $("#witnessPick").querySelectorAll("button").forEach(b=>b.onclick=async ()=>{
     const stars = +b.dataset.n;
@@ -1751,7 +1781,7 @@ function maybeShowWitnessPrompt(){
     saveLogs([...loadLogs(), log]);
     markWitnessAsked(entry);
     closeWitness();
-    toast(full ? "Takk! Lagret som økt." : "Takk! Lagret som økt - uten varselets tall for timen (fikk ikke hentet dem).");
+    toast(full ? "Takk! Lagret som økt." : "Takk! Lagret som økt: uten varselets tall for timen (fikk ikke hentet dem).");
     syncLogs();
     Front.refresh();
   });

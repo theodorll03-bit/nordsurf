@@ -294,6 +294,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .srad .nm small{display:block;margin-top:2px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
 .srad .na{max-width:9.5rem;text-align:right;color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
 .srad .na .num{display:block;font-weight:500;text-transform:none;color:var(--muted)}
+.srad .na .grunn{display:block;font-weight:500;color:var(--muted)}
 .srad mark{background:transparent;color:inherit;text-decoration:underline;text-decoration-color:var(--focus);text-underline-offset:2px}
 .ingen-treff{padding:24px 8px;color:var(--muted)}
 /* søkesiden (mobil) */
@@ -309,7 +310,14 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .avbryt{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-width:44px;min-height:44px;cursor:pointer;color:var(--ink);font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase}
 .forslag .sek:first-child,.sokgrupper .sek:first-child{margin-top:var(--s3)}
 .forslag .chips{flex-wrap:wrap}
-.alfa{display:flex;flex-direction:column}
+.alfa{display:flex;flex-direction:column;container-type:inline-size}
+/* Stor tekst i en smal liste (200 %): ordet, høyden og årsaken står under navnet, så de ikke går inn i navnet eller i
+   neste rad (feiljegeren 25.11.2026, funn 18) */
+@container (max-width: 13rem){
+  .alfa .srad{grid-template-columns:1.5rem minmax(0,1fr)}
+  .alfa .srad .na{grid-column:2;max-width:none;text-align:left}
+  .alfa .srad .nm small{overflow-wrap:anywhere}
+}
 .sok-drop{position:absolute;left:0;right:0;top:calc(100% + 6px);max-height:70vh;overflow:auto;padding:0 12px 12px;background:var(--raised);box-shadow:0 0 0 1px var(--outline);z-index:40}
 .sok-drop[hidden]{display:none}
 
@@ -691,9 +699,13 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-tabell .fs-dom{white-space:nowrap}
   .fs-tabell .fs-dom .t-listetall{display:inline-block;min-width:1.6ch;margin-right:10px;vertical-align:middle;color:var(--rc-tall)}
   .fs-tabell .fs-dom .ord{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle}
+  .fs-domv{display:flex;align-items:center}   /* årsaken og tapet brytes ved stor tekst («Blåst ut · −1 vind»), tallet gjør ikke (runde 2 a) */
+  .fs-domv .t-listetall{flex:none}
+  .fs-domv .ord{min-width:0;white-space:normal}
   .fs-tabell .fs-dom b{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .fs-tabell .fs-bst{font-family:var(--mono);font-stretch:87.5%;font-size:1rem;font-weight:800;white-space:nowrap}
   .fs-tabell .fs-sv{white-space:nowrap}
+  .fs-tabell :is(.fs-dom,.fs-sv){padding-right:calc(16px - .25rem)}   /* 12 px, 8 ved 200 % tekst: tabellen er ikke bredere enn før surfehøyden kom inn (runde 2 a) */
   .fs-tabell .fs-tim{width:250px}
   .fs-stripe{display:grid;grid-template-columns:repeat(13,14px);gap:5px}
   .fs-stripe i,.fs-tegn i{display:block;width:14px;height:14px;background:var(--rc,transparent)}
@@ -744,15 +756,26 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-time{grid-column:7/10}
   .spw-time > .sek-spot{margin-top:0}
   .spw-time .svell{margin-top:12px}
+  .spw-time .t-surf.ingen{font-size:2.5rem;line-height:1.2;font-weight:500}   /* «–» (mørk time, Flatt, Treffer ikke): en tynn strek, ikke en bjelke i 72 px (feiljegeren, runde 4 k) */
   .spw-time .svell > .svell-sub.lang-sjo{margin-top:4px}   /* S40: merknaden står rett under periodelinja */
   .spw-time .svell > .svell-sub{margin-top:16px}   /* kommaet i 96 px går under linja */
-  .spw-time .maal{grid-template-columns:96px auto 1fr}
+  .spw-time .maal{grid-template-columns:104px auto 1fr}
   @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */
-    .spw-time .maal{grid-template-columns:96px minmax(0,1fr)}
+    .spw-time .maal{grid-template-columns:104px minmax(0,1fr)}
     .spw-time .maal .mu{grid-column:2}
     .spw-time .maal .mv .ordv{white-space:normal}   /* «Surfing forbudt» er bredere enn kolonnen ved 1024 px (målt 135 mot 114 px) */
   }
   .spw-skive{grid-column:10/13}
+  /* stor tekst (200 % på 1024 til 1440 px): dommen får hele bredden, og timen står bredt ved siden av skiva, så surfetallet
+     er klart størst og ordene i radene ikke brytes midt i (feiljegeren, runde 2 b) */
+  .spw-inn{container:spw / inline-size}
+  @container spw (max-width: 48rem){   /* 48rem (før 45): slår også inn ved 175 % på 1360 og 1440 px (feiljegeren, runde 3 k) */
+    .spw-dom{grid-column:1/-1}
+    .spw-time{grid-column:1/8;margin-top:var(--s5)}
+    .spw-skive{grid-column:8/13;margin-top:var(--s5)}
+    .spw-time .maal{grid-template-columns:8rem minmax(0,1fr)}
+    .spw-time .maal .mu{grid-column:2}
+  }
   .skive-rad.stor{flex-direction:column;align-items:flex-start;margin-top:0}
   .skive-rad.stor .skive{width:min(300px, 100%);height:auto;aspect-ratio:1}
   .skive-rad.stor .skive svg{width:100%;height:100%}
@@ -771,31 +794,33 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .dk-ord{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
   .dagknapp.stor.miss .dk-ord,.dagknapp.stor.dark .dk-ord,.dagknapp.stor.over .dk-ord,.dagknapp.stor.forbud .dk-ord{color:var(--muted);font-weight:500}
   .dk-best{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);font-weight:800;letter-spacing:var(--sperr);text-transform:uppercase}
+  .dk-grunn{width:100%;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
   .dk-sub{font-size:.9375rem;line-height:1.35;color:var(--ink)}
   .dk-sub + .dk-sub{color:var(--muted)}
   /* «Time for time»: tabellen med etikettkolonne på 144 px (timestripe.js, {bred: true}) */
   .tstripe.bred{display:grid;grid-template-columns:144px minmax(0,1fr);margin-top:var(--s3);cursor:default}
-  .tetik{display:grid;grid-template-rows:28px 50px 54px 28px 38px 72px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
-  .tetik span{display:flex;align-items:center;gap:4px}
+  .tetik{display:grid;grid-template-rows:28px 50px 76px 28px 38px 72px;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1.2;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
+  .tetik span{justify-self:start;display:flex;align-items:center;gap:4px}
   .tetik span:last-child{flex-direction:column;align-items:flex-start;justify-content:center}
   .tetik small{font-size:inherit;text-transform:none;letter-spacing:0}
   .tetik small.u{font-family:var(--body);font-size:.75rem}
-  .tflate{position:relative;cursor:pointer}
+  .tflate{cursor:pointer}
+  .tstripe.bred .ideal span{left:auto;right:100%;padding:0 8px 0 0}
+  .tstripe.bred .tnote{grid-column:2}
   .tstripe.bred .tikk{height:28px;font-size:var(--t-etikett);line-height:28px}
   .tstripe.bred .tikk em{line-height:28px}
-  .tstripe.bred .skygge{top:28px;height:242px}
+  .tstripe.bred .skygge{top:28px;height:264px}
   .tstripe.bred .segs{margin-top:8px}
-  .tstripe.bred .svl{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:44px;margin-top:10px}
-  .tstripe.bred .svl b,.tstripe.bred .sfr b{font-family:var(--mono);font-stretch:75%;font-size:var(--t-etikett);line-height:1;font-weight:700}
-  .tstripe.bred .svl i{display:block;width:44%;background:var(--outline)}
+  .tstripe.bred .kolonner{--srf-bunn:126px}
+  .tstripe.bred .srf{gap:4px;height:66px;margin-top:10px}
+  .tstripe.bred .srf b,.tstripe.bred .sfr b{font-family:var(--mono);font-stretch:75%;font-size:var(--t-etikett);line-height:1;font-weight:700}
   .tstripe.bred .sfr{display:flex;align-items:center;justify-content:center;height:24px;margin-top:4px}
   .tstripe.bred .vnd{height:34px;margin-top:4px}
   .tstripe.bred .vnd b{font-size:var(--t-etikett)}
-  .tstripe.bred .tk.mork .svl,.tstripe.bred .tk.mork .sfr{color:var(--dim)}
-  .tstripe.bred .tk.mork .svl i{opacity:.6}
+  .tstripe.bred .tk.mork .srf,.tstripe.bred .tk.mork .sfr{color:var(--dim)}
   .tstripe.bred .tide{height:64px}
-  .tstripe.bred .ring{top:28px;height:170px}
-  .tstripe.bred .naalinje{top:28px;height:242px}
+  .tstripe.bred .ring{top:28px;height:192px}
+  .tstripe.bred .naalinje{top:28px;height:264px}
   .spw .sp-tilbakena{margin-top:var(--s3)}
   .spw .hvorfor{max-width:880px;margin-top:var(--s4)}
   /* «Spotten» og «Om spotten» */
@@ -837,14 +862,16 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .minikart .u{stroke:var(--bg);fill:var(--bg);stroke-linecap:round;stroke-linejoin:round}
 .minikart line.u{stroke-width:6}
 .minikart path.u{stroke-width:3}
-.minikart .svell{color:var(--signal)}
+.minikart .svell{color:var(--ink)}
+.minikart .svell.hoy{color:var(--signal)}   /* korall bare når timen er 4 eller mer (fase 3 punkt 4) */
 .minikart .svell.miss{color:var(--swell-miss)}
 .minikart .svell line:not(.u){stroke:currentColor;stroke-width:2.5;stroke-linecap:round}
 .minikart .svell path:not(.u){fill:currentColor}
 .minikart .svell.miss line:not(.u){stroke-dasharray:4 4}
 .minikart .vind line:not(.u){stroke:var(--ink);stroke-width:1.8;stroke-linecap:round}
 .minikart .vind path:not(.u){fill:var(--ink)}
-.minikart .buer .bue{fill:none;stroke:var(--signal);stroke-width:1.6;stroke-linecap:round;opacity:.9;animation:mk-rull 4.2s linear infinite}
+.minikart .buer .bue{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9;animation:mk-rull 4.2s linear infinite}
+.minikart .buer.hoy .bue{stroke:var(--signal)}
 .minikart.still .buer .bue{animation:none}
 .minikart .spot{fill:var(--ink);stroke:var(--bg);stroke-width:1.5}
 .minikart .komp text{font-family:var(--mono);font-stretch:87.5%;font-size:17px;font-weight:700;fill:var(--ink)}   /* font-size overstyres til ekte 12 px av docs/js/svgtekst.js (data-tekst-px) */
@@ -887,7 +914,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .sp-inn{padding-top:10px}
 .sp-meta,.sp-merker{margin:0}
 .sp-merker{margin-top:4px;color:var(--ink)}
-.kredit{margin:6px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:.6875rem;line-height:1.4;color:var(--muted)}
+.kredit{margin:6px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:.6875rem;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}   /* stor tekst: «Copernicus/Kartverket» brytes i stedet for å gå ut av kolonnen (feiljegeren, funn 18) */
 .kredit.liten{margin-top:10px}
 .kredit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 /* den ene linja under toppbildet: linja er 44 px høy, og lenka fyller høyden (44 px trykkflate uten å ligge over nabotekst) */
@@ -895,7 +922,21 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .kredit.linje a{display:inline-flex;align-items:center;min-height:44px}
 .kredit.linje + .dom{margin-top:6px}
 .kilder.foto{margin-top:8px}
+/* sikkerheten på egen linje på 44 px, og 14 px til neste linje, så trykkflatene til sikkerheten og «kystmodell 100 m» ikke ligger
+   oppå hverandre (feiljegeren, runde 2 viktig 1) */
+.sp-inn .kilder.sikk{margin-top:18px;line-height:0}   /* 32 px til teksten */
+.kilder.sikk + .kilder{margin-top:14px}
+.kilder.sikk .forklar{margin:0}
 .kilder a{color:inherit;text-underline-offset:2px}
+/* S38 2 a: etiketter som åpner forklaringsarket. Trykkflaten er 44 px høy (14 px over og under en 16 px linje) uten å
+   flytte teksten, og prikkete strek under viser at de kan trykkes. Fokus: den felles ringen (:root :focus-visible). */
+.forklar{all:unset;box-sizing:border-box;position:relative;z-index:1;display:inline-block;min-width:44px;padding:14px 0;margin:-14px 0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;text-decoration:underline dotted;text-decoration-color:var(--muted);text-decoration-thickness:1px;text-underline-offset:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.forklar:hover{text-decoration-style:solid;text-decoration-color:currentColor}
+.forklar:active{background:var(--trykk)}
+.kilder .forklar,.spw-om .forklar{line-height:16px}
+.forklar .fk{display:inline}   /* teksten selv: målt for seg, så den store trykkflaten ikke regnes som tekst som overlapper */
+.maal > .etikett{min-width:0}
+.maal .forklar{max-width:100%;overflow-wrap:anywhere}   /* med 200 % tekst er «TIDEVANN» bredere enn kolonnen: brytes i stedet for å gå inn i tallet */
 .dom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:20px}
 .dom-v{display:flex;align-items:flex-end;gap:12px;min-width:0}
 .dom .t-tall{color:var(--rc-tall)}
@@ -907,25 +948,37 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .dom-setn{margin:20px 0 0;font-size:1.125rem;line-height:1.444}
 .fakta-linje{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 0;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink)}
 .sek-spot > .tdom{display:inline-flex;align-items:center;gap:8px}
-.tdom .tapt{display:inline-flex;align-items:center;gap:5px}
-.tdom .tapt i{box-sizing:border-box;width:10px;height:10px;border:1.5px dashed var(--signal)}
-.tdom .tapt i.tv{border-color:var(--ink)}   /* tapt på tidevann: blekk, ikke korall (S33 c) */
-.tdom .tapt + .tapt{margin-left:2px}
 .tdom .to{font-weight:700;color:var(--ink)}
+/* årsaken og tapte poeng på egen linje (designrevisjon fase 3 punkt 4 og 5): stiplet blekk, ikke korall */
+.tgrunn{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin:calc(-1 * var(--s2)) 0 0;color:var(--ink);font-weight:700}
+.tgrunn .tapt{display:inline-flex;align-items:center;gap:5px}
+.tgrunn .tapt i{box-sizing:border-box;width:10px;height:10px;border:1.5px dashed var(--ink)}
+.tgrunn .sk{white-space:pre}
+.dom-grunn{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:var(--lh-etikett);font-weight:700;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--ink)}
 .ik{flex:none;margin-right:6px;vertical-align:-2.5px;color:var(--muted)}
 .ik .pk{fill:var(--bg)}
 .ik.sv{color:var(--swell-miss)}
-.ik.sv.inne{color:var(--signal)}
+.ik.sv.inne{color:var(--ink)}
+.ik.sv.hoy{color:var(--signal)}   /* korall bare når timen er 4 eller mer (fase 3 punkt 4) */
 .svell{margin-top:18px}
 .svell .t-svell{margin-top:6px}
 .svell .t-svell small{margin-left:4px;font-size:1.25rem;font-weight:700}
+/* Tallet står alltid på én linje («3,0–3,7 m» ble «3,0–3,» og «7 m» ved 1024 til 1280 px, feiljegeren 25.11.2026 funn 1).
+   Skriften følger kolonnen: --n er antall tegn (spot.js), et tegn er høyst .54 em (målt .45 til .53), og «m» tar 2 rem. */
+.svell.surf{container-type:inline-size}
+.t-surf{white-space:nowrap;--surf:var(--t-svell);font-size:clamp(40px, 2.5rem, 48px)}   /* reserve for nettlesere uten cqi (Safari før 16): 40 px, opptil 48 ved stor tekst, så tallet er større enn radene (runde 3 l) */
+.t-surf.spenn{font-size:clamp(30px, 1.875rem, 46px)}   /* reserven for et spenn («10,2–13,0») holder seg i kolonnen */
+@supports (width: 1cqi){ .t-surf,.t-surf.spenn{font-size:min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))} }
+.t-surf.spenn{--surf:calc(var(--t-svell) * .75)}   /* et spenn («1,4–1,7») har dobbelt så mange tegn */
+.t-surf.mork,.t-surf.ingen{color:var(--muted)}
 .svell-sub{margin-top:4px;font-size:1rem;line-height:1.375}
-.maalene{display:grid;gap:10px;margin-top:16px}
+.maalene{display:grid;margin-top:16px}
+.maal:not(:last-child){box-sizing:border-box;min-height:45px;padding-bottom:10px}   /* en rad er minst 44 px (45, for etiketten kan stå en brøkdel av en piksel lavere), så trykkflatene bak etikettene ikke ligger oppå hverandre (feiljegeren 25.11.2026, funn 16) */
 .maal{display:grid;grid-template-columns:110px auto 1fr;align-items:baseline;column-gap:12px}
 .maal .mv{font-family:var(--mono);font-stretch:87.5%;font-size:1.375rem;line-height:1.1;font-weight:800;white-space:nowrap}
 .maal .mv small{margin-left:3px;font-size:.8125rem;font-weight:700}
 .maal .mv .ordv{font-size:.8125rem;letter-spacing:var(--sperr);text-transform:uppercase}
-.maal .mu{min-width:0;font-size:1rem;line-height:1.375;color:var(--muted)}
+.maal .mu{min-width:0;overflow-wrap:anywhere;font-size:1rem;line-height:1.375;color:var(--muted)}
 .maal .mu-pref{grid-column:2 / -1;font-size:1rem;line-height:1.375;color:var(--ink)}   /* spotens tidevannsregel på egen linje under TIDEVANN-raden (mobil, S33 a) */
 /* dagvelgeren: ukedag, dagens tall i ruta fra ukeoversikten, dato */
 .dagvelger{display:flex;gap:2px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
@@ -938,12 +991,39 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 @media (max-width: 1023px) and (max-height: 700px){
   .sp-inn .dom-setn{margin-top:var(--s2);font-size:1rem;line-height:1.375}   /* 16/22, nedre ende av SPEC §3 «16–18/22–26» */
   .sp-inn .fakta-linje{margin-top:var(--s2)}
-  .sp-inn #spOver .sek-spot{margin:var(--s3) 0 var(--s2)}
-  .sp-inn #spOver .svell{margin-top:var(--s2)}
+  .sp-inn #spOver .sek-spot{margin:var(--s2) 0 var(--s2)}
+  .sp-inn #spOver .svell{margin-top:var(--s1)}
   .sp-inn #spOver .svell .t-svell{margin-top:var(--s1)}
-  .sp-inn #spOver .maalene{gap:var(--s1);margin-top:var(--s2)}   /* s1 fra 24.11.2026: «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer */
+  /* fase 3: kroppsmålet ved siden av det store tallet, og tallet litt mindre, så tidevannsraden står over fanelinja */
+  .sp-inn #spOver .svell.surf{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:var(--s3)}
+  .sp-inn #spOver .svell.surf > .etikett{width:100%}
+  .sp-inn #spOver .svell.surf .t-surf{--surf:2.5rem;line-height:1}
+  .sp-inn #spOver .svell.surf .t-surf.spenn{--surf:2.25rem}
+  .sp-inn #spOver .maal .mu,.sp-inn #spOver .maal .mu-pref{font-size:.875rem;line-height:1.286}   /* 14/18: færre linjeskift i radene */
+  .sp-inn #spOver .svell.surf .svell-sub{margin-top:0}
+  .sp-inn #spOver .maalene{margin-top:var(--s2)}
+  .sp-inn #spOver .maal:not(:last-child){padding-bottom:var(--s1)}   /* s1 fra 24.11.2026: «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer */
+  /* Lang sjø (S40): etiketten «LANG SJØ UTE» går over to linjer, og grunnlinja til en knapp over to linjer er den siste
+     linja, så tallet ble skjøvet 7 px ned. Her står etiketten øverst og tallet på første linje, uten luft under raden:
+     12 px lavere, så tidevannet står over fanelinja også i en time med lang sjø (feiljegeren, runde 3 m) */
+  .sp-inn #spOver .maal.lang{padding-bottom:0}
+  .sp-inn #spOver .maal.lang > .etikett{grid-row:1 / span 2;align-self:start;padding-top:9px}
 }
-@media (max-width: 379px){ .sp-inn .maal{grid-template-columns:92px auto 1fr} }
+@media (max-width: 379px){ .sp-inn .maal{grid-template-columns:104px auto 1fr} }
+/* iPhone SE (375 x 548 i Safari, 320 x 568): radene på 44 px skyver tidevannet under fanelinja etter dagbytte (Farstadsanden,
+   målt 17 px). Da går det at KL.-blokka synes, foran, og radene er så høye som teksten. Trykk på ordet treffer fortsatt riktig. */
+@media (max-width: 379px) and (max-height: 600px){ .sp-inn #spOver .maal:not(:last-child){min-height:0} }
+/* 320 x 568 (iPhone SE, første utgave): tidevannsregelen får hele bredden og kroppsmålet plass ved siden av tallet, så
+   KL.-blokka står over fanelinja etter dagbytte også her (feiljegeren 25.11.2026, funn 20) */
+@media (max-width: 339px) and (max-height: 700px){
+  .sp-inn .dom-setn{font-size:.875rem;line-height:1.286}   /* 14/18: setningen på én linje, som forklaringene i radene */
+  .sp-inn #spOver .maal .mu-pref{grid-column:1 / -1}
+  .sp-inn #spOver .svell.surf{column-gap:var(--s2)}
+  .sp-inn #spOver .svell.surf .t-surf{--surf:2rem}
+  .sp-inn #spOver .svell.surf .t-surf.spenn{--surf:1.875rem}
+  .sp-inn #spOver .svell.surf .svell-sub{font-size:.875rem;line-height:1.286}
+  .sp-inn #spOver .maal.lang > .etikett{grid-row:auto;align-self:auto;padding-top:0}   /* merknaden om lang sjø har hele bredden her, så etiketten står som før */
+}
 .dagvelger::-webkit-scrollbar{display:none}
 .dagknapp{all:unset;box-sizing:border-box;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;min-height:44px;padding:4px 4px 6px;border-bottom:3px solid transparent;cursor:pointer}
 .dagknapp .ud,.dagknapp .dt{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
@@ -951,12 +1031,12 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .dagknapp[aria-pressed="true"]{border-bottom-color:var(--ink)}
 .dagknapp[aria-pressed="true"] .ud{font-weight:800;color:var(--ink)}
 .dagknapp .rute.over{box-shadow:inset 0 0 0 1px var(--hair)}
-/* timestripa (docs/js/timestripe.js): tikk 16, strek 4, segmenter 38, vind 30, tidevann 52 */
+/* timestripa (docs/js/timestripe.js): tikk 16, strek 4, segmenter 38, surf 48, vind 30, tidevann 52 */
 .tstripe{position:relative;margin-top:14px;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none}
 .tstripe .tikk{position:relative;display:grid;height:16px;font-family:var(--mono);font-stretch:87.5%;font-size:.75rem;line-height:14px;color:var(--muted)}
 .tstripe .tikk span{text-align:center;white-space:nowrap}
 .tstripe .tikk em{position:absolute;top:0;transform:translateX(-50%);font-style:normal;font-weight:800;text-transform:uppercase;color:var(--ink)}
-.tstripe .skygge{position:absolute;left:0;right:0;top:16px;height:147px;display:grid;pointer-events:none}
+.tstripe .skygge{position:absolute;left:0;right:0;top:16px;height:201px;display:grid;pointer-events:none}
 .tstripe .skygge .natt{background:var(--night)}
 .tstripe .skygge .skum{background:var(--dusk)}
 .tstripe .kolonner{position:relative;display:grid}
@@ -968,8 +1048,36 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .segs i{background:var(--unreached)}
 .tstripe .segs i.pa{background:var(--ink)}
 .tstripe .segs.r-4 i.pa,.tstripe .segs.r-5 i.pa{background:var(--signal)}
-.tstripe .segs i.tapt{box-sizing:border-box;background:none;border:1px dashed var(--signal)}
-.tstripe .segs i.tapt.tv{border-color:var(--ink)}   /* tapt på tidevann: blekk, ikke korall (S33 c) */
+.tstripe .segs i.tapt{box-sizing:border-box}
+/* tapte poeng: stiplet blekk, og bare på valgt time (designrevisjon fase 3 punkt 4); teksten står i KL.-blokka */
+.tstripe .tk.valgt .segs i.tapt{background:none;border:1px dashed var(--ink)}
+/* surfehøyden ved spoten: stolpe med fast skala 0 til max_height, tynn linje ved ideal_height */
+.tstripe .kolonner{--srf-bunn:101px}
+.tstripe .srf{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:48px;margin-top:6px}
+.tstripe .srf .sbx{display:flex;align-items:flex-end;justify-content:center;width:100%;height:48px;box-shadow:inset 0 -1px 0 var(--hair)}
+.tstripe .srf .sbx i{display:block;width:44%;background:var(--ink)}
+.tstripe .srf .sbx.miss{background:repeating-linear-gradient(45deg,var(--hatch) 0 1.5px,transparent 1.5px 5px)}
+.tstripe .tk.mork .srf .sbx i{background:var(--dim)}
+/* totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde) er sjøen, ikke surfehøyden: omriss, ikke fylt stolpe (S45 2) */
+.tstripe .srf.sjo .sbx i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tstripe .tk.mork .srf.sjo .sbx i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--dim)}
+.tstripe.bred .srf.sjo b{color:var(--muted)}
+/* forklaringen av omrisset under stripa, på dager med sjø-stolper */
+.tstripe .tnote{display:flex;align-items:center;gap:8px;margin:var(--s2) 0 0;color:var(--muted);text-transform:none;letter-spacing:0}
+.tstripe .tnote i{flex:none;width:9px;height:14px;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tstripe .ideal{position:absolute;left:0;right:0;top:calc(var(--srf-bunn) - var(--y));height:0;border-top:1px dashed var(--muted);pointer-events:none}
+/* tallet står i margen til høyre på linje med streken, så det aldri dekker en stolpe (feiljegeren, funn 10). Nettsiden: i etikettkolonnen til venstre */
+.tflate{position:relative}
+.tstripe.med-ideal:not(.bred) .tflate{margin-right:2.75rem}
+/* stor tekst på mobil: margen ville klemt timene, så tallet står over stripa til høyre med en bit av streken foran */
+#spStripe{container-type:inline-size}
+@container (max-width: 15rem){
+  .tstripe.med-ideal:not(.bred){margin-top:2rem}
+  .tstripe.med-ideal:not(.bred) .tflate{margin-right:0}
+  .tstripe:not(.bred) .ideal span{left:auto;right:0;top:calc(var(--y) - var(--srf-bunn) - 16px - 1.5rem);transform:none}
+  .tstripe:not(.bred) .ideal span::before{content:"";display:inline-block;width:1.25rem;margin-right:4px;border-top:1px dashed var(--muted);vertical-align:middle}
+}
+.tstripe .ideal span{position:absolute;left:100%;top:0;padding-left:4px;transform:translateY(-50%);white-space:nowrap;font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;color:var(--muted)}
 .tstripe .segs.miss{background:repeating-linear-gradient(45deg,var(--hatch) 0 1.5px,transparent 1.5px 5px)}
 .tstripe .vnd{display:flex;flex-direction:column;align-items:center;gap:4px;height:30px;margin-top:8px}
 .tstripe .vnd b{font-family:var(--mono);font-stretch:75%;font-size:.75rem;line-height:1;font-weight:700}
@@ -982,9 +1090,9 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .tsvg .eks{fill:var(--ink)}
 .tstripe .tsvg text{font-family:var(--mono);font-stretch:87.5%;font-size:12px;font-weight:700;text-transform:uppercase;fill:var(--ink);stroke:var(--bg);stroke-width:3px;paint-order:stroke}
 .tstripe .tsvg .valgt{fill:var(--bg);stroke:var(--ink);stroke-width:2}
-.tstripe .ring{position:absolute;top:16px;height:87px;box-shadow:inset 0 0 0 2px var(--ink);pointer-events:none}
+.tstripe .ring{position:absolute;top:16px;height:141px;box-shadow:inset 0 0 0 2px var(--ink);pointer-events:none}
 .tstripe:focus-within .ring{outline:2px solid var(--focus);outline-offset:2px}
-.tstripe .naalinje{position:absolute;top:16px;width:1px;height:147px;background:var(--ink);pointer-events:none}
+.tstripe .naalinje{position:absolute;top:16px;width:1px;height:201px;background:var(--ink);pointer-events:none}
 @media (prefers-reduced-motion: no-preference){.tstripe .ring{transition:left 160ms ease}}
 .sp-tilbakena:empty{display:none}
 .sp-tilbakena{margin-top:12px}
@@ -1001,7 +1109,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .skive .fl{fill:none;stroke:var(--ink);stroke-width:3;opacity:.45}
 .skive .sv,.skive .vd{transform-origin:80px 80px;transform-box:view-box}
 .skive .sv{color:var(--swell-miss)}
-.skive .sv.inne{color:var(--signal)}
+.skive .sv.inne{color:var(--ink)}
+.skive .sv.hoy{color:var(--signal)}   /* korall bare når timen er 4 eller mer (fase 3 punkt 4) */
 .skive .sv .u{fill:none;stroke:var(--bg);stroke-width:9;stroke-linecap:square}
 .skive .sv polygon{fill:currentColor;stroke:var(--bg);stroke-width:2.5;stroke-linejoin:round}
 .skive .sv .p{fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:square}

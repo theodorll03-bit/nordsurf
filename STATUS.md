@@ -1,5 +1,67 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 3, runde 5: feiljegerens funn i runde 4, 26.11.2026
+
+Gren `design/revisjon-fase3`, oppå `20f48a7`, med ny main flettet inn (`8b8a241`: PR 58 og nye varsler; konflikt bare i STATUS.md og `docs/sw.js`). Bare visning: `fetcher/rating.py` er mains. Lokalt, ikke pushet. Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase3-r4-2026-11-26.md`.
+
+- **Viktig 1:** raden over stolpene på PC heter «SJØ m» når alle dagens lyse tall er totalhøyden, «SURF / SJØ m» når de er blandet, ellers «SURF m». Under stripa står «Omriss: sjøen ved spoten, ikke surfehøyden» når dagen har en sjø-stolpe, på mobil og PC. Sett på skjerm: Persfjord 25.11 «SJØ m», Steinkrøssa 25.11 «SURF / SJØ m».
+- **Viktig 2:** ikke endret (sendes som spørsmål). Bare streken er borte: «Nå Treffer ikke», ikke «Nå Treffer ikke –».
+- **d:** «(foreløpig)» i overskriften følger merkelappen i raden (status eller `andel_forelopig`), så Russelv og Lenangsøyra får den også. Hovedbildet på PC har «Foreløpig» i linja over navnet.
+- **j og k:** tallraden på PC har «–» i mørke timer (stolpen står, dempet). «–» i KL.-blokka på PC er en tynn strek (40 px, vekt 500).
+- **c:** endringen i `surfHeadline()` og testen av den er tatt ut igjen. `detailsGrid()` er død kode, men en annen test (tidevannscella) bruker den, så selve ryddingen hører til fase 4.
+- **i:** status hemmelig tas bort ett sted, der spotlista leses inn (`utenHemmelige()` i `app.js`), ikke i `overskrift()`. Publiseringen er fortsatt det egentlige vernet.
+- La stå: a, b, e, f, g og h.
+- **Breivikeidet 26.11 kl. 09** med varselet 25.11 kl. 23Z fra tidevannsgrenen: «0 SMÅTT», «−2 TIDEVANN», «SURF 0,6–0,8 m». Ordregelen er mains og er ikke endret her.
+- **Fysikk-kontrolløren (runde 5):** godkjent, ingen stoppere. Kosmetisk, ikke rettet: `ensureSpot()` kopierer `status` fra detaljfila, så det ekstra vernet mot status hemmelig har et teoretisk hull (publiseringen skriver ingen slike filer).
+- **Tester:** alle 17 testfilene og `tools/kontrast.py` er grønne. `test_spotside_browser.py` brukte 256 s av 300.
+- **Bilder:** `fase-3/etter/r5_*`.
+
+## Designrevisjonen fase 3, runde 4: S45 kodet, 26.11.2026
+
+Gren `design/revisjon-fase3`, oppå `26f8b03`, med main flettet inn (bare botens varsler). Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 13.10 (S45). Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokalt, ikke pushet.
+
+- **1 a:** «Ikke surfbart» er ordet ved 0, med årsaken på linja under. Det var kodet fra før. Bare kommentaren i `strings.js` er rettet.
+- **2 a med tillegg:** der regel (c) viser totalhøyden ved spoten (Stormsjø med BarentsWatch-høyde, og Blåst ut når surfehøyden er 0), heter tallet «SJØ», ikke «SURF», og har ikke kroppsmål. Ny funksjon `visesSomSjo()` i `app.js`, brukt alle steder tallet står: KL.-blokka, lister («sjø 2,7 m»), regionraden («Nå Stormsjø, sjø 1,4 m»), dagkolonnene og tabellen på PC, kortet i Utforsk (feltet heter «Sjø»), «Hvorfor», skjermlesertekstene og timestripa (stolpen er et omriss, tallet på PC dempet). Etiketten «SJØ» åpner arket om signifikant høyde. Persfjord 25.11 kl. 12 viser nå «SJØ 2,7 m» uten kroppsmål (sett på skjerm, varselet 24.11 kl. 21Z).
+- **3 a:** en ny spot (foreløpig, første 14 dager) nevnes i overskriften på Hjem når den har minst 2 og alle andre er under 2. Spots med status foreløpig har «(foreløpig)» bak navnet i overskriften. Hovedbildet på PC-forsiden følger samme regel (fysikk-kontrollørens funn). En spot med forbud løftes ikke fram, og status hemmelig filtreres bort i `overskrift()`. Låst med 14 nye oppdiktede tilfeller i testen.
+- **4 a:** havfargen er fortsatt ikke i appen. Ny mørketidsfarge til prøve: #2F9BA2, 4,54:1 mot bakgrunnen #002941 (regnet med `tools/kontrast.py`). Bilder i `privat/design-b4/revisjon-2026-11-21/fase-3/havfarge-r2/`. Nytt spørsmål til Theodor.
+- **5 a:** mørke timer viser «SURF –» uten tall og uten ord under i KL.-blokka. Mangler høyden i dataene, står «Mangler data» også i en mørk time. Timestripa viser fortsatt høyden som dempet stolpe (småvalg 4 a). SPEC er rettet.
+- **Småvalgene** følger anbefalingene i rapporten, og alle fem var «som nå»: ingen kodeendring.
+- **Feiljegerens k til n:** k) oppsettet for stor tekst på PC slår inn fra 48rem (før 45), målt uten ordbrudd ved 175 % på 1360 og 1440 og 150 % på 1200. l) reserven uten `cqi` er 40 til 48 px (spenn 30 til 46), større enn radene og minst 12 px inne i kolonnen ved 100 til 200 % på 320 til 1440 px. m) raden «LANG SJØ UTE» er 11 px lavere på lave skjermer: med lang sjø i alle timer står KL.-blokka over fanelinja i 378 av 378 dagbytter på 375 × 548 og på 320 × 568 (før 1 av 378 under på 375 × 548). n) kommaet i STATUS.
+- **Fysikk-kontrolløren (26.11):** godkjent, ingen stoppere. Viktig funn rettet: hovedbildet på PC-forsiden hadde den gamle regelen for nye spots. Kosmetisk, ikke rettet: død kode (`SpotGraf.html`, `heightRangeText`, `detailsGrid`) viser høyde uten «sjø» hvis den tas i bruk igjen.
+- **Bilder:** `fase-3/etter/r4_*` (390 og 1280 px, dag og mørketid).
+
+Gjenstår: feiljegeren må se på rettingen før fletting. Åpent for Theodor: havfargen (nytt spørsmål med bilder), og funn 11, 12 og 19 fra runde 2, som ikke hadde noen anbefaling. Tvil står i rapporten under «Runde 4 (S45)».
+
+## Designrevisjonen fase 3: riktig tall størst, 25.11.2026
+
+Gren `design/revisjon-fase3` fra `e03a61d`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 3 punkt 1 til 5 (godkjent av Theodor 21.11), pluss S44 3, S38 2 a og feiljegerens funn fra fase 2 runde 5. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokale commits, ikke pushet: `44fb094` (fase 3), `f89294d` (S38 2 a), `f68304e` (feiljegerens funn fra fase 2), `e80d400` (fletting av main med fase 2), `a8f3da5` (runde 2, feiljegerens funn i fase 3) og `6e7255d` (runde 3). Bilder før og etter: `privat/design-b4/revisjon-2026-11-21/fase-3/` (`for/`, `etter/`, `havfarge/`). Rapport: `privat/kontor/observasjoner/utvikler-design-fase3-2026-11-25.md`.
+
+- **1. Det store tallet i KL.-blokka er surfehøyden ved spoten** (regel (c), samme som listene), med kroppsmålet under. SVELL UTE er en rad over VIND og TIDEVANN. Flatt og Treffer ikke: «–» stort og ordet under. Mørk time: tallet i grått, og ordet «Flatt» står ikke der.
+- **2.** Dommen har dagen under ordet («I DAG»), KL.-blokka har «KL. hh».
+- **3. Lister og dagkolonner** viser surfehøyden, med «–» ved Flatt og Treffer ikke: mobil-Hjem, PC-forsiden (kolonnen heter SURF), Søk, Utforsk og «Neste 7 dager» på PC-spotsiden.
+- **4. Timestripa:** surfehøyden som stolper i blekk, fast skala 0 til `max_height`, stiplet linje ved nedre grense i `ideal_height`. Tapte poeng stiplet blekk, bare på valgt time. Svellpila (KL.-blokka, skiva, minikartet) er korall bare når timen har 4 eller mer.
+- **5.** Ordet etter tallet er karakteren (ved 0: «Ikke surfbart», utenom Flatt og Smått), årsaken står på egen linje. Overskriften gir råd på dårlige dager: «Lite å hente i dag. Unstad er best, lørdag.»
+- **S44 3:** Søk og Utforsk viser «Mørkt» uten tall i mørke timer.
+- **S38 2 a:** etikettene i KL.-blokka, ved skiva og i kildelinja åpner forklaringsarkene (44 px trykkflate, fokusring, Escape). På 375 × 548 står KL.-blokka 8 px over fanelinja etter dagbytte (målt med varselet 24.11 kl. 21Z for de 27 spotene, 378 bytter per størrelse, også 320 × 568 og 390 × 663: 0 under fanelinja). Før var Unstad under på 13 av 14 på 375 × 548, verst 53 px.
+- **Feiljegerens funn:** «usikkert» på dagens ord i regionraden, og « - » som tankestrek er byttet ut. Runde 1 overså fire steder i app.js (kalibreringen i Logger). De er rettet i runde 2, og testen leser nå filene i `docs/js` og HTML-filene i `docs/`. Tekster fra henteren er ikke sjekket.
+- **Runde 2 (`a8f3da5`), feiljegerens funn:**
+  - 1: det store tallet står på én linje, og skrifta følger kolonnebredden (målt på 17 bredder fra 320 til 1440 px).
+  - 2: kortet i Utforsk viser «–» under SURF i mørke timer.
+  - 3: lista, KL.-blokka og stripa bruker samme funksjon (`hoydeVist` i `ui.js`). 5400 timer, 27 spots: 0 ulike.
+  - 5: rådet «Lite å hente i dag» vises ikke når lyset er over på én av spotene.
+  - 6: svell ute som mangler, gir raden «–» og «Mangler data». 7: skravur i stripa når høyden mangler i en kjent time.
+  - 8, 9, 10, 14, 15, 16, 17, 18 og 20: tankestreker, teksten i arket, tallet ved streken (nå i margen), skjermlesertekst, Tab i arkene, rader på minst 44 px, «usikkert», 200 % tekst og 320 × 568. Unntak: under 380 × 600 er radene lavere (minst 28 px), ellers går KL.-blokka under fanelinja på 375 × 548.
+- **Runde 3 (`6e7255d`):** sikkerheten på spotsiden (mobil) står på egen linje. Trykk midt i og 20 px over og under «Høy sikkerhet · kystmodell 100 m» og «kystmodell 100 m» åpner hvert sitt ark (målt på 320, 375 × 548, 390, 393, 402, 412, 430 og 768 px). «Mangler data» står under «–» når høyden mangler. Dommen sier «usikkert» ved lang sjø. Ved 200 % tekst på PC er surfetallet klart størst (129 px mot 44 px i radene på 1024), og tabellen på forsiden er ikke bredere enn på main (1242 mot 1246 px). Nettlesere uten `cqi` får 40 px.
+- **Havfargen** (`--god` for 3) er bare prøvd med injisert CSS og skjermbilder i `fase-3/havfarge/`. Den er ikke i appen.
+
+Tester: `fetcher/test_spotside_browser.py` oppdatert (det store tallet, «–» ved Flatt og Treffer ikke, karakteren og årsaken, stolpene, tapt bare på valgt time, overskriftsrådet, Søk i mørket, forklaringsarkene, 375 × 548, «usikkert», tankestreker). Hele suiten: `SUM: alle ok (17 filer)`.
+
+Gjenstår:
+- Ikke pushet. Feiljegeren har sett runde 1 og 2, men ikke runde 3. Fysikk-kontrolløren har ikke sett endringen.
+- Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19, og runde 2 d, g og h. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
+- Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
+- Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
+
 ## Breivikeidet: tidevannsregelen har fått et gulv, 26.11.2026
 
 Gren `fiks/breivikeidet-tidevann` fra main `f53fe62`. Oppdrag: svar.md 26.11.2026 kl. 13.10, punkt 1 til 4. Kilde: observasjon 26.11.2026, Theodor («Ikke surfbart før 10-10:30 pga lavvann», kl. 09.13 fra stranda «Ganske flatt»). Committet lokalt, ikke pushet, ingen PR ennå.

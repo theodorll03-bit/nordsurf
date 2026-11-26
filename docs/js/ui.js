@@ -47,11 +47,12 @@
   const forbudLinje = (s)=>{ const rs = forbudRestr(s); return rs.length ? rs.map(r=> `${r.type==="surfeforbud" ? "Surfing" : "Ferdsel"} forbudt ${periodeTekst(r)}`).join(" · ") : null; };
   // nå-visningen i lister og kort: i forbudsperioden ingen vurdering, ordet «Surfing forbudt nå», ingen høyde.
   // `rute` sier hvorfor ruta er tom: «forbud», «miss» (tallet mangler) eller «mork» (mørk time: sola under −6°,
-  // ingen vurdering på skjermen - SPEC §5; høyden står, ordet er «Mørkt»). Ellers null, og ruta viser tallet.
+  // ingen vurdering på skjermen - SPEC §5). Mørke timer får ingen høyde heller, raden sier bare «Mørkt» (S44 3: Søk og
+  // Utforsk som Hjem, der regionraden sier «Nå Mørkt»). Ellers null, og ruta viser tallet.
   function naaVisning(s, h){
     if(forbudNa(s)) return {st: 0, rute: "forbud", oh: {ord: "Surfing forbudt nå", hoyde: null, forbud: true}};
     if(!known(h)) return {st: 0, rute: "miss", oh: ordOgHoyde(h)};
-    if(mork(h)) return {st: 0, rute: "mork", oh: {ord: "Mørkt", hoyde: ordOgHoyde(h).hoyde}};
+    if(mork(h)) return {st: 0, rute: "mork", oh: {ord: "Mørkt", hoyde: null}};
     return {st: stars(h), rute: null, oh: ordOgHoyde(h)};
   }
   // spotsiden: timene i forbudsperioden merkes (_forbud) i en kopi - grafen, dagfanene og kortene viser da ingen
@@ -62,7 +63,8 @@
   }
   const nyForelopig = (s)=> s.status==="forelopig" && !(s.forelopig_fra && Date.now() - Date.parse(s.forelopig_fra) >= FORELOPIG_DAGER*864e5);
   const iBesteOkt = (s, t)=> !nyForelopig(s) && !forbudNa(s, t);
-  const merker = (s)=> [s.status==="forelopig" || s.andel_forelopig ? STR.forelopig : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
+  const erForelopig = (s)=> s.status==="forelopig" || !!s.andel_forelopig;   // merkelappen «Foreløpig»: ny spot, eller en andel satt uten observasjon
+  const merker = (s)=> [erForelopig(s) ? STR.forelopig : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
   const omrMerker = (s)=> [s.area, ...merker(s)].filter(Boolean).join(" · ");
   const stedText = (s)=>{ const r = regionOf(s); return [s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r), ...merker(s)].join(" · "); };
   const regions = ()=> (DATA.regions || []).map(r=>r.name);
@@ -94,9 +96,29 @@
   const spotById = (id)=> DATA.spots.find(x=>x.id===id);
   const numHtml = (t)=> esc(t).replace(/\d[\d,.–]*/g, m=>`<span class="num">${m}</span>`);
   const min5 = (n)=> Math.min(5, n||0);
-  function heightText(h){
-    // «1,6–2,1 m» (høyden som vises–settene); regel (c) via Spot.visHoyde; tallet mangler → null
+  // Høyden som vises, {a, b} eller null («–»): felles for listene, det store tallet i KL.-blokka og stolpene i timestripa
+  // (feiljegeren 25.11.2026, funn 3). Regel (c) via Spot.visHoyde, og uten poeng bare fra 0,3 m: en flat time har ingen
+  // høyde noe sted, aldri «0,0 m».
+  function hoydeVist(h){
     const v = window.Spot ? Spot.visHoyde(h) : (h && h.surf_height!=null ? {a: h.surf_height, b: h.surf_height_sets} : null);
+    return v && (stars(h) >= 1 || v.a >= 0.3) ? v : null;
+  }
+  // Høyden skulle vært der, men tallet mangler i dataene: skravur i timestripa, aldri en tom kolonne som ser ut som flatt
+  // (feiljegeren, funn 7). Flatt og Treffer ikke mangler ikke noe, de har ingen høyde.
+  function hoydeMangler(h){
+    if(!known(h) || h._forbud || (window.Spot && Spot.visHoyde(h))) return false;
+    if(!h.low_reason || h.low_reason==="stormsjo") return true;
+    if(h.low_reason==="blown_out") return !!h.stars || calmWindWord(h)==null;
+    return false;
+  }
+  // Tallet er totalhøyden ved spoten (Stormsjø, og Blåst ut når surfehøyden er 0), ikke surfehøyden: etiketten er «Sjø»,
+  // og tallet har «sjø» foran seg der det står uten etikett (S45 2, visesSomSjo() i app.js)
+  const erSjo = (h)=> !!hoydeVist(h) && visesSomSjo(h);
+  // høyden med enhet, slik den står i lister, setninger og for skjermleser: «1,6–2,1 m», «sjø 2,7 m»; ingen høyde → null
+  function hoydeMedMerke(h){ const t = heightText(h); return t ? `${erSjo(h) ? STR.sjo.toLowerCase() + " " : ""}${t} m` : null; }
+  function heightText(h){
+    // «1,6–2,1 m» (høyden som vises–settene); ingen høyde → null
+    const v = hoydeVist(h);
     if(!v) return null;
     const a = nf1.format(v.a), b = v.b!=null ? nf1.format(v.b) : null;
     return b!=null && b!==a ? `${a}–${b}` : a;
@@ -106,10 +128,15 @@
   const usikkertTillegg = (h)=> h && h.long_sea ? `, ${STR.hjem.usikkert}` : "";
   function ordOgHoyde(h){
     if(!h) return {ord:"–", hoyde:null};
-    const ord = ratingWord(h);
-    const v = window.Spot ? Spot.visHoyde(h) : null;
-    const show = v!=null && (stars(h) >= 1 || v.a >= 0.3);
-    return {ord, hoyde: show ? heightText(h) : null};
+    return {ord: ratingWord(h), hoyde: heightText(h), sjo: erSjo(h), merket: hoydeMedMerke(h)};
+  }
+  // Ordet og høyden til høyre i listeraden (Søk, Utforsk og lista utenfor kartet): karakteren, surfehøyden ved spoten
+  // («–» når ordet er Flatt eller Treffer ikke, fase 3 punkt 3) og årsaken på egen linje (fase 3 punkt 5). Er ruta tom
+  // (mørkt, mangler, forbud), står bare ordet for det, uten høyde.
+  function naHtml(h, rute, ordTom){
+    if(rute) return esc(ordTom);
+    const k = karakter(h), hoyde = hoydeMedMerke(h);
+    return `${esc(k.ord + usikkertTillegg(h))}<span class="num">${hoyde ? esc(hoyde) : "–"}</span>${k.aarsak ? `<span class="grunn">${esc(k.aarsak)}</span>` : ""}`;
   }
   function windText(h){
     if(!h || h.wind_speed==null) return null;
@@ -202,20 +229,39 @@
   // bedre dag. En rad uten tall (mangler data) regnes aldri som «ingen surf»: da sier overskriften at data mangler,
   // eller ingenting. `egne` = brukerens egne favoritter: alle rader teller. Ellers holdes nye spots og spots med
   // forbud utenfor som i «Beste økt», men bare så lenge en av de andre er surfbar.
+  // Nye spots (S45 3 a, svar.md 26.11.2026 kl. 13.10): en ny spot nevnes også når den har minst 2 og alle de andre er
+  // under 2, og en spot med status «forelopig» har alltid «(foreløpig)» bak navnet i overskriften. En spot med forbud
+  // den timen løftes aldri fram slik. Merket følger merkelappen «Foreløpig» i raden (erForelopig: status eller
+  // andel_forelopig), så overskriften og raden sier det samme (feiljegeren 26.11.2026, runde 4 d).
   function overskrift(spots, days, egne){
     const H = STR.hjem;
+    const navn = (s)=> erForelopig(s) ? STR.spotForelopig(s.name) : s.name;
     if(!days.length || !spots.length) return [];
     const rader = (d)=> spots.map(s=> ({s, b: dayBest(s, d.key)}));
-    const ordAv = (h)=> ratingWord(h).replace(/\s+nå$/, "");   // «Ikke surfbart nå» gjelder en time, ikke en dag
+    // «Ikke surfbart nå» gjelder en time, ikke en dag. Fra 1 poeng er ordet karakteren (fase 3 punkt 5), som i raden
+    const ordAv = (h)=> (stars(h) >= 1 ? karakter(h).ord : ratingWord(h)).replace(/\s+nå$/, "");
     const sorter = (rs)=> rs.slice().sort((x, y)=> y.b.st - x.b.st || (y.b.h.surf_height||0) - (x.b.h.surf_height||0) || x.s.name.localeCompare(y.s.name, "nb"))[0] || null;
     const topp = (rs)=>{
       const med = rs.filter(r=> r.b.st!=null), a = egne ? null : sorter(med.filter(r=> iBesteOkt(r.s, r.b.t)));
-      return a && a.b.st >= 1 ? a : sorter(med);
+      if(egne || !a) return sorter(med);
+      // en ny spot med minst 2 når alle de andre er under 2 (S45 3 a)
+      const ny = a.b.st < 2 ? sorter(med.filter(r=> nyForelopig(r.s) && !forbudNa(r.s, r.b.t) && r.b.st >= 2)) : null;
+      return ny || (a.b.st >= 1 ? a : sorter(med));
     };
     const alle = (rs, cls)=> rs.every(r=> r.b.cls===cls), noen = (rs, cls)=> rs.some(r=> r.b.cls===cls);
     const d0 = days[0], r0 = rader(d0), t0 = topp(r0), st0 = t0 ? t0.b.st : 0, dag0 = dagOrd(d0);
+    const rest = days.slice(1).map(d=> ({d, rs: rader(d)}));
+    // dagen med høyest tall resten av uka, men bare fra 2 poeng (Theodor 16.11.2026): en dag med 1 («Blåst ut på X
+    // lørdag») er ikke verdt en setning. Den er likevel surf, så «Ingen surf de neste …» sies ikke da.
+    let neste = null, surfSenere = false;
+    for(const {d, rs} of rest){ const t = topp(rs); if(!t || t.b.st < 1) continue; surfSenere = true; if(t.b.st >= 2 && (!neste || t.b.st > neste.t.b.st)) neste = {t, d}; }
+    // Dårlig dag (under 2 poeng, med tall) og en bedre dag senere: overskriften gir råd (fase 3 punkt 5). «Lite å hente
+    // i morgen.» og så hvor og når: «Tromvik er best, onsdag.» Mangler tallet, eller er lyset over, på en av spotene, sies
+    // setningene under som før («Ingen surf resten av dagen.»; feiljegeren, funn 5). Dager uten noe tall (mørkt, forbud) også.
+    if(neste && st0 < 2 && r0.some(r=> r.b.st!=null) && !noen(r0, "miss") && !noen(r0, "over"))
+      return [H.lite(dag0), H.bestSpot(navn(neste.t.s), dagOrd(neste.d) + usikkertTillegg(neste.t.b.h))];
     let s1;
-    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), t0.s.name, dag0 + usikkertTillegg(t0.b.h));
+    if(t0 && st0 >= 1) s1 = H.ordSpot(ordAv(t0.b.h), navn(t0.s), dag0 + usikkertTillegg(t0.b.h));
     else if(noen(r0, "miss")) s1 = alle(r0, "miss") ? `${STR.bestNoLight}.` : H.manglerDag(dag0);
     else if(alle(r0, "over")) s1 = `${H.over}.`;
     else if(alle(r0, "forbud")) s1 = H.ord(H.forbud, dag0);
@@ -226,15 +272,10 @@
       // er lyset over for noen av dem, vet vi ikke hvordan dagen var der: da gjelder setningen bare resten av dagen
       s1 = noen(r0, "over") ? H.ingenRest : o && o!=="–" ? H.ord(o, dag0) : H.ingen(dag0);
     }
-    const rest = days.slice(1).map(d=> ({d, rs: rader(d)}));
-    // dagen med høyest tall resten av uka, men bare fra 2 poeng (Theodor 16.11.2026): en dag med 1 («Blåst ut på X
-    // lørdag») er ikke verdt en setning. Den er likevel surf, så «Ingen surf de neste …» sies ikke da.
-    let neste = null, surfSenere = false;
-    for(const {d, rs} of rest){ const t = topp(rs); if(!t || t.b.st < 1) continue; surfSenere = true; if(t.b.st >= 2 && (!neste || t.b.st > neste.t.b.st)) neste = {t, d}; }
     const apent = !!t0 && st0 >= 1 && new Date(t0.b.slutt).getTime() + 36e5 > Date.now();   // dagens vindu er ikke over
     let s2 = null;
     if(apent && (!neste || neste.t.b.st <= st0)) s2 = H.best(...vinduKl(t0.b.start, t0.b.slutt));
-    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), neste.t.s.name, dagOrd(neste.d) + usikkertTillegg(neste.t.b.h));
+    else if(neste) s2 = H.ordSpot(ordAv(neste.t.b.h), navn(neste.t.s), dagOrd(neste.d) + usikkertTillegg(neste.t.b.h));
     else if(st0 < 1 && !surfSenere && rest.length && rest.every(x=> !noen(x.rs, "miss"))){
       // Dager uten lyse timer (mørketid) har ingen vurdering, så «Ingen surf» er ikke kjent for dem: er alle dagene
       // mørke, sier setningen det, og er bare noen det, sies ingenting (feiljegeren 25.11.2026, funn 12). Ellers som før.
@@ -267,8 +308,8 @@
       if(e) return e.replace(/\s+[–-] se regnestykket under\.?$/, ".");
       return lowReasonNotice(h);
     }
-    const hoyde = heightText(h);
-    const deler = [hoyde ? `${hoyde} m` : null, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
+    const hoyde = hoydeMedMerke(h);
+    const deler = [hoyde, h.period!=null ? `${nf0.format(h.period)} s${h.dir_offshore!=null ? " " + STR.fromDir(compass(h.dir_offshore)) : ""}` : null, windText(h)].filter(Boolean);
     const us = h.long_sea ? STR.notice.uncertain + "." : "";   // S40 (V1): timen er regnet med lang sjø
     const tall = [deler.length ? cap(deler.join(", ")) + "." : null, us || null].filter(Boolean).join(" ");
     // et vindu som er over, er ikke et råd (fysikk-kontrolløren 19.11.2026): da står bare tallene, som i fsApent på PC-forsiden
@@ -302,9 +343,9 @@
     const hn = naaOf(s), v = naaVisning(s, hn), ord0 = v.oh.ord.replace(/\s+nå$/, "");
     if(ord0==="–" || v.rute==="forbud" || v.rute==="miss") return null;
     const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
-    const hoyde = v.rute==="mork" ? null : v.oh.hoyde;
-    return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${hoyde} m` : ""}`,
-      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? ` <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};
+    const hoyde = v.rute==="mork" ? null : v.oh.hoyde, sjo = hoyde && v.oh.sjo ? `${STR.sjo.toLowerCase()} ` : "";   // «Nå Stormsjø, sjø 1,4 m» (S45 2)
+    return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${sjo}${hoyde} m` : ""}`,
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? `${sjo ? ", " + esc(sjo.trim()) : ""} <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};   // uten høyde (Flatt, Treffer ikke): bare ordet, ingen hengende strek (runde 4, viktig 2)
   }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
@@ -314,18 +355,22 @@
     // Favorittradene sier «I dag:» foran ordet (feiljegeren 25.11.2026, funn 9): ordet der er dagens, mens regionraden for
     // samme spot sier «Nå …». Uten merket sto «Smått» og «Nå Treffer ikke» om samme spot på samme skjerm.
     const dag = d0.idag && kort ? "" : `${cap(dagOrd(d0))}: `, dagSynlig = S.hjemMorgen || (d0.idag && kort) ? "" : dag;
-    const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : ratingWord(h);
+    // ordet er karakteren, og årsaken er et eget ledd etter den (fase 3 punkt 5): «I dag: Ikke surfbart · Blåst ut · −2 vind»
+    const k = h && b.st!=null ? karakter(h) : null, grunn = k ? k.aarsak : null;
+    const H = STR.hjem, ord = b.cls==="forbud" ? H.forbud : b.cls==="dark" ? H.morktOrd : b.cls==="over" ? H.over : b.cls==="miss" ? H.mangler : k ? k.ord : ratingWord(h);
     const tapt = h && b.st!=null ? (lostParts(h).map(p=> p.tekst).join(" · ") || null) : null;
+    // «usikkert» på dagens ord som på nå-leddet og i overskriften (feiljegeren, fase 2 runde 5): lang sjø gir et usikkert tall
+    const ordU = b.st!=null ? ord + usikkertTillegg(h) : ord;
     // merkene («Foreløpig», forbudet) står etter stedet i alle rader, også favorittene (runde 3, 24.11.2026)
     const stedDeler = [s.area || regionOf(s), ...merker(s)], sted = stedDeler.join(" · "), kj = kjoreText(s.id), setn = kort ? null : favSetning(s, b), obs = kort ? null : favObs(s);
     // regionradene (kort): dagens tall til venstre, og i metalinja «Nå» med ordet og høyden for nå-timen i stedet for
     // dagens ord (S38 1 b). Bare når raden viser i dag og har et tall: i morgen-radene og rader uten tall er som før.
     const naa = kort && b.st!=null && dagOrd(d0)==="i dag" ? naaLedd(s) : null;
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
-      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ord}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
+      `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ordU}${grunn ? ", " + grunn.toLowerCase() : ""}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
     const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
-        <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ord, naa ? null : tapt])}</span>
+        <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ordU, naa ? null : grunn, naa ? null : tapt])}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
         ${obs ? `<span class="etikett obs">${esc(obs)}</span>` : ""}
         ${ukeHtml(s, days, "under")}</span>`;
@@ -381,11 +426,18 @@
   function fsHelt(rader){
     // dagens beste med samme regel som overskriften: nye spots og spots med forbud bare når ingen andre er surfbare
     const med = rader.filter(r=> r.b.st!=null && r.b.st >= 1);
-    return med.find(r=> iBesteOkt(r.s, r.b.t)) || med[0] || null;
+    const a = med.find(r=> iBesteOkt(r.s, r.b.t));
+    // som topp() i overskrift(): en ny spot med minst 2 når alle de andre er under 2 (S45 3 a; fysikk-kontrolløren 26.11.2026:
+    // ellers pekte overskriften og hovedbildet på hver sin spot)
+    const ny = a && a.b.st < 2 ? med.find(r=> nyForelopig(r.s) && !forbudNa(r.s, r.b.t) && r.b.st >= 2) : null;
+    return ny || a || med[0] || null;
   }
-  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : ratingWord(b.h).replace(/\s+nå$/, "") + usikkertTillegg(b.h);
-  const fsTapt = (h)=> !h ? "" : lostParts(h).map(p=> p.tekst).join(" · ");
-  const fsSvell = (h)=> h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}` : "–";
+  // ordet etter tallet er karakteren, og årsaken står med tapte poeng på linja under (fase 3 punkt 5)
+  const fsOrd = (b)=> b.cls==="forbud" ? STR.hjem.forbud : b.cls==="dark" ? STR.hjem.morktOrd : b.cls==="over" ? STR.hjem.over : b.cls==="miss" ? STR.hjem.mangler : karakter(b.h).ord + usikkertTillegg(b.h);
+  const fsTapt = (h)=> !h ? "" : [karakter(h).aarsak, ...lostParts(h).map(p=> p.tekst)].filter(Boolean).join(" · ");
+  // surfehøyden ved spoten, ikke svellet ute (fase 3 punkt 3): «–» når ordet er Flatt eller Treffer ikke
+  // Er tallet totalhøyden (Stormsjø, Blåst ut uten surfehøyde), står «sjø» foran det (S45 2)
+  const fsSurf = (h)=> (h && hoydeMedMerke(h)) || "–";
   // «Best hh–hh» vises bare mens vinduet er åpent (fysikk-kontrolløren 15.10 og 16.11.2026) - samme test som «apent»
   // i overskrift(): et vindu som er over, er ikke et råd
   const fsApent = (b)=> !!b.slutt && new Date(b.slutt).getTime() + 36e5 > Date.now();
@@ -401,20 +453,21 @@
     const {s, b} = r, h = b.h, n = b.st!=null ? min5(b.st) : null, kj = kjoreText(s.id);
     const vindu = n!=null && n >= 1 && fsApent(b) ? vinduKl(b.start, b.slutt).join("–") : "–";
     const href = `#spot=${encodeURIComponent(s.id)}${b.t ? "&t=" + encodeURIComponent(b.t) : ""}`;
-    const aria = [`${s.name}, ${[regionOf(s), kj].filter(Boolean).join(", ")}`, `${n!=null ? starsAriaLost(n, h) + ", " : ""}${fsOrd(b)}`, vindu!=="–" ? `${STR.spot.best} ${vindu}` : null, h && h.swell_offshore!=null ? `${STR.spot.svell} ${fsSvell(h)}` : null].filter(Boolean).join(". ");
+    const aria = [`${s.name}, ${[regionOf(s), kj].filter(Boolean).join(", ")}`, `${n!=null ? starsAriaLost(n, h) + ", " : ""}${fsOrd(b)}${n!=null && karakter(h).aarsak ? ", " + karakter(h).aarsak.toLowerCase() : ""}`, vindu!=="–" ? `${STR.spot.best} ${vindu}` : null, n!=null && fsSurf(h)!=="–" ? (erSjo(h) ? cap(fsSurf(h)) : `${STR.spot.surf} ${fsSurf(h)}`) : null].filter(Boolean).join(". ");
     return `<tr class="s r-${n!=null ? n : 0}" data-spot="${esc(s.id)}" data-href="${esc(href)}">
       <td class="fs-nr">${esc(STR.web.nr(nr))}</td>
       <td class="fs-nm"><a class="t-navn${s.name.length > 12 ? " lang" : ""}" href="${esc(href)}" aria-label="${esc(aria)}">${esc(s.name)}</a><span class="etikett">${esc([regionOf(s), kj, ...merker(s)].filter(Boolean).join(" · "))}</span></td>
-      <td class="fs-dom">${n!=null ? `<span class="t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></td>
+      <td class="fs-dom"><span class="fs-domv">${n!=null ? `<span class="t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></span></td>
       <td class="fs-bst">${esc(vindu)}</td>
-      <td class="fs-sv">${esc(n!=null ? fsSvell(h) : "–")}</td>
+      <td class="fs-sv">${esc(n!=null ? fsSurf(h) : "–")}</td>
       <td class="fs-tim">${fsStripe(s, key, b)}</td></tr>`;
   }
   function fsHeltHtml(r, dag){
     const {s, b} = r, h = b.h, n = min5(b.st), foto = !!(window.Skive && Skive.harBilde(s.id)), id = encodeURIComponent(s.id), kj = kjoreText(s.id), K = window.KJORETID;
     const vindu = fsApent(b) ? vinduKl(b.start, b.slutt).join("–") : "";   // vinduet er over: ingen «Best», ingen ring
-    const fakta = [fsSvell(h), h && h.wind_speed!=null ? windLabel(h) : null].filter(x=> x && x!=="–").join(" · ");
-    const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(" · ");
+    const fakta = [fsSurf(h), h && h.wind_speed!=null ? windLabel(h) : null].filter(x=> x && x!=="–").join(" · ");
+    // «Foreløpig» står i linja over navnet, som i raden og i overskriften (runde 4 d)
+    const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, erForelopig(s) ? STR.forelopig : null].filter(Boolean).join(" · ");
     // den håndtegnede ringen rundt beste vindu (SPEC §6D punkt 3) - bare når dagen har 4 eller 5, i korall. Ellers ren tekst
     const ring = n < 4 ? "" : `<svg class="fs-ring" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><path d="M30 12 C70 2 150 2 182 14 C204 24 196 50 150 58 C100 66 30 62 10 46 C-4 34 12 18 46 9"/></svg>`;
     return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${starsAriaLost(n, h)}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
@@ -471,7 +524,7 @@
       </div>
       ${helt && dag ? fsHeltHtml(helt, relDay(new Date(dag.key + "T11:00:00Z"))) : ""}
       <section class="sek"><h2 class="h2">${esc(besteTittel)}</h2><p class="sub">${esc(`${STR.web.tallFra} · ${STR.web.bareLyse}`)}</p></section>
-      <table class="fs-tabell"><thead><tr><th scope="col" class="fs-nr">${esc(STR.web.kol.nr)}</th><th scope="col">${esc(STR.web.kol.spot)}</th><th scope="col">${esc(dag ? dagNavn(dag) : "")}</th><th scope="col">${esc(STR.web.kol.best)}</th><th scope="col">${esc(STR.web.kol.svell)}</th><th scope="col" class="fs-tim">${esc(STR.web.kol.timer)}</th></tr></thead>
+      <table class="fs-tabell"><thead><tr><th scope="col" class="fs-nr">${esc(STR.web.kol.nr)}</th><th scope="col">${esc(STR.web.kol.spot)}</th><th scope="col">${esc(dag ? dagNavn(dag) : "")}</th><th scope="col">${esc(STR.web.kol.best)}</th><th scope="col">${esc(STR.web.kol.surf)}</th><th scope="col" class="fs-tim">${esc(STR.web.kol.timer)}</th></tr></thead>
         <tbody>${vis.map((r, i)=> fsRadHtml(r, i + (helt ? 2 : 1), dag.key)).join("")}</tbody></table>
       <div class="fs-bunn">${tegn}<div class="fs-knapper">${vis.length < resten.length ? `<button type="button" class="knapp2" id="fsAlle">${esc(STR.web.visAlle(spots.length))}</button>` : ""}<a class="knapp1" href="#utforsk">${esc(STR.web.apneKart)} <span aria-hidden="true">→</span></a></div></div>
       ${fsMatrise(spots, days, !!reg)}
@@ -552,7 +605,7 @@
   }
   function sradHtml(s){
     const h = naaOf(s), {st, rute, oh} = naaVisning(s, h);
-    return `<a class="srad r-${min5(st)}" href="#spot=${esc(s.id)}" role="option">${ruteHtml(st, rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${esc(oh.ord)}${oh.hoyde ? `<span class="num">${esc(oh.hoyde)} m</span>` : ""}</span></a>`;
+    return `<a class="srad r-${min5(st)}" href="#spot=${esc(s.id)}" role="option">${ruteHtml(st, rute)}<span class="nm"><b>${esc(s.name)}</b><small>${esc(stedText(s))}</small></span><span class="na">${naHtml(h, rute, oh.ord)}</span></a>`;
   }
   function resultsHtml(q){
     const r = search(q);
@@ -709,12 +762,12 @@
       return;
     }
     if(S.tIso){ const i = s.hours.findIndex(h=>h.t===S.tIso); S.idx = i >= 0 ? i : null; S.tIso = null; }
-    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent});
+    Spot.render(root, forbudKopi(s), S, {regionOf, stedText, forbudInfo, forbudLinje, close: closeSpot, nowIdx, usable, mork, known, stars, dkOf, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, usikkertTillegg, isDesktop, dayBest, favSetning, kjoreText, vinduKl, merker, fsApent, ordOgHoyde});
   }
   function render(behold){
     if(!DATA) return;
     show(S.view);
-    document.title = S.view==="spot" && spotById(S.spotId) ? `${spotById(S.spotId).name} – Nordsurf` : "Nordsurf";
+    document.title = S.view==="spot" && spotById(S.spotId) ? `${spotById(S.spotId).name} · Nordsurf` : "Nordsurf";
     if(S.view==="hjem") renderHome();
     else if(S.view==="sok") renderSok();
     else if(S.view==="utforsk") Utforsk.render(S, behold);
@@ -793,6 +846,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, ordOgHoyde, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, fsHelt, fsHeltHtml, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

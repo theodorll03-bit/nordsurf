@@ -54,17 +54,18 @@
     const fra = sektorer(s.offshore_wind).map(([a, b])=> `<path class="fl" d="${bue(a, b, 67)}"/>`).join("");
     const svg = `<svg width="${px}" height="${px}" viewBox="0 0 160 160" aria-hidden="true"${stor ? ' data-tekst-px="12"' : ""}>
         ${ring}${radier ? `<path class="rd" d="${radier}"/>` : ""}<circle class="tk" cx="80" cy="80" r="64"/>${fra}
-        ${svell!=null ? `<g class="sv${iVindu ? " inne" : ""}" style="transform:rotate(${Math.round(svell)}deg)"><path class="u" d="M80 16 L80 42"/><polygon points="80,52 74,42 86,42"/><path class="p" d="M80 16 L80 42"/></g>` : ""}
+        ${svell!=null ? `<g class="sv${iVindu ? " inne" : ""}${iVindu && o && o.hoy ? " hoy" : ""}" style="transform:rotate(${Math.round(svell)}deg)"><path class="u" d="M80 16 L80 42"/><polygon points="80,52 74,42 86,42"/><path class="p" d="M80 16 L80 42"/></g>` : ""}
         ${vind!=null ? `<g class="vd" style="transform:rotate(${Math.round(vind)}deg)"><path class="u" d="M80 54 L80 69 M75 64 L80 71 L85 64"/><path class="p" d="M80 54 L80 69 M75 64 L80 71 L85 64"/></g>` : ""}
         <circle class="m0" cx="80" cy="80" r="4.5"/><circle class="m1" cx="80" cy="80" r="3"/>
         <g class="hr"><text x="80" y="9">N</text><text x="155" y="84">Ø</text><text x="80" y="159">S</text><text x="5" y="84">V</text></g>
       </svg>`;
     const vs = h ? vinduStatus(h, s) : null;
-    const linje = (k, v, sub)=> `<span><span class="etikett">${esc(k)}</span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
+    // etiketten åpner forklaringsarket (S38 2 a): svell fra = retningstreff, vind fra = vind, vindu = eksponering
+    const linje = (k, key, v, sub)=> `<span><span class="etikett"><button type="button" class="forklar" data-explain="${key}" aria-haspopup="dialog"><span class="fk">${esc(k)}</span></button></span><span class="v">${v}</span>${sub ? `<span class="u">${esc(sub)}</span>` : ""}</span>`;
     const forkl = [
-      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
-      linje(STR.spot.vindFra, vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
-      vinduer.length ? linje(STR.spot.vindu, esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
+      linje(h && h.long_sea ? STR.spot.langSjoFra : STR.spot.svellFra, "direction", svell!=null ? `${esc(compass(svell))} ${Math.round(svell)}°` : esc(STR.spot.mangler), vs ? vs.txt : ""),
+      linje(STR.spot.vindFra, "wind", vind!=null ? `${esc(compass(vind))} ${Math.round(vind)}°` : esc(STR.spot.mangler), vind!=null ? vindOrd : ""),
+      vinduer.length ? linje(STR.spot.vindu, "exposure", esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");
     return `<div class="skive-rad${stor ? " stor" : ""}"><div class="skive" role="img" aria-label="${esc(etikett)}">${harBilde(s.id) ? bilde("trykk") + bilde("lodd") : ""}${svg}</div><div class="skive-forkl">${forkl}</div></div>
       ${harBilde(s.id) ? `<p class="kredit liten">${esc(window.SPOTBILDER.kort)}</p>` : ""}`;

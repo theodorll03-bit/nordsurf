@@ -220,6 +220,53 @@ def sikkerhet(conf, zone):
     return f"{s} · " + {"barentswatch": "kystmodell 100 m", "reserve": "havmodell", "langtid": "langtidsmodell"}[zone]
 
 
+def tankestreker():
+    """S42: « - » og « – » i strenger og maler i docs/js (ikke kommentarer og ikke ${...}-uttrykk) og i teksten i docs/*.html."""
+    funn = []
+    for f in sorted((Path(__file__).resolve().parent.parent / "docs" / "js").glob("*.js")):
+        t, ut = f.read_text(encoding="utf-8"), []
+        def les(i, ln, slutt):   # kode fram til «}» på nivå 0 når slutt er sann, ellers til slutten av fila
+            niva, forrige = 0, ""
+            while i < len(t):
+                c = t[i]
+                if c == "\n": ln += 1; i += 1; continue
+                if t.startswith("//", i): i = t.find("\n", i) if "\n" in t[i:] else len(t); continue
+                if t.startswith("/*", i): j = t.index("*/", i); ln += t.count("\n", i, j); i = j + 2; continue
+                if c in "\"'":
+                    j = i + 1
+                    while t[j] != c: j += 2 if t[j] == "\\" else 1
+                    ut.append((ln, t[i + 1:j])); i = j + 1; forrige = "x"; continue
+                if c == "`":
+                    i += 1; start, buf = ln, ""
+                    while t[i] != "`":
+                        if t[i] == "\\": buf += t[i:i + 2]; i += 2; continue
+                        if t.startswith("${", i): i, ln = les(i + 2, ln, True); buf += "X"; continue
+                        ln += t[i] == "\n"; buf += t[i]; i += 1
+                    ut.append((start, buf)); i += 1; forrige = "x"; continue
+                if c == "/" and (forrige == "" or forrige in "(,=:[!&|?{};+>"):   # regulært uttrykk
+                    j, klasse = i + 1, False
+                    while t[j] != "\n" and (t[j] != "/" or klasse):
+                        if t[j] == "\\": j += 1
+                        elif t[j] == "[": klasse = True
+                        elif t[j] == "]": klasse = False
+                        j += 1
+                    i = j + 1; forrige = "x"; continue
+                if c == "{": niva += 1
+                if c == "}":
+                    if slutt and niva == 0: return i + 1, ln
+                    niva -= 1
+                if not c.isspace(): forrige = c
+                i += 1
+            return i, ln
+        les(0, 1, False)
+        assert len(ut) > 5 or f.stat().st_size < 12000, f"leseren fant for få strenger i {f.name}: {len(ut)}"
+        funn += [f"{f.name}:{ln}: {s[max(0, m.start() - 30):m.end() + 30]}" for ln, s in ut for m in re.finditer(r"\S [-–—] \S", s)]
+    for f in sorted((Path(__file__).resolve().parent.parent / "docs").glob("*.html")):
+        ren = re.sub(r"<!--.*?-->|<script.*?</script>|<style.*?</style>", "", f.read_text(encoding="utf-8"), flags=re.S)
+        funn += [f"{f.name}: {m.group(0)}" for m in re.finditer(r".{0,30}\S [-–—] \S.{0,30}", ren)]
+    return funn
+
+
 AUDIT_JS = r"""() => {
   const view = document.querySelector('main .view:not([hidden])');
   const roots = [view, document.querySelector('.tabbar'), document.querySelector('.topbar'), document.querySelector('#sokDrop')].filter(Boolean);
@@ -590,6 +637,7 @@ def main():
                         mm = re.match(rf"^(.+) på (.+) {DAG_RE}\.$", setn)
                         if mm:
                             ordet, spot, dag = mm.groups()
+                            spot = spot.removesuffix(" (foreløpig)")   # en ny spot har «(foreløpig)» bak navnet (S45 3 a)
                             rad = next((r for r in rader if r["navn"].lower() == spot.lower()), None)
                             assert rad, f"overskriften nevner «{spot}», som ikke står i lista: {setn}"
                             i = kol(dag)
@@ -600,11 +648,33 @@ def main():
                             assert i > 0 or f"{ordet}" in rad["meta"], f"«{setn}», men raden sier {rad['meta']}"
                             assert all(not r["celler"][i].isdigit() or int(r["celler"][i]) <= int(rad["celler"][i]) for r in rader), f"«{setn}», men en annen favoritt har høyere tall den dagen"
                             continue
+                        # dårlig dag og en bedre dag senere: rådet (designrevisjon fase 3 punkt 5). «Lite å hente i dag.» sies
+                        # bare når ingen favoritt har 2 eller mer den dagen og ingen mangler data, og andre setning er da
+                        # «X er best, dag.» med den beste dagen (fra 2 poeng) senere i lista
+                        mm = re.match(rf"^Lite å hente {DAG_RE}\.$", setn)
+                        if mm:
+                            i = kol(mm.group(1))
+                            assert nr == 0 and i == 0 and len(hj["set"]) == 2, f"«{setn}» skal være første setning og ha et råd etter seg: {hj['set']}"
+                            assert all(not r["celler"][0].isdigit() or int(r["celler"][0]) < 2 for r in rader), f"«{setn}», men en favoritt har 2 eller mer: {[r['celler'][0] for r in rader]}"
+                            assert any(r["celler"][0].isdigit() for r in rader) and not any("miss" in r["cls"][0] for r in rader), f"«{setn}»: {[(r['celler'][0], r['cls'][0]) for r in rader]}"
+                            continue
+                        mm = re.match(rf"^(.+) er best, {DAG_RE}(?:, usikkert)?\.$", setn)
+                        if mm:
+                            spot, dag = mm.groups()
+                            spot = spot.removesuffix(" (foreløpig)")
+                            assert nr == 1 and hj["set"][0].startswith("Lite å hente "), f"«{setn}» uten «Lite å hente» foran: {hj['set']}"
+                            rad = next((r for r in rader if r["navn"].lower() == spot.lower()), None)
+                            assert rad, f"overskriften nevner «{spot}», som ikke står i lista: {setn}"
+                            i = kol(dag)
+                            assert i > 0 and rad["celler"][i].isdigit() and int(rad["celler"][i]) >= 2, f"«{setn}», men ruta er {rad['celler'][i]}"
+                            beste = max(int(r["celler"][k]) for r in rader for k in range(1, len(r["celler"])) if r["celler"][k].isdigit())
+                            assert int(rad["celler"][i]) == beste, f"«{setn}», men den beste ruta senere er {beste}"
+                            continue
                         mm = re.match(r"^Best kl\. (\d\d)–(\d\d)\.$", setn)
                         if mm:
                             m1 = re.match(rf"^(.+) på (.+) {DAG_RE}\.$", hj["set"][0])
                             assert nr == 1 and m1, f"«{setn}» uten en spot i første setning: {hj['set']}"
-                            rad = next(r for r in rader if r["navn"].lower() == m1.group(2).lower())
+                            rad = next(r for r in rader if r["navn"].lower() == m1.group(2).removesuffix(" (foreløpig)").lower())
                             assert kol(m1.group(3)) == 0 and rad["setn"].strip().endswith(setn), f"«{setn}» er ikke vinduet på raden til {rad['navn']}: {rad['setn']}"
                             continue
                         mm = re.match(rf"^Ingen surf {DAG_RE}\.$", setn)
@@ -641,7 +711,7 @@ def main():
                         if(c && typeof c === 'object') return Object.assign({d: d.key, start: d.key + 'T09:00:00Z', slutt: d.key + 'T11:00:00Z'}, c, {h: Object.assign({t: d.key + 'T10:00:00Z'}, c.h)});
                         return typeof c === 'string' ? {d: d.key, status: c} : {d: d.key, h: {stars: c, surf_height: c ? 1.2 : 0.1, low_reason: c ? null : 'flat', t: d.key + 'T10:00:00Z'}, start: d.key + 'T09:00:00Z', slutt: d.key + 'T11:00:00Z'}; })}, ekstra || {});
                     const best = H.best('11', '14'), n = dager.length - 1;   // timene 09, 10 og 11 UTC er kl. 11–14 norsk sommertid 15.10
-                    const forbud = {restriksjoner: [{type: 'surfeforbud', gjelder: 'sjø'}]}, ny = {status: 'forelopig'};
+                    const forbud = {restriksjoner: [{type: 'surfeforbud', gjelder: 'sjø'}]}, ny = {status: 'forelopig'}, PF = STR.spotForelopig('P');
                     const smatt = {h: {stars: 0, surf_height: 0.5, low_reason: 'flat'}}, ikkeNa = {h: {stars: 0, surf_height: 1.0, low_reason: null, period: 12}};
                     const forbi = {h: {stars: 3, surf_height: 1.2, low_reason: null}, slutt: '2020-01-01T11:00:00Z'};   // vinduet er over
                     const t = (spots, egne, ventet, d) => ({fikk: ov(spots, d || dager, egne), ventet});
@@ -653,6 +723,8 @@ def main():
                         'dagens lys er over': t([spot('A', ['over', 0]), spot('B', ['over', 0])], true, [H.over + '.', H.ingenNeste(n)]),
                         'lyset over, surf senere': t([spot('A', ['over', 0, 3, 0]), spot('B', ['over', 0])], true, [H.over + '.', H.ordSpot(W[3], 'A', dag(2))]),
                         'lyset over for én': t([spot('A', ['over', 0]), spot('B', [0])], true, [H.ingenRest, H.ingenNeste(n)]),
+                        'lyset over for én, surf senere': t([spot('A', ['over', 0, 3, 0]), spot('B', [0])], true, [H.ingenRest, H.ordSpot(W[3], 'A', dag(2))]),
+                        'lyset over for én, 1 poeng hos den andre': t([spot('A', ['over', 0, 3, 0]), spot('B', [1, 0])], true, [H.ordSpot(W[1], 'B', dag(0)), H.ordSpot(W[3], 'A', dag(2))]),
                         'lyset over og mangler data': t([spot('A', ['over', 0]), spot('B', ['miss', 0])], true, [H.manglerDag(dag(0)), H.ingenNeste(n)]),
                         'mørkt og mangler data': t([spot('A', ['dark', 0]), spot('B', ['miss', 0])], true, [H.manglerDag(dag(0)), H.ingenNeste(n)]),
                         'forbud og flatt': t([spot('A', [3], forbud), spot('B', [0])], true, [H.ingen(dag(0)), H.ingenNeste(n)]),
@@ -664,12 +736,30 @@ def main():
                         'forbud utenfor favorittene': t([spot('A', [4], forbud), spot('B', [2, 0])], false, [H.ordSpot(W[2], 'B', dag(0)), best]),
                         'forbud for alle': t([spot('A', [3], forbud), spot('B', [2], forbud)], true, [H.ord(H.forbud, dag(0)), H.ingenNeste(n)]),
                         'mørkt i dag': t([spot('A', ['dark', 0]), spot('B', ['dark', 0])], true, [H.morkt(dag(0)), H.ingenNeste(n)]),
-                        'foreløpig favoritt teller': t([spot('A', [0]), spot('P', [3, 0], ny)], true, [H.ordSpot(W[3], 'P', dag(0)), best]),
+                        'foreløpig favoritt teller': t([spot('A', [0]), spot('P', [3, 0], ny)], true, [H.ordSpot(W[3], PF, dag(0)), best]),
                         'foreløpig utenfor favorittene': t([spot('A', [2, 0]), spot('P', [3, 0], ny)], false, [H.ordSpot(W[2], 'A', dag(0)), best]),
-                        'bare foreløpig er surfbar': t([spot('A', [0]), spot('P', [3, 0], ny)], false, [H.ordSpot(W[3], 'P', dag(0)), best]),
+                        'bare foreløpig er surfbar': t([spot('A', [0]), spot('P', [3, 0], ny)], false, [H.ordSpot(W[3], PF, dag(0)), best]),
+                        // S45 3 a (svar.md 26.11.2026 kl. 13.10): en ny spot nevnes når den har minst 2 og alle andre er under 2, med «foreløpig» bak navnet
+                        'ny spot med 2, de andre under 2': t([spot('A', [1, 0]), spot('B', [0]), spot('P', [2, 0], ny)], false, [H.ordSpot(W[2], PF, dag(0)), best]),
+                        'ny spot med 3, en annen har 1': t([spot('A', [1, 0]), spot('P', [3, 0], ny)], false, [H.ordSpot(W[3], PF, dag(0)), best]),
+                        'ny spot med 2, en annen har 2': t([spot('A', [2, 0]), spot('P', [2, 0], ny)], false, [H.ordSpot(W[2], 'A', dag(0)), best]),
+                        'ny spot med 5, en annen har 2': t([spot('A', [2, 0]), spot('P', [5, 0], ny)], false, [H.ordSpot(W[2], 'A', dag(0)), best]),
+                        'ny spot med 1, en annen har 1': t([spot('A', [1, 0]), spot('P', [1, 0], ny)], false, [H.ordSpot(W[1], 'A', dag(0)), best]),
+                        'ny spot med 1, de andre har 0 (eldre regel)': t([spot('A', [0]), spot('P', [1, 0], ny)], false, [H.ordSpot(W[1], PF, dag(0)), best]),
+                        'ny spot senere i uka': t([spot('A', [1, 0]), spot('P', [0, 0, 3, 0], ny)], false, [H.lite(dag(0)), H.bestSpot(PF, dag(2))]),
+                        'ny spot senere, en annen har 2 den dagen': t([spot('A', [1, 0, 2, 0]), spot('P', [0, 0, 3, 0], ny)], false, [H.lite(dag(0)), H.bestSpot('A', dag(2))]),
+                        'ny spot med forbud løftes ikke fram': t([spot('A', [1, 0]), spot('P', [3, 0], Object.assign({}, ny, forbud))], false, [H.ordSpot(W[1], 'A', dag(0)), best]),
+                        'gammel foreløpig spot (over 14 dager) teller som de andre, med merket': t([spot('A', [2, 0]), spot('P', [3, 0], {status: 'forelopig', forelopig_fra: '2020-01-01'})], false, [H.ordSpot(W[3], PF, dag(0)), best]),
+                        // runde 4 d: merket følger merkelappen «Foreløpig» i raden, også for andel_forelopig (Russelv, Lenangsøyra). Den er ikke en ny spot
+                        'andel_forelopig har merket, men er ikke ny': t([spot('A', [1, 0]), spot('P', [3, 0], {andel_forelopig: true})], false, [H.ordSpot(W[3], PF, dag(0)), best]),
+                        'andel_forelopig blant favorittene': t([spot('A', [0]), spot('P', [2, 0], {andel_forelopig: true})], true, [H.ordSpot(W[2], PF, dag(0)), best]),
                         'bedre dag senere': t([spot('A', [2, 0, 4, 0]), spot('B', [1, 3, 0])], true, [H.ordSpot(W[2], 'A', dag(0)), H.ordSpot(W[4], 'A', dag(2))]),
                         'bare 1 poeng senere': t([spot('A', [0, 0, 1, 0])], true, [H.ord(W[0], dag(0))]),
-                        '1 poeng før 2 poeng senere': t([spot('A', [0, 1, 0, 2, 0])], true, [H.ord(W[0], dag(0)), H.ordSpot(W[2], 'A', dag(3))]),
+                        '1 poeng før 2 poeng senere': t([spot('A', [0, 1, 0, 2, 0])], true, [H.lite(dag(0)), H.bestSpot('A', dag(3))]),
+                        'råd: 1 i dag, 3 senere hos en annen': t([spot('A', [1, 0]), spot('B', [0, 0, 3, 0])], true, [H.lite(dag(0)), H.bestSpot('B', dag(2))]),
+                        'ikke råd når dagen har 2': t([spot('A', [2, 0, 4, 0])], true, [H.ordSpot(W[2], 'A', dag(0)), H.ordSpot(W[4], 'A', dag(2))]),
+                        'ikke råd når data mangler i dag': t([spot('A', [0, 3]), spot('B', ['miss', 0])], true, [H.manglerDag(dag(0)), H.ordSpot(W[3], 'A', dag(1))]),
+                        'ikke råd i mørket': t([spot('A', ['dark', 3])], true, [H.morkt(dag(0)), H.ordSpot(W[3], 'A', dag(1))]),
                         '1 poeng i dag, 1 senere': t([spot('A', [1, 0, 1, 0])], true, [H.ordSpot(W[1], 'A', dag(0)), best]),
                         'to dager, ingen surf': t([spot('A', [0]), spot('B', [0])], true, [H.ord(W[0], dag(0)), H.ingen(dag(1))], dager.slice(0, 2)),
                         'én dag': t([spot('A', [0])], true, [H.ord(W[0], dag(0))], dager.slice(0, 1)),
@@ -787,17 +877,28 @@ def main():
                   const dag = '2026-10-21';
                   const mk = (hh, o) => Object.assign({t: `${dag}T${String(hh - 2).padStart(2, '0')}:00Z`, light: 'dag', stars: 0, faded: 0, surf_height: 1, wind_speed: 5, wind_dir: 180, wind_type: 'offshore'}, o);
                   const s = {id: 'syn', hours: [mk(8, {stars: 3}), mk(9, {stars: 3, faded: 1, faded_wind: 1}), mk(10, {stars: 4, faded: 1, faded_tide: 1}), mk(11, {stars: 5}),
-                    mk(12, {light: 'mørkt', stars: 4}), mk(13, {surf_height: null}), mk(14, {_forbud: true}), mk(15, {low_reason: 'flat', surf_height: 0})]};
-                  const Hh = {usable: h => h.light === 'dag' || h.light === 'skumring', mork: h => h.light === 'mørkt', known: h => !!h && !(!h.stars && !h.low_reason && h.surf_height == null), stars: h => h.stars || 0};
+                    mk(12, {light: 'mørkt', stars: 4}), mk(13, {surf_height: null}), mk(14, {_forbud: true}), mk(15, {low_reason: 'flat', surf_height: 0}),
+                    mk(16, {stars: 1, surf_height: null}), mk(17, {low_reason: 'stormsjo', surf_height: null, bw_height: null}), mk(18, {surf_height: 0.04}), mk(19, {low_reason: 'treffer_ikke', surf_height: 1.2})], max_height: 2, ideal_height: [1, 1.5]};
+                  const Hh = {usable: h => h.light === 'dag' || h.light === 'skumring', mork: h => h.light === 'mørkt', known: h => !!h && !(!h.stars && !h.low_reason && h.surf_height == null), stars: h => h.stars || 0, heightText: Front.helpers.heightText, hoydeVist: Front.helpers.hoydeVist, hoydeMangler: Front.helpers.hoydeMangler, erSjo: Front.helpers.erSjo};
                   const d = {key: dag, idxs: s.hours.map((_, i) => i), step: 1}, best = new Set([2, 3]);
                   const boks = document.createElement('div');
-                  boks.innerHTML = Timestripe.html(s, d, 0, best, Hh);
                   document.querySelector('#viewSpot :is(.sp-inn, .spw-inn)').appendChild(boks);
-                  const ut = {kol: {}, aria: {}};
+                  const ut = {kol: {}, aria: {}, valgt: {}};
+                  const tapt = (e) => { const i = e.querySelector('i.tapt'); return i ? {stil: getComputedStyle(i).borderTopStyle, farge: getComputedStyle(i).borderTopColor} : null; };
+                  // timen kl. 08 er valgt: tapte poeng vises bare der (designrevisjon fase 3 punkt 4)
+                  boks.innerHTML = Timestripe.html(s, d, 0, best, Hh);
                   for(const tk of boks.querySelectorAll('.tk')){
-                    const e = tk.querySelector('.segs'), pa = e.querySelector('i.pa'), bst = tk.querySelector('.bst');
-                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length, tv: e.querySelectorAll('i.tapt.tv').length, tfarge: e.querySelector('i.tapt') ? getComputedStyle(e.querySelector('i.tapt')).borderTopColor : null,
-                      farge: pa ? getComputedStyle(pa).backgroundColor : null, mork: tk.classList.contains('mork'), best: bst.classList.contains('pa') ? (bst.classList.contains('k') ? 'korall' : 'blekk') : null};
+                    const e = tk.querySelector('.segs'), pa = e.querySelector('i.pa'), bst = tk.querySelector('.bst'), sb = tk.querySelector('.srf .sbx'), st = sb && sb.querySelector('i');
+                    ut.kol[tk.dataset.hh] = {cls: e.className.replace(/^segs ?/, ''), n: e.children.length, pa: e.querySelectorAll('i.pa').length, tapt: e.querySelectorAll('i.tapt').length, tv: e.querySelectorAll('i.tapt.tv').length, vist: tapt(e),
+                      farge: pa ? getComputedStyle(pa).backgroundColor : null, mork: tk.classList.contains('mork'), best: bst.classList.contains('pa') ? (bst.classList.contains('k') ? 'korall' : 'blekk') : null,
+                      stolpe: st ? Math.round(st.getBoundingClientRect().height) : null, stolpeFarge: st ? getComputedStyle(st).backgroundColor : null, skravur: !!sb && sb.classList.contains('miss'), boks: sb ? Math.round(sb.getBoundingClientRect().height) : null};
+                  }
+                  const il = boks.querySelector('.ideal');
+                  ut.ideal = il ? {y: getComputedStyle(il).getPropertyValue('--y').trim(), tekst: il.textContent.trim()} : null;
+                  // velger man 09 (−1 vind) og 10 (−1 tidevann), står det tapte poenget stiplet i blekk der
+                  for(const [i, hh] of [[1, '09'], [2, '10']]){
+                    boks.innerHTML = Timestripe.html(s, d, i, best, Hh);
+                    ut.valgt[hh] = Object.assign(tapt(boks.querySelector(`.tk[data-hh='${hh}'] .segs`)) || {}, {andre: [...boks.querySelectorAll('.tk:not(.valgt) .segs i.tapt')].map(e => getComputedStyle(e).borderTopStyle).filter(x => x !== 'none').length});
                   }
                   boks.remove();
                   const tmp = document.createElement('div');
@@ -852,24 +953,33 @@ def main():
                     # dommen: samme tall som Hjem og ukeoversikten (dagssammendraget fra publish.py)
                     cls, st = day_cls(OV["unstad"], imorgen); dom = dommen()
                     assert cls.startswith("r-") and dom["tall"] == str(min(5, st)) and cls in dom["cls"].split(), (cls, st, dom)
-                    assert dom["ord"] == page.evaluate("(h) => ratingWord(h)", next(x for x in OV["unstad"]["dager"] if x["d"] == imorgen)["h"]), dom
+                    # ordet etter tallet er karakteren, årsaken (Blåst ut, Treffer ikke, Stormsjø) står på egen linje (fase 3 punkt 5)
+                    kar = page.evaluate("(h) => karakter(h)", next(x for x in OV["unstad"]["dager"] if x["d"] == imorgen)["h"])
+                    assert dom["ord"] == kar["ord"] and tekst("#viewSpot .dom .dom-grunn") == kar["aarsak"], (dom, kar, tekst("#viewSpot .dom .dom-grunn"))
                     assert dom["dag"].lower() == "i morgen" and (dom["vindu"] is not None) == (st >= 1), dom
-                    # timen: svell stort, så surf, vind og tidevann - tallene er varselets
-                    assert nf1(h["swell_offshore"]) in tekst("#spOver .t-svell"), (tekst("#spOver .t-svell"), h["swell_offshore"])
-                    assert tekst("#spOver .svell > .etikett") == "Svell ute", tekst("#spOver .svell > .etikett")   # svellet ute, ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
+                    # timen: surfehøyden ved spoten er det store tallet (designrevisjon fase 3 punkt 1, godkjent av Theodor 21.11), med
+                    # kroppsmålet under; svellet ute er en rad på linje med vind og tidevann - tallene er varselets
+                    # S45 5: en mørk time har «–» uten tall. S45 2: er tallet totalhøyden (Stormsjø, Blåst ut uten surfehøyde), heter det «Sjø» og har ikke kroppsmål
+                    ht = page.evaluate("(h) => Front.helpers.mork(h) ? null : Front.helpers.heightText(h)", h)
+                    sjo_ = bool(ht) and page.evaluate("(h) => Front.helpers.erSjo(h)", h)
+                    assert tekst("#spOver .t-svell") == (f"{ht}m" if ht else "–"), (tekst("#spOver .t-svell"), ht)
+                    assert tekst("#spOver .svell > .etikett") == ("Sjø" if sjo_ else "Surf"), tekst("#spOver .svell > .etikett")
+                    assert ht is None or tekst("#spOver .svell > .svell-sub") == (None if sjo_ else page.evaluate("(h) => Spot.kroppshoyde(h)", h)), tekst("#spOver .svell > .svell-sub")
                     # samme ord i det skjermleseren leser for hver time i timestripa
                     sv_aria = page.evaluate("[...document.querySelectorAll('#tstripe [aria-label]')].map(e => e.getAttribute('aria-label')).filter(a => /svell/i.test(a))")
                     assert page.evaluate("STR.spot.timeSvell('1,2')") == "Svell ute 1,2 m" and all("Svell ute " in a_ for a_ in sv_aria), sv_aria[:3]
-                    sub = tekst("#spOver .svell > .svell-sub")
-                    assert f"{r0(h['period'])} s" in sub and f"{r0(h['dir_offshore'])}°" in sub, (sub, h["period"], h["dir_offshore"])
                     maal = maalene()
+                    assert list(maal)[:2] == ["Svell ute", "Vind"], list(maal)   # svellet ute, ikke bølgene på stranda (Theodor S20 a, 20.11.2026)
+                    sub = maal["Svell ute"]
+                    assert nf1(h["swell_offshore"]) in sub and f"{r0(h['period'])} s" in sub and f"{r0(h['dir_offshore'])}°" in sub, (sub, h["swell_offshore"], h["period"], h["dir_offshore"])
                     if h["surf_height"] is not None and h["surf_height"] > 0 and not h.get("low_reason"):
-                        assert nf1(h["surf_height"]) in maal["Surf"] and kroppshoyde(h["surf_height"], h.get("surf_height_sets")) in maal["Surf"], (maal, h["surf_height"])
+                        surf = tekst("#spOver .svell.surf")
+                        assert nf1(h["surf_height"]) in surf and kroppshoyde(h["surf_height"], h.get("surf_height_sets")) in surf, (surf, h["surf_height"])
                     assert f"{r0(h['wind_speed'])}m/s" in maal["Vind"].replace(" ", "").replace("\xa0", ""), maal
                     assert page.evaluate("(h) => windLabel(h)", h) in maal["Vind"] and not re.search(r"offshore|onshore", " ".join(maal.values()), re.I), maal
                     assert re.search(r"\d,\d ?m", maal["Tidevann"]), maal
                     if light_of(h) != "mørkt":
-                        assert tekst("#spOver .tdom .rute") == str(min(5, h.get("stars") or 0)) and tekst("#spOver .tdom .to") == page.evaluate("(h) => ratingWord(h)", h)
+                        assert tekst("#spOver .tdom .rute") == str(min(5, h.get("stars") or 0)) and tekst("#spOver .tdom .to") == page.evaluate("(h) => karakter(h).ord", h)
                     # faktalinja: under timen på mobil; på PC metalinja under navnet (kjøretid og dato først)
                     fakta = tekst("#spOver .fakta-linje" if mobile else "#spMeta")
                     assert (fakta.startswith("Lys ") if mobile else " Lys " in fakta) and "Oppdatert" in fakta, fakta
@@ -879,7 +989,7 @@ def main():
                     inne = any(rating.in_sector(h["dir_offshore"], sec) for sec in rating.window_sectors(SP["unstad"]))
                     assert sa.startswith(f"Unstad kl. {v['hh']}: svell fra {r0(h['dir_offshore'])} grader, {'innenfor' if inne else 'utenfor'} svellvinduet"), sa
                     if mobile:
-                        assert tekst("#spUnder .kilder").startswith(sikkerhet(h["confidence"], h["zone"]) + ". "), tekst("#spUnder .kilder")
+                        assert tekst("#spUnder .kilder.sikk") == sikkerhet(h["confidence"], h["zone"]) and tekst("#spUnder .kilder.sikk + .kilder").startswith("Varsel fra "), tekst("#spUnder .kilder")
                     else:   # PC: sikkerheten står i «Om spotten» (Data)
                         om = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))")
                         assert om.get("Data", "").startswith(sikkerhet(h["confidence"], h["zone"])), om
@@ -899,21 +1009,86 @@ def main():
                         # SPEC §6C: 7 store dagkolonner, tabellen time for time med etikettkolonnen, minikartet med kystlinje
                         assert page.locator(".dagvelger.sju .dagknapp.stor").count() == 7, page.locator(".dagvelger.sju .dagknapp").count()
                         etik = page.evaluate("[...document.querySelectorAll('#tstripe .tetik > *')].map(e => e.textContent.replace(/\\s+/g, ' ').trim())")
-                        assert etik[:5] == ["Kl.", "Vurdering", "Svell ute m", "Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
+                        assert etik[:2] == ["Kl.", "Vurdering"] and etik[2] in ("Surf m", "Sjø m", "Surf / sjø m") and etik[3:5] == ["Svell fra", "Vind m/s"] and (len(etik) == 6) == bool(page.query_selector("#tstripe .tsvg")), etik
                         page.wait_for_selector("#miniKort .minikart path.land")
                     shot("unstad-na", scheme); audit("unstad-na")
+                    # S38 2 a: etikettene i KL.-blokka, skiva og kildelinja åpner forklaringsarket. Trykkflaten er minst 44 px høy,
+                    # fokus er synlig, og Escape lukker arket og gir fokus tilbake til etiketten
+                    fk = page.evaluate("""() => [...document.querySelectorAll('#viewSpot .forklar')].filter(e => e.getClientRects().length).map(e => { const b = e.getBoundingClientRect();
+                        return {key: e.dataset.explain, tag: e.tagName, h: Math.round(b.height), w: Math.round(b.width), finnes: !!EXPLAIN[e.dataset.explain]}; })""")
+                    nokler = {f_["key"] for f_ in fk}
+                    surf_ark = "hs" if tekst("#spOver .svell > .etikett") == "Sjø" else "surf_height"   # «SJØ» (totalhøyden, S45 2) åpner arket om signifikant høyde
+                    assert {surf_ark, "swell", "wind", "tide", "direction", "confidence"} <= nokler and (not mobile or "hs" in nokler), f"etikettene som skal kunne trykkes ({scheme}): {sorted(nokler)}"
+                    assert all(f_["tag"] == "BUTTON" and f_["finnes"] and f_["h"] >= 44 and f_["w"] >= 44 for f_ in fk), f"trykkflatene skal være knapper på minst 44 x 44 px: {[f_ for f_ in fk if f_['h'] < 44 or f_['w'] < 44]}"
+                    for key_, tittel_ in (("swell", "Svell ute"), ("confidence", "Sikkerhet"), ("exposure", "Eksponering"), ("hs", "Signifikant høyde")):
+                        if key_ not in nokler:
+                            continue
+                        page.keyboard.press("Tab")   # tastatur sist brukt: fokus satt fra skript regnes som synlig fokus
+                        fokus_ = page.evaluate("""(k) => { const e = [...document.querySelectorAll(`#viewSpot .forklar[data-explain="${k}"]`)].find(x => x.getClientRects().length); e.scrollIntoView({block: 'center'}); e.focus();
+                            const c = getComputedStyle(e); return [document.activeElement === e, c.outlineStyle, c.outlineWidth]; }""", key_)
+                        assert fokus_ == [True, "solid", "2px"], f"synlig fokus på etiketten {key_}: {fokus_}"
+                        page.keyboard.press("Enter"); page.wait_for_selector("#exSheet.open")
+                        assert page.text_content("#exTitle").strip() == tittel_ and page.get_attribute("#exSheet", "aria-hidden") == "false", (key_, page.text_content("#exTitle"))
+                        assert not re.search(r"(?<![a-zæøå])null|undefined|NaN", page.text_content("#exBody")), page.text_content("#exBody")[:200]
+                        page.keyboard.press("Escape"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
+                        assert page.evaluate("(k) => document.activeElement && document.activeElement.dataset.explain === k", key_), f"fokus skal tilbake til etiketten {key_} når arket lukkes"
+                    # med musa eller fingeren
+                    page.click("#spOver .forklar[data-explain='wind']"); page.wait_for_selector("#exSheet.open")
+                    assert page.text_content("#exTitle").strip() == "Vind"
+                    # arket er modalt: Tab og Shift+Tab blir i arket (feiljegeren 25.11.2026, funn 15)
+                    for tast_ in ("Tab", "Tab", "Shift+Tab", "Shift+Tab"):
+                        page.keyboard.press(tast_)
+                        assert page.evaluate("!!document.activeElement.closest('#exSheet')"), f"{tast_} gikk ut av arket: {page.evaluate('document.activeElement.outerHTML.slice(0, 80)')}"
+                    # tapte poeng er stiplet bare for valgt time, og det sier arkene også (funn 9)
+                    assert page.evaluate("[EXPLAIN.wind.how().join(' '), EXPLAIN.stars.what].every(t => /stiplede ruter i timestripa, bare for valgt time/i.test(t))"), "arkene om vind og poeng skal si at de stiplede rutene bare gjelder valgt time"
+                    # trykkflatene ligger ikke oppå hverandre i KL.-blokka: minst 44 px kan treffes, også på lave skjermer (funn 16)
+                    page.click("#exClose"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
+                    for bw_, bh_ in ((375, 548), (375, 667), (390, 663), vp) if mobile else ((1024, 800), (1280, 800), vp):
+                        page.set_viewport_size({"width": bw_, "height": bh_}); page.wait_for_timeout(200)
+                        treff_ = page.evaluate("""[...document.querySelectorAll('#spOver .forklar')].map(e => { e.scrollIntoView({block: 'center'}); const b = e.getBoundingClientRect(); let n = 0;
+                            for(let y = b.top + .5; y < b.bottom; y++){ const el = document.elementFromPoint(b.left + 12, y); if(el && el.closest('.forklar') === e) n++; } return [e.dataset.explain, n]; })""")
+                        # 375 x 548: radene er lavere der, så KL.-blokka står over fanelinja etter dagbytte (ui.css)
+                        assert len(treff_) == 4 and all(n_ >= (28 if bh_ <= 600 and k_ != "surf_height" else 44) for k_, n_ in treff_), f"trykkflatene i KL.-blokka ({bw_} x {bh_}): {treff_}"
+                    page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(200)
+                    # tallet ved streken for nedre grense dekker ingen stolpe og står på skjermen (funn 10)
+                    il_ = page.evaluate("""() => { const a = document.querySelector('#tstripe .ideal span').getBoundingClientRect(); return {treffer: [...document.querySelectorAll('#tstripe .sbx i, #tstripe .segs, #tstripe .tk')].filter(e => { const c = e.getBoundingClientRect(); return Math.min(a.right, c.right) - Math.max(a.left, c.left) > 0.5 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 0.5; }).length,
+                        venstre: a.left, hoyre: a.right, w: innerWidth, hoyde: a.height}; }""")
+                    assert il_["treffer"] == 0 and il_["venstre"] >= 16 and il_["hoyre"] <= il_["w"] - 15.5 and il_["hoyde"] > 0, f"tallet ved streken skal stå utenfor timene: {il_}"
+                    page.click("#spOver .forklar[data-explain='wind']"); page.wait_for_selector("#exSheet.open")
+                    page.click("#exClose"); page.wait_for_selector("#exSheet:not(.open)", state="attached")
+                    page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(100)
+                    # S42 (feiljegeren, fase 2 runde 5): ingen tankestrek (« - » eller « – ») i arkene eller i tekstene i strings.js
+                    strek = page.evaluate("""(h) => { const spot = DATA.spots.find(x => x.id === 'unstad'), ut = [], re = / [-–] /;
+                        for(const k of Object.keys(EXPLAIN)){ openExplain(k, h, spot); const t = document.getElementById('exSheet').textContent; if(re.test(t)) ut.push(k + ': ' + t.match(/.{0,30} [-–] .{0,30}/)[0]); }
+                        closeExplain();
+                        const gaa = (o, sti) => { for(const [k, v] of Object.entries(o)){ if(typeof v === 'string' && re.test(v)) ut.push(sti + k + ': ' + v); else if(v && typeof v === 'object') gaa(v, sti + k + '.'); } };
+                        gaa(STR, 'STR.'); ut.push(...[STR.witness.sub('A', 'i dag', '10', 3)].filter(x => re.test(x))); return ut; }""", h)
+                    assert not strek, f"tankestrek i tekster brukeren ser: {strek}"
+                    assert not tankestreker(), f"tankestrek i tekst i docs (S42; feiljegeren 25.11.2026, funn 8): {tankestreker()}"
+                    page.evaluate("window.scrollTo(0, 0)")
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
                         .filter(el => el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
                     assert not hoye, f"tall brutt over flere linjer ({scheme}): {hoye}"
                     # korall fra 4, blekk til og med 3, tapte poeng stiplet, og ingen segmenter i mørke, forbudte eller tomme timer
                     syn = page.evaluate(SYN_STRIPE_JS); kol = syn["kol"]
-                    assert sorted(kol) == [f"{x:02d}" for x in range(6, 16)], sorted(kol)   # 06 og 07 har vært: varselet starter kl. 08
+                    assert sorted(kol) == [f"{x:02d}" for x in range(6, 20)], sorted(kol)   # 06 og 07 har vært: varselet starter kl. 08
                     assert kol["06"]["cls"] == kol["07"]["cls"] == "vaert" and kol["07"]["n"] == 0, kol["07"]
                     assert (kol["08"]["cls"], kol["08"]["pa"], kol["08"]["tapt"]) == ("r-3", 3, 0) and (kol["09"]["cls"], kol["09"]["pa"], kol["09"]["tapt"]) == ("r-3", 3, 1), (kol["08"], kol["09"])
                     assert (kol["10"]["cls"], kol["10"]["pa"], kol["10"]["tapt"]) == ("r-4", 4, 1) and (kol["11"]["cls"], kol["11"]["pa"], kol["11"]["tapt"]) == ("r-5", 5, 0), (kol["10"], kol["11"])
                     assert kol["08"]["farge"] == kol["09"]["farge"] != kol["10"]["farge"] == kol["11"]["farge"], f"blekk til og med 3 og korall fra 4: {[kol[x]['farge'] for x in ('08', '09', '10', '11')]}"
-                    # S33 c (svar.md 23.11.2026 kl. 14.00): poeng tapt på tidevann er stiplet i blekk, poeng tapt på vind i korall som før
-                    assert (kol["09"]["tv"], kol["10"]["tv"]) == (0, 1) and kol["10"]["tfarge"] == kol["08"]["farge"] != kol["09"]["tfarge"] == kol["10"]["farge"], f"tapt på tidevann skal være stiplet i blekk og tapt på vind i korall ({scheme}): {kol['09']} {kol['10']}"
+                    # designrevisjon fase 3 punkt 4: tapte poeng (vind og tidevann) er stiplet i blekk, ikke korall, og vises bare for valgt time
+                    vg = syn["valgt"]
+                    assert (kol["09"]["tv"], kol["10"]["tv"]) == (0, 1) and kol["09"]["vist"]["stil"] == kol["10"]["vist"]["stil"] == "none", f"tapte poeng skal bare vises for valgt time ({scheme}): {kol['09']} {kol['10']}"
+                    assert vg["09"]["stil"] == vg["10"]["stil"] == "dashed" and vg["09"]["farge"] == vg["10"]["farge"] == kol["08"]["farge"] != kol["10"]["farge"] and vg["09"]["andre"] == vg["10"]["andre"] == 0, f"tapt skal være stiplet blekk på valgt time ({scheme}): {vg}"
+                    # surfehøyden som stolpe: fast skala 0 til max_height (2 m = 48 px), linje ved ideal_height (1 m), ingen stolpe ved flatt
+                    # eller forbud, skravur når data mangler (aldri en lav stolpe), og stolpen finnes også i en mørk time
+                    assert [kol[x]["stolpe"] for x in ("08", "11", "12", "13", "14", "15")] == [24, 24, 24, None, None, None] and kol["08"]["boks"] == 48, [(x, kol[x]["stolpe"]) for x in kol]
+                    assert kol["13"]["skravur"] and not kol["15"]["skravur"] and kol["12"]["stolpeFarge"] != kol["08"]["stolpeFarge"], (kol["12"], kol["13"], kol["15"])
+                    assert syn["ideal"] == {"y": "24px", "tekst": "1,0 m"}, syn["ideal"]
+                    # feiljegeren 25.11.2026, funn 3 og 7: høyden mangler i en time med vurdering (1 poeng, Stormsjø) = skravur. Flatt (0,04 m) og
+                    # Treffer ikke mangler ingenting: tom grunnlinje, uten stolpe på 2 px og uten «0,0 m» i det skjermleseren leser
+                    assert [(kol[x]["stolpe"], kol[x]["skravur"]) for x in ("16", "17", "18", "19")] == [(None, True), (None, True), (None, False), (None, False)], [(x, kol[x]["stolpe"], kol[x]["skravur"]) for x in ("16", "17", "18", "19")]
+                    assert "surf" not in syn["aria"]["18"].lower() and "surf" in syn["aria"]["08"].lower(), (syn["aria"]["18"], syn["aria"]["08"])
                     # det den lokale tidevannsregelen tar (local_rules.stars_lost, Breivikeidet når tidevannet er størst) vises som tidevann
                     s33 = page.evaluate("""() => { const lok = {stars: 1, faded: 0, faded_wind: 0, faded_tide: 0, local_rules: {stars_lost: 1}}, begge = {stars: 2, faded: 2, faded_wind: 1, faded_tide: 1, local_rules: {stars_lost: 1}};
                         return {lok: [tideLost(lok), lostAll(lok), lostParts(lok).map(p => p.tekst)], begge: [tideLost(begge), lostAll(begge), lostParts(begge).map(p => p.tekst)],
@@ -945,7 +1120,9 @@ def main():
                     assert page.evaluate("window.__S.idx") == m["i"] and v2["k"] == m["k"], (m, v2)
                     assert tekst("#spOver .sek-spot h2") == f"Kl. {m['hh']}" and tekst("#spUnder h2") == f"Retning kl. {m['hh']}"
                     assert v2["aria"].startswith(f"kl. {m['hh']}, " + ("mørkt, ingen vurdering" if light_of(hm) == "mørkt" else f"{hm.get('stars') or 0} av 5")), v2["aria"]
-                    assert nf1(hm["swell_offshore"]) in tekst("#spOver .t-svell")
+                    assert nf1(hm["swell_offshore"]) in maalene()["Svell ute"]
+                    vk = page.evaluate("[...document.querySelectorAll('#tstripe .tk.valgt')].map(e => +e.dataset.k)")
+                    assert vk == [m["k"]], f"klassen «valgt» (tapte poeng) skal flytte med timen: {vk}, {m}"
                     ring = page.evaluate("parseFloat(document.querySelector('#tstripe .ring').style.left)")
                     assert abs(ring - m["k"] / n * 100) < 0.01, (ring, m, n)
                     audit("unstad-valgt")
@@ -996,7 +1173,9 @@ def main():
                     shot("farstadsanden", scheme); audit("farstadsanden")
                     # ---- 11. «Treffer ikke» ----
                     aapne(treffer)
-                    assert tekst("#spOver .tdom .to") == "Treffer ikke" and tekst("#spOver .tdom .rute") == "0", "«Treffer ikke» i en lys time skal vise ordet og tallet 0"
+                    # karakteren etter tallet, årsaken på egen linje, og «–» som det store tallet (regel (c): ingen pålitelig høyde)
+                    assert tekst("#spOver .tdom .to") == "Ikke surfbart" and tekst("#spOver .tdom .rute") == "0" and tekst("#spOver .tgrunn").startswith("Treffer ikke"), ("«Treffer ikke» i en lys time skal vise tallet 0, karakteren og årsaken", tekst("#spOver .sek-spot"), tekst("#spOver .tgrunn"))
+                    assert tekst("#spOver .t-svell") == "–" and "Treffer ikke" in tekst("#spOver .svell.surf"), tekst("#spOver .svell.surf")
                     assert page.evaluate(f"document.querySelectorAll(\"#tstripe .tk[data-i='{treffer[1]}'] .segs.r-0 i.pa\").length") == 0
                     shot("treffer-ikke", scheme); audit("treffer-ikke")
                     if treffer_mork:   # samme i en mørk time: ingen vurdering, bare «Bare lyse timer får tall» - grunnen står fortsatt i surf-raden
@@ -1004,29 +1183,31 @@ def main():
                         assert tekst("#spOver .sek-spot .sub") == "Bare lyse timer får tall" and not page.query_selector("#spOver .tdom"), tekst("#spOver .sek-spot")
                         assert page.evaluate(f"document.querySelector(\"#tstripe .tk[data-i='{treffer_mork[1]}'] .segs\").children.length") == 0, "en mørk time skal ikke ha segmenter"
                         assert "mørkt, ingen vurdering" in valgt()["aria"]
-                        if hx.get("surf_height") is not None:
-                            assert "Treffer ikke" in maalene().get("Surf", ""), "grunnen skal stå i surf-raden også i en mørk time"
+                        # S45 5 a (svar.md 26.11.2026 kl. 13.10): «–» i mørke timer uten ord under, heller ikke «Treffer ikke»
+                        assert tekst("#spOver .t-svell") == "–" and not page.query_selector("#spOver .svell.surf .svell-sub") and tekst("#spOver .svell > .etikett") == "Surf", f"en mørk time skal bare ha «–» under SURF: {tekst('#spOver .svell.surf')}"
                     # Theodor 16.10 (Grøtfjord 17.10 kl. 14): ved surfehøyde 0 og «Blåst ut» er tallet BarentsWatch-høyden (regel (c))
                     bo = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("surf_height") == 0
-                               and x.get("low_reason") == "blown_out" and (x.get("bw_height") or 0) > 0.5 and i > now_idx(d["hours"])), None)
-                    if bo:
-                        hx = aapne(bo); tall = tallene(maalene().get("Surf"))
-                        assert len(tall) == 1 and abs(tall[0] - hx["bw_height"]) <= 0.051, (bo, maalene(), hx["bw_height"])
+                               and x.get("low_reason") == "blown_out" and (x.get("bw_height") or 0) > 0.5 and i > now_idx(d["hours"]) and light_of(x) != "mørkt" and page.evaluate("(h) => visesSomSjo(h)", x)), None)
+                    if bo:   # tallet er totalhøyden: «SJØ», ett tall, ikke noe kroppsmål (S45 2). Bare lyse timer: en mørk time har «–» (S45 5 a)
+                        hx = aapne(bo); tall = tallene(tekst("#spOver .svell.surf"))
+                        assert len(tall) == 1 and abs(tall[0] - hx["bw_height"]) <= 0.051, (bo, tekst("#spOver .svell.surf"), hx["bw_height"])
+                        assert tekst("#spOver .svell > .etikett") == "Sjø" and not page.query_selector("#spOver .svell.surf .svell-sub"), tekst("#spOver .svell.surf")
                     ok = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if (x.get("surf_height") or 0) > 0.3
-                               and x.get("surf_height_sets") is not None and not x.get("low_reason") and i > now_idx(d["hours"])), None)
+                               and x.get("surf_height_sets") is not None and not x.get("low_reason") and i > now_idx(d["hours"]) and light_of(x) != "mørkt"), None)
                     if ok:
-                        hx = aapne(ok); tall = tallene(maalene().get("Surf"))
-                        assert tall and abs(tall[0] - hx["surf_height"]) <= 0.051 and abs(tall[-1] - hx["surf_height_sets"]) <= 0.051, (ok, maalene(), hx["surf_height"], hx["surf_height_sets"])   # JS og Python runder x,x5 ulikt
+                        hx = aapne(ok); tall = tallene(tekst("#spOver .svell.surf"))
+                        assert tall and abs(tall[0] - hx["surf_height"]) <= 0.051 and abs(tall[-1] - hx["surf_height_sets"]) <= 0.051, (ok, tekst("#spOver .svell.surf"), hx["surf_height"], hx["surf_height_sets"])   # JS og Python runder x,x5 ulikt
                     # ---- ekte 0 (flat-sperren): ordet, aldri «–» eller «null» (fysikk-kontrollør runde 2) ----
                     flat = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "flat" and x.get("surf_height") == 0 and i > now_idx(d["hours"])), None)
                     if flat:
-                        hx = aapne(flat); surf = maalene().get("Surf", "")
-                        assert page.evaluate("(h) => ratingWord(h)", hx) in surf and not tallene(surf), (flat, surf)
+                        hx = aapne(flat); surf = tekst("#spOver .svell.surf")
+                        assert not tallene(surf) and tekst("#spOver .t-svell") == "–" and "Mangler" not in surf, (flat, surf)
+                        assert (page.evaluate("(h) => ratingWord(h)", hx) in surf) == (light_of(hx) != "mørkt"), (flat, surf)   # mørk time: ingen karakter under «–» (feiljegeren 25.11.2026, funn 2)
                     # «Treffer ikke» med surfehøyde > 0: regel (c) sier intet pålitelig tall → ordet, ikke et tall (runde 3)
-                    ti = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "treffer_ikke" and (x.get("surf_height") or 0) > 0 and i > now_idx(d["hours"])), None)
+                    ti = next(((sid, i) for sid, d in details.items() for i, x in enumerate(d["hours"]) if x.get("low_reason") == "treffer_ikke" and (x.get("surf_height") or 0) > 0 and i > now_idx(d["hours"]) and light_of(x) != "mørkt"), None)
                     if ti:
-                        aapne(ti); surf = maalene().get("Surf", "")
-                        assert "Treffer ikke" in surf and not tallene(surf), (ti, surf)
+                        aapne(ti); surf = tekst("#spOver .svell.surf")
+                        assert "Treffer ikke" in surf and not tallene(surf) and tekst("#spOver .t-svell") == "–", (ti, surf)
                     # ---- 10. spotsiden på dagen uten tall: «Mangler data» og skravur, aldri 0 ----
                     aapne((MISS_ID, first_miss_idx))
                     dom = dommen()
@@ -1040,6 +1221,123 @@ def main():
                     assert segs and all(c == "segs miss" for c in segs), f"timene uten data skal være skravert: {segs}"
                     assert "mangler data" in valgt()["aria"]
                     shot("mangler-data", scheme); audit("mangler-data")
+                    # ---- feiljegeren 25.11.2026 (fase 3): KL.-blokka og stripa med endrede tall i en lys time på Unstad ----
+                    go("#spot=unstad", SPOT_KLAR); page.wait_for_selector("#tstripe .tsvg"); i_ = valgt()["i"]
+                    aapne(("unstad", i_))   # timen i adressen: den står også når den gjøres mørk
+                    def med(endring):
+                        page.evaluate("""([i, e]) => { const s = DATA.spots.find(x => x.id === 'unstad'); s.__gml = s.__gml || {...s.hours[i]}; s.hours[i] = {...s.__gml, light: 'dag', daylight: true, faded: 0, faded_wind: 0, faded_tide: 0, long_sea: false, ...e}; Front.refresh(); }""", [i_, endring])
+                        page.wait_for_timeout(150)
+                        return page.evaluate("""() => { const k = document.querySelector('#tstripe .tk.valgt'), v = document.querySelector('#spOver .svell.surf'), sub = v.querySelector('.svell-sub');
+                            return {stort: v.querySelector('.t-svell') ? v.querySelector('.t-svell').textContent : null, under: sub ? sub.textContent : null, stolpe: !!k.querySelector('.sbx i'), skravur: k.querySelector('.sbx').classList.contains('miss'), tall: k.querySelector('.srf b') ? k.querySelector('.srf b').textContent : null,
+                                etikett: v.querySelector('.etikett').textContent.trim(), ark: v.querySelector('.etikett .forklar').dataset.explain, omriss: k.querySelector('.srf').classList.contains('sjo'), graa: !!v.querySelector('.t-surf.mork'),
+                                fyll: k.querySelector('.sbx i') ? getComputedStyle(k.querySelector('.sbx i')).backgroundColor : null, note: document.querySelector('#tstripe .tnote') ? document.querySelector('#tstripe .tnote').textContent : null,
+                                rad: document.querySelector('#tstripe .te-surf') ? document.querySelector('#tstripe .te-surf').textContent.replace(/\s+/g, ' ').trim() : null, aria: document.querySelector('#tstripeVelg').getAttribute('aria-valuetext')}; }""")
+                    # ---- S45 (svar.md 26.11.2026 kl. 13.10) ----
+                    # 2: Stormsjø, og Blåst ut når surfehøyden er 0, viser totalhøyden ved spoten (regel (c)). Da heter tallet «SJØ», ikke
+                    # «SURF», det har ikke kroppsmål, etiketten åpner arket om signifikant høyde, stolpen er et omriss, og skjermleseren sier «sjø»
+                    for e_, tall_ in (({"stars": 0, "low_reason": "stormsjo", "surf_height": 0.91, "surf_height_sets": 1.16, "bw_height": 2.65, "wind_speed": 15.2, "wind_type": "onshore"}, "2,7"),
+                                      ({"stars": 1, "low_reason": "stormsjo", "surf_height": 0.91, "surf_height_sets": 1.16, "bw_height": 2.65, "wind_speed": 15.2, "wind_type": "onshore"}, "2,7"),
+                                      ({"stars": 0, "low_reason": "blown_out", "surf_height": 0, "surf_height_sets": None, "bw_height": 1.9, "wind_speed": 12, "wind_type": "onshore"}, "1,9")):
+                        sj_ = med(e_)
+                        assert sj_["etikett"] == "Sjø" and sj_["stort"] == f"{tall_}m" and sj_["under"] is None and sj_["ark"] == "hs", f"S45 2, totalhøyden skal hete SJØ og ikke ha kroppsmål: {e_} {sj_}"
+                        assert sj_["stolpe"] and sj_["omriss"] and sj_["fyll"] == "rgba(0, 0, 0, 0)" and f"Sjø {tall_} m" in sj_["aria"] and "surf" not in sj_["aria"].lower(), f"S45 2, stripa og skjermleseren: {sj_}"
+                        # runde 4 viktig 1: forklaringen av omrisset står under stripa, og raden over stolpene på nettsiden heter aldri «SURF» alene når den har sjøtall
+                        assert sj_["note"] == "Omriss: sjøen ved spoten, ikke surfehøyden" and (mobile or sj_["rad"] in ("Sjø m", "Surf / sjø m")), f"etiketten og forklaringen i stripa: {sj_}"
+                        assert page.evaluate("(h) => Spot.kroppshoyde(h)", {**e_, "light": "dag"}) is None, "S45 2: ikke kroppsmål for totalhøyden"
+                        assert not re.search(r"hode|hofte|bryst|skulder|kne", tekst("#spOver").lower()), f"S45 2: kroppsmål i en time med totalhøyden: {tekst('#spOver')}"
+                    # … og bare da: Blåst ut med ekte surfehøyde, og Stormsjø uten totalhøyde, er fortsatt «SURF» med kroppsmål
+                    for e_, tall_ in (({"stars": 0, "low_reason": "blown_out", "surf_height": 1.4, "surf_height_sets": 1.8, "bw_height": 1.9, "wind_speed": 12, "wind_type": "onshore"}, "1,4–1,8"),
+                                      ({"stars": 0, "low_reason": "stormsjo", "surf_height": 0.91, "surf_height_sets": 1.16, "bw_height": None, "wind_speed": 15.2, "wind_type": "onshore"}, "0,9")):
+                        su_ = med(e_)
+                        assert su_["etikett"] == "Surf" and su_["stort"] == f"{tall_}m" and su_["under"] and su_["ark"] == "surf_height" and not su_["omriss"] and f"Surf {tall_} m" in su_["aria"], f"S45 2 gjelder bare totalhøyden: {e_} {su_}"
+                    # de samme timene i listene, i regionraden, på kortet i Utforsk, i tabellen på forsiden og for skjermleseren: «sjø 2,7 m»
+                    sjl_ = page.evaluate("""() => { const F = Front.helpers, b = (o) => Object.assign({light: 'dag', faded: 0, t: '2026-10-15T10:00Z'}, o), tmp = document.createElement('div');
+                        const st = b({stars: 0, low_reason: 'stormsjo', surf_height: 0.91, surf_height_sets: 1.16, bw_height: 2.65, wind_speed: 15.2, wind_type: 'onshore'});
+                        const bl = b({stars: 0, low_reason: 'blown_out', surf_height: 0, bw_height: 1.9, wind_speed: 12, wind_type: 'onshore'});
+                        const su = b({stars: 0, low_reason: 'blown_out', surf_height: 1.4, surf_height_sets: 1.8, bw_height: 1.9, wind_speed: 12, wind_type: 'onshore'});
+                        const les = (h) => { tmp.innerHTML = F.naHtml(h, null, ratingWord(h)); return [...tmp.childNodes].map(e => e.textContent.trim()); };
+                        return {st: les(st), bl: les(bl), su: les(su), merket: [st, bl, su].map(h => F.hoydeMedMerke(h)), sjo: [st, bl, su].map(h => F.erSjo(h)),
+                                ro: [st, bl, su].map(h => visesSomSjo(h)), svak: visesSomSjo(b({stars: 0, low_reason: 'blown_out', surf_height: 0, bw_height: 0.5, wind_speed: 1})), forbud: visesSomSjo({...st, _forbud: true})}; }""")
+                    assert sjl_["st"] == ["Ikke surfbart", "sjø 2,7 m", "Stormsjø"] and sjl_["bl"] == ["Ikke surfbart", "sjø 1,9 m", "Blåst ut"] and sjl_["su"] == ["Ikke surfbart", "1,4–1,8 m", "Blåst ut"], f"S45 2 i listene: {sjl_}"
+                    assert sjl_["merket"] == ["sjø 2,7 m", "sjø 1,9 m", "1,4–1,8 m"] and sjl_["sjo"] == [True, True, False] and sjl_["ro"] == [True, True, False] and not sjl_["svak"] and not sjl_["forbud"], f"S45 2: {sjl_}"
+                    # 5 a: en mørk time har «–» uten tall og uten ord under, også når timen har en høyde. Stripa viser den fortsatt, dempet
+                    for e_ in ({"stars": 2, "low_reason": None, "surf_height": 1.2, "surf_height_sets": 1.5}, {"stars": 0, "low_reason": "treffer_ikke", "surf_height": 1.2}, {"stars": 0, "low_reason": "stormsjo", "surf_height": 0.9, "bw_height": 2.65}):
+                        mk_ = med({**e_, "light": "mørkt", "daylight": False})
+                        assert mk_["stort"] == "–" and mk_["under"] is None and mk_["etikett"] == "Surf" and not mk_["graa"], f"S45 5 a, mørk time: {e_} {mk_}"
+                        assert not re.search(r"\d,\d ?m\b", tekst("#spOver .svell.surf")), f"S45 5 a: tall i en mørk time: {tekst('#spOver .svell.surf')}"
+                    mt_ = med({"stars": 2, "low_reason": None, "surf_height": 1.2, "surf_height_sets": 1.5, "light": "mørkt", "daylight": False})
+                    assert mt_["stolpe"] and mt_["tall"] == (None if mobile else "–"), f"mørk time: høyden står som dempet stolpe i stripa (småvalg 4 a), og tallraden på nettsiden har «–» (S45 5 a): {mt_}"
+                    # PC-raden: «Sjø» når alle dagens lyse tall er sjø, «Surf / sjø» når de er blandet, «Surf» ellers. Forklaringen bare når dagen har en sjø-stolpe
+                    if not mobile:
+                        rd_ = page.evaluate("""() => { const s = DATA.spots.find(x => x.id === 'unstad'), dag = document.querySelector('#tstripe').dataset.day, gml = s.hours, ut = {};
+                            const sett = (f) => { s.hours = gml.map((h, i) => dayKey(new Date(h.t)) === dag ? f(h, i) : h); Front.refresh(); const e = document.querySelector('#tstripe .te-surf'), n = document.querySelector('#tstripe .tnote'); return [e.textContent.replace(/\\s+/g, ' ').trim(), !!n]; };
+                            const sjo = (h) => ({...h, stars: 0, low_reason: 'stormsjo', surf_height: 0.9, surf_height_sets: 1.2, bw_height: 2.6, wind_speed: 15, wind_type: 'onshore'}), surf = (h) => ({...h, stars: 2, low_reason: null, surf_height: 1.2, surf_height_sets: 1.5});
+                            ut.alle = sett(sjo); ut.blandet = sett((h, i) => i % 2 ? sjo(h) : surf(h)); ut.ingen = sett(surf); s.hours = gml; Front.refresh(); return ut; }""")
+                        assert rd_ == {"alle": ["Sjø m", True], "blandet": ["Surf / sjø m", True], "ingen": ["Surf m", False]}, f"raden over stolpene på nettsiden (runde 4 viktig 1): {rd_}"
+                    # funn 3: en flat time har «–» i det store tallet og i stripa, som i listene. Ikke «0,0 m, Nesten flatt»
+                    fl_ = med({"stars": 0, "low_reason": None, "surf_height": 0.04, "surf_height_sets": 0.05, "zero_losses": None, "local_rules": None})
+                    assert fl_["stort"] == "–" and fl_["under"] == "Flatt" and not fl_["stolpe"] and not fl_["skravur"] and fl_["tall"] == (None if mobile else "–"), f"flat time: {fl_}"
+                    # en mørk flat time: ingen karakter under «–» (funn 2)
+                    fm_ = med({"light": "mørkt", "daylight": False, "stars": 0, "low_reason": "flat", "surf_height": 0.04})
+                    assert fm_["stort"] == "–" and fm_["under"] is None, f"mørk flat time: {fm_}"
+                    # funn 6: svellet mangler i en time med andre tall: raden står med ordet for det, og periode og retning når de finnes
+                    med({"swell_offshore": None, "period": 9.0, "dir_offshore": 300}); rad_ = maalene()["Svell ute"]
+                    assert "–" in rad_ and "Mangler data" in rad_ and "9 s" in rad_ and "300°" in rad_ and not re.search(r"\d,\d", rad_), rad_
+                    med({"swell_offshore": None, "period": None, "dir_offshore": None}); rad_ = maalene()["Svell ute"]
+                    assert "Mangler data" in rad_ and not re.search(r"\d", rad_), rad_
+                    # funn 7: en time med vurdering, men uten høyde, er skravert i stripa
+                    for e_ in ({"stars": 1, "low_reason": None, "surf_height": None, "surf_height_sets": None}, {"stars": 0, "low_reason": "stormsjo", "surf_height": None, "surf_height_sets": None, "bw_height": None}):
+                        mh_ = med(e_); assert mh_["stort"] == "–" and mh_["skravur"] and not mh_["stolpe"], f"time uten høyde: {e_} {mh_}"
+                        # runde 2 e: ordet for at høyden mangler under «–», ikke karakteren («– Dårlig»), også i en mørk time
+                        assert mh_["under"] == "Mangler data", f"under «–» når høyden mangler: {mh_}"
+                        mm_ = med({**e_, "light": "mørkt", "daylight": False}); assert mm_["stort"] == "–" and mm_["under"] == "Mangler data", f"mørk time uten høyde: {mm_}"
+                    if mobile:   # runde 2, viktig 1: trykk på sikkerheten og «kystmodell 100 m» åpner hvert sitt ark, midt i og 20 px over og under
+                        med({"stars": 1, "low_reason": None, "confidence": 90, "zone": "barentswatch", "uncertain": False})
+                        for bw_, bh_ in ((375, 548), (390, 663), (393, 700), (402, 720), (412, 732), (430, 780)):
+                            page.set_viewport_size({"width": bw_, "height": bh_}); page.wait_for_timeout(150)
+                            for key_, ord_, tittel_ in (("confidence", "Høy sikkerhet · kystmodell 100 m", "Sikkerhet"), ("hs", "kystmodell 100 m", "Signifikant høyde")):
+                                for dy_ in (-20, 0, 20):
+                                    x_, y_, to_ = page.evaluate("""(k) => { const e = document.querySelector(`#viewSpot .kilder .forklar[data-explain="${k}"]`); e.scrollIntoView({block: 'center', behavior: 'instant'}); const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2, e.textContent]; }""", key_)
+                                    assert to_ == ord_, to_
+                                    page.mouse.click(x_, y_ + dy_); page.wait_for_selector("#exSheet.open")
+                                    assert page.text_content("#exTitle").strip() == tittel_, f"trykk {dy_} px fra midten av «{ord_}» ({bw_} x {bh_}) åpnet «{page.text_content('#exTitle')}»"
+                                    page.keyboard.press("Escape"); page.wait_for_selector("#exSheet:not(.open)", state="attached"); page.wait_for_timeout(50)
+                        page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.evaluate("window.scrollTo(0, 0)"); page.wait_for_timeout(150)
+                    else:   # runde 2 b: 200 % tekst på nettsiden: surfetallet er klart størst, og ordene i radene brytes ikke midt i
+                        med({"stars": 1, "low_reason": None, "surf_height": 3.0, "surf_height_sets": 3.7})
+                        page.evaluate("document.documentElement.style.fontSize = '200%'")
+                        for bw_ in (1024, 1060, 1280, 1440):
+                            page.set_viewport_size({"width": bw_, "height": vp[1]}); page.wait_for_timeout(150)
+                            b2 = page.evaluate("""() => { const brutt = [], w = document.createTreeWalker(document.querySelector('#spOver .maalene'), NodeFilter.SHOW_TEXT);
+                                while(w.nextNode()){ const t = w.currentNode; for(const m of t.textContent.matchAll(/[A-Za-zÆØÅæøå0-9:,°]{3,}/g)){ const r = document.createRange(); r.setStart(t, m.index); r.setEnd(t, m.index + m[0].length); if(new Set([...r.getClientRects()].filter(x => x.width > 0).map(x => Math.round(x.top))).size > 1) brutt.push(m[0]); } }
+                                return {brutt, px: parseFloat(getComputedStyle(document.querySelector('#spOver .t-surf')).fontSize), rad: parseFloat(getComputedStyle(document.querySelector('#spOver .maal .mv')).fontSize)}; }""")
+                            assert not b2["brutt"] and b2["px"] >= 2 * b2["rad"], f"200 % tekst på {bw_} px: {b2}"
+                            if bw_ == 1440:   # runde 3 k: også ved 175 % på 1440 px slår oppsettet inn, så «pålands» og «Tidevann» ikke brytes midt i
+                                page.evaluate("document.documentElement.style.fontSize = '175%'"); page.wait_for_timeout(150)
+                                b3 = page.evaluate("""() => { const brutt = [], w = document.createTreeWalker(document.querySelector('#spOver .maalene'), NodeFilter.SHOW_TEXT);
+                                    while(w.nextNode()){ const t = w.currentNode; for(const m of t.textContent.matchAll(/[A-Za-zÆØÅæøå0-9:,°]{3,}/g)){ const r = document.createRange(); r.setStart(t, m.index); r.setEnd(t, m.index + m[0].length); if(new Set([...r.getClientRects()].filter(x => x.width > 0).map(x => Math.round(x.top))).size > 1) brutt.push(m[0]); } }
+                                    return {brutt, px: parseFloat(getComputedStyle(document.querySelector('#spOver .t-surf')).fontSize), rad: parseFloat(getComputedStyle(document.querySelector('#spOver .maal .mv')).fontSize)}; }""")
+                                assert not b3["brutt"] and b3["px"] >= 2 * b3["rad"], f"175 % tekst på 1440 px: {b3}"
+                        page.evaluate("document.documentElement.style.fontSize = ''"); page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
+                    # funn 1 (stopper): det store tallet står på én linje og i kolonnen sin, også på smale nettsider
+                    for bredder_, e_ in (((1024, 1200, 1280, 1300, 1440) if not mobile else (320, 360, 390), x) for x in ({"surf_height": 3.0, "surf_height_sets": 3.7}, {"surf_height": 10.2, "surf_height_sets": 13.0}, {"surf_height": 10.2, "surf_height_sets": None})):
+                        med({"stars": 3, "low_reason": None, **e_})
+                        for bw_ in bredder_:
+                            page.set_viewport_size({"width": bw_, "height": vp[1]}); page.wait_for_timeout(150)
+                            t1 = page.evaluate("""() => { const e = document.querySelector('#spOver .t-surf'), r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect(), k = document.querySelector('#spOver').getBoundingClientRect();
+                                return {tekst: e.textContent, linjer: Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)), ut: Math.round(b.right - k.right), px: Math.round(parseFloat(getComputedStyle(e).fontSize))}; }""")
+                            assert t1["linjer"] == 1 and t1["ut"] <= 0 and t1["px"] >= 28, f"det store tallet skal stå på én linje og i kolonnen ({bw_} px): {t1}"
+                        page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
+                    # runde 2 c: nettlesere uten cqi (Safari før 16) får en reserve i px, ikke brødtekststørrelsen
+                    res_ = page.evaluate("""() => { for(const ark of document.styleSheets){ let rr; try { rr = ark.cssRules; } catch(e){ continue; }
+                        for(let i = rr.length - 1; i >= 0; i--) if(rr[i] instanceof CSSSupportsRule && /cqi/.test(rr[i].conditionText)){ const t = rr[i].cssText; ark.deleteRule(i); const px = getComputedStyle(document.querySelector('#spOver .t-surf')).fontSize; ark.insertRule(t, i); return px; } } return null; }""")
+                    assert res_ in ("40px", "30px"), f"reserven for det store tallet (40 px, 30 px for et spenn): {res_}"
+                    # funn 17 og runde 2 f: «, usikkert» (lang sjø) står i dommen, og i dagkolonnene på nettsiden
+                    dk_ = page.evaluate("""() => { const s = DATA.spots.find(x => x.id === 'unstad'), kn = document.querySelector('.dagvelger .dagknapp[aria-pressed="true"]'), o = s.dager.find(x => x.d === kn.dataset.day), gml = o.h, foer = document.querySelector('#viewSpot .dom-ord b').textContent;
+                        o.h = {...o.h, stars: Math.max(1, o.h.stars || 0), low_reason: null, long_sea: true}; Front.refresh();
+                        const k2 = document.querySelector('.dagknapp.stor[aria-pressed="true"]'), ut = [foer, document.querySelector('#viewSpot .dom-ord b').textContent, ...(k2 ? [k2.querySelector('.dk-ord').textContent, k2.getAttribute('aria-label')] : [])]; o.h = gml; Front.refresh(); return ut; }""")
+                    assert "usikkert" not in dk_[0] and len(dk_) == (2 if mobile else 4) and all(", usikkert" in x for x in dk_[1:]), f"«, usikkert» i dommen og dagkolonnen: {dk_}"
+                    page.evaluate("(i) => { const s = DATA.spots.find(x => x.id === 'unstad'); s.hours[i] = s.__gml; delete s.__gml; Front.refresh(); }", i_)
 
                 for scheme in ("mork", "lys"):
                     media(scheme)
@@ -1140,7 +1438,7 @@ def main():
                                 if r["mork"]:
                                     assert r["sist"] == "Nå Mørkt" and not re.search(r"\d", r["sist"]) and ". Nå mørkt." in r["aria"], f"mørk nå-time skal stå som «Nå Mørkt» uten tall ({nar_}): {r}"
                                 else:
-                                    vent_ = f"Nå {r['ord']}" + (f" {r['hoyde']} m" if r["hoyde"] else "")
+                                    vent_ = f"Nå {r['ord']}" + (f" {r['hoyde']} m" if r["hoyde"] else "")   # uten høyde (Flatt, Treffer ikke): bare ordet, ingen hengende strek (runde 4, viktig 2)
                                     assert r["sist"] == vent_ and f". Nå {r['ord'].lower()}" in r["aria"], f"«Nå» med ordet og høyden for nå-timen skal stå sist i metalinja ({nar_}): {r} (ventet «{vent_}»)"
                                     assert not r["hoyde"] or r["enhStil"] == "none", f"enheten «m» i nå-leddet skal ikke stå i versaler: {r}"
                             for r in lys_["rader"]:
@@ -1155,6 +1453,14 @@ def main():
                         assert [r["sist"] for r in naa_sett["i lys"]] != [r["sist"] for r in naa_sett["før det lysner"]], "raden før det lysner skal ikke være lik raden midt på dagen"
                         page.clock.set_fixed_time(T0); page.evaluate("Front.refresh()"); page.wait_for_timeout(150)
                         assert page.query_selector("#viewHjem #hjemMerk"), "linja skal stå igjen når klokka er tilbake på 22:10"
+                        # feiljegeren (fase 2 runde 5): «usikkert» står også på dagens ord i regionraden (lang sjø), som på nå-leddet
+                        usk = page.evaluate("""() => { const H = Front.helpers, key = Front.state.hjemDag, rader = [...document.querySelectorAll('#viewHjem .regionliste a.favlinje')];
+                            const s = rader.map(r => DATA.spots.find(x => r.getAttribute('href') === '#spot=' + x.id)).find(x => { const b = H.dayBest(x, key); return b.st != null && b.h && !b.h.long_sea; });
+                            if(!s) return null;
+                            const h = H.dayBest(s, key).h; h.long_sea = true; Front.refresh();
+                            const r = document.querySelector(`#viewHjem .regionliste a.favlinje[href="#spot=${s.id}"]`), ut = {navn: s.name, meta: r.querySelector('.etikett').textContent.replace(/\\s+/g, ' '), aria: r.getAttribute('aria-label')};
+                            delete h.long_sea; Front.refresh(); return ut; }""")
+                        assert usk and ", usikkert" in usk["meta"] and ", usikkert" in usk["aria"] and "Nå " not in usk["meta"], f"«usikkert» mangler på dagens ord i regionraden: {usk}"
                     cell = miss_cells[4]   # T0 er kl. 22:10 - dagens lys er over, ukeradene starter i morgen (PR #12 punkt c), så dag 5 er rute 4
                     assert ("miss" in cell["cls"] or "tom" in cell["cls"]) and cell["txt"] in ("", "–"), f"dagen uten tall skal være stiplet uten tall på Hjem: {cell}"
                     if not mobile:
@@ -1166,7 +1472,7 @@ def main():
                             tittel: document.querySelector('#forside table.fs-tabell').previousElementSibling.querySelector('h2').textContent.trim(),
                             linje: (document.querySelector('#forside .fs-helt .fs-plate .etikett') || {}).textContent || ''})""")
                         # tallet i kolonnen er svellet ute, og overskriften følger dagen som er valgt (Theodor S20 a og b, 20.11.2026)
-                        assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Svell ute", "06–18"] and fs["tittel"] == "Beste i morgen", fs
+                        assert fs["dag"] == "I morgen" and fs["kol"] == ["#", "Spot", "I morgen", "Best", "Surf", "06–18"] and fs["tittel"] == "Beste i morgen", fs
                         # etter lyset er knappene «I morgen» og ukedagen etter: en navngitt dag heter «Beste fredag» (Theodor S25, 22.11.2026),
                         # og linja på hovedbildet sier det samme som overskriften over tabellen
                         assert fs["linje"].split(" · ")[1] == fs["tittel"], fs
@@ -1281,6 +1587,21 @@ def main():
                         for navn, c in syn.items():
                             assert c["fikk"] == c["ventet"], f"overskriften, tilfellet «{navn}»: fikk {c['fikk']}, ventet {c['ventet']}"
                             assert not any(re.search(r"\bnå\b|neste 1 dagene", x) for x in c["fikk"]), f"overskriften, tilfellet «{navn}»: {c['fikk']}"
+                        assert page.evaluate("STR.spotForelopig('Breivikeidet')") == "Breivikeidet (foreløpig)"
+                        # runde 4 i: status «hemmelig» tas bort ett sted, der spotlista leses inn (utenHemmelige i app.js), så overskrift,
+                        # lister, kart og hovedbilde er like. Publiseringen er det egentlige vernet (test_publish.py)
+                        hm_ = page.evaluate("""() => { const o = utenHemmelige({spots: [{id: 'a', name: 'A'}, {id: 'hx', name: 'HEMMELIGX', status: 'hemmelig'}, {id: 'p', name: 'P', status: 'forelopig'}]});
+                            return {ids: o.spots.map(s => s.id), tom: utenHemmelige({}).spots === undefined, iAppen: DATA.spots.filter(s => s.status === 'hemmelig').length}; }""")
+                        assert hm_ == {"ids": ["a", "p"], "tom": True, "iAppen": 0}, f"spots med status hemmelig skal tas bort når spotlista leses inn: {hm_}"
+                        assert "DATA = utenHemmelige(window.__FORECAST__ || await loadOverview());" in (DOCS / "js" / "app.js").read_text(encoding="utf-8"), "start() skal lese spotlista gjennom utenHemmelige()"
+                        # hovedbildet på PC-forsiden: samme regel som overskriften for nye spots (fysikk-kontrolløren 26.11.2026), og «Foreløpig» i linja over navnet (runde 4 d)
+                        fh_ = page.evaluate("""() => { const F = Front.helpers, t = new Date().toISOString(), rad = (name, st, e) => ({s: Object.assign({id: name.toLowerCase(), name}, e || {}), b: {st, t, h: {stars: st, surf_height: 1.2, t}, start: t, slutt: t}});
+                            const ny = {status: 'forelopig'}, helt = (rader) => { const r = F.fsHelt(rader); return r ? r.s.name : null; }, tmp = document.createElement('div');
+                            const linje = (e) => { tmp.innerHTML = F.fsHeltHtml(rad('P', 2, e), 'i dag'); return tmp.querySelector('.fs-plate .etikett').textContent; };
+                            return {ny2: helt([rad('P', 2, ny), rad('A', 1)]), lik: helt([rad('A', 2), rad('P', 2, ny)]), ny3gml2: helt([rad('P', 3, ny), rad('A', 2)]), ny1: helt([rad('A', 1), rad('P', 1, ny)]),
+                                    forbud: helt([rad('P', 2, Object.assign({restriksjoner: [{type: 'surfeforbud', gjelder: 'sjø'}]}, ny)), rad('A', 1)]),
+                                    merke: [linje(ny), linje({andel_forelopig: true}), linje({})].map(x => /Foreløpig/.test(x))}; }""")
+                        assert fh_ == {"ny2": "P", "lik": "A", "ny3gml2": "A", "ny1": "A", "forbud": "A", "merke": [True, True, False]}, f"hovedbildet på PC-forsiden: {fh_}"
                         shot("hjem-fav", scheme); audit("hjem-fav")
                         page.click("#favRediger"); page.wait_for_selector("#viewHjem [data-fjern]")
                         red = page.evaluate(HJEM_JS)
@@ -1375,14 +1696,20 @@ def main():
                     mk, cl = check_colors(val_now, "nå")
                     assert page.text_content("#utforskChips [aria-pressed='true']").strip() == "Troms", "standardutsnittet skal være valgt region (Troms)"
                     shot("utforsk-na", scheme); audit("utforsk-na")
-                    # kortet for en spot med ekte 0 nå: Surf = ordet, aldri «–»/«null»
+                    # kortet i en mørk time: «Mørkt», og verken høyde eller vurderingsord i Surf (S44 3; feiljegeren 25.11.2026, funn 2)
+                    for m in [m_ for m_ in mk if known(naa_of(OV[m_["id"]])) and light_of(naa_of(OV[m_["id"]])) == "mørkt"][:3]:
+                        click_mk(m["id"]); page.wait_for_selector("#kartKort:not([hidden])")
+                        kt = page.evaluate("[document.querySelector('#kartKort .vurd .ord').textContent.trim(), document.querySelector('#kartKort .fakta div:first-child b').textContent.trim(), document.querySelector('#kartKort .vurd').textContent]")
+                        assert kt[0] == "Mørkt" and kt[1] == "–" and not re.search(r"\d", kt[2]), f"kortet i en mørk time ({m['id']}): {kt}"
+                        page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
+                    # kortet for en spot med ekte 0 nå i lys: Surf = ordet, aldri «–»/«null»
                     nul = next((m for m in mk if naa_of(OV[m["id"]]).get("surf_height") == 0 and naa_of(OV[m["id"]]).get("low_reason")), None)
                     if nul:
                         click_mk(nul["id"]); page.wait_for_selector("#kartKort:not([hidden])")
                         h0 = naa_of(OV[nul["id"]])
                         surf_txt = page.text_content("#kartKort .fakta div:first-child b").strip()
                         exp_word = page.evaluate("(h) => ratingWord(h)", h0)
-                        assert surf_txt not in ("–", "null", "") and (exp_word in surf_txt or "m" in surf_txt), (surf_txt, exp_word)
+                        assert (surf_txt == "–") if light_of(h0) == "mørkt" else (surf_txt not in ("–", "null", "") and (exp_word in surf_txt or "m" in surf_txt)), (surf_txt, exp_word)
                         page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     day3 = TODAY + dt.timedelta(days=3)
                     page.click(f"#dagChips .chip[data-day='{day3.isoformat()}']"); page.wait_for_timeout(300)
@@ -1392,6 +1719,12 @@ def main():
                     mk3, _ = check_colors(val_day3, str(day3))
                     for m in mk3:
                         if val_day3(m["id"])[0] == "miss": assert m["ord"] == "–", m
+                    if not mobile:   # skjermleseren får det samme som raden viser: karakteren, høyden og årsaken (feiljegeren 25.11.2026, funn 14)
+                        ul = page.evaluate("""[...document.querySelectorAll('#utforskListe .srad')].filter(r => !r.querySelector('.rute:is(.miss, .mork, .forbud, .over)')).map(r => { const na = r.querySelector('.na'), q = (s) => { const e = na.querySelector(s); return e ? e.textContent.trim() : null; };
+                            return {aria: r.getAttribute('aria-label'), navn: r.querySelector('.nm b').textContent.trim(), ord: na.firstChild.textContent.trim(), hoyde: q('.num'), grunn: q('.grunn'), st: r.querySelector('.rute').textContent.trim()}; })""")
+                        assert ul, "ingen rader med tall i Utforsk-lista"
+                        for r in ul:
+                            assert r["aria"] == f"{r['navn']}: " + ", ".join(x for x in (r["ord"], r["hoyde"] if r["hoyde"] != "–" else None, r["grunn"].lower() if r["grunn"] else None, f"{r['st']} av 5") if x), f"teksten for skjermleseren skal være den raden viser: {r}"
                     # valgt markør beholder navnet: Lofoten-utsnittet har én spot (Unstad)
                     page.click("#utforskChips [data-view='Lofoten']"); page.wait_for_timeout(900)
                     click_mk("unstad"); page.wait_for_selector("#kartKort:not([hidden])")
@@ -1426,7 +1759,21 @@ def main():
                         assert not brutt, f"tall brutt over to linjer ved 200 %: {brutt}"
                         navn = page.evaluate("(() => { const h = document.querySelector('#viewSpot .sp-navn h1'), r = document.createRange(); r.selectNodeContents(h); return [r.getBoundingClientRect().right, innerWidth]; })()")
                         assert navn[0] <= navn[1] - 15, f"spotnavnet går ut av skjermen ved 200 % tekst: {navn}"
+                        # 320 px: krediteringen brytes i kolonnen (feiljegeren 25.11.2026, funn 18)
+                        page.set_viewport_size({"width": 320, "height": 568}); page.wait_for_timeout(250)
+                        kr_ = page.evaluate("[...document.querySelectorAll('#viewSpot .kredit')].map(k => { const r = document.createRange(); r.selectNodeContents(k); return [Math.round(r.getBoundingClientRect().right), Math.round(k.getBoundingClientRect().right)]; })")
+                        assert kr_ and all(a_ <= b_ + 1 for a_, b_ in kr_), f"krediteringen går ut av kolonnen ved 200 % tekst på 320 px: {kr_}"
+                        page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
                         page.evaluate("document.documentElement.style.fontSize = ''")
+                    else:
+                        # søkelista på nettsiden ved 200 %: ordet, høyden og årsaken står under navnet, ikke oppå det eller i neste rad (funn 18)
+                        go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)")
+                        page.evaluate("document.documentElement.style.fontSize = '200%'")
+                        page.fill("#sokPC", "o"); page.wait_for_selector("#sokDrop:not([hidden]) .srad"); page.wait_for_timeout(200)
+                        so_ = page.evaluate("""() => { const R = [...document.querySelectorAll('#sokDrop .srad')], ut = [], f = (e) => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); };
+                            R.forEach((r, i) => { const n = f(r.querySelector('.nm')), a = f(r.querySelector('.na')), b = r.getBoundingClientRect(); if(Math.min(n.right, a.right) - Math.max(n.left, a.left) > 1 && Math.min(n.bottom, a.bottom) - Math.max(n.top, a.top) > 2) ut.push(r.innerText); if(a.bottom > b.bottom + 1 || n.bottom > b.bottom + 1) ut.push('ut av raden: ' + r.innerText); }); return {n: R.length, ut}; }""")
+                        assert so_["n"] and not so_["ut"], f"søkelista ved 200 % tekst: {so_}"
+                        page.fill("#sokPC", ""); page.keyboard.press("Escape"); page.evaluate("document.documentElement.style.fontSize = ''")
                     media(scheme, "more")
                     go("#hjem", "#viewHjem:not([hidden]) :is(#forside, .hjem-linje)"); shot("hjem-kontrast", scheme); audit("hjem-kontrast")
                     go("#spot=unstad", SPOT_KLAR); page.wait_for_timeout(300); shot("unstad-kontrast", scheme); audit("unstad-kontrast")
@@ -1437,6 +1784,7 @@ def main():
                         got = page.evaluate("([a, b]) => Spot.kroppshoyde({surf_height: a, surf_height_sets: b})", [a, b])
                         assert got == kroppshoyde(a, b), (a, b, got)
                     assert page.evaluate("() => Spot.kroppshoyde({surf_height: null})") in (None, "", "–")
+                    assert page.evaluate("() => Spot.kroppshoyde({stars: 0, low_reason: 'stormsjo', surf_height: 0.9, surf_height_sets: 1.2, bw_height: 2.7})") is None, "S45 2: totalhøyden har ikke kroppsmål"
                     for kj in (0, 100, 499, 500, 1999, 2000, 9999, 10000, 50000):
                         assert page.evaluate("(kj) => Spot.energiOrd(kj)", kj) == energi_ord(kj), kj
                     # regel (c): «Blåst ut» uten surfehøyde viser BarentsWatch-høyden, «Stormsjø» alltid den
@@ -1764,6 +2112,18 @@ def main():
                                 felt: cs(f).borderTopLeftRadius, minste: Math.min(...[...document.querySelectorAll('#viewSok *')].filter(e => e.getClientRects().length && e.childNodes.length && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).map(e => parseFloat(cs(e).fontSize)))}; }""")
                     assert sok["sek"][-2:] == ["Områder", "Alle spots"] and "Martian" in sok["navn"] and sok["versaler"] == "uppercase" and sok["radH"] >= 44 and sok["felt"] == "0px" and sok["minste"] >= 11.9, f"Søk: {sok}"
                     ring(["#viewSok .chip", "#viewSok .srad", "#sokAvbryt"], "Søk")
+                    # S44 3: Søk er lik Hjem. Klokka er 22:10: mørke timer får ikke tall, og raden sier at det er mørkt
+                    na_ = page.evaluate("[...document.querySelectorAll('#viewSok .srad .na')].map(e => e.textContent.replace(/\\s+/g, ' ').trim())")
+                    assert na_ and "Mørkt" in na_ and not any(re.search(r"\d", x) for x in na_), f"Søk i mørket skal si «Mørkt» uten tall: {na_[:8]}"
+                    # fase 3 punkt 3: listeraden viser surfehøyden ved spoten, og «–» der ordet er Flatt eller Treffer ikke. Årsaken på egen linje
+                    rad3 = page.evaluate("""() => { const n = Front.helpers.naHtml, b = (o) => Object.assign({light: 'dag', faded: 0, wind_speed: 4, wind_type: 'offshore'}, o), tmp = document.createElement('div');
+                        const les = (h) => { tmp.innerHTML = n(h, null, ratingWord(h)); return [...tmp.childNodes].map(e => e.textContent.trim()); };
+                        return {flatt: les(b({stars: 0, low_reason: 'flat', surf_height: 0})), treffer: les(b({stars: 0, low_reason: 'treffer_ikke', surf_height: 1.2})),
+                                to: les(b({stars: 2, surf_height: 1.2})), blaast: les(b({stars: 0, low_reason: 'blown_out', surf_height: 1.4, wind_speed: 14, wind_type: 'onshore'}))}; }""")
+                    assert rad3["flatt"] == ["Flatt", "–"] and rad3["treffer"] == ["Ikke surfbart", "–", "Treffer ikke"] and rad3["to"] == ["Ok", "1,2 m"], rad3
+                    assert rad3["blaast"] == ["Ikke surfbart", "1,4 m", "Blåst ut"], rad3
+                    # lang sjø: «, usikkert» står i Søk og Utforsk-lista også (feiljegeren 25.11.2026, funn 17)
+                    assert page.evaluate("Front.helpers.naHtml({stars: 2, surf_height: 1.2, light: 'dag', long_sea: true}, null, 'Ok')").startswith("Ok, usikkert<span")
                     audit("fase2-sok")
                     go("#logger", "#viewSide:not([hidden]) #detailPane .sek")
                     lg = page.evaluate("""() => ({sek: document.querySelectorAll('#detailPane .sek').length, tomme: [...document.querySelectorAll('#detailPane .tomlinje')].map(p => p.textContent.trim()), kort: document.querySelectorAll('#detailPane .kort').length,
@@ -1801,7 +2161,7 @@ def main():
                             ut.push({dag: d, valgt: document.querySelector('#viewSpot .dagknapp[aria-pressed="true"]').dataset.day, fane: Math.round(document.querySelector('.tabbar').getBoundingClientRect().top), dv: r('.dagvelger'),
                                      tall: r('.dom .t-tall') || r('.dom-ord b'), ord: r('.dom-ord b'), kl: r('#spOver .sek-spot'), stort: r('#spOver .t-svell') || r('#spOver .svell'), blokk: r('#spOver'), y: Math.round(scrollY)}); }
                         return ut; }"""
-                    for bw_, bh_ in ((360, 640), (390, 663)):
+                    for bw_, bh_ in ((320, 568), (360, 640), (375, 548), (390, 663)):   # 320 x 568: feiljegeren 25.11.2026, funn 20. 375 x 548: iPhone SE med verktøylinja i Safari (S38 2 a)
                         page.set_viewport_size({"width": bw_, "height": bh_})
                         for sid_ in ("unstad", "farstadsanden"):
                             go("#hjem", HJEM_KLAR); go(f"#spot={sid_}", SPOT_KLAR)
@@ -1878,7 +2238,7 @@ def main():
                 page.route("**/data/spots/*.json", sf_route)
                 page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
                 page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
-                dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
+                dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), grunn: (document.querySelector('#viewSpot .dom-grunn') || {}).textContent || null, setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
                     vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
                 # dag for dag: dagens time fra oversikten (publish.best_hour), timen dagen åpnes på og ordet i dagfanen
                 dager = page.evaluate("""([det, ov]) => { const s = {...det, ...ov, hours: det.hours}, Hh = Front.helpers; SpotGraf.defaultDay(s, Hh.nowIdx(s), Hh);
@@ -1896,7 +2256,8 @@ def main():
                     assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak vind uten svell, uansett retning"
                 else:
                     assert sum(d["blaast"] for d in med_tall) >= 2, f"testdataene skal ha minst to dager med en blåst lys time: {dager}"
-                    assert dom["ord"].lower() == "blåst ut", f"dagens ord skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}"
+                    # fase 3 punkt 5: ordet etter tallet er karakteren, årsaken «Blåst ut» står på egen linje
+                    assert dom["ord"] == "Ikke surfbart" and (dom["grunn"] or "").lower() == "blåst ut", f"dagens årsak skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}, {dom['grunn']!r}"
                 ctx.close()
             # ---- S28 på skjermen (PC, «Om spotten»): en Breivikeidet laget av Lenangsøyra-timene i fiksturen med metaen fra
             # spots.json (local_rules.tide_level) sier «Best på lavt vann». Grøtfjord (ingen regel) og Farstadsanden (tide_prefer)
