@@ -3412,4 +3412,56 @@ assert not any("under 0,3 m" in l for l in _r47["breakdown"])
 assert not any("hele høyden ved punktet" in l for r in (r44[11], r44[12], _rk44) for l in r["breakdown"])
 print("47: «flatt (signifikant høyde under 0,35 m)» og «lang, perioden kutter ikke» - OK")
 
+
+# ---------- 48: Ersfjordstranda vender 290°, fralandsvind 65-155° (S47 b, svar.md 26.11.2026 kl. 20.20) ----------
+# Før: 315° og 90-180°, satt fra satellittbilde. Kilder: strandnormalen fra OSM-kystlinja (287-295°) og retningen ved
+# BarentsWatch-punktet (median 296° i 284 lagrede timer). Spoten har ingen observasjon. Svellvinduet, havpunktet og
+# BarentsWatch-punktene er urørt.
+import fetch as _fetch48
+E48 = spots["ersfjordstranda"]
+E48_for = dict(E48, facing=315, offshore_wind=[90, 180])
+assert E48["region"] == "Troms" and E48["area"] == "Senja" and E48["facing"] == 290 and E48["offshore_wind"] == [65, 155]
+assert E48["swell_window"] == [294, 320] and E48["swell_window_tegnet"] == [294, 323] and E48.get("status") is None
+assert E48["barentswatch_point"] == {"lat": 69.485517, "lon": 17.394874} and E48["offshore"] == {"lat": 69.5764, "lon": 17.0514}
+# 48.1 fralandssektoren er motsatt av facing ±45° (samme regel som fabrikken bruker for nye spots)
+assert E48["offshore_wind"] == [(E48["facing"] + 180 - 45) % 360, (E48["facing"] + 180 + 45) % 360]
+# 48.2 vindordet rundt hele kompasset: fralands 65-155, pålands under 45° fra 290 (246-334), skrått pålands fra 45 til
+# under 80° fra facing, ellers sidevind
+for d48 in range(360):
+    v48 = rating.angle_diff(d48, 290)
+    ventet48 = "offshore" if 65 <= d48 <= 155 else "onshore" if v48 < 45 else "sideonshore" if v48 < 80 else "side"
+    assert wind_type(d48, E48) == ventet48, (d48, wind_type(d48, E48), ventet48)
+# det som flytter seg fra før (tabellen i S47): NNV fra pålands til skrått pålands, ØNØ fra sidevind til fralands,
+# V fra skrått pålands til pålands, S fra fralands til sidevind
+for d48, for48, etter48 in ((345, "onshore", "sideonshore"), (75, "side", "offshore"), (260, "sideonshore", "onshore"), (170, "offshore", "side")):
+    assert (wind_type(d48, E48_for), wind_type(d48, E48)) == (for48, etter48), (d48, wind_type(d48, E48_for), wind_type(d48, E48))
+n48_ord = sum(1 for d in range(360) if wind_type(d, E48) != wind_type(d, E48_for))
+# 48.3 eksponeringen er bygget på nytt: sjekksummen stemmer med spots.json (ellers faller henteren tilbake til vindu
+# og skyggekurve og skriver feil i kilderapporten), og kurven er den samme som før (facing er bare med i sjekksummen)
+_expo48 = json.loads((Path(__file__).parent.parent / "data" / "exposure_baseline.json").read_text())
+_sm48, _raw48, _adv48 = _fetch48.resolve_exposure(E48, _expo48, "Ersfjordstranda")
+assert _adv48 is None and len(_sm48) == len(_raw48) == 360, _adv48
+assert _fetch48.resolve_exposure(E48_for, _expo48, "Ersfjordstranda")[0] is None   # den gamle sjekksummen er borte
+E48r, E48r_for = dict(E48, exposure_smoothed=_sm48, exposure_raw=_raw48), dict(E48_for, exposure_smoothed=_sm48, exposure_raw=_raw48)
+# 48.4 regnet eksempel fra S47: svell 2,0 m fra 305° med 12 s, punktet 1,0 m fra 296°. Høyden, surfehøyden og ordet er
+# like med 315° og 290° i begge soner, og poengene flytter seg aldri mer enn ett, for alle vindretninger og 0-14 m/s.
+t48 = {"height_offshore": 2.2, "swell_offshore": 2.0, "swell_model": "standard", "dir_offshore": 305.0, "period": 12.0,
+       "bw_height": 1.0, "bw_dir": 296.0, "bw_period": 11.0}
+n48 = n48_poeng = 0
+for sone48 in ({}, {"bw_height": None, "bw_dir": None, "bw_period": None}):
+    for v48 in (0.0, 2.0, 5.0, 8.0, 11.0, 14.0):
+        for d48 in range(0, 360, 10):
+            h48 = dict(t48, wind_speed=v48, gust=v48, wind_dir=float(d48), **sone48)
+            a48, b48 = rate(dict(h48), E48r_for), rate(dict(h48), E48r)
+            n48 += 1
+            assert (a48["height"], a48["surf_height"], a48["height_source"], a48["uncertain"]) == (b48["height"], b48["surf_height"], b48["height_source"], b48["uncertain"]), (v48, d48)
+            assert abs(a48["stars"] - b48["stars"]) <= 1, (v48, d48, a48["stars"], b48["stars"])
+            assert a48["stars"] == b48["stars"] or a48["wind_type"] != b48["wind_type"], (v48, d48)
+            n48_poeng += a48["stars"] != b48["stars"]
+            if v48 <= 5.0:
+                assert a48["stars"] == b48["stars"], (v48, d48)
+assert n48_poeng > 0
+print(f"48: Ersfjordstranda vender 290° med fralandsvind 65-155° - vindordet er nytt for {n48_ord} av 360 vindretninger, eksponeringens sjekksum stemmer, "
+      f"og i {n48} regnede timer (svell 2,0 m fra 305°, begge soner) er høyden lik og {n48_poeng} flytter ett poeng, ingen mer - OK")
+
 print("Alle tester ok")

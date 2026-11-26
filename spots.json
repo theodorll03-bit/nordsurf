@@ -136,16 +136,17 @@
         320
       ],
       "offshore_wind": [
-        90,
-        180
+        65,
+        155
       ],
       "ideal_height": [
         0.8,
         2.0
       ],
       "max_height": 3.5,
-      "facing": 315,
-      "_offshore_vind": "Stranda i bunnen av bukta vender mot NV (sett på satellittbilde). Offshorevind er satt ut fra det. Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
+      "facing": 290,
+      "_facing": "26.11.2026 (svar.md 26.11.2026 kl. 20.20, S47 b): 290, før 315 (satt fra satellittbilde 25.09.2026). Kilder: strandnormalen fra OSM-kystlinja er 287-295° (±75 til ±500 m langs kysten fra pinnen, spotansvarlig 25.11.2026), og bølgene ved BarentsWatch-punktet kom inn fra 296° (median av 284 lagrede timer med minst 0,2 m fra havsiden, kvartiler 294-303°). offshore_wind er flyttet med til 65-155 (motsatt av facing ±45°), før 90-180. Ingen observasjon fra spoten: sektoren 160-180° (S) er ikke lenger fralands, og ingen har sett vinden der. Urørt: swell_window (294-320, facing ligger nå 4° utenfor vestkanten), havpunktet og BarentsWatch-punktene, som alle ligger langs 315° fra pinnen (251, 150 og 501 m ut). Et snitt langs 290° er ikke kjørt, og å flytte punktet krever eget ja. data/exposure_baseline.json er bygget på nytt for spoten samme dag (facing er med i sjekksummen, kurven er uendret).",
+      "_offshore_vind": "26.11.2026 (S47 b): 65-155, motsatt av facing 290° ±45°, se _facing. Før: 90-180, satt fra satellittbilde (stranda i bunnen av bukta vender mot NV). Lokale fallvinder og vind som kanaliseres i fjorden vises ikke på kart, så bekreft lokalt.",
       "swell_window_tegnet": [
         294,
         323
