@@ -45,6 +45,118 @@ Gjenstår:
 - Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19, og runde 2 d, g og h. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
 - Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
 - Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
+## Breivikeidet: tidevannsregelen har fått et gulv, 26.11.2026
+
+Gren `fiks/breivikeidet-tidevann` fra main `f53fe62`. Oppdrag: svar.md 26.11.2026 kl. 13.10, punkt 1 til 4. Kilde: observasjon 26.11.2026, Theodor («Ikke surfbart før 10-10:30 pga lavvann», kl. 09.13 fra stranda «Ganske flatt»). Committet lokalt, ikke pushet, ingen PR ennå.
+
+**Hva som er gjort**
+- `local_rules.tide_level` for Breivikeidet har en nedre del: `low_full_above_cm` 160, `low_max_at_cm` 100, `low_penalty` 2,5 (× weight 0,7 = 1,75 poeng). Den øvre delen (fra 2,0 m, høyst 0,49) er urørt. Andelen 0,22 er urørt. Bare Breivikeidet har feltene.
+- `rating.tide_level_penalty()` leser den nedre delen. Høyde, surfehøyde og `low_reason` endres ikke: regelen tar bare poeng.
+- Ny fast observasjon i CLAUDE.md og test 46. Test 36 og 42 har nye ord og den nye grensa, og 37.4 (forventningen for torsdag 26.11 med 0,63 m vann) er nå 0 poeng på 0,63 m og 2 poeng på 1,8 m.
+- Ordene: «Best på lavt vann, men ikke under ca. 1,6 m» i «Om spotten», tidevannskortet, forklaringen og skjermleseretiketten. På mobil står den korte formen «Best på lavt vann, over 1,6 m» på én linje under TIDEVANN-raden. «Hvorfor»: «Lavt vann. 0,99 m midt i timen, og under ca. 1,6 m er det for lite vann her: −1,75 poeng.» Linja for høyt vann sier «lavere vann er bedre her, ned til ca. 1,6 m» i stedet for «jo lavere vann, jo bedre her». Mellom 1,6 og 2,0 m: «passe vannstand, ingen straff».
+
+**Kurven** (vannstand over sjøkartnull, midt i timen → fradrag i poeng)
+
+| Vannstand | Fradrag | 2 poeng blir | 3 poeng blir |
+|---|---|---|---|
+| 1,0 m og lavere | 1,75 | 0 | 1 |
+| 1,1 m | 1,46 | 1 | 2 |
+| 1,2 m | 1,17 | 1 | 2 |
+| 1,3 m | 0,88 | 1 | 2 |
+| 1,4 m | 0,58 | 1 | 2 |
+| 1,5 m | 0,29 | 2 | 3 |
+| 1,6 til 2,0 m | 0 | 2 | 3 |
+| 2,4 m | 0,25 | 2 | 3 |
+| 2,8 m og høyere | 0,49 | 2 | 3 |
+
+En time med 2 poeng før tidevann får 0 under ca. 1,09 m, 1 fra 1,09 til 1,43 m og 2 over 1,43 m. Rett linje fordi det ikke finnes observasjoner mellom 1,0 og 1,6 m. Fradraget er fast i poeng, så et større svell tåler lavere vann enn et lite. Fjord-timer er usikre anslag og har høyst 3 poeng før vind og tidevann, så 1,0 m gir alltid høyst 1.
+
+**Høydereferansen.** Observasjonsfila og koden bruker samme tall: Kartverkets tidevannstabell i cm over sjøkartnull (`sources.kartverket_tide()`, refcode `cd`), fjære 06:52Z på 56 cm og flo 13:00Z på 316 cm. Det er varslet tidevann, ikke målt vannstand. Vannstanden per time er regnet midt i timen (`fetch.py`: 30 minutter etter timeslaget). 0,99 m for kl. 08Z er nivået kl. 08.30Z. På timeslagene gir kurven 0,77 m kl. 08:00Z, 1,26 m kl. 09:00Z, 1,57 m kl. 09:30Z og 1,90 m kl. 10:00Z. Da ble det surfbart på ca. 1,3 til 1,6 m (kl. 09:00 til 09:30Z), ikke 1,6 til 1,9 m som det står i svaret. Grensa på 1,6 m er satt som svaret sier. Den er forsiktig og ikke målt.
+
+**26.11 før og etter** (inndata fra varselet 25.11 kl. 23Z, artifacten «varsel» fra kjøring 45722872045)
+
+| Time | Vann midt i timen | Før | Etter | Surfehøyde | Krav |
+|---|---|---|---|---|---|
+| 07Z | 0,63 m | 2 | 0 | 0,67 m | ingen |
+| 08Z | 0,99 m | 2 | 0 | 0,64 m | høyst 1, mål 0 |
+| 09Z | 1,57 m | 2 | 2 | 0,64 m | ingen (overgangen) |
+| 10Z | 2,23 m | 2 | 2 | 0,60 m | 1 til 2 poeng, 0,4 til 0,8 m |
+| 11Z | 2,79 m | 2 | 2 | 0,60 m | ingen |
+
+17.11 og 22.11 holder som før (test 34 og 36: 2 poeng kl. 08Z og 09Z 17.11, 2 poeng kl. 07 til 13Z 22.11, samme surfehøyder).
+
+**Før og etter for hele varselet (14 dager), alle 27 publiserte spots.** Hver time er regnet med `rating.rate()` fra main `f53fe62` og fra denne grenen, på de samme inndataene.
+
+| Varsel | Timer | Spots med endring | Breivikeidet ned 1 | ned 2 | ned 3+ | opp | Lyse timer ned | Høyde eller `low_reason` endret |
+|---|---|---|---|---|---|---|---|---|
+| 25.11 kl. 23Z (artifact) | 5400 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 (26.11 kl. 07Z og 08Z, begge 2 → 0) | 0 |
+| 26.11 kl. 12Z (artifact) | 5433 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+| 26.11 kl. 15Z (artifact, det som ligger ute nå) | 5427 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+| Inndata 23.11 kl. 12Z (72 t, `data/backtest/inputs/`) | 1944 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 | 0 |
+| Inndata 25.11 kl. 02Z (72 t) | 1944 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 | 0 |
+| Inndata 26.11 kl. 12Z (72 t) | 1944 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+
+- Alle timer som går ned har vann under 1,6 m. Ingen går opp. Alle er 26.11: Breivikeidet har 0 poeng resten av de 14 dagene i alle varslene.
+- Timene i varselet 26.11 kl. 15Z: kl. 17Z (1,10 m) 2 → 1, kl. 18Z (0,71 m), 19Z (0,59 m) og 20Z (0,80 m) 2 → 0, kl. 21Z (1,27 m) 2 → 1. Alle er mørke.
+- Ingen lyse timer som er dagens beste forsvinner. I varselet 25.11 kl. 23Z er beste lyse time 26.11 fortsatt 2 poeng (kl. 09, 10 og 11Z står). «Best 08–13» blir «Best 10–13» norsk tid.
+- Tidevannslinja i «Hvorfor» får nye ord i alle Breivikeidet-timene (200 til 202 per varsel). Ingen annen linje endres.
+- Endringene går samme vei som den faste observasjonen, så de er committet med tabellen her (svar.md 26.11.2026 kl. 13.10, punkt 3). Ingen annen spot endres, så det er ikke noe S-spørsmål om 2 poeng.
+- Forbehold om målingen: for Breivikeidet gir før-regningen nøyaktig det lagrede varselet i alle timer. For seks andre spots avviker `rate()` alene fra det lagrede i 212 til 229 timer per varsel, likt før og etter. Årsaken er ikke undersøkt. Sammenligningen før mot etter er lik for dem.
+
+**Fysikk-kontrolløren (26.11.2026):** fysikken og testene holder, ingen dobbelttelling, testendringene er ikke svekkelser. Tre funn:
+1. `_local_rules` i spots.json sa «surfbart på 1,6-1,9 m» og tall uten «midt i timen». Rettet.
+2. Ved 0 poeng og surfehøyde under 0,8 m sier appen «Smått» (`zeroWord()` i app.js), også når det er vannstanden som tok poengene. Årsaken står bare i «Hvorfor» og som «−2 tidevann» i raden. Ikke rettet: ordregelen er Theodors fra 09.10.2026 og gjelder alle spots. Spørsmål til Theodor.
+3. «Grense satt ut fra observasjonene 17.11 til 26.11» kunne leses som mange observasjoner. Rettet til «17.11, 22.11 og 26.11».
+
+**Runde 2 etter feiljegeren (26.11.2026).** Feiljegeren fant 0 stoppere, 2 viktige og 7 kosmetiske i `a1cd9f8`. Bare tekst og robusthet er endret. Poeng, høyder, `low_reason` og bokføringen er like `a1cd9f8` i alle timer i de seks varslene over (5400, 5433, 5427 og 3 × 1944 timer: 0 ulike utenom tidevannslinja).
+- **Klokkeslett i linja (viktig 2).** Raden TIDEVANN viser nivået på timeslaget, regelen bruker nivået 30 minutter senere. Linja sier nå når tallet gjelder, i norsk tid: «Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: −1,75 poeng.» og «Tidevann (2,2 m over sjøkartnull kl. 11.30): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng». Uten timens tid står «midt i timen». Raden er urørt.
+- **Timer uten poeng å ta (kosmetisk 1).** Har timen 0 før vind og tidevann, sier linja «ingen poeng å ta» og har ikke minustegn: «Lavt vann. 0,74 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: ingen poeng å ta.» Det gjelder også linja for høyt vann. 165 av 200 Breivikeidet-timer i varselet 25.11 kl. 23Z.
+- **Ordet følger tidevannsarket (kosmetisk 2).** «Middels vann. 1,57 m kl. 10.30, …» når `tide.state` er middels. Aldri «Høyt vann … for lite vann».
+- **Halve eller ugyldige `low_*`-felt (kosmetisk 5)** slår den nedre delen av: ingen straff, ingen krasj. Test 46.4 c.
+- **Test 37 (kosmetisk 6):** `r37_lav` og `r37_019` bruker timen med 1,8 m vann, så 0 poeng kommer av svellet og ikke av vannstanden.
+- Ikke rørt: ordet ved 0 poeng («Smått»/«Grøtete», viktig 1, spørsmål S46 2) og kosmetisk 3, 4 og 7.
+- Bilder: `r2-390-…` i samme mappe (08Z, 09Z, 10Z og en time uten poeng å ta).
+
+**Bilder** (før og etter, 390 og 1440 px, varselet 25.11 kl. 23Z): `privat/design-b4/breivikeidet-tide-2026-11-26/`.
+
+**Gjenstår**
+- Push, PR og feiljegeren (svar.md punkt 3).
+- Spørsmål til Theodor: skal ordet være «Feil tidevann» i stedet for «Smått» når vannstanden tar alle poengene og surfehøyden er under 0,8 m?
+- Grensa 1,6 m og de 1,75 poengene bygger på én dag. Ingen observasjon mellom 1,0 og 1,6 m.
+- Raden TIDEVANN på spotsiden viser nivået på timeslaget (0,8 m kl. 09 norsk tid), mens regelen bruker nivået midt i timen (0,99 m). Det var slik før også.
+
+## Småfunn etter PR 56 (bare tekst og opprydding), og Russelv: de to feilene er alt borte, 25. og 26.11.2026
+
+Gren `fiks/russelv-vind`. To oppdrag i samme oppføring: småfunnene som sto igjen etter PR 56 (Unstad lang sjø), rettet 26.11, og Russelv-sjekken fra 25.11 (under). Main (designfase 2, PR 57) er flettet inn 26.11.
+
+### Småfunn etter PR 56, 26.11.2026
+
+Kilder: etterkontrollens F1 til F4 og feiljegerens V2-rest (`privat/kontor/observasjoner/kontrollor-s40-2026-11-25.md` og `feiljeger-s40-2026-11-25.md`). Endrer `fetcher/rating.py` (to tekstlinjer og en kommentar), `publish.py`, `notify.py` og testene. Ikke `spots.json`, ikke `docs/`, ikke `data/`. **Ingen poeng, høyder eller `low_reason` flytter seg.**
+
+- **F1 (`publish.py`):** `HOME_HOUR_FIELDS` ble ikke brukt noe sted, bare nevnt i docstringen og i test 12 i `test_publish.py`, som dermed så ut til å dekke forsiden uten å gjøre det. Konstanten er fjernet (og `HOME_DAYS`, som var like død), docstringen beskriver oversikten slik den er (nå-timene og dagene med `NAA_FIELDS`), og test 12 prøver nå det appen leser: `_naa_hour()` på timen med lang sjø (merket `long_sea` og `uncertain` følger med, tallene er den lange sjøens), nå-timene i oversikten, at varselet uten regelen ikke har noe merke, og at `ui.js` og `spot.js` faktisk leser feltene.
+- **F2 (`rating.py`, «Hvorfor»):** «BarentsWatch-periode 9 s: lang, hele høyden ved punktet regnes som lang sjø» er nå «BarentsWatch-periode 9 s: lang, perioden kutter ikke». Den gamle linja sa for mye: høyden kan inneholde lokal sjø, og svellandelen kan være under 1. Bare tekst.
+- **F3 (`rating.py`, «Hvorfor»):** «Surfehøyde: flatt (signifikant høyde under 0,3 m)» er nå «under 0,35 m». Grensa er og var 0,35 m (`FLAT_HS_THRESHOLD`). Linja rundet den til én desimal. Bare tekst. Test 47 i `test_rating.py`.
+- **F4 (`rating.py`, `publish.py`, kommentarer):** merket `long_sea_seen` er offentlig. Det står i timen i `docs/data/forecast.json`, som publiseres hel fordi verktøyene, arkivet og læringen leser den. Kommentarene sier nå det (samme praksis som `surf_height_shadow` og `total_model`). Merket er fortsatt ute av appens filer (oversikten og detaljfilene). Å holde det ute av `forecast.json` også ville krevd en egen fil for læringen, og er ikke gjort.
+- **Push-varselet (`notify.py`, feiljegerens V2-rest):** tittelen sier «Unstad: 3 poeng i dag 12–15» (før «3 stjerner»), «Rått»-varselet «5 poeng («Rått»)», og vinden skrives med appens ord fra `rating.WIND_TYPE_WORD`: fralands, sidevind, skrått pålands, pålands (før kodeordene `offshore`, `side`, `sideonshore`, `onshore`). Samme tall, samme vinduer, samme utsendingsregel. Test 6h2 og 18 i `test_pipeline.py`.
+- **Avspilling før og etter** (hele svaret fra `rate()` utenom tekstlinjene, spotene satt opp med `backtest.prepare_spot()`): 14 283 ekte timer, 27 spots. De seks filene i `data/backtest/inputs/` (07.10, 12.10, 16.11, 23.11, 25.11 og 26.11: 576, 576, 1 872, 1 944, 1 944 og 1 944 timer) og det publiserte varselet 26.11 kl. 15Z (5 427 timer). **0 timer endrer poeng, surfehøyde, sett, Hs, `low_reason` eller noe annet felt.** 7 269 timer endrer en tekstlinje: 7 261 flat-linja og 8 linja for lang topp (Unstad 28.11 kl. 09 til 13Z, der regelen for lang sjø slår til i 9 timer og er merket `long_sea_seen` i 1). I tillegg 603 lagde Unstad-timer med lang nordsjø lagt på (lang topp, kort topp og 0,3 m ved punktet), så begge linjene blir prøvd bredt: 0 felt endret, 384 tekstlinjer.
+- **Ikke kodet, lagt fram i rapporten** (`privat/kontor/observasjoner/utvikler-smafunn-pr56-2026-11-25.md`): V3 (en installert app viser gammelt skall den første økta etter en ny utgave) og opprydding i `data/backtest/inputs/` (1,27 MB per dag i dag, ca. 465 MB i året i arbeidstreet). Ingenting er slettet.
+- **Tester:** alle 17 grønne 26.11. De 13 raske (`test_rating`, `test_pipeline`, `test_exposure_learn`, `test_backtest`, `test_docs_cache`, `test_publish`, `test_matrise`, `test_kallregnskap`, `test_kandidater`, `test_spotfabrikk`, `test_vakthund`, `test_display_only`, `tools/kontrast.py`) og de fire nettlesertestene, én om gangen. `test_spotside_browser.py` feilet første gang (snittlast 5,3 til 7, «Hjem skal tegnes på nytt ved ny bredde», en test i `docs/` som denne grenen ikke rører) og var grønn på andre kjøring (203 s). `test_skalering_browser`, `test_kart_browser` og `test_svgtekst_browser` var grønne første gang. Ingen skjermbilder endret seg i git.
+- **Kontrolløren:** godkjent 26.11. Den klarte ikke å velte påstanden om at ingen tall flytter seg (eneste kodeendring i `rating.py` er to tekststrenger), fant ingen som leser de gamle tekstene eller den fjernede konstanten, ingen sirkelimport, og viste at de nye testene biter (gammel `rating.py` og gammel `notify.py` gir røde tester). To små funn, begge rettet: docstringen i `publish.py` sa at dagene bare har `NAA_FIELDS` (de har også sitt eget sammendrag), og «Manglende stjerner» i en docstring i `notify.py`.
+
+### Russelv: gap-grensa uten vindstyrke og ordet «Treffer ikke» 16.11 er alt borte, ingen kode, 25.11.2026
+
+Gren `fiks/russelv-vind` fra main `1f787b9`. Oppdrag fra svar.md 25.11.2026 kl. 16.40, punkt 5. Begge feilene ble sjekket mot dagens kode før noe ble skrevet. **Ingen av dem finnes lenger etter fjord-omleggingen (PR 53, 24.11), så ingenting er kodet.** Ingen endring i `rating.py`, `spots.json`, `docs/` eller `data/`. Bare denne oppføringen.
+
+- **a) Gap-grensa når vindstyrken mangler (ja 18.11):** feilen 17.11 var at grensa løftet høyden ved punktet (0,08 m til 0,48 m) når vinden var ukjent, mens kjent pålandsvind fra 8 m/s tok løftet bort. Russelv er nå fjord-spot, og høyden er andelshøyden uansett vind (`fjord_share_height()` ser ikke på vinden).
+  - Russelv 16.11 kl. 11Z (test 31.1), bare vinden byttet: vind mangler 0,53 m og 0 poeng. 2 m/s 0,53 m og 1 poeng. 12 m/s pålands eller ukjent retning 0,53 m og 0 poeng («Blåst ut»). 12 m/s fralands 0,53 m og 1 poeng. Ukjent vind gir altså aldri mer enn svak vind. Den koster det faste ene poenget.
+  - Lenangsøyra gir de samme tallene. Breivikeidet 1, 2, 0 og 2 poeng. Samme kodevei for alle tre.
+  - Russelv slik den var før 23.11 (kystkopi med grense, 0,20): 0,48 m med ukjent vind og 2 m/s, 0,08 m med 12 m/s pålands. Der fantes feilen.
+  - Forslaget (ingen grense når vindstyrken mangler) prøvd uten å lagre det: 12 339 timer (fem lagrede varsler i `data/backtest/inputs/` og det publiserte varselet 25.11 kl. 15Z, 27 spots). Med ekte vind endres 0 timer og 0 felt, for ingen time mangler vindstyrke. Med vindstyrken tatt bort i alle timene endres 0 poeng, 0 høyder og 0 `low_reason`. Det eneste som endres er feltet `gap_floor` og ordet «Løftet til» i regnestykket: Russelv 248 timer, Lenangsøyra 248 og Breivikeidet 118. Rettingen ville altså truffet alle tre spots, og jaet gjelder bare Russelv.
+  - 40 000 tilfeldige timer uten vindstyrke på de tre spotene: forslaget endrer 0 timer.
+- **b) «Treffer ikke» på Russelv 16.11 kl. 11Z (bare ordet):** timen gir i dag 1 poeng, 0,53 m og `low_reason` None. Unntaket kom med fjord-regelen 23.11 (`classify_low_rating()`: aldri `treffer_ikke` når høyden er andelshøyden), og test 31.1 låser det allerede. I de seks varslene har ingen time på Russelv, Lenangsøyra eller Breivikeidet `treffer_ikke` med andelshøyde. Timene som har ordet (Russelv 76), har alle 0 poeng og svell utenfor det tegnede vinduet eller under 7 s.
+- **Funnet underveis, ikke rørt:** i 12 av de 40 000 tilfeldige timene gir ukjent vindstyrke ett poeng mer enn 0 m/s. Det er ikke gap-grensa: svellet er utenfor det tegnede vinduet, punktet viser 1,6 til 2,0 m, og med kjent vind står hele høyden og blir for stor for spoten, mens ukjent vind lar den korte perioden ved punktet dempe den. Høyden er lavere med ukjent vind, ikke høyere. 0 slike timer i de seks varslene. Lagt fram i rapporten, ikke kodet. Forklart av en annen agent 26.11: regelen om svelldominans krever kjent vindstyrke, og ingen lagret time mangler den.
+- **Tester:** `test_rating.py` (test 31 og 31.9 urørt) og de elleve andre raske testene og `tools/kontrast.py` er grønne på grenen. De fire nettlesertestene er ikke kjørt, fordi ingen kode og ingenting under `docs/` er endret. Ingen skjermbilder, fordi ingenting synes i appen.
+- **Kontrolløren:** ikke kjørt, for det er ingen kodeendring å gå gjennom.
 
 ## Designrevisjonen fase 2: B 4.0 ferdig på mobil, 24.11.2026
 

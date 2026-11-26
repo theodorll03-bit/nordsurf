@@ -4,9 +4,11 @@ Leser varselet henteren har skrevet (docs/data/forecast.json - fetch.py er
 uendret) og skriver filene appen faktisk laster:
 
   docs/data/oversikt.json       lastes ved åpning: alle spots med spotfeltene
-                                (vindu, kalibrering, lokale regler ...) og
-                                timene i forsidens rekkevidde (HOME_DAYS døgn)
-                                med BARE feltene forsiden leser (HOME_HOUR_FIELDS)
+                                (META_FIELDS: vindu, kalibrering, lokale regler ...),
+                                nå-timene («naa») og dagssammendragene («dager»,
+                                SUMMARY_DAYS døgn). Nå-timene og dagens beste time
+                                har BARE feltene forsiden leser (NAA_FIELDS), dagene
+                                har i tillegg sitt eget sammendrag - ingen andre timer
   docs/data/spots/<id>.json     lastes når en spot åpnes: alle timene med alle
                                 felt unntatt de appen aldri leser (DETAIL_EXCLUDE)
   docs/data/forecast.json       hele varselet UTEN «hemmelig»-spots (publiseres i
@@ -45,24 +47,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "docs" / "data" / "forecast.json"
 OUT = ROOT / "docs" / "data"
 
-# Forsidens timefelt (målt 14.10.2026: hver time pakket i en Proxy mens forsiden
-# - svarlinje, liste, kart, uke, avspilling, tidspille, regionvalg - kjørte i
-# mobil og PC; pluss feltene i grener dagens data ikke traff: daylight når light
-# mangler, faded_wind/faded_tide/sources_disagree i ordet ved 0 stjerner,
-# energy_total_kj når svellfeltet mangler).
-# + «transfer»: Logger-siden viser første times transfer når spoten mangler
-# calibration.transfer_used (eldre varsel) - uten feltet ville den vist
-# standardverdien som et faktum (fysikk-kontrollør 14.10.2026).
-HOME_HOUR_FIELDS = (
-    "t", "stars", "faded", "light", "daylight", "surf_height", "low_reason", "period",
-    "local_rules", "zero_losses", "faded_wind", "faded_tide", "sources_disagree", "long_sea", "uncertain",
-    "energy_swell_kj", "energy_total_kj", "swell_offshore", "swell_model", "transfer",
-    # Spotside/søk (Theodor 15.10.2026): Hjem og Utforsk viser høydespennet, vinden
-    # (m/s og type) og svellet ute med retning uten å åpne spoten.
-    "surf_height_sets", "bw_height", "wind_speed", "wind_type", "dir_offshore",
-    "wind_calm_ms",   # spotens egen vindgrense for ordet (bare spots med egen vindkurve), se wind_blamed()
-)
-
 # Detaljfila: ALLE timefelt unntatt de som aldri leses av docs/js (målt
 # 14.10.2026 mot varselets 67 felt: 55 leses, disse 12 aldri - de blir igjen i
 # henterens eget varsel og arkiv). Utelatt-liste, ikke tillatt-liste: et nytt
@@ -76,10 +60,10 @@ DETAIL_EXCLUDE = (
     # 24.11.2026 (S29 c del 1): samlet sjø og vindsjø-del ute - bare lagring i forecast.json og data/backtest/inputs/
     "total_model", "bw_period_real_max_3h", "total_height_offshore", "total_dir_offshore", "total_period_offshore",
     "wind_wave_height_offshore", "wind_wave_dir_offshore", "wind_wave_period_offshore",
-    "long_sea_seen",   # K2 (25.11.2026): regelen for lang sjø traff, men vanlig regning vant - bare et merke for læringen
+    # K2 (25.11.2026): regelen for lang sjø traff, men vanlig regning vant - et merke for læringen. Ute av appens filer,
+    # men offentlig i forecast.json som de andre feltene i denne lista (F4, se rating.rate()).
+    "long_sea_seen",
 )
-
-HOME_DAYS = 9   # (oversikt-1) glidebryteren dekket 7 døgn; to døgns margin
 
 # ---------- oversikt-2 (Tillegg 2, Theodor 15.10.2026): forsiden laster ikke timer ----------
 # Per spot: «naa» (nå-timen) og «dager» (dagssammendrag for SUMMARY_DAYS døgn). Utvalg og

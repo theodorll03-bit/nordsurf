@@ -71,6 +71,7 @@
       "Observasjoner 26.09-05.10.2026": "Grense satt ut fra observasjonene 26.09 til 05.10",
       "Lofoten Surfsenter, 09.11.2026": "Ifølge Lofoten Surfsenter",
       "Observasjoner 17.11 og 22.11.2026": "Grense satt ut fra observasjonene 17.11 og 22.11",
+      "Observasjoner 17.11-26.11.2026": "Grense satt ut fra observasjonene 17.11, 22.11 og 26.11",   // tre dager, ikke en periode (fysikk-kontrolløren 26.11.2026)
     },
     // overskriften til «Lokale regler» når tidevannsregelen har egen kilde (local_rules.tide_source)
     localSourcesBoth: (src, tideSrc)=>`${src}; tidevann: ${tideSrc}`,
@@ -263,7 +264,10 @@
     tideNow: (rising, state) => `${rising?"Stigende":"Fallende"}, ${state}`,
     tideNext: (type, time) => `${type} kl. ${time}`,
     tidePref: (list) => list && list.length ? `Spoten liker ${list.join(" og ")} vann` : "Spoten tåler alt tidevann",
-    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden: jo lavere, jo bedre (local_rules.tide_level, Theodor 23.11.2026, S28)
+    // 26.11.2026 (svar.md 26.11.2026 kl. 13.10): regelen har et gulv (tide_level.low_full_above_cm), så lavere er ikke alltid bedre
+    tideLowBestFloor: (m) => `Best på lavt vann, men ikke under ca. ${m} m`,
+    tideLowBestFloorKort: (m) => `Best på lavt vann, over ${m} m`,   // raden TIDEVANN på mobil: én linje på 390 px
+    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden uten gulv (local_rules.tide_level, Theodor 23.11.2026, S28)
     lightOnly: "Bare lyse timer får tall",
     lightNone: "Mørkt hele dagen", lightSub: (sun) => sun ? "Fra skumring til skumring" : "Mørketid, bare skumring", lightUsable: "Brukbart lys",
     temps: (water, air) => `${water} i vannet, ${air} i lufta`,
