@@ -1,5 +1,76 @@
 # Nordsurf: status
 
+## Breivikeidet: tidevannsregelen har fått et gulv, 26.11.2026
+
+Gren `fiks/breivikeidet-tidevann` fra main `f53fe62`. Oppdrag: svar.md 26.11.2026 kl. 13.10, punkt 1 til 4. Kilde: observasjon 26.11.2026, Theodor («Ikke surfbart før 10-10:30 pga lavvann», kl. 09.13 fra stranda «Ganske flatt»). Committet lokalt, ikke pushet, ingen PR ennå.
+
+**Hva som er gjort**
+- `local_rules.tide_level` for Breivikeidet har en nedre del: `low_full_above_cm` 160, `low_max_at_cm` 100, `low_penalty` 2,5 (× weight 0,7 = 1,75 poeng). Den øvre delen (fra 2,0 m, høyst 0,49) er urørt. Andelen 0,22 er urørt. Bare Breivikeidet har feltene.
+- `rating.tide_level_penalty()` leser den nedre delen. Høyde, surfehøyde og `low_reason` endres ikke: regelen tar bare poeng.
+- Ny fast observasjon i CLAUDE.md og test 46. Test 36 og 42 har nye ord og den nye grensa, og 37.4 (forventningen for torsdag 26.11 med 0,63 m vann) er nå 0 poeng på 0,63 m og 2 poeng på 1,8 m.
+- Ordene: «Best på lavt vann, men ikke under ca. 1,6 m» i «Om spotten», tidevannskortet, forklaringen og skjermleseretiketten. På mobil står den korte formen «Best på lavt vann, over 1,6 m» på én linje under TIDEVANN-raden. «Hvorfor»: «Lavt vann. 0,99 m midt i timen, og under ca. 1,6 m er det for lite vann her: −1,75 poeng.» Linja for høyt vann sier «lavere vann er bedre her, ned til ca. 1,6 m» i stedet for «jo lavere vann, jo bedre her». Mellom 1,6 og 2,0 m: «passe vannstand, ingen straff».
+
+**Kurven** (vannstand over sjøkartnull, midt i timen → fradrag i poeng)
+
+| Vannstand | Fradrag | 2 poeng blir | 3 poeng blir |
+|---|---|---|---|
+| 1,0 m og lavere | 1,75 | 0 | 1 |
+| 1,1 m | 1,46 | 1 | 2 |
+| 1,2 m | 1,17 | 1 | 2 |
+| 1,3 m | 0,88 | 1 | 2 |
+| 1,4 m | 0,58 | 1 | 2 |
+| 1,5 m | 0,29 | 2 | 3 |
+| 1,6 til 2,0 m | 0 | 2 | 3 |
+| 2,4 m | 0,25 | 2 | 3 |
+| 2,8 m og høyere | 0,49 | 2 | 3 |
+
+En time med 2 poeng før tidevann får 0 under ca. 1,09 m, 1 fra 1,09 til 1,43 m og 2 over 1,43 m. Rett linje fordi det ikke finnes observasjoner mellom 1,0 og 1,6 m. Fradraget er fast i poeng, så et større svell tåler lavere vann enn et lite. Fjord-timer er usikre anslag og har høyst 3 poeng før vind og tidevann, så 1,0 m gir alltid høyst 1.
+
+**Høydereferansen.** Observasjonsfila og koden bruker samme tall: Kartverkets tidevannstabell i cm over sjøkartnull (`sources.kartverket_tide()`, refcode `cd`), fjære 06:52Z på 56 cm og flo 13:00Z på 316 cm. Det er varslet tidevann, ikke målt vannstand. Vannstanden per time er regnet midt i timen (`fetch.py`: 30 minutter etter timeslaget). 0,99 m for kl. 08Z er nivået kl. 08.30Z. På timeslagene gir kurven 0,77 m kl. 08:00Z, 1,26 m kl. 09:00Z, 1,57 m kl. 09:30Z og 1,90 m kl. 10:00Z. Da ble det surfbart på ca. 1,3 til 1,6 m (kl. 09:00 til 09:30Z), ikke 1,6 til 1,9 m som det står i svaret. Grensa på 1,6 m er satt som svaret sier. Den er forsiktig og ikke målt.
+
+**26.11 før og etter** (inndata fra varselet 25.11 kl. 23Z, artifacten «varsel» fra kjøring 45722872045)
+
+| Time | Vann midt i timen | Før | Etter | Surfehøyde | Krav |
+|---|---|---|---|---|---|
+| 07Z | 0,63 m | 2 | 0 | 0,67 m | ingen |
+| 08Z | 0,99 m | 2 | 0 | 0,64 m | høyst 1, mål 0 |
+| 09Z | 1,57 m | 2 | 2 | 0,64 m | ingen (overgangen) |
+| 10Z | 2,23 m | 2 | 2 | 0,60 m | 1 til 2 poeng, 0,4 til 0,8 m |
+| 11Z | 2,79 m | 2 | 2 | 0,60 m | ingen |
+
+17.11 og 22.11 holder som før (test 34 og 36: 2 poeng kl. 08Z og 09Z 17.11, 2 poeng kl. 07 til 13Z 22.11, samme surfehøyder).
+
+**Før og etter for hele varselet (14 dager), alle 27 publiserte spots.** Hver time er regnet med `rating.rate()` fra main `f53fe62` og fra denne grenen, på de samme inndataene.
+
+| Varsel | Timer | Spots med endring | Breivikeidet ned 1 | ned 2 | ned 3+ | opp | Lyse timer ned | Høyde eller `low_reason` endret |
+|---|---|---|---|---|---|---|---|---|
+| 25.11 kl. 23Z (artifact) | 5400 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 (26.11 kl. 07Z og 08Z, begge 2 → 0) | 0 |
+| 26.11 kl. 12Z (artifact) | 5433 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+| 26.11 kl. 15Z (artifact, det som ligger ute nå) | 5427 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+| Inndata 23.11 kl. 12Z (72 t, `data/backtest/inputs/`) | 1944 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 | 0 |
+| Inndata 25.11 kl. 02Z (72 t) | 1944 | bare Breivikeidet | 1 | 4 | 0 | 0 | 2 | 0 |
+| Inndata 26.11 kl. 12Z (72 t) | 1944 | bare Breivikeidet | 2 | 3 | 0 | 0 | 0 | 0 |
+
+- Alle timer som går ned har vann under 1,6 m. Ingen går opp. Alle er 26.11: Breivikeidet har 0 poeng resten av de 14 dagene i alle varslene.
+- Timene i varselet 26.11 kl. 15Z: kl. 17Z (1,10 m) 2 → 1, kl. 18Z (0,71 m), 19Z (0,59 m) og 20Z (0,80 m) 2 → 0, kl. 21Z (1,27 m) 2 → 1. Alle er mørke.
+- Ingen lyse timer som er dagens beste forsvinner. I varselet 25.11 kl. 23Z er beste lyse time 26.11 fortsatt 2 poeng (kl. 09, 10 og 11Z står). «Best 08–13» blir «Best 10–13» norsk tid.
+- Tidevannslinja i «Hvorfor» får nye ord i alle Breivikeidet-timene (200 til 202 per varsel). Ingen annen linje endres.
+- Endringene går samme vei som den faste observasjonen, så de er committet med tabellen her (svar.md 26.11.2026 kl. 13.10, punkt 3). Ingen annen spot endres, så det er ikke noe S-spørsmål om 2 poeng.
+- Forbehold om målingen: for Breivikeidet gir før-regningen nøyaktig det lagrede varselet i alle timer. For seks andre spots avviker `rate()` alene fra det lagrede i 212 til 229 timer per varsel, likt før og etter. Årsaken er ikke undersøkt. Sammenligningen før mot etter er lik for dem.
+
+**Fysikk-kontrolløren (26.11.2026):** fysikken og testene holder, ingen dobbelttelling, testendringene er ikke svekkelser. Tre funn:
+1. `_local_rules` i spots.json sa «surfbart på 1,6-1,9 m» og tall uten «midt i timen». Rettet.
+2. Ved 0 poeng og surfehøyde under 0,8 m sier appen «Smått» (`zeroWord()` i app.js), også når det er vannstanden som tok poengene. Årsaken står bare i «Hvorfor» og som «−2 tidevann» i raden. Ikke rettet: ordregelen er Theodors fra 09.10.2026 og gjelder alle spots. Spørsmål til Theodor.
+3. «Grense satt ut fra observasjonene 17.11 til 26.11» kunne leses som mange observasjoner. Rettet til «17.11, 22.11 og 26.11».
+
+**Bilder** (før og etter, 390 og 1440 px, varselet 25.11 kl. 23Z): `privat/design-b4/breivikeidet-tide-2026-11-26/`.
+
+**Gjenstår**
+- Push, PR og feiljegeren (svar.md punkt 3).
+- Spørsmål til Theodor: skal ordet være «Feil tidevann» i stedet for «Smått» når vannstanden tar alle poengene og surfehøyden er under 0,8 m?
+- Grensa 1,6 m og de 1,75 poengene bygger på én dag. Ingen observasjon mellom 1,0 og 1,6 m.
+- Raden TIDEVANN på spotsiden viser nivået på timeslaget (0,8 m kl. 09 norsk tid), mens regelen bruker nivået midt i timen (0,99 m). Det var slik før også.
+
 ## Designrevisjonen fase 2: B 4.0 ferdig på mobil, 24.11.2026
 
 Gren `design/revisjon-fase2` fra main `30eefa3`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 2, punkt 1 til 7. Ja i svar.md 21.11.2026 kl. 18.30. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-2/` (mobil-Hjem, Utforsk, Søk, Logger, Innstillinger og Unstad på 390 × 663, Hjem og Unstad på 1440 × 900, dag og mørketid, varselet 24.11 kl. 13Z med klokka på 15.20).

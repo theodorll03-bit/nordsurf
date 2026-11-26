@@ -2013,11 +2013,20 @@ def energy_thresholds_used(spot):
     return _energy_thresholds(spot)
 
 
+def _m_text(cm):
+    """Vannstand i meter med én desimal og desimalkomma (aldri «-0,0»)."""
+    return f"{cm / 100:.1f}".replace(".", ",").replace("-0,0", "0,0")
+
+
 def tide_level_penalty(hour, spot):
-    """Myk lokal regel på vannstanden i cm over sjøkartnull (local_rules["tide_level"]), «jo lavere vann, jo bedre»:
-    (fradrag vektet med weight, linje). Ingen straff opp til "full_below_cm", så jevnt opp til "penalty" ved
-    "max_at_cm" og aldri mer. Mangler regelen: (0.0, None). Mangler vannstanden (uten cm, eller Kartverket feilet):
-    (0.0, linje som sier at vannstanden mangler) - manglende data er aldri 0, gir aldri straff, og er aldri «tåler alt». 22.11.2026 (svar.md 22.11.2026 kl. 12.20; kilder: observasjon 17.11.2026 og 22.11.2026, Theodor)."""
+    """Myk lokal regel på vannstanden i cm over sjøkartnull (local_rules["tide_level"]): (fradrag vektet med weight, linje).
+    Øvre del, «lavere vann er bedre»: ingen straff opp til "full_below_cm", så jevnt opp til "penalty" ved "max_at_cm" og
+    aldri mer. Nedre del (valgfri, 26.11.2026, svar.md 26.11.2026 kl. 13.10; kilde: observasjon 26.11.2026, Theodor: «Ikke
+    surfbart før 10-10:30 pga lavvann»): ingen straff fra "low_full_above_cm" og opp, så jevnt opp til "low_penalty" ved
+    "low_max_at_cm" og aldri mer under det. Mellom de to grensene er det ingen straff. Mangler regelen: (0.0, None).
+    Mangler vannstanden (uten cm, eller Kartverket feilet): (0.0, linje som sier at vannstanden mangler) - manglende data
+    er aldri 0, gir aldri straff, og er aldri «tåler alt». 22.11.2026 (svar.md 22.11.2026 kl. 12.20; kilder: observasjon
+    17.11.2026 og 22.11.2026, Theodor)."""
     rules = spot.get("local_rules") or {}
     level_rule = rules.get("tide_level")
     cm = (hour.get("tide") or {}).get("cm")
@@ -2026,13 +2035,30 @@ def tide_level_penalty(hour, spot):
     if cm is None:
         # manglende vannstand er aldri 0 cm og aldri «tåler alt»: ingen straff, og teksten sier at tallet mangler
         return 0.0, "Tidevann: vannstanden mangler, ingen straff"
+    weight = rules.get("weight", 1.0)
     lo, hi = level_rule["full_below_cm"], level_rule["max_at_cm"]
     share = min(1.0, max(0.0, (cm - lo) / (hi - lo)))
-    pen = rules.get("weight", 1.0) * level_rule["penalty"] * share
-    m = f"{cm / 100:.1f}".replace(".", ",").replace("-0,0", "0,0")
+    pen = weight * level_rule["penalty"] * share
+    m = _m_text(cm)
+    low_top = level_rule.get("low_full_above_cm")
+    if low_top is None:
+        # regel uten nedre del (ingen spot har det i dag): ordene fra 22.11.2026
+        if pen > 0:
+            return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her" + f": −{pen:.2f} poeng".replace(".", ",")
+        return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
+    gulv = _m_text(low_top)
     if pen > 0:
-        return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her" + f": −{pen:.2f} poeng".replace(".", ",")
-    return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
+        return pen, f"Tidevann ({m} m over sjøkartnull): lavere vann er bedre her, ned til ca. {gulv} m" + f": −{pen:.2f} poeng".replace(".", ",")
+    low_share = min(1.0, max(0.0, (low_top - cm) / (low_top - level_rule["low_max_at_cm"])))
+    low_pen = weight * level_rule["low_penalty"] * low_share
+    if low_pen > 0:
+        # samme form som linja for flo og fjære (S42 a): «Lavt vann. …: −N poeng.» Appen leser den med TIDEVANN_LINJE.
+        # to desimaler på vannstanden her: 1,57 m ved en grense på 1,6 m skal ikke stå som «1,6 m nå, og under ca. 1,6 m»
+        m2 = f"{cm / 100:.2f}".replace(".", ",").replace("-", "−")
+        # «midt i timen»: vannstanden per time er regnet 30 minutter etter timeslaget (fetch.py), mens spotsiden viser
+        # nivået på timeslaget i raden over. «nå» ville stått ved siden av et annet tall.
+        return low_pen, f"Lavt vann. {m2} m midt i timen, og under ca. {gulv} m er det for lite vann her" + f": −{low_pen:.2f}".replace(".", ",") + " poeng."
+    return 0.0, f"Tidevann ({m} m over sjøkartnull): passe vannstand, ingen straff"
 
 
 def local_tide_prefer_line(spot, lines):

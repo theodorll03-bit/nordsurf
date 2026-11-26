@@ -2101,7 +2101,8 @@ assert B36["swell_window"] == B36["swell_window_tegnet"] == [345, 30] and B36["g
 # 24.11.2026 (svar.md 23.11.2026 kl. 21.00, S34 a): Russelv også.
 assert sorted(i for i, sp in spots.items() if sp.get("gap_soft_edge")) == ["breivikeidet", "lenangsoyra", "russelv"]
 assert [i for i, sp in spots.items() if (sp.get("local_rules") or {}).get("tide_level")] == ["breivikeidet"]
-assert B36["local_rules"]["tide_level"] == {"full_below_cm": 200, "max_at_cm": 280, "penalty": 0.7} and B36["local_rules"]["weight"] == 0.7
+# 26.11.2026 (svar.md 26.11.2026 kl. 13.10): regelen har fått en nedre del (low_*), se test 46. Den øvre delen er urørt.
+assert B36["local_rules"]["tide_level"] == {"full_below_cm": 200, "max_at_cm": 280, "penalty": 0.7, "low_full_above_cm": 160, "low_max_at_cm": 100, "low_penalty": 2.5} and B36["local_rules"]["weight"] == 0.7
 assert B36["transfer"] == B36["gap_transfer"] and B36["transfer_locked"] and "tide" not in B36 and "exposure_override" not in B36
 # skyggepunktet er bare til logging (S19 a): ratingen leser fortsatt hovedpunktet
 assert B36["barentswatch_point_shadow"] == {"lat": 69.671471, "lon": 19.659025} and B36["barentswatch_point"] != B36["barentswatch_point_shadow"]
@@ -2169,19 +2170,31 @@ assert not rate(dict(h36, wind_speed=8.0, wind_dir=20.0), B36)["gap_floor"]
 # 36.5: tidevannsregelen. Full uttelling til 2,0 m, jevnt opp til 0,7 × 0,7 = 0,49 ved 2,8 m, og aldri mer.
 def lvl36(cm):
     return tide_level_penalty({"tide": {"level": 0.5, "state": "middels", "rising": True, "cm": cm}}, B36)
-assert lvl36(150)[0] == 0.0 and lvl36(200)[0] == 0.0 and "ingen straff" in lvl36(200)[1]
+# 26.11.2026: under 1,6 m gjelder den nedre delen (test 46). Fra 1,6 til 2,0 m er det ingen straff.
+assert lvl36(160)[0] == 0.0 and lvl36(200)[0] == 0.0 and "ingen straff" in lvl36(200)[1]
 assert abs(lvl36(240)[0] - 0.245) < 1e-9 and abs(lvl36(280)[0] - 0.49) < 1e-9 and abs(lvl36(330)[0] - 0.49) < 1e-9
-# formen på regelen (feiljegeren 22.11.2026): grensene må stå i rekkefølge, weight må finnes, regelen alene tar aldri et
-# helt poeng (aldri sperre), og den kombineres ikke med en vanlig tidevannspreferanse - da ville linja i regnestykket
+# formen på regelen (feiljegeren 22.11.2026): grensene må stå i rekkefølge, weight må finnes, den ØVRE delen alene tar aldri et
+# helt poeng (aldri sperre; den nedre delen fra 26.11.2026 kan, se test 46), og den kombineres ikke med en vanlig tidevannspreferanse - da ville linja i regnestykket
 # skjult det andre fradraget. Negativ vannstand gir ingen straff og skrives ikke som «-0,0 m».
 for i36, sp36 in spots.items():
     tl36 = (sp36.get("local_rules") or {}).get("tide_level")
     if tl36:
         assert 0 <= tl36["full_below_cm"] < tl36["max_at_cm"] and 0 < sp36["local_rules"]["weight"] * tl36["penalty"] < 0.5, i36
         assert "tide" not in sp36 and "tide_prefer" not in sp36["local_rules"], i36
-assert lvl36(-4) == (0.0, "Tidevann (0,0 m over sjøkartnull): lavt nok, ingen straff"), lvl36(-4)
+        # nedre del (26.11.2026): enten alle tre feltene eller ingen, og grensene i rekkefølge under den øvre delen
+        assert len([k for k in ("low_full_above_cm", "low_max_at_cm", "low_penalty") if k in tl36]) in (0, 3), i36
+        if "low_penalty" in tl36:
+            assert 0 <= tl36["low_max_at_cm"] < tl36["low_full_above_cm"] <= tl36["full_below_cm"] and tl36["low_penalty"] > 0, i36
+# uten nedre del (regelen slik den sto 22.11.2026): negativ vannstand gir ingen straff og skrives ikke som «-0,0 m»
+B36_uten_gulv = dict(B36, local_rules=dict(B36["local_rules"], tide_level={"full_below_cm": 200, "max_at_cm": 280, "penalty": 0.7}))
+gml36 = lambda cm: tide_level_penalty({"tide": {"level": 0.5, "state": "middels", "rising": True, "cm": cm}}, B36_uten_gulv)
+assert gml36(-4) == (0.0, "Tidevann (0,0 m over sjøkartnull): lavt nok, ingen straff"), gml36(-4)
+assert gml36(150)[0] == 0.0 and "jo lavere vann, jo bedre" in gml36(247)[1] and abs(gml36(247)[0] - lvl36(247)[0]) < 1e-12
+# med nedre del: negativ vannstand (under sjøkartnull) er lavt vann med hele fradraget, og tallet står med ekte minustegn
+assert abs(lvl36(-4)[0] - 1.75) < 1e-9 and lvl36(-4)[1].startswith("Lavt vann. −0,04 m midt i timen") and "-0" not in lvl36(-4)[1], lvl36(-4)
 assert lvl36(280)[0] < 0.5       # under et halvt poeng: regelen alene runder aldri et poeng bort
-assert "jo lavere vann, jo bedre" in lvl36(247)[1] and "2,5 m over sjøkartnull" in lvl36(247)[1] and "−0,29" in lvl36(247)[1]
+# 26.11.2026: linja sier ikke lenger «jo lavere vann, jo bedre» (det er ikke sant under 1,6 m)
+assert "lavere vann er bedre her, ned til ca. 1,6 m" in lvl36(247)[1] and "jo lavere" not in lvl36(247)[1] and "2,5 m over sjøkartnull" in lvl36(247)[1] and "−0,29" in lvl36(247)[1]
 # manglende vannstand er aldri 0 og gir aldri straff: uten cm, uten tidevann i det hele tatt, og for spots uten regelen
 mangler36 = (0.0, "Tidevann: vannstanden mangler, ingen straff")
 assert tide_level_penalty({"tide": {"level": 0.99, "state": "høy", "rising": True}}, B36) == mangler36
@@ -2197,11 +2210,11 @@ assert r36_utide["stars"] == 2 and mangler36[1] in r36_utide["breakdown"] and "T
 # og linja om vannstanden står i forklaringen i stedet for «tåler alt».
 assert r36[9]["stars"] == 2 and r36[9]["faded_wind"] == 0 and r36[9]["faded_tide"] == 0 and r36[9]["local_rules"]["stars_lost"] == 0, r36[9]["local_rules"]
 assert r36[9]["breakdown"][-1] == "Totalt: 2 av 5 stjerner", r36[9]["breakdown"][-1]
-assert any("jo lavere vann, jo bedre" in l for l in r36[9]["breakdown"]) and "Tidevann: spoten tåler alt" not in r36[9]["breakdown"]
-assert r36[9]["local_rules"]["source"] == "Observasjoner 17.11 og 22.11.2026"       # appen viser kilden uten navn
+assert any("lavere vann er bedre her, ned til ca. 1,6 m" in l for l in r36[9]["breakdown"]) and "Tidevann: spoten tåler alt" not in r36[9]["breakdown"]
+assert r36[9]["local_rules"]["source"] == "Observasjoner 17.11-26.11.2026"       # appen viser kilden uten navn (26.11.2026: tre dager)
 # på lavt vann (1,8 m) står linja uten straff
 r36_lav = rate(dict(bre_2211[9], tide={"level": 0.5, "state": "middels", "rising": False, "cm": 180}), B36)
-assert r36_lav["stars"] == 2 and "Tidevann (1,8 m over sjøkartnull): lavt nok, ingen straff" in r36_lav["breakdown"], r36_lav["stars"]
+assert r36_lav["stars"] == 2 and "Tidevann (1,8 m over sjøkartnull): passe vannstand, ingen straff" in r36_lav["breakdown"], r36_lav["stars"]
 # 36.6: reserven bortenfor BarentsWatch-horisonten (svell ute × andelen 0,22 × retningsfaktoren til gap-grensa, S27;
 # før: transfer 0,15 × retningstreff). swell_window og
 # swell_window_tegnet er like (345-30), så et nordsvell varsles likt tre døgn fram og når BarentsWatch-timene kommer.
@@ -2282,9 +2295,14 @@ tors37 = {"height_offshore": 2.4, "swell_offshore": 1.84, "swell_model": "standa
           "tide": {"level": 0.05, "state": "lav", "rising": True, "cm": 63}}
 r37_tors = rate(dict(tors37), B37)
 show("37: Breivikeidet torsdag 26.11 kl. 06Z (forventning)", r37_tors)
-assert r37_tors["stars"] == 2 and r37_tors["uncertain"] and r37_tors["gap_floor"] and r37_tors["height_source"] == "svell_ute", (r37_tors["stars"], r37_tors["gap_floor"])
+# 26.11.2026 (svar.md 26.11.2026 kl. 13.10; kilde: observasjon 26.11.2026, Theodor): torsdagen kom, og på 0,6 m vann var
+# det ikke surfbart. Høyden er den samme, men den nedre delen av tidevannsregelen tar begge poengene (test 46). De 2
+# poengene fra forventningen står når vannet er 1,6-2,0 m.
+assert r37_tors["stars"] == 0 and r37_tors["local_rules"]["stars_lost"] == 2 and r37_tors["low_reason"] is None, (r37_tors["stars"], r37_tors["local_rules"])
+tors37_vann = dict(tors37, tide={"level": 0.5, "state": "middels", "rising": True, "cm": 180})
+assert rate(dict(tors37_vann), B37)["stars"] == 2 and r37_tors["uncertain"] and r37_tors["gap_floor"] and r37_tors["height_source"] == "svell_ute", (r37_tors["stars"], r37_tors["gap_floor"])
 assert abs(r37_tors["height"] - 1.84 * 0.22) < 0.006 and 0.5 <= r37_tors["surf_height"] <= 0.8, (r37_tors["height"], r37_tors["surf_height"])
-assert rate(dict(tors37, swell_offshore=1.76), B37)["stars"] == 2          # det laveste svellet torsdag (1,76-1,84 m)
+assert rate(dict(tors37_vann, swell_offshore=1.76), B37)["stars"] == 2          # det laveste svellet torsdag (1,76-1,84 m)
 r37_lav = rate(dict(tors37, swell_offshore=1.55), B37)
 assert r37_lav["stars"] == 0 and r37_lav["likely_flat"] and r37_lav["low_reason"] == "flat", (r37_lav["stars"], r37_lav["low_reason"])
 r37_019 = rate(dict(tors37), dict(B37, transfer=0.19, gap_transfer=0.19))
@@ -2315,7 +2333,7 @@ assert not linje37(6.5, 11.5) and not linje37(6.0, 14.0) and not linje37(7.9, 12
 assert linje37(8.0, 8.0) and linje37(9.0, None)
 assert not linje37(11.9, 20.0, 200.0) and linje37(12.0, 12.0, 200.0)                   # fralands: 12 m/s middelvind
 assert "wind_calm_ms" not in rate(dict(lav37, swell_offshore=0.6, wind_speed=3.0), {k: v for k, v in B37.items() if k != "wind_local"})
-print("37: Breivikeidet S27 - låst andel bare på fjord-spotene, reserven lik gap-grensa 343-32°, ingen vindstraff under 8 m/s, torsdag 26.11 gir 2 poeng som anslag - OK")
+print("37: Breivikeidet S27 - låst andel bare på fjord-spotene, reserven lik gap-grensa 343-32°, ingen vindstraff under 8 m/s, torsdag 26.11 gir 2 poeng som anslag på 1,6-2,0 m vann og 0 på 0,6 m (test 46) - OK")
 
 # 38: S29 a (Theodor 22.11.2026 og ja i svar.md 23.11.2026; forslag fra fysikk-kontrolløren 22.11.2026). Unstad har egen
 # vindkurve: under 14 m/s middelvind tar vinden ingen poeng, uansett retning og kast. Fra 14 m/s en mildere kurve
@@ -2828,7 +2846,7 @@ B41_s19 = {k: v for k, v in B36.items() if k != "wind_local"}   # Breivikeidet s
 r42 = rate(dict(bre_2211[9]), B41_s19)
 show("42: Breivikeidet 22.11 kl. 09Z (før S27-vinden)", r42)
 assert "Vind 5 m/s skrått pålands, kast 10 (teller som 6,5): −0,3" in r42["breakdown"], r42["breakdown"]
-assert "Tidevann (2,7 m over sjøkartnull): jo lavere vann, jo bedre her: −0,45 poeng" in r42["breakdown"], r42["breakdown"]
+assert "Tidevann (2,7 m over sjøkartnull): lavere vann er bedre her, ned til ca. 1,6 m: −0,45 poeng" in r42["breakdown"], r42["breakdown"]
 assert r42["stars"] == 1 and rate(dict(bre_2211[9], wind_speed=1.0, gust=2.0), B41_s19)["stars"] == 2 and rate(dict(bre_2211[9], tide=None), B41_s19)["stars"] == 2
 # før: faded_wind 1 og «(2 uten vind)». Nå: tidevannsregelen (lokal regel) får poenget.
 assert (r42["faded"], r42["faded_wind"], r42["faded_tide"], r42["local_rules"]["stars_lost"]) == (0, 0, 0, 1), (r42["faded"], r42["faded_wind"], r42["local_rules"])
@@ -2851,7 +2869,7 @@ assert r["stars"] == 1 and (r["faded_wind"], r["faded"], r["local_rules"]["stars
 # 42.4: uavgjort (0,375 mot 0,375, tall som er eksakte i flyttall): vinden, som før. Litt mer tidevann: tidevannet.
 B41_lik = dict(B36, local_rules=dict(B36["local_rules"], weight=1.0, tide_level=dict(B36["local_rules"]["tide_level"], penalty=0.75)))
 lik42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(240)), B41_lik)
-assert "jo bedre her: −0,38 poeng" in " ".join(lik42["breakdown"]) and any(l.startswith("Vind 12 m/s fralands") and l.endswith("−0,4") for l in lik42["breakdown"]), lik42["breakdown"]
+assert "ned til ca. 1,6 m: −0,38 poeng" in " ".join(lik42["breakdown"]) and any(l.startswith("Vind 12 m/s fralands") and l.endswith("−0,4") for l in lik42["breakdown"]), lik42["breakdown"]
 assert lik42["stars"] == 1 and (lik42["faded_wind"], lik42["local_rules"]["stars_lost"]) == (1, 0), (lik42["faded_wind"], lik42["local_rules"])
 mer42 = rate(dict(bre_2211[9], wind_speed=11.5, gust=None, wind_dir=200.0, tide=tide42(241)), B41_lik)
 assert mer42["stars"] == 1 and (mer42["faded_wind"], mer42["local_rules"]["stars_lost"]) == (0, 1), (mer42["faded_wind"], mer42["local_rules"])
@@ -3253,6 +3271,99 @@ for _navn45, _r45 in (("44.2 kl. 11", r44[11]), ("44.7", _rk44), ("44 kappet", _
     for _l45 in list(_r45["breakdown"]) + list((_r45.get("local_rules") or {}).get("lines") or []):
         assert not re.search(r" - | – |—|vektet|Høyvann|Lavvann", _l45), (_navn45, _l45)
 print(f"45: S42 - «Høyt vann. Lokale sier …: −0,7 poeng.», fralands/pålands/skrått pålands, «teller {round(ef45 * 100)} %» og «(N uten vind og tidevann)» i {n45} timer der begge tok poeng - OK")
+
+
+# 46: Breivikeidet 26.11.2026 (fast observasjon; kilde: observasjon 26.11.2026, Theodor; svar og krav: svar.md 26.11.2026
+# kl. 13.10). Theodor: «Surf i dag: litt dårligere enn de to andre gangene. Ikke surfbart før 10-10:30 pga lavvann.
+# Bølgene var ganske langt inne mot grunna.» Kl. 09.13 fra stranda: «Ganske flatt.» Kl. 14.01: «mellom 1 og 2 stjerner
+# i dag. Var noen sets som var 2 stjerner.» Appen viste 2 poeng hele morgenen, også kl. 08Z på 0,99 m vann.
+# Timene er inndataene fra varselet 25.11 kl. 23Z (docs/data/forecast.json i artifacten «varsel» fra «Hent varsel»,
+# kjøring 45722872045; de samme tallene står i observasjonsfila). Vannstanden er Kartverkets tidevannstabell i cm over
+# sjøkartnull (refcode «cd»), fjære 06:52Z på 56 cm og flo 13:00Z på 316 cm, med henterens cosinuskurve mellom.
+# Vannstanden per time er regnet midt i timen (fetch.py: 30 minutter etter timeslaget): 99 cm for kl. 08Z er nivået
+# kl. 08.30Z, 157 cm for kl. 09Z er nivået kl. 09.30Z. På timeslagene gir samme kurve 77, 126 og 190 cm (08, 09, 10Z).
+B46 = spots["breivikeidet"]
+TL46 = B46["local_rules"]["tide_level"]
+assert (TL46["low_full_above_cm"], TL46["low_max_at_cm"], TL46["low_penalty"]) == (160, 100, 2.5) and B46["local_rules"]["weight"] == 0.7
+assert (TL46["full_below_cm"], TL46["max_at_cm"], TL46["penalty"]) == (200, 280, 0.7)          # den øvre delen er urørt
+assert B46["gap_transfer"] == B46["transfer"] == 0.22                                           # andelen står
+assert [i for i, sp in spots.items() if "low_penalty" in ((sp.get("local_rules") or {}).get("tide_level") or {})] == ["breivikeidet"]
+# (t, total ute, svell ute, retning, periode, BarentsWatch-høyde, vind, vindretning, kast, nivå, tilstand, cm)
+rad46 = [(7, 2.3, 1.86, 25, 7.45, 0.13333333333333333, 1.6, 97.0, 2.8, 0.03, "lav", 63), (8, 2.3, 1.86, 26, 7.45, 0.12666666666666668, 1.7, 95.0, 2.8, 0.17, "lav", 99),
+         (9, 2.3, 1.88, 26, 7.45, 0.12, 1.7, 98.0, 2.8, 0.39, "middels", 157), (10, 2.3, 1.86, 27, 7.5, 0.12, 1.6, 58.0, 2.8, 0.64, "middels", 223),
+         (11, 2.2, 1.86, 27, 7.5, 0.12, 1.7, 56.0, 2.7, 0.86, "høy", 279)]
+bre_2611 = {t: {"height_offshore": tot, "swell_offshore": sv, "swell_model": "standard", "bw_height": bw, "bw_dir": 84.0, "bw_period": 2.3,
+                "bw_period_real_max_3h": 2.3, "dir_offshore": d, "period": p, "wind_speed": ws, "wind_dir": wd, "gust": g,
+                "tide": {"level": lvl, "state": st, "rising": True, "cm": cm}}
+            for (t, tot, sv, d, p, bw, ws, wd, g, lvl, st, cm) in rad46}
+r46 = {t: rate(dict(h), B46) for t, h in bre_2611.items()}
+for t in sorted(r46):
+    show(f"46: Breivikeidet 26.11 kl. {t:02d}Z ({bre_2611[t]['tide']['cm']} cm)", r46[t])
+# uten den nedre delen (regelen slik den sto 22.11) ga alle fem timene 2 poeng, som appen viste
+B46_for = dict(B46, local_rules=dict(B46["local_rules"], tide_level={k: v for k, v in TL46.items() if not k.startswith("low_")}))
+assert [rate(dict(bre_2611[t]), B46_for)["stars"] for t in sorted(bre_2611)] == [2, 2, 2, 2, 2]
+# 46.1 fast observasjon, kl. 08Z (09 norsk tid, vann ca. 1,0 m): ikke surfbart. Høyst 1 poeng, mål 0.
+assert r46[8]["stars"] <= 1, r46[8]["stars"]
+assert r46[8]["stars"] == 0, r46[8]["stars"]            # målet: kurven gir 0 i dag (kravet er linja over)
+# 46.2 fast observasjon, kl. 10Z (11 norsk tid, vann ca. 2,2 m): surfbart, litt dårligere enn 17. og 22.11.
+# Minst 1 poeng, høyst 2. Surfehøyde 0,4-0,8 m.
+assert 1 <= r46[10]["stars"] <= 2 and 0.4 <= r46[10]["surf_height"] <= 0.8 and not r46[10]["likely_flat"], (r46[10]["stars"], r46[10]["surf_height"])
+# kl. 09Z (1,57 m) er overgangen og har ikke krav. Timen skrives ut over, og fradraget er lite (under et halvt poeng).
+assert 0 < tide_level_penalty(bre_2611[9], B46)[0] < 0.5
+# høyden er den samme med og uten den nedre delen: regelen tar poeng, ikke bølgehøyde
+for t in bre_2611:
+    f46 = rate(dict(bre_2611[t]), B46_for)
+    assert (r46[t]["height"], r46[t]["surf_height"], r46[t]["low_reason"]) == (f46["height"], f46["surf_height"], f46["low_reason"]), t
+    assert r46[t]["stars"] <= f46["stars"], t                                   # bare ned
+# 46.3 kurven: ingen straff fra 1,6 til 2,0 m, jevnt økende under 1,6 m til 2,5 × 0,7 = 1,75 ved 1,0 m, og aldri mer
+lvl46 = lambda cm: tide_level_penalty({"tide": {"level": 0.5, "state": "middels", "rising": True, "cm": cm}}, B46)
+for cm46, pen46 in ((40, 1.75), (58, 1.75), (100, 1.75), (110, 1.4583333333), (120, 1.1666666667), (130, 0.875), (140, 0.5833333333), (150, 0.2916666667),
+                    (160, 0.0), (180, 0.0), (200, 0.0), (240, 0.245), (280, 0.49), (320, 0.49)):
+    assert abs(lvl46(cm46)[0] - pen46) < 1e-9, (cm46, lvl46(cm46)[0])
+assert all(lvl46(cm)[0] >= lvl46(cm + 1)[0] for cm in range(0, 160)) and all(lvl46(cm)[0] <= lvl46(cm + 1)[0] for cm in range(200, 340))
+# nok ved 1,0 m til høyst 1 poeng for alt en fjord-time kan ha før vind og tidevann (gap-grensa er usikker: høyst 3)
+assert all(math.floor(pot46 - lvl46(100)[0] + 0.5) <= 1 for pot46 in (1, 2, 3))
+# 46.4 «Hvorfor»: «Lavt vann. …: −N poeng.», som linja for flo og fjære (S42 a). Appen leser den med TIDEVANN_LINJE.
+linje46 = "Lavt vann. 0,99 m midt i timen, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."
+assert r46[8]["local_rules"]["lines"] == [linje46] and linje46 in r46[8]["breakdown"] and r46[8]["breakdown"][-1] == "Totalt: 0 av 5 stjerner", r46[8]["breakdown"][-3:]
+assert re.fullmatch(r"(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?", linje46)
+assert lvl46(157)[1] == "Lavt vann. 1,57 m midt i timen, og under ca. 1,6 m er det for lite vann her: −0,09 poeng."      # aldri «1,6 m midt i timen, og under ca. 1,6 m»
+assert lvl46(180)[1] == "Tidevann (1,8 m over sjøkartnull): passe vannstand, ingen straff"
+assert lvl46(223)[1] == "Tidevann (2,2 m over sjøkartnull): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng" and lvl46(223)[1] in r46[10]["breakdown"]
+for cm46 in range(-10, 340):
+    l46 = lvl46(cm46)[1]
+    assert "jo lavere" not in l46 and not re.search(r" - | – |—|vektet|Høyvann|Lavvann|\d\.\d", l46), l46
+    assert ("−" in l46) == (lvl46(cm46)[0] > 0) or cm46 < 0, l46
+# 46.5 bokføringen (test 42) summerer: poengene pluss det vinden og tidevannet tok er det timen hadde før vind og
+# tidevann, for alle vannstander og fralandsvind fra 1 til 12,5 m/s. Tidevannsregelen bokføres som lokal regel.
+n46 = 0
+for cm46 in range(40, 330, 5):
+    for v46 in (1.0, 10.5, 11.2, 11.8, 12.2, 12.5):
+        for mult46 in (1.0, 1.5, 2.5):
+            h46 = dict(bre_2611[9], wind_speed=v46, gust=None, wind_dir=200.0, tide=dict(bre_2611[9]["tide"], cm=cm46),
+                       swell_offshore=bre_2611[9]["swell_offshore"] * mult46, height_offshore=bre_2611[9]["height_offshore"] * mult46)
+            r, fri46 = rate(dict(h46), B46), rate(dict(h46, wind_speed=1.0, tide=dict(h46["tide"], cm=180)), B46)
+            if r["height"] != fri46["height"]:
+                continue
+            n46 += 1
+            assert r["faded_tide"] == 0 and r["stars"] + r["faded_wind"] + r["local_rules"]["stars_lost"] == fri46["stars"], (cm46, v46, mult46, r["stars"], r["faded_wind"], r["local_rules"])
+            assert r["zero_losses"]["local"] == r["local_rules"]["stars_lost"] and r["faded"] == r["faded_wind"], (cm46, v46, mult46)
+            if r["local_rules"]["stars_lost"] and r["faded_wind"]:
+                assert r["breakdown"][-1].endswith(f"({fri46['stars']} uten vind og tidevann)"), r["breakdown"][-1]
+            elif not r["faded_wind"]:
+                assert re.fullmatch(r"Totalt: \d av 5 stjerner", r["breakdown"][-1]), r["breakdown"][-1]
+assert n46 > 900, n46
+# 46.6 17.11 og 22.11 holder som før (test 34 og 36 over er kjørt med den nye regelen). 17.11 var best på 1,95-1,6 m:
+# ingen straff der. 22.11 lå vannet på 2,47-2,79 m i timene Theodor var ute: den nedre delen er aldri i bruk.
+for cm46 in (195, 180, 160):
+    r = rate(dict(bre_1711[8], tide={"level": 0.4, "state": "middels", "rising": False, "cm": cm46}), B46)
+    assert r["stars"] == 2 and r["local_rules"]["stars_lost"] == 0 and "passe vannstand, ingen straff" in r["local_rules"]["lines"][0], (cm46, r["stars"])
+assert (r34[8]["stars"], r34[9]["stars"]) == (2, 2) and all(0.5 <= r34[t]["surf_height"] <= 0.9 for t in r34)
+assert all(bre_2211[t]["tide"]["cm"] > 200 for t in (8, 9, 10)) and all(r36[t]["stars"] >= 2 and 0.4 <= r36[t]["surf_height"] <= 0.8 for t in (8, 9, 10))
+# manglende vannstand er fortsatt aldri 0 cm: ingen straff uten cm, heller ikke fra den nedre delen
+assert rate(dict(bre_2611[8], tide={"level": 0.17, "state": "lav", "rising": True}), B46)["stars"] == 2 and rate(dict(bre_2611[8], tide=None), B46)["stars"] == 2
+print(f"46: Breivikeidet 26.11 - kl. 08Z (0,99 m vann) gir {r46[8]['stars']} poeng (høyst 1, mål 0), kl. 09Z {r46[9]['stars']} (uten krav), kl. 10Z {r46[10]['stars']} poeng og {r46[10]['surf_height']} m; "
+      f"ingen straff 1,6-2,0 m, 1,75 ved 1,0 m, bokføringen summerer i {n46} timer, 17.11 og 22.11 som før - OK")
 
 
 print("Alle tester ok")
