@@ -1580,13 +1580,15 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
         elif long_sea_used:
             # M4 og K1 (fysikk-kontrolløren 25.11.2026): regelen leser toppperioden ved punktet I SELVE TIMEN, også når
             # tallet er jevnet ut mellom to modelltimer (BarentsWatch gir tall hver tredje time). Da står det i linja.
-            # Under 7 s eller ukjent: høyst halve energien der er den lange sjøen. Ellers hele høyden.
+            # Under 7 s eller ukjent: høyst halve energien der er den lange sjøen. Ellers kutter perioden ikke høyden
+            # (F2, etterkontrollen 25.11.2026: linja sa «hele høyden ved punktet regnes som lang sjø», men høyden kan
+            # fortsatt inneholde lokal sjø, og svellandelen kan være under 1. Bare tekst).
             jevnet = " (jevnet ut mellom to modelltimer)" if hour.get("bw_interpolated") else ""
             bw_p_txt = f"{hour['bw_period']:.0f} s{jevnet}" if hour.get("bw_period") is not None else "ukjent"
             if bw_detail.get("bw_period_basis") == "lang_sjo_kort_topp":
                 items.append(f"BarentsWatch-periode {bw_p_txt}: kort, høyst halve energien regnes som lang sjø")
             else:
-                items.append(f"BarentsWatch-periode {bw_p_txt}: lang, hele høyden ved punktet regnes som lang sjø")
+                items.append(f"BarentsWatch-periode {bw_p_txt}: lang, perioden kutter ikke")
         elif hour.get("bw_period") is not None:
             items.append(f"BarentsWatch-periode {hour['bw_period']:.0f} s: {_bw_period_word(bw_detail['bw_period_factor'])}")
         if bw_detail["spot_direction_offshore"]:
@@ -1667,7 +1669,9 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             items.append(f"Surfehøyde: blåst ut, {cause}, ikke surfbart "
                          f"(BarentsWatch {_fmt_m(hour['bw_height'])} totalt ved punktet)")
         elif low_hs:
-            items.append(f"Surfehøyde: flatt (signifikant høyde under {_fmt_m(FLAT_HS_THRESHOLD)})")
+            # F3 (etterkontrollen 25.11.2026): grensa er 0,35 m. _fmt_m() runder til én desimal og viste «under 0,3 m».
+            # Bare tekst.
+            items.append(f"Surfehøyde: flatt (signifikant høyde under {FLAT_HS_THRESHOLD:.2f} m)".replace(".", ","))
         elif hb is None:
             items.append("Surfehøyde: ingen data (mangler periode)")
         else:
@@ -2577,7 +2581,11 @@ def rate(hour, spot, _long_sea=True):
     # time skifter bare ord eller høyde, og ingen går ned.
     # K2 (fysikk-kontrolløren 25.11.2026): treffet merkes (long_sea_seen), så læringen kan hoppe over timen også da.
     # Svellet i timen er fortsatt det lille GFS skilte ut, mens høyden ved punktet er den lange sjøen. Resten av
-    # svaret er den vanlige regningen, urørt. Appen leser ikke merket (publish.DETAIL_EXCLUDE).
+    # svaret er den vanlige regningen, urørt. Appen leser ikke merket, og det er ikke med i appens filer (oversikten
+    # og detaljfilene, publish.DETAIL_EXCLUDE). F4 (etterkontrollen 25.11.2026): merket ER offentlig. Det står i
+    # timen i docs/data/forecast.json, som publiseres hel (uten hemmelige spots) fordi verktøyene, arkivet og
+    # læringen leser den. Samme praksis som surf_height_shadow og total_model. Det sier bare at regelen traff uten
+    # å gi flere poeng, ingenting om spoten som ikke alt står i timen.
     if long_sea_base is not None and result["stars"] <= long_sea_base["stars"]:
         return {**long_sea_base, "long_sea_seen": True}
     return result

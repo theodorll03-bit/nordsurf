@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 
 from longrange import NOTIFY_MIN_CONFIDENCE
+from rating import WIND_TYPE_WORD
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "data" / "notified.json"
@@ -86,10 +87,12 @@ def describe(spot, w, now):
     ls = top.get("long_sea") if isinstance(top.get("long_sea"), dict) else None
     period = ls["period"] if ls and ls.get("period") is not None else top.get("period")
     usikkert = "lang sjø regnet som svell, usikkert varsel" if any(isinstance(h.get("long_sea"), dict) for h in w["hours"]) else None
+    # Ordene er appens (feiljegeren 25.11.2026, V2-resten): «poeng», og vinden som i «Hvorfor» (rating.WIND_TYPE_WORD:
+    # fralands, sidevind, skrått pålands, pålands), ikke kodeordene. Bare ord: samme tall og samme utsendingsregel.
     parts = [height_txt,
              f"{period:.0f} s" if period else None,
-             top.get("wind_type"), usikkert]
-    return f"{spot['name']}: {w['best']} stjerner {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)
+             WIND_TYPE_WORD.get(top.get("wind_type"), top.get("wind_type")), usikkert]
+    return f"{spot['name']}: {w['best']} poeng {day} {s:%H}–{e:%H}", ", ".join(p for p in parts if p)
 
 
 FIVE_STAR_DAYS_AHEAD = 7       # «Rått»-varselet ser 7 dager frem
@@ -98,9 +101,9 @@ FIVE_STAR_REPEAT_HOURS = 24    # høyst ett «Rått»-varsel per spot per døgn
 
 def five_star_windows(spot, now, days_ahead=FIVE_STAR_DAYS_AHEAD):
     """Theodor 15.10.2026 (ROADMAP K, del 0.1b): sammenhengende timer med
-    nøyaktig 5 stjerner («Rått») de neste `days_ahead` dagene, i
+    nøyaktig 5 poeng («Rått») de neste `days_ahead` dagene, i
     kronologisk rekkefølge. Timer i mørke tas ikke med (ingen kan sjekke og
-    logge dem). Bare et varsel - ratingen røres ikke. Manglende stjerner
+    logge dem). Bare et varsel - ratingen røres ikke. Manglende poeng
     (None) teller aldri som 5."""
     out, cur = [], None
     end = now + dt.timedelta(days=days_ahead)
@@ -126,7 +129,7 @@ def describe_five(spot, ws, now):
     """Tittel og tekst for «Rått»-varselet: spot, dag og tidsrom (første
     vindu), og hvor mange vinduer til som har 5 de neste 7 dagene."""
     title, body = describe(spot, ws[0], now)
-    title = title.replace("5 stjerner", "5 stjerner («Rått»)", 1)
+    title = title.replace("5 poeng", "5 poeng («Rått»)", 1)
     more = len(ws) - 1
     extra = f" Og {more} vindu{'er' if more > 1 else ''} til med 5 de neste {FIVE_STAR_DAYS_AHEAD} dagene." if more else ""
     return title, " ".join(p for p in ((body + ".") if body else "", extra.strip(), "Sjekk gjerne og logg økta.") if p)
@@ -150,10 +153,10 @@ def five_star_alerts(forecast, now, state, topic):
             msg["click"] = os.environ["APP_URL"]
         try:
             requests.post("https://ntfy.sh/", json=msg, timeout=20).raise_for_status()
-            print(f"Varslet (5 stjerner): {title}")
+            print(f"Varslet (5 poeng): {title}")
             state[key] = {"sent": now.isoformat(), "end": now.isoformat()}
         except Exception as e:
-            print(f"Varsel (5 stjerner) feilet: {e}")
+            print(f"Varsel (5 poeng) feilet: {e}")
 
 
 HEALTH_ALERT_REPEAT_HOURS = 24  # samme helseproblem varsles høyst én gang per døgn
