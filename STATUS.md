@@ -63,6 +63,15 @@ En time med 2 poeng før tidevann får 0 under ca. 1,09 m, 1 fra 1,09 til 1,43 m
 2. Ved 0 poeng og surfehøyde under 0,8 m sier appen «Smått» (`zeroWord()` i app.js), også når det er vannstanden som tok poengene. Årsaken står bare i «Hvorfor» og som «−2 tidevann» i raden. Ikke rettet: ordregelen er Theodors fra 09.10.2026 og gjelder alle spots. Spørsmål til Theodor.
 3. «Grense satt ut fra observasjonene 17.11 til 26.11» kunne leses som mange observasjoner. Rettet til «17.11, 22.11 og 26.11».
 
+**Runde 2 etter feiljegeren (26.11.2026).** Feiljegeren fant 0 stoppere, 2 viktige og 7 kosmetiske i `a1cd9f8`. Bare tekst og robusthet er endret. Poeng, høyder, `low_reason` og bokføringen er like `a1cd9f8` i alle timer i de seks varslene over (5400, 5433, 5427 og 3 × 1944 timer: 0 ulike utenom tidevannslinja).
+- **Klokkeslett i linja (viktig 2).** Raden TIDEVANN viser nivået på timeslaget, regelen bruker nivået 30 minutter senere. Linja sier nå når tallet gjelder, i norsk tid: «Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: −1,75 poeng.» og «Tidevann (2,2 m over sjøkartnull kl. 11.30): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng». Uten timens tid står «midt i timen». Raden er urørt.
+- **Timer uten poeng å ta (kosmetisk 1).** Har timen 0 før vind og tidevann, sier linja «ingen poeng å ta» og har ikke minustegn: «Lavt vann. 0,74 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: ingen poeng å ta.» Det gjelder også linja for høyt vann. 165 av 200 Breivikeidet-timer i varselet 25.11 kl. 23Z.
+- **Ordet følger tidevannsarket (kosmetisk 2).** «Middels vann. 1,57 m kl. 10.30, …» når `tide.state` er middels. Aldri «Høyt vann … for lite vann».
+- **Halve eller ugyldige `low_*`-felt (kosmetisk 5)** slår den nedre delen av: ingen straff, ingen krasj. Test 46.4 c.
+- **Test 37 (kosmetisk 6):** `r37_lav` og `r37_019` bruker timen med 1,8 m vann, så 0 poeng kommer av svellet og ikke av vannstanden.
+- Ikke rørt: ordet ved 0 poeng («Smått»/«Grøtete», viktig 1, spørsmål S46 2) og kosmetisk 3, 4 og 7.
+- Bilder: `r2-390-…` i samme mappe (08Z, 09Z, 10Z og en time uten poeng å ta).
+
 **Bilder** (før og etter, 390 og 1440 px, varselet 25.11 kl. 23Z): `privat/design-b4/breivikeidet-tide-2026-11-26/`.
 
 **Gjenstår**

@@ -2018,7 +2018,39 @@ def _m_text(cm):
     return f"{cm / 100:.1f}".replace(".", ",").replace("-0,0", "0,0")
 
 
-def tide_level_penalty(hour, spot):
+def _tide_level_clock(hour):
+    """« kl. 09.30» (norsk tid) for tidspunktet vannstanden i timen gjelder, eller tom streng uten timens tid.
+    Vannstanden per time er regnet 30 minutter etter timeslaget (fetch.py), mens spotsiden viser nivået på timeslaget i
+    raden TIDEVANN. Uten klokkeslettet sto 1,3 m i raden og 1,57 m i «Hvorfor» for samme time (feiljegeren 26.11.2026, V2).
+    Bare tekst."""
+    t = hour.get("t")
+    if not isinstance(t, str):
+        return ""
+    try:
+        import datetime as _dt
+        from zoneinfo import ZoneInfo
+        tid = _dt.datetime.fromisoformat(t.replace("Z", "+00:00"))
+        if tid.tzinfo is None:
+            tid = tid.replace(tzinfo=_dt.timezone.utc)
+        return (tid + _dt.timedelta(minutes=30)).astimezone(ZoneInfo("Europe/Oslo")).strftime(" kl. %H.%M")
+    except Exception:
+        return ""
+
+
+def _tide_level_low_part(level_rule):
+    """(gulv_cm, bunn_cm, fradrag) for den nedre delen av regelen, eller None når den mangler eller ikke er gyldig:
+    alle tre feltene må være tall, bunnen under gulvet og fradraget over 0. Halve eller ugyldige felt slår den nedre
+    delen av (ingen straff, ingen krasj), og regelen virker som uten den (feiljegeren 26.11.2026, kosmetisk 5)."""
+    v = [level_rule.get(k) for k in ("low_full_above_cm", "low_max_at_cm", "low_penalty")]
+    if any(isinstance(x, bool) or not isinstance(x, (int, float)) for x in v):
+        return None
+    top, bottom, pen = v
+    if not (bottom < top and pen > 0):
+        return None
+    return top, bottom, pen
+
+
+def tide_level_penalty(hour, spot, potential=None):
     """Myk lokal regel på vannstanden i cm over sjøkartnull (local_rules["tide_level"]): (fradrag vektet med weight, linje).
     Øvre del, «lavere vann er bedre»: ingen straff opp til "full_below_cm", så jevnt opp til "penalty" ved "max_at_cm" og
     aldri mer. Nedre del (valgfri, 26.11.2026, svar.md 26.11.2026 kl. 13.10; kilde: observasjon 26.11.2026, Theodor: «Ikke
@@ -2026,7 +2058,9 @@ def tide_level_penalty(hour, spot):
     "low_max_at_cm" og aldri mer under det. Mellom de to grensene er det ingen straff. Mangler regelen: (0.0, None).
     Mangler vannstanden (uten cm, eller Kartverket feilet): (0.0, linje som sier at vannstanden mangler) - manglende data
     er aldri 0, gir aldri straff, og er aldri «tåler alt». 22.11.2026 (svar.md 22.11.2026 kl. 12.20; kilder: observasjon
-    17.11.2026 og 22.11.2026, Theodor)."""
+    17.11.2026 og 22.11.2026, Theodor).
+    potential (bare tekst, feiljegeren 26.11.2026, kosmetisk 1): det timen har før vind og tidevann. Er det 0, sier linja
+    «ingen poeng å ta» i stedet for et fradrag som ikke ble tatt. Tallet som returneres er det samme uansett."""
     rules = spot.get("local_rules") or {}
     level_rule = rules.get("tide_level")
     cm = (hour.get("tide") or {}).get("cm")
@@ -2040,25 +2074,29 @@ def tide_level_penalty(hour, spot):
     share = min(1.0, max(0.0, (cm - lo) / (hi - lo)))
     pen = weight * level_rule["penalty"] * share
     m = _m_text(cm)
-    low_top = level_rule.get("low_full_above_cm")
-    if low_top is None:
+    low = _tide_level_low_part(level_rule)
+    if low is None:
         # regel uten nedre del (ingen spot har det i dag): ordene fra 22.11.2026
         if pen > 0:
             return pen, f"Tidevann ({m} m over sjøkartnull): jo lavere vann, jo bedre her" + f": −{pen:.2f} poeng".replace(".", ",")
         return 0.0, f"Tidevann ({m} m over sjøkartnull): lavt nok, ingen straff"
-    gulv = _m_text(low_top)
+    low_top, low_bottom, low_raw = low
+    gulv, kl = _m_text(low_top), _tide_level_clock(hour)
+    tomt = potential is not None and potential <= 0      # ingenting å ta: linja påstår ikke et tap
     if pen > 0:
-        return pen, f"Tidevann ({m} m over sjøkartnull): lavere vann er bedre her, ned til ca. {gulv} m" + f": −{pen:.2f} poeng".replace(".", ",")
-    low_share = min(1.0, max(0.0, (low_top - cm) / (low_top - level_rule["low_max_at_cm"])))
-    low_pen = weight * level_rule["low_penalty"] * low_share
+        tall = "ingen poeng å ta" if tomt else f"−{pen:.2f} poeng".replace(".", ",")
+        return pen, f"Tidevann ({m} m over sjøkartnull{kl}): lavere vann er bedre her, ned til ca. {gulv} m: {tall}"
+    low_share = min(1.0, max(0.0, (low_top - cm) / (low_top - low_bottom)))
+    low_pen = weight * low_raw * low_share
     if low_pen > 0:
         # samme form som linja for flo og fjære (S42 a): «Lavt vann. …: −N poeng.» Appen leser den med TIDEVANN_LINJE.
-        # to desimaler på vannstanden her: 1,57 m ved en grense på 1,6 m skal ikke stå som «1,6 m nå, og under ca. 1,6 m»
+        # Ordet følger tide.state som forklaringsarket («Middels vann» ved 1,57 m 26.11.2026; feiljegeren, kosmetisk 2).
+        ordet = TIDE_STATE_WORD.get((hour.get("tide") or {}).get("state")) if (hour.get("tide") or {}).get("state") in ("lav", "middels") else "Lavt vann"
+        # to desimaler på vannstanden her: 1,57 m ved en grense på 1,6 m skal ikke stå som «1,6 m, og under ca. 1,6 m»
         m2 = f"{cm / 100:.2f}".replace(".", ",").replace("-", "−")
-        # «midt i timen»: vannstanden per time er regnet 30 minutter etter timeslaget (fetch.py), mens spotsiden viser
-        # nivået på timeslaget i raden over. «nå» ville stått ved siden av et annet tall.
-        return low_pen, f"Lavt vann. {m2} m midt i timen, og under ca. {gulv} m er det for lite vann her" + f": −{low_pen:.2f}".replace(".", ",") + " poeng."
-    return 0.0, f"Tidevann ({m} m over sjøkartnull): passe vannstand, ingen straff"
+        tall = "ingen poeng å ta" if tomt else f"−{low_pen:.2f}".replace(".", ",") + " poeng"
+        return low_pen, f"{ordet}. {m2} m{kl or ' midt i timen'}, og under ca. {gulv} m er det for lite vann her: {tall}."
+    return 0.0, f"Tidevann ({m} m over sjøkartnull{kl}): passe vannstand, ingen straff"
 
 
 def local_tide_prefer_line(spot, lines):
@@ -2085,7 +2123,7 @@ def tide_prefer_words(prefer):
     return " og ".join([", ".join(ord_[:-1]), ord_[-1]]) if len(ord_) > 1 else "".join(ord_)
 
 
-def local_rules_penalty(hour, spot, wind_type_, wind_speed):
+def local_rules_penalty(hour, spot, wind_type_, wind_speed, potential=None):
     """Tidevann og en strengere offshore-sjekk, begge "koster stjerner".
     15.10.2026 (Theodors regel 4): returnerer (tidevann_rå, vind_rå, linjer),
     begge vektet med weight. Tidevannsfradraget er et eget, additivt ledd i
@@ -2119,7 +2157,7 @@ def local_rules_penalty(hour, spot, wind_type_, wind_speed):
             else:
                 lines.append(f"Tidevann ({state}): foretrukket lokalt, ingen straff")
 
-    level_pen, level_line = tide_level_penalty(hour, spot)
+    level_pen, level_line = tide_level_penalty(hour, spot, potential)
     if level_line:
         raw_total += level_pen
         lines.append(level_line)
@@ -2396,7 +2434,7 @@ def rate(hour, spot, _long_sea=True):
     # flyttall og rundes først til slutt (0,5 opp) - stjernene er fortsatt hele.
     wind_parts = wind_penalty_parts(wind_speed, wind_dir, spot, gust, energy_swell)
     wp_general = wind_parts["pen"]
-    local_tide_raw, local_wind_raw, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed)
+    local_tide_raw, local_wind_raw, local_rules_lines = local_rules_penalty(hour, spot, wt, wind_speed, potential)
     wp = max(wp_general, local_wind_raw)
     # 23.11.2026 (bw_tillit, feiljegeren S27 funn 2): for en fjord-spot tar vinden alt når den tar gap-grensa bort
     # (gap_blocked_by_wind(): fra 8 m/s pålands, skrått pålands eller ukjent retning), i begge soner. Høyden som
@@ -2467,7 +2505,7 @@ def rate(hour, spot, _long_sea=True):
         energy_period_value, energy_period_source,
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
         wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
-        tide_level_line=tide_level_penalty(hour, spot)[1] or local_tide_prefer_line(spot, local_rules_lines),
+        tide_level_line=tide_level_penalty(hour, spot, potential)[1] or local_tide_prefer_line(spot, local_rules_lines),
         fjord_wind_block=fjord_wind_block, tide_lost_local=local_extra_stars,
     )
 

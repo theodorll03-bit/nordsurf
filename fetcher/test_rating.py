@@ -2191,7 +2191,8 @@ gml36 = lambda cm: tide_level_penalty({"tide": {"level": 0.5, "state": "middels"
 assert gml36(-4) == (0.0, "Tidevann (0,0 m over sjøkartnull): lavt nok, ingen straff"), gml36(-4)
 assert gml36(150)[0] == 0.0 and "jo lavere vann, jo bedre" in gml36(247)[1] and abs(gml36(247)[0] - lvl36(247)[0]) < 1e-12
 # med nedre del: negativ vannstand (under sjøkartnull) er lavt vann med hele fradraget, og tallet står med ekte minustegn
-assert abs(lvl36(-4)[0] - 1.75) < 1e-9 and lvl36(-4)[1].startswith("Lavt vann. −0,04 m midt i timen") and "-0" not in lvl36(-4)[1], lvl36(-4)
+lav36 = tide_level_penalty({"tide": {"level": 0.0, "state": "lav", "rising": True, "cm": -4}}, B36)
+assert abs(lav36[0] - 1.75) < 1e-9 and lav36[1].startswith("Lavt vann. −0,04 m midt i timen") and "-0" not in lav36[1], lav36
 assert lvl36(280)[0] < 0.5       # under et halvt poeng: regelen alene runder aldri et poeng bort
 # 26.11.2026: linja sier ikke lenger «jo lavere vann, jo bedre» (det er ikke sant under 1,6 m)
 assert "lavere vann er bedre her, ned til ca. 1,6 m" in lvl36(247)[1] and "jo lavere" not in lvl36(247)[1] and "2,5 m over sjøkartnull" in lvl36(247)[1] and "−0,29" in lvl36(247)[1]
@@ -2303,9 +2304,10 @@ tors37_vann = dict(tors37, tide={"level": 0.5, "state": "middels", "rising": Tru
 assert rate(dict(tors37_vann), B37)["stars"] == 2 and r37_tors["uncertain"] and r37_tors["gap_floor"] and r37_tors["height_source"] == "svell_ute", (r37_tors["stars"], r37_tors["gap_floor"])
 assert abs(r37_tors["height"] - 1.84 * 0.22) < 0.006 and 0.5 <= r37_tors["surf_height"] <= 0.8, (r37_tors["height"], r37_tors["surf_height"])
 assert rate(dict(tors37_vann, swell_offshore=1.76), B37)["stars"] == 2          # det laveste svellet torsdag (1,76-1,84 m)
-r37_lav = rate(dict(tors37, swell_offshore=1.55), B37)
+# (feiljegeren 26.11.2026, kosmetisk 6: på 0,63 m vann er 0 poeng alltid sant. Timen med 1,8 m vann bærer testen.)
+r37_lav = rate(dict(tors37_vann, swell_offshore=1.55), B37)
 assert r37_lav["stars"] == 0 and r37_lav["likely_flat"] and r37_lav["low_reason"] == "flat", (r37_lav["stars"], r37_lav["low_reason"])
-r37_019 = rate(dict(tors37), dict(B37, transfer=0.19, gap_transfer=0.19))
+r37_019 = rate(dict(tors37_vann), dict(B37, transfer=0.19, gap_transfer=0.19))
 assert r37_019["stars"] == 0 and r37_019["likely_flat"], (r37_019["stars"], r37_019["height"])
 # 37.5: 22.11 kl. 09-10Z med vindkurven og tidevannsregelen sammen: 2 poeng, og regelen tar ikke et helt poeng
 for t in (9, 10):
@@ -3292,7 +3294,7 @@ assert [i for i, sp in spots.items() if "low_penalty" in ((sp.get("local_rules")
 rad46 = [(7, 2.3, 1.86, 25, 7.45, 0.13333333333333333, 1.6, 97.0, 2.8, 0.03, "lav", 63), (8, 2.3, 1.86, 26, 7.45, 0.12666666666666668, 1.7, 95.0, 2.8, 0.17, "lav", 99),
          (9, 2.3, 1.88, 26, 7.45, 0.12, 1.7, 98.0, 2.8, 0.39, "middels", 157), (10, 2.3, 1.86, 27, 7.5, 0.12, 1.6, 58.0, 2.8, 0.64, "middels", 223),
          (11, 2.2, 1.86, 27, 7.5, 0.12, 1.7, 56.0, 2.7, 0.86, "høy", 279)]
-bre_2611 = {t: {"height_offshore": tot, "swell_offshore": sv, "swell_model": "standard", "bw_height": bw, "bw_dir": 84.0, "bw_period": 2.3,
+bre_2611 = {t: {"t": f"2026-11-26T{t:02d}:00Z", "height_offshore": tot, "swell_offshore": sv, "swell_model": "standard", "bw_height": bw, "bw_dir": 84.0, "bw_period": 2.3,
                 "bw_period_real_max_3h": 2.3, "dir_offshore": d, "period": p, "wind_speed": ws, "wind_dir": wd, "gust": g,
                 "tide": {"level": lvl, "state": st, "rising": True, "cm": cm}}
             for (t, tot, sv, d, p, bw, ws, wd, g, lvl, st, cm) in rad46}
@@ -3316,7 +3318,7 @@ for t in bre_2611:
     assert (r46[t]["height"], r46[t]["surf_height"], r46[t]["low_reason"]) == (f46["height"], f46["surf_height"], f46["low_reason"]), t
     assert r46[t]["stars"] <= f46["stars"], t                                   # bare ned
 # 46.3 kurven: ingen straff fra 1,6 til 2,0 m, jevnt økende under 1,6 m til 2,5 × 0,7 = 1,75 ved 1,0 m, og aldri mer
-lvl46 = lambda cm: tide_level_penalty({"tide": {"level": 0.5, "state": "middels", "rising": True, "cm": cm}}, B46)
+lvl46 = lambda cm, st=None, **kw: tide_level_penalty({"tide": {"level": 0.5, "state": st or ("lav" if cm < 140 else "middels"), "rising": True, "cm": cm}, **kw}, B46)
 for cm46, pen46 in ((40, 1.75), (58, 1.75), (100, 1.75), (110, 1.4583333333), (120, 1.1666666667), (130, 0.875), (140, 0.5833333333), (150, 0.2916666667),
                     (160, 0.0), (180, 0.0), (200, 0.0), (240, 0.245), (280, 0.49), (320, 0.49)):
     assert abs(lvl46(cm46)[0] - pen46) < 1e-9, (cm46, lvl46(cm46)[0])
@@ -3324,12 +3326,45 @@ assert all(lvl46(cm)[0] >= lvl46(cm + 1)[0] for cm in range(0, 160)) and all(lvl
 # nok ved 1,0 m til høyst 1 poeng for alt en fjord-time kan ha før vind og tidevann (gap-grensa er usikker: høyst 3)
 assert all(math.floor(pot46 - lvl46(100)[0] + 0.5) <= 1 for pot46 in (1, 2, 3))
 # 46.4 «Hvorfor»: «Lavt vann. …: −N poeng.», som linja for flo og fjære (S42 a). Appen leser den med TIDEVANN_LINJE.
-linje46 = "Lavt vann. 0,99 m midt i timen, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."
+# Klokkeslettet (norsk tid) er tidspunktet vannstanden gjelder, 30 minutter etter timeslaget: raden TIDEVANN på spotsiden
+# viser nivået på timeslaget (feiljegeren 26.11.2026, V2: 1,3 m i raden og 1,57 m i «Hvorfor» for samme time).
+linje46 = "Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."
 assert r46[8]["local_rules"]["lines"] == [linje46] and linje46 in r46[8]["breakdown"] and r46[8]["breakdown"][-1] == "Totalt: 0 av 5 stjerner", r46[8]["breakdown"][-3:]
 assert re.fullmatch(r"(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?", linje46)
-assert lvl46(157)[1] == "Lavt vann. 1,57 m midt i timen, og under ca. 1,6 m er det for lite vann her: −0,09 poeng."      # aldri «1,6 m midt i timen, og under ca. 1,6 m»
+# ordet følger tide.state, som forklaringsarket: «Middels vann» kl. 09Z (1,57 m, nivå 0,39), aldri «Lavt vann» der.
+# To desimaler, så det aldri står «1,6 m, og under ca. 1,6 m». Uten timens tid: «midt i timen».
+assert r46[9]["local_rules"]["lines"] == ["Middels vann. 1,57 m kl. 10.30, og under ca. 1,6 m er det for lite vann her: −0,09 poeng."], r46[9]["local_rules"]
+assert lvl46(157)[1] == "Middels vann. 1,57 m midt i timen, og under ca. 1,6 m er det for lite vann her: −0,09 poeng."
+assert lvl46(99)[1] == "Lavt vann. 0,99 m midt i timen, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."
+assert lvl46(120, "høy")[1].startswith("Lavt vann. 1,20 m") and lvl46(120, "ukjent")[1].startswith("Lavt vann. ")      # aldri «Høyt vann … for lite vann»
 assert lvl46(180)[1] == "Tidevann (1,8 m over sjøkartnull): passe vannstand, ingen straff"
-assert lvl46(223)[1] == "Tidevann (2,2 m over sjøkartnull): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng" and lvl46(223)[1] in r46[10]["breakdown"]
+assert lvl46(180, t="2026-11-26T09:00Z")[1] == "Tidevann (1,8 m over sjøkartnull kl. 10.30): passe vannstand, ingen straff"
+assert lvl46(223)[1] == "Tidevann (2,2 m over sjøkartnull): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng"
+assert r46[10]["local_rules"]["lines"] == ["Tidevann (2,2 m over sjøkartnull kl. 11.30): lavere vann er bedre her, ned til ca. 1,6 m: −0,14 poeng"] and r46[10]["local_rules"]["lines"][0] in r46[10]["breakdown"]
+# sommertid og ugyldig tid: norsk tid følger datoen, og en tid som ikke kan leses gir linja uten klokkeslett (aldri krasj)
+assert "0,99 m kl. 10.30," in lvl46(99, t="2026-06-26T08:00Z")[1] and "0,99 m kl. 00.30," in lvl46(99, t="2026-11-26T23:00Z")[1]
+assert lvl46(99, t="tull")[1] == lvl46(99)[1] and lvl46(99, t=None)[1] == lvl46(99)[1] and lvl46(99, t=17)[1] == lvl46(99)[1]
+# 46.4 b (feiljegeren 26.11.2026, kosmetisk 1): en time som har 0 før vind og tidevann, mister ingenting. Linja sier
+# «ingen poeng å ta» og har ikke noe minustegn (appen leser «−» som et fradrag som ble tatt). Tallet regelen gir, er det samme.
+flat46 = rate(dict(bre_2611[8], swell_offshore=1.2, height_offshore=1.3), B46)
+assert flat46["stars"] == 0 and flat46["likely_flat"] and flat46["local_rules"]["stars_lost"] == 0, (flat46["stars"], flat46["local_rules"])
+assert flat46["local_rules"]["lines"] == ["Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: ingen poeng å ta."] and flat46["local_rules"]["lines"][0] in flat46["breakdown"], flat46["local_rules"]
+flat46_h = rate(dict(bre_2611[11], swell_offshore=1.2, height_offshore=1.3), B46)
+assert flat46_h["local_rules"]["lines"] == ["Tidevann (2,8 m over sjøkartnull kl. 12.30): lavere vann er bedre her, ned til ca. 1,6 m: ingen poeng å ta"], flat46_h["local_rules"]
+for pot46 in (None, 1, 2, 3):
+    assert tide_level_penalty(bre_2611[8], B46, pot46) == (tide_level_penalty(bre_2611[8], B46, 0)[0], linje46)
+assert "−" not in tide_level_penalty(bre_2611[8], B46, 0)[1] and re.fullmatch(r"(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?", tide_level_penalty(bre_2611[8], B46, 0)[1])
+# 46.4 c (feiljegeren 26.11.2026, kosmetisk 5): halve eller ugyldige felt slår den nedre delen av. Ingen straff under
+# 2,0 m, ingen krasj, og ordene er som for en regel uten nedre del. Den øvre delen virker som før.
+for feil46 in ({"low_full_above_cm": 160}, {"low_max_at_cm": 100, "low_penalty": 2.5}, {"low_full_above_cm": 160, "low_max_at_cm": 160, "low_penalty": 2.5},
+               {"low_full_above_cm": 100, "low_max_at_cm": 160, "low_penalty": 2.5}, {"low_full_above_cm": 160, "low_max_at_cm": 100, "low_penalty": 0},
+               {"low_full_above_cm": 160, "low_max_at_cm": 100, "low_penalty": -1}, {"low_full_above_cm": None, "low_max_at_cm": 100, "low_penalty": 2.5},
+               {"low_full_above_cm": "160", "low_max_at_cm": 100, "low_penalty": 2.5}, {"low_full_above_cm": True, "low_max_at_cm": False, "low_penalty": 2.5}):
+    Bf46 = dict(B46, local_rules=dict(B46["local_rules"], tide_level=dict({k: v for k, v in TL46.items() if not k.startswith("low_")}, **feil46)))
+    for cm46 in (-10, 0, 99, 157, 160, 180):
+        assert tide_level_penalty({"tide": {"level": 0.2, "state": "lav", "rising": True, "cm": cm46}}, Bf46)[0] == 0.0, (feil46, cm46)
+    assert "lavt nok, ingen straff" in tide_level_penalty(bre_2611[8], Bf46)[1] and rate(dict(bre_2611[8]), Bf46)["stars"] == 2, feil46
+    assert abs(tide_level_penalty(bre_2611[11], Bf46)[0] - tide_level_penalty(bre_2611[11], B46)[0]) < 1e-12, feil46
 for cm46 in range(-10, 340):
     l46 = lvl46(cm46)[1]
     assert "jo lavere" not in l46 and not re.search(r" - | – |—|vektet|Høyvann|Lavvann|\d\.\d", l46), l46
