@@ -3464,4 +3464,97 @@ assert n48_poeng > 0
 print(f"48: Ersfjordstranda vender 290° med fralandsvind 65-155° - vindordet er nytt for {n48_ord} av 360 vindretninger, eksponeringens sjekksum stemmer, "
       f"og i {n48} regnede timer (svell 2,0 m fra 305°, begge soner) er høyden lik og {n48_poeng} flytter ett poeng, ingen mer - OK")
 
+
+# ---------- 49: høyst 3 poeng for nye spots uten observasjon i timer uten BarentsWatch (S48 a, svar.md 26.11.2026 kl. 20.20) ----------
+# «Høyst 3 poeng i sluttsummen for de 18 spotene uten observasjon utenfor BarentsWatch-dagene. Appen skal ikke love 4
+# der ingen har surfet og kystmodellen mangler. Taket løftes for en spot når den får sin første observasjon.»
+# Koden vet det slik: status «forelopig» uten feltet forste_observasjon i spots.json (rating.unconfirmed_cap_applies()).
+from rating import unconfirmed_cap_applies, UNCONFIRMED_MAX_STARS
+assert UNCONFIRMED_MAX_STARS == 3
+# 49.1 hvem taket gjelder: de 18 nye spotene som er på i appen, og ingen andre som er på. Breivikeidet har observasjon.
+tak49 = sorted(i for i, sp in spots.items() if sp.get("status") != "hemmelig" and sp.get("enabled") and unconfirmed_cap_applies(sp, "svell_ute"))
+assert tak49 == ["berlevag-sandfjorden", "bleik", "bovaer", "bunes", "ducks", "eggum", "haukland", "horseid", "hoyvika", "kvalnes", "kvalvika", "persfjord",
+                 "seines", "skagsanden", "stave", "the-frog", "utakleiv", "vikten"], tak49
+GAMLE49 = ("grotfjord", "tromvik", "ersfjordstranda", "russelv", "lenangsoyra", "steinkrossa", "unstad", "farstadsanden")
+for i49 in GAMLE49 + ("breivikeidet",):
+    for kilde49 in ("svell_ute", "metno_korrigert", "barentswatch", None):
+        assert not unconfirmed_cap_applies(spots[i49], kilde49), (i49, kilde49)
+assert all(spots[i].get("status") is None for i in GAMLE49)
+assert spots["breivikeidet"]["status"] == "forelopig" and spots["breivikeidet"]["forste_observasjon"] == "2026-11-17"
+for i49, sp49 in spots.items():
+    # en spot med en skrevet observasjon (_observasjon) skal ha feltet koden leser, og feltet er en dato eller mangler
+    assert not sp49.get("_observasjon") or sp49.get("forste_observasjon"), i49
+    assert sp49.get("forste_observasjon") is None or re.fullmatch(r"20\d\d-\d\d-\d\d", sp49["forste_observasjon"]), i49
+    if sp49.get("status") == "forelopig" and not sp49.get("forste_observasjon"):
+        # aldri i timer med BarentsWatch, alltid ellers (også nye spots som ikke er slått på ennå)
+        assert not unconfirmed_cap_applies(sp49, "barentswatch") and unconfirmed_cap_applies(sp49, "svell_ute") and unconfirmed_cap_applies(sp49, "metno_korrigert")
+# 49.2 en ekte time: Bøvær 03.12.2026 kl. 09Z i varselet 26.11 kl. 18Z (reserven, svell 1,9 m fra 259° med 13,6 s,
+# sidevind 6,7 m/s). 4 poeng før taket, 3 etter. Surfehøyden, ordet og vinden er som før, og timen er ikke merket usikker.
+BO49 = spots["bovaer"]
+t49 = {"t": "2026-12-03T09:00Z", "height_offshore": 1.8, "swell_offshore": 1.88, "swell_model": "gfs", "dir_offshore": 259, "period": 13.6,
+       "swell_peak_period": None, "turn": 6.6, "wind_speed": 6.7, "wind_dir": 194.2, "gust": None,
+       "tide": {"level": 0.73, "state": "høy", "rising": False, "cm": 170}, "light": "skumring", "daylight": True,
+       "bw_height": None, "bw_dir": None, "bw_period": None, "height_spot_model": 1.0, "dir_spot": 252.4}
+r49 = rate(dict(t49), BO49)
+fri49 = rate(dict(t49), dict(BO49, forste_observasjon="2026-12-01"))   # samme spot den dagen noen har surfet der
+show("49: Bøvær 03.12 kl. 09Z (reserven, ny spot)", r49)
+assert fri49["stars"] == 4 and "unconfirmed_cap_from" not in fri49 and not any(l.startswith("Ny spot") for l in fri49["breakdown"])
+assert r49["stars"] == 3 and r49["unconfirmed_cap_from"] == 4 and r49["height_source"] == "svell_ute"
+assert r49["breakdown"][-2:] == ["Ny spot: kappet fra 4 til maks 3 stjerner (ingen har surfet her ennå, og BarentsWatch mangler)",
+                                 "Totalt: 3 av 5 stjerner"], r49["breakdown"][-2:]
+assert (r49["surf_height"], r49["height"], r49["low_reason"], r49["wind_type"], r49["uncertain"]) == (1.93, 1.13, None, "side", False)
+assert (r49["faded"], r49["faded_wind"], r49["faded_tide"]) == (0, 0, 0) and r49["zero_losses"] == {"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 1}
+ULIKE49 = ("stars", "unconfirmed_cap_from", "breakdown", "zero_losses")
+assert {k: v for k, v in r49.items() if k not in ULIKE49} == {k: v for k, v in fri49.items() if k not in ULIKE49}
+assert fri49["breakdown"] == r49["breakdown"][:-2] + ["Totalt: 4 av 5 stjerner"]
+# linja er i samme form som de andre: ingen tankestrek, og appens tabell deler den ved kolon («Ny spot» | resten)
+assert not re.search(r" - | – |—", r49["breakdown"][-2]) and r49["breakdown"][-2].count(": ") == 1
+# samme time uten status (en av de åtte første) eller med BarentsWatch-tall: ikke taket
+assert rate(dict(t49), {k: v for k, v in BO49.items() if k != "status"})["stars"] == 4
+bw49 = rate(dict(t49, bw_height=1.13, bw_dir=float(BO49["facing"]), bw_period=12.0), BO49)
+assert bw49["height_source"] == "barentswatch" and "unconfirmed_cap_from" not in bw49 and not any(l.startswith("Ny spot") for l in bw49["breakdown"])
+# 49.3 alle de 18, mange svell og vinder i reserven: poengene er de laveste av 3 og poengene uten taket, aldri opp og
+# aldri mer enn ett ned (det femte poenget krever BarentsWatch, så reserven gir aldri 5). Alt annet i svaret er likt.
+# Bokføringen (test 42, S28) summerer fortsatt: poengene pluss det vinden, tidevannet og taket tok.
+n49 = n49_tak = 0
+tatt49 = set()
+for i49 in tak49:
+    sp49 = spots[i49]
+    w49 = sp49["swell_window"] if isinstance(sp49["swell_window"][0], (int, float)) else sp49["swell_window"][0]
+    midt49 = (w49[0] + ((w49[1] - w49[0]) % 360) / 2) % 360
+    # 4 poeng i reserven krever nok energi (2000 kJ) og en surfehøyde innenfor spotens beste spenn: et smalt felt rundt 1,7-2,0 m med 13-15 s
+    for sv49 in (0.5, 1.0, 1.5, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.5, 3.5, 5.0):
+        for per49 in (8.0, 11.0, 13.0, 13.6, 14.0, 15.0):
+            for v49, vd49 in ((0.0, 0.0), (4.0, float(sp49["facing"])), (9.0, float(sp49["facing"])), (6.0, (sp49["facing"] + 180.0) % 360), (14.0, (sp49["facing"] + 90.0) % 360)):
+                for tide49 in (None, {"level": 0.9, "state": "høy", "rising": True, "cm": 250}, {"level": 0.1, "state": "lav", "rising": False, "cm": 40}):
+                    h49 = {"height_offshore": sv49 + 0.2, "swell_offshore": sv49, "swell_model": "gfs", "dir_offshore": midt49, "period": per49, "turn": 2.0,
+                           "wind_speed": v49, "wind_dir": vd49, "gust": v49 * 1.3, "tide": tide49}
+                    a49, b49 = rate(dict(h49), dict(sp49, forste_observasjon="2026-12-01")), rate(dict(h49), sp49)
+                    n49 += 1
+                    assert a49["height_source"] != "barentswatch" and a49["stars"] <= 4, (i49, sv49, per49, a49["stars"])
+                    assert b49["stars"] == min(a49["stars"], 3), (i49, sv49, per49, v49, a49["stars"], b49["stars"])
+                    tapt49 = a49["stars"] - b49["stars"]
+                    lok49 = lambda r: (r["local_rules"] or {}).get("stars_lost", 0)
+                    assert b49["stars"] + b49["faded_wind"] + b49["faded_tide"] + lok49(b49) + tapt49 == a49["stars"] + a49["faded_wind"] + a49["faded_tide"] + lok49(a49)
+                    assert b49["zero_losses"]["cap"] == a49["zero_losses"]["cap"] + tapt49 and b49.get("unconfirmed_cap_from") == (a49["stars"] if tapt49 else None)
+                    assert {k: v for k, v in a49.items() if k not in ULIKE49} == {k: v for k, v in b49.items() if k not in ULIKE49}, (i49, sv49, per49, v49)
+                    if tapt49:
+                        n49_tak += 1
+                        tatt49.add(i49)
+                    else:
+                        assert a49["breakdown"] == b49["breakdown"] and a49["zero_losses"] == b49["zero_losses"]
+assert n49_tak > 100 and sorted(tatt49) == tak49, (n49_tak, sorted(tatt49))
+# 49.4 Breivikeidet og de åtte første får aldri taket, heller ikke med 4 poeng i reserven (Unstad har slike timer)
+u49 = rate({"height_offshore": 2.4, "swell_offshore": 2.2, "swell_model": "gfs", "dir_offshore": 295.0, "period": 14.0, "turn": 2.0,
+            "wind_speed": 2.0, "wind_dir": 110.0, "gust": 3.0, "tide": {"level": 0.5, "state": "middels", "rising": True}}, spots["unstad"])
+assert u49["height_source"] != "barentswatch" and u49["stars"] >= 4 and "unconfirmed_cap_from" not in u49, (u49["stars"], u49["height_source"])
+for i49 in GAMLE49 + ("breivikeidet",):
+    for sv49 in (1.0, 2.0, 3.0, 4.0):
+        w49 = spots[i49]["swell_window"] if isinstance(spots[i49]["swell_window"][0], (int, float)) else spots[i49]["swell_window"][0]
+        r = rate({"height_offshore": sv49 + 0.2, "swell_offshore": sv49, "swell_model": "gfs", "dir_offshore": (w49[0] + ((w49[1] - w49[0]) % 360) / 2) % 360,
+                  "period": 13.0, "turn": 2.0, "wind_speed": 1.0, "wind_dir": 0.0, "gust": 1.0, "tide": None}, spots[i49])
+        assert "unconfirmed_cap_from" not in r and not any(l.startswith("Ny spot") for l in r["breakdown"]), i49
+print(f"49: S48 a - taket på 3 gjelder {len(tak49)} nye spots uten observasjon i timer uten BarentsWatch; Bøvær 03.12 kl. 09Z går fra {fri49['stars']} til {r49['stars']}, "
+      f"{n49_tak} av {n49} regnede reservetimer ({len(tatt49)} spots) går fra 4 til 3, ingen opp, bokføringen summerer, Breivikeidet og de åtte første er urørt - OK")
+
 print("Alle tester ok")
