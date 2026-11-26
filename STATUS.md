@@ -1,5 +1,21 @@
 # Nordsurf: status
 
+## Designrevisjonen fase 3, runde 5: feiljegerens funn i runde 4, 26.11.2026
+
+Gren `design/revisjon-fase3`, oppå `20f48a7`, med ny main flettet inn (`8b8a241`: PR 58 og nye varsler; konflikt bare i STATUS.md og `docs/sw.js`). Bare visning: `fetcher/rating.py` er mains. Lokalt, ikke pushet. Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase3-r4-2026-11-26.md`.
+
+- **Viktig 1:** raden over stolpene på PC heter «SJØ m» når alle dagens lyse tall er totalhøyden, «SURF / SJØ m» når de er blandet, ellers «SURF m». Under stripa står «Omriss: sjøen ved spoten, ikke surfehøyden» når dagen har en sjø-stolpe, på mobil og PC. Sett på skjerm: Persfjord 25.11 «SJØ m», Steinkrøssa 25.11 «SURF / SJØ m».
+- **Viktig 2:** ikke endret (sendes som spørsmål). Bare streken er borte: «Nå Treffer ikke», ikke «Nå Treffer ikke –».
+- **d:** «(foreløpig)» i overskriften følger merkelappen i raden (status eller `andel_forelopig`), så Russelv og Lenangsøyra får den også. Hovedbildet på PC har «Foreløpig» i linja over navnet.
+- **j og k:** tallraden på PC har «–» i mørke timer (stolpen står, dempet). «–» i KL.-blokka på PC er en tynn strek (40 px, vekt 500).
+- **c:** endringen i `surfHeadline()` og testen av den er tatt ut igjen. `detailsGrid()` er død kode, men en annen test (tidevannscella) bruker den, så selve ryddingen hører til fase 4.
+- **i:** status hemmelig tas bort ett sted, der spotlista leses inn (`utenHemmelige()` i `app.js`), ikke i `overskrift()`. Publiseringen er fortsatt det egentlige vernet.
+- La stå: a, b, e, f, g og h.
+- **Breivikeidet 26.11 kl. 09** med varselet 25.11 kl. 23Z fra tidevannsgrenen: «0 SMÅTT», «−2 TIDEVANN», «SURF 0,6–0,8 m». Ordregelen er mains og er ikke endret her.
+- **Fysikk-kontrolløren (runde 5):** godkjent, ingen stoppere. Kosmetisk, ikke rettet: `ensureSpot()` kopierer `status` fra detaljfila, så det ekstra vernet mot status hemmelig har et teoretisk hull (publiseringen skriver ingen slike filer).
+- **Tester:** alle 17 testfilene og `tools/kontrast.py` er grønne. `test_spotside_browser.py` brukte 256 s av 300.
+- **Bilder:** `fase-3/etter/r5_*`.
+
 ## Designrevisjonen fase 3, runde 4: S45 kodet, 26.11.2026
 
 Gren `design/revisjon-fase3`, oppå `26f8b03`, med main flettet inn (bare botens varsler). Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 13.10 (S45). Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Lokalt, ikke pushet.
@@ -45,6 +61,7 @@ Gjenstår:
 - Til Theodor, ikke rettet: funn 4 (regel (c) gir totalhøyden ved Stormsjø og delvis Blåst ut, og den står nå som det store tallet), 11, 12, 13 og 19, og runde 2 d, g og h. Alternativene står i rapporten, bildet er `fase-3/sporsmal-persfjord-25-11-kl-12_main-til-venstre_fase3-til-hoyre.png`.
 - Ord som må til Theodor: «Ikke surfbart» som karakter ved 0, og «Lite å hente …» / «… er best, …» (fra PLAN.md).
 - Havfargen venter på Theodor (bildene i `fase-3/havfarge/`).
+
 ## Breivikeidet: tidevannsregelen har fått et gulv, 26.11.2026
 
 Gren `fiks/breivikeidet-tidevann` fra main `f53fe62`. Oppdrag: svar.md 26.11.2026 kl. 13.10, punkt 1 til 4. Kilde: observasjon 26.11.2026, Theodor («Ikke surfbart før 10-10:30 pga lavvann», kl. 09.13 fra stranda «Ganske flatt»). Committet lokalt, ikke pushet, ingen PR ennå.

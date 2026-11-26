@@ -63,7 +63,8 @@
   }
   const nyForelopig = (s)=> s.status==="forelopig" && !(s.forelopig_fra && Date.now() - Date.parse(s.forelopig_fra) >= FORELOPIG_DAGER*864e5);
   const iBesteOkt = (s, t)=> !nyForelopig(s) && !forbudNa(s, t);
-  const merker = (s)=> [s.status==="forelopig" || s.andel_forelopig ? STR.forelopig : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
+  const erForelopig = (s)=> s.status==="forelopig" || !!s.andel_forelopig;   // merkelappen «Foreløpig»: ny spot, eller en andel satt uten observasjon
+  const merker = (s)=> [erForelopig(s) ? STR.forelopig : null, forbudRestr(s).length ? forbudLinje(s) : null].filter(Boolean);
   const omrMerker = (s)=> [s.area, ...merker(s)].filter(Boolean).join(" · ");
   const stedText = (s)=>{ const r = regionOf(s); return [s.area && s.area!==r ? `${s.area} · ${r}` : (s.area || r), ...merker(s)].join(" · "); };
   const regions = ()=> (DATA.regions || []).map(r=>r.name);
@@ -230,11 +231,11 @@
   // forbud utenfor som i «Beste økt», men bare så lenge en av de andre er surfbar.
   // Nye spots (S45 3 a, svar.md 26.11.2026 kl. 13.10): en ny spot nevnes også når den har minst 2 og alle de andre er
   // under 2, og en spot med status «forelopig» har alltid «(foreløpig)» bak navnet i overskriften. En spot med forbud
-  // den timen løftes aldri fram slik. En spot med status «hemmelig» nevnes aldri (CLAUDE.md: den publiseres ikke, så
-  // den skal ikke finnes i dataene; dette er bare et ekstra vern).
-  function overskrift(spots0, days, egne){
-    const H = STR.hjem, spots = (spots0 || []).filter(s=> s && s.status!=="hemmelig");
-    const navn = (s)=> s.status==="forelopig" ? STR.spotForelopig(s.name) : s.name;
+  // den timen løftes aldri fram slik. Merket følger merkelappen «Foreløpig» i raden (erForelopig: status eller
+  // andel_forelopig), så overskriften og raden sier det samme (feiljegeren 26.11.2026, runde 4 d).
+  function overskrift(spots, days, egne){
+    const H = STR.hjem;
+    const navn = (s)=> erForelopig(s) ? STR.spotForelopig(s.name) : s.name;
     if(!days.length || !spots.length) return [];
     const rader = (d)=> spots.map(s=> ({s, b: dayBest(s, d.key)}));
     // «Ikke surfbart nå» gjelder en time, ikke en dag. Fra 1 poeng er ordet karakteren (fase 3 punkt 5), som i raden
@@ -344,7 +345,7 @@
     const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
     const hoyde = v.rute==="mork" ? null : v.oh.hoyde, sjo = hoyde && v.oh.sjo ? `${STR.sjo.toLowerCase()} ` : "";   // «Nå Stormsjø, sjø 1,4 m» (S45 2)
     return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${sjo}${hoyde} m` : ""}`,
-      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? `${sjo ? ", " + esc(sjo.trim()) : ""} <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : v.rute==="mork" ? "" : ` <span class="num">–</span>`}`};
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? `${sjo ? ", " + esc(sjo.trim()) : ""} <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};   // uten høyde (Flatt, Treffer ikke): bare ordet, ingen hengende strek (runde 4, viktig 2)
   }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
@@ -465,7 +466,8 @@
     const {s, b} = r, h = b.h, n = min5(b.st), foto = !!(window.Skive && Skive.harBilde(s.id)), id = encodeURIComponent(s.id), kj = kjoreText(s.id), K = window.KJORETID;
     const vindu = fsApent(b) ? vinduKl(b.start, b.slutt).join("–") : "";   // vinduet er over: ingen «Best», ingen ring
     const fakta = [fsSurf(h), h && h.wind_speed!=null ? windLabel(h) : null].filter(x=> x && x!=="–").join(" · ");
-    const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(" · ");
+    // «Foreløpig» står i linja over navnet, som i raden og i overskriften (runde 4 d)
+    const linje = [STR.web.nr(1), STR.web.bestDag(dag), regionOf(s), kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null, erForelopig(s) ? STR.forelopig : null].filter(Boolean).join(" · ");
     // den håndtegnede ringen rundt beste vindu (SPEC §6D punkt 3) - bare når dagen har 4 eller 5, i korall. Ellers ren tekst
     const ring = n < 4 ? "" : `<svg class="fs-ring" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><path d="M30 12 C70 2 150 2 182 14 C204 24 196 50 150 58 C100 66 30 62 10 46 C-4 34 12 18 46 9"/></svg>`;
     return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${starsAriaLost(n, h)}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
@@ -844,6 +846,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, fsHelt, fsHeltHtml, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();

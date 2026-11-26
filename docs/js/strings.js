@@ -188,7 +188,10 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeSjo: (m) => `sjø ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeSjo: (m) => `sjø ${m} m`,
+      // Raden over stolpene på nettsiden når tallene er sjø (S45 2): «Sjø» når alle dagens lyse tall er totalhøyden,
+      // «Surf / sjø» når de er blandet. Linja under stripa forklarer omrisset, på mobil og nettside.
+      surfSjo: "Surf / sjø", sjoForklar: "Omriss: sjøen ved spoten, ikke surfehøyden", timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,

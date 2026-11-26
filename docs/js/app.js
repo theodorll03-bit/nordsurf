@@ -601,7 +601,7 @@ function surfHeadline(h){
   // "Trolig flatt" som før.
   if(h.low_reason){
     const m = heightMForDisplay(h);
-    return m!=null ? `${ratingWord(h)} (${visesSomSjo(h) ? STR.sjo.toLowerCase() + " " : ""}${nf1.format(m)} m)` : ratingWord(h);   // «Stormsjø (sjø 2,7 m)»: totalhøyden, ikke surfehøyden (S45 2)
+    return m!=null ? `${ratingWord(h)} (${nf1.format(m)} m)` : ratingWord(h);
   }
   if(h.surf_height==null) return h.height!=null ? `${nf1.format(h.height)} m` : "–";
   const sets = h.surf_height_sets!=null ? `, sett ${nf1.format(h.surf_height_sets)} m` : "";
@@ -998,6 +998,13 @@ function exposureChartSVG(spotId, curve, logs){
    til det). s._full === false betyr «bare oversikten ennå»; et varsel lagt
    inn helt (window.__FORECAST__, testene) har ikke feltet og regnes som fullt. */
 const _spotLoads = new Map();
+// En spot med status «hemmelig» skal aldri vises (CLAUDE.md). Det egentlige vernet er publiseringen
+// (publish.public_forecast() tar dem bort før fila skrives). Dette er et ekstra vern ett sted, der spotlista leses inn,
+// så overskrift, lister, kart og hovedbilde er like (feiljegeren 26.11.2026, runde 4 i).
+function utenHemmelige(o){
+  if(o && Array.isArray(o.spots)) o.spots = o.spots.filter(s=> s && s.status!=="hemmelig");
+  return o;
+}
 async function loadOverview(){
   const o = await (await fetch("data/oversikt.json", {cache:"no-cache"})).json();
   (o.spots||[]).forEach(s=>{ s._full = false; });
@@ -1683,7 +1690,7 @@ async function start(){
   // forklaringer, Detaljer-rutenettet og formateringen.
   const wm = $("#wordmark"); if(wm) wm.innerHTML = wordmarkSvg();
   try{
-    DATA = window.__FORECAST__ || await loadOverview();
+    DATA = utenHemmelige(window.__FORECAST__ || await loadOverview());
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
     const gen = new Date(DATA.generated);
     $("#updated").textContent = DATA.sample ? STR.exampleSub : STR.updated(relDay(gen), fmtTime.format(gen));
