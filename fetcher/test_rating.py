@@ -3064,8 +3064,8 @@ assert "Svellandel: 100 % (lang sjø regnet som svell)" in r44[11]["breakdown"]
 # K1 (fysikk-kontrolløren 25.11.2026): 7,7 s kl. 11Z er jevnet ut mellom to modelltimer (4,3 og 9,4 s). Regelen leser tallet
 # i selve timen, og «Hvorfor» sier at det er jevnet ut. Kl. 12Z er en ekte modelltime (9,4 s): ingen merknad.
 assert H44[11]["bw_interpolated"] is True and H44[12]["bw_interpolated"] is False
-assert "BarentsWatch-periode 8 s (jevnet ut mellom to modelltimer): lang, hele høyden ved punktet regnes som lang sjø" in r44[11]["breakdown"], r44[11]["breakdown"]
-assert "BarentsWatch-periode 9 s: lang, hele høyden ved punktet regnes som lang sjø" in r44[12]["breakdown"], r44[12]["breakdown"]
+assert "BarentsWatch-periode 8 s (jevnet ut mellom to modelltimer): lang, perioden kutter ikke" in r44[11]["breakdown"], r44[11]["breakdown"]
+assert "BarentsWatch-periode 9 s: lang, perioden kutter ikke" in r44[12]["breakdown"], r44[12]["breakdown"]
 assert not any("–" in l or " - " in l for l in r44[11]["breakdown"] if "sjø" in l.lower()), "ingen tankestreker i de nye linjene"
 assert not any("Lang sjø" in l or "lang sjø" in l for l in _av44(H44[11], U44)["breakdown"])   # av: ingen slike linjer
 assert r44[11]["energy_swell_kj"] > 2000 and r44[11]["swell_share"] == 1.0 and r44[11]["bw_confirms"]
@@ -3400,5 +3400,16 @@ assert rate(dict(bre_2611[8], tide={"level": 0.17, "state": "lav", "rising": Tru
 print(f"46: Breivikeidet 26.11 - kl. 08Z (0,99 m vann) gir {r46[8]['stars']} poeng (høyst 1, mål 0), kl. 09Z {r46[9]['stars']} (uten krav), kl. 10Z {r46[10]['stars']} poeng og {r46[10]['surf_height']} m; "
       f"ingen straff 1,6-2,0 m, 1,75 ved 1,0 m, bokføringen summerer i {n46} timer, 17.11 og 22.11 som før - OK")
 
+
+# ---------- 47: småfunn etter PR 56 (etterkontrollen 25.11.2026, F2 og F3) - bare tekst i «Hvorfor» ----------
+# F3: flat-sperren er 0,35 m, og linja skal si det. Før rundet _fmt_m() grensa til «under 0,3 m».
+# F2: en time med lang topp ved punktet sier «perioden kutter ikke», ikke at hele høyden er lang sjø (44.2 over).
+_r47 = rate({"bw_height": 0.34, "bw_dir": 300.0, "bw_period": 9.0, "swell_offshore": 1.0, "height_offshore": 1.1, "dir_offshore": 300,
+             "period": 10.0, "wind_speed": 2.0, "wind_dir": 110.0, "gust": 3.0}, U44)
+assert rating.FLAT_HS_THRESHOLD == 0.35 and _r47["surf_height"] == 0 and _r47["low_reason"] == "flat", (_r47["surf_height"], _r47["low_reason"])
+assert "Surfehøyde: flatt (signifikant høyde under 0,35 m)" in _r47["breakdown"], _r47["breakdown"]
+assert not any("under 0,3 m" in l for l in _r47["breakdown"])
+assert not any("hele høyden ved punktet" in l for r in (r44[11], r44[12], _rk44) for l in r["breakdown"])
+print("47: «flatt (signifikant høyde under 0,35 m)» og «lang, perioden kutter ikke» - OK")
 
 print("Alle tester ok")
