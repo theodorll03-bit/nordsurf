@@ -344,8 +344,8 @@ def main():
                         assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 26.09-05.10.2026; tidevann: Lofoten Surfsenter"
                     if sp_["id"] == "breivikeidet":
                         # 22.11.2026 (S19): tidevannsregelen på vannstanden har samme kilde som resten, og samme ordlyd som Unstads
-                        assert energi_ == tide_ == "Grense satt ut fra observasjonene 17.11 og 22.11", (energi_, tide_)
-                        assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 17.11 og 22.11.2026"
+                        assert energi_ == tide_ == "Grense satt ut fra observasjonene 17.11, 22.11 og 26.11", (energi_, tide_)   # 26.11.2026: tre dager
+                        assert page.evaluate("(lr) => localSourceLabel(lr.source, lr)", lr_) == "Observasjoner 17.11-26.11.2026"
 
                 # S28 (Theodor 23.11.2026): «Best på lavt vann» for en spot med regel på vannstanden (local_rules.tide_level, jo lavere jo
                 # bedre - bare Breivikeidet), i tidevannscella (detailsGrid), forklaringen (EXPLAIN.tide) og tidevannskortet (Tidevann.html og
@@ -366,8 +366,9 @@ def main():
                     pref_ = (meta_["tide_regel"] or {}).get("prefer")
                     gammel_kort = (f"{sp_['name']} er best på " + {("lav",): "lav", ("lav", "middels"): "lav til middels", ("middels", "høy"): "middels til høy", ("høy",): "høy", ("middels",): "middels"}[tuple(x for x in ("lav", "middels", "høy") if x in pref_)] + " vannstand") if pref_ else "Spoten tåler alt tidevann"
                     if lav_:
-                        assert got_["kort"] == got_["pref"] == got_["fork"] == "Best på lavt vann" and got_["lav"], (sp_["id"], got_)
-                        assert got_["celle"].endswith("Best på lavt vann") and "tåler alt" not in got_["celle"], got_
+                        # 26.11.2026 (svar.md 26.11.2026 kl. 13.10): regelen har et gulv, og ordet sier det
+                        assert got_["kort"] == got_["pref"] == got_["fork"] == "Best på lavt vann, men ikke under ca. 1,6 m" and got_["lav"], (sp_["id"], got_)
+                        assert got_["celle"].endswith("Best på lavt vann, men ikke under ca. 1,6 m") and "tåler alt" not in got_["celle"], got_
                     else:
                         # som før: cella sier «tåler alt» uten spot.tide, kortet følger tide_regel. Forklaringen sier «liker lav og middels vann» for
                         # en spot med lokal regel på flo og fjære (local_rules.tide_prefer, fysikk-kontrolløren 24.11.2026, vilkår 2), ellers «tåler alt»
@@ -377,6 +378,8 @@ def main():
                 # regelen må ha effekt: vekt 0 eller ingen økning mot flo er ikke «best på lavt vann»
                 lr_b = next(x for x in tv_spots if x["id"] == "breivikeidet")["local_rules"]
                 assert page.evaluate("(lr) => [tideLowBest({local_rules: lr}), tideLowBest({local_rules: {...lr, weight: 0}}), tideLowBest({local_rules: {...lr, tide_level: {...lr.tide_level, penalty: 0}}}), tideLowBest({}), tideLowBest(null)]", lr_b) == [True, False, False, False, False]
+                # uten gulv (regelen slik den sto 22.11.2026) er ordet «Best på lavt vann» som før, i lang og kort form
+                assert page.evaluate("(lr) => { const u = {...lr, tide_level: {full_below_cm: 200, max_at_cm: 280, penalty: 0.7}}; return [tideLowBestTekst({local_rules: u}), tideLowBestTekst({local_rules: u}, true), tideLowBestTekst({local_rules: lr}), tideLowBestTekst({local_rules: lr}, true), tideLowBestTekst({})]; }", lr_b) == ["Best på lavt vann", "Best på lavt vann", "Best på lavt vann, men ikke under ca. 1,6 m", "Best på lavt vann, over 1,6 m", ""]
 
                 # S28: vindtallet rett under spotens egen grense (wind_calm_ms) er én desimal rundet ned, ellers hele m/s som før. Samme
                 # regel som rating.wind_ms_text() i regnestykket, for 0-30 m/s i hundredeler uten grense og med grensene 8 og 14.
@@ -1927,10 +1930,10 @@ def main():
                 sett_b[sid_] = page.evaluate("[document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1, document.querySelector('#spOm').innerText.split('Best på lavt vann').length - 1]")
                 page.wait_for_selector("#tstripe .tsvg")
                 kurve_b[sid_] = page.get_attribute("#tstripe .tsvg", "aria-label")
-            assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
+            assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann, men ikke under ca. 1,6 m", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
             assert sett_b["breivikeidet"] == [1, 1], f"«Best på lavt vann» skal stå ett sted på Breivikeidets spotside på 1440, i «Om spotten»: {sett_b}"
             assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
-            assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann."), kurve_b["breivikeidet"]
+            assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann, men ikke under ca. 1,6 m."), kurve_b["breivikeidet"]
             assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
             # på 390 (S33 a, plassen kom med designrevisjonen fase 2): ordene står ett sted, under raden TIDEVANN i KL.-blokka
             # (Tidevann.prefKort() leser Tidevann.prefTekst()), på én linje og innenfor skjermen. De andre spotene har sin egen
@@ -1943,13 +1946,13 @@ def main():
                 mob_b[sid_] = page.evaluate("""() => { const p = [...document.querySelectorAll('#viewSpot .maal .mu-pref')], b = p[0] ? p[0].getBoundingClientRect() : null;
                     return {pref: p.map(e => e.textContent.trim()), antall: document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1,
                             linjer: b ? Math.round(b.height / parseFloat(getComputedStyle(p[0]).lineHeight)) : 0, hoyre: b ? Math.round(b.right) : 0, bredde: innerWidth}; }""")
-            assert mob_b["breivikeidet"]["pref"] == ["Best på lavt vann"] and mob_b["breivikeidet"]["antall"] == 1, f"«Best på lavt vann» skal stå ett sted på mobil, under raden TIDEVANN: {mob_b['breivikeidet']}"
+            assert mob_b["breivikeidet"]["pref"] == ["Best på lavt vann, over 1,6 m"] and mob_b["breivikeidet"]["antall"] == 1, f"«Best på lavt vann» skal stå ett sted på mobil, under raden TIDEVANN: {mob_b['breivikeidet']}"
             assert mob_b["breivikeidet"]["linjer"] == 1 and mob_b["breivikeidet"]["hoyre"] <= mob_b["breivikeidet"]["bredde"] - 16, f"«Best på lavt vann» skal stå på én linje innenfor skjermen: {mob_b['breivikeidet']}"
             # (Unstad har ingen tidevannsregel i testfila fra 14.10.2026: ingen linje der. Regelen kom 10.11.2026.)
             assert mob_b["grotfjord"]["pref"] == [] and mob_b["farstadsanden"]["pref"] == ["Best på lav til middels vannstand"] and mob_b["unstad"]["pref"] in ([], ["Best på lav til middels vannstand"]), mob_b
             assert mob_b["grotfjord"]["antall"] == mob_b["farstadsanden"]["antall"] == mob_b["unstad"]["antall"] == 0, f"«Best på lavt vann» står bare for Breivikeidet: {mob_b}"
             page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload(); page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
-            assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann.")
+            assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann, men ikke under ca. 1,6 m.")
             ctx.close()
             browser.close()
             # ---- Designrevisjonen fase 2, runde 2: skjemafeltene i WebKit (Safari). Nedtrekkslista var 23 px høy der med

@@ -131,7 +131,7 @@
       what: "Flo og fjære flytter hvor og hvordan bølgene brekker. Noen spots liker lavvann (Farstadsanden, ifølge lokale surfere), andre tåler alt.",
       numbers: (h, spot) => [
         ["Nå", h.tide ? `${h.tide.rising?"stigende":"fallende"}, ${h.tide.state}${h.tide.level!=null?` (${nf1.format(h.tide.level)})`:""}` : "mangler"],
-        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : spot && spot.local_rules && spot.local_rules.tide_prefer && spot.local_rules.tide_prefer.length ? `liker ${spot.local_rules.tide_prefer.join(" og ")} vann` : (typeof tideLowBest === "function" && tideLowBest(spot) ? STR.tideLowBest : "tåler alt tidevann")],
+        ["Spoten", spot && spot.tide && spot.tide.length ? `liker ${spot.tide.join(" og ")} vann` : spot && spot.local_rules && spot.local_rules.tide_prefer && spot.local_rules.tide_prefer.length ? `liker ${spot.local_rules.tide_prefer.join(" og ")} vann` : (typeof tideLowBest === "function" && tideLowBest(spot) ? tideLowBestTekst(spot) : "tåler alt tidevann")],
         ["Poeng tapt på tidevann", h.faded_tide!=null ? String(typeof tideLost === "function" ? tideLost(h) : h.faded_tide) : "mangler"],
       ],
       how: () => ["Kartverket sin tidevannsvarsel for nærmeste punkt. Lokale regler (med navngitt kilde) kan trekke ett poeng ved feil tidevann, dempet med regelens vekt."],

@@ -228,7 +228,7 @@ assert [len(w["hours"]) for w in ws5] == [2, 1]
 sent5, state5 = [], {}
 notify.requests.post = lambda url, json=None, timeout=None: sent5.append(json) or type("R", (), {"raise_for_status": lambda s: None})()
 notify.five_star_alerts({"spots": [spot5, spot4]}, now3, state5, "emne")
-assert len(sent5) == 1 and "Rå: 5 stjerner («Rått»)" in sent5[0]["title"] and "1 vindu til" in sent5[0]["message"], sent5
+assert len(sent5) == 1 and "Rå: 5 poeng («Rått»)" in sent5[0]["title"] and "stjerne" not in sent5[0]["title"] + sent5[0]["message"] and "1 vindu til" in sent5[0]["message"], sent5
 notify.five_star_alerts({"spots": [spot5, spot4]}, now3 + dt.timedelta(hours=23), state5, "emne")
 assert len(sent5) == 1  # samme døgn: ikke på nytt
 notify.five_star_alerts({"spots": [spot5, spot4]}, now3 + dt.timedelta(hours=25), state5, "emne")
@@ -1684,7 +1684,12 @@ _now19 = dt.datetime(2026, 11, 21, 8, 0, tzinfo=dt.timezone.utc)
 _t19 = {"stars": 3, "surf_height": 1.15, "surf_height_sets": 1.46, "period": 12.0, "wind_type": "sideonshore"}
 _w19 = lambda h: {"start": dt.datetime(2026, 11, 21, 11, tzinfo=dt.timezone.utc), "end": dt.datetime(2026, 11, 21, 13, tzinfo=dt.timezone.utc), "best": 3, "hours": [h]}
 _tit19, _txt19 = notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": 10.15, "dir_offshore": 359})), _now19)
-assert _txt19 == "1,1 m (sett 1,5 m), 10 s, sideonshore, lang sjø regnet som svell, usikkert varsel", _txt19
-assert notify.describe({"name": "Unstad"}, _w19(dict(_t19)), _now19)[1] == "1,1 m (sett 1,5 m), 12 s, sideonshore"
+assert _txt19 == "1,1 m (sett 1,5 m), 10 s, skrått pålands, lang sjø regnet som svell, usikkert varsel", _txt19
+# V2-resten: ordene er appens («poeng», og vinden som i «Hvorfor»), aldri kodeordene. Ukjent vind gir ikke noe ord.
+assert _tit19 == "Unstad: 3 poeng i dag 12–15", _tit19
+for _wt19, _ord19 in (("offshore", "fralands"), ("side", "sidevind"), ("sideonshore", "skrått pålands"), ("onshore", "pålands")):
+    assert notify.describe({"name": "Unstad"}, _w19(dict(_t19, wind_type=_wt19)), _now19)[1] == f"1,1 m (sett 1,5 m), 12 s, {_ord19}"
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19, wind_type=None)), _now19)[1] == "1,1 m (sett 1,5 m), 12 s"
+assert notify.describe({"name": "Unstad"}, _w19(dict(_t19)), _now19)[1] == "1,1 m (sett 1,5 m), 12 s, skrått pålands"
 assert notify.describe({"name": "Unstad"}, _w19(dict(_t19, long_sea={"swell_offshore": 2.76, "period": None})), _now19)[1].startswith("1,1 m (sett 1,5 m), 12 s"), "mangler perioden i long_sea: timens egen, aldri 0"
 print("18: inndata-bildet lagres daglig (døgnets første varsel, uten hemmelige spots, mangler lagres ikke), i samme commit som læringsdataene - OK")
