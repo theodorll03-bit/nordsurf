@@ -207,7 +207,7 @@ Fase 1 (24.11.2026, plan i `privat/designrevisjon-2026-11-21/PLAN.md`). Der dett
 - **Toppbildet er kortere.** Mobil 160 px (§6B sa 220). Web 260 px (§6C sa 420), og spotnavnet på web er 96/84 (§3 sa 144/124). Dommen skal stå i første skjermbilde.
 - **Under toppbildet står én linje:** «Sentinel-2 · Copernicus/Kartverket · CC BY 4.0», med lisensen som lenke (44 px trykkflate). Hele krediteringen står under Kilder nederst.
 - **Fyllet for 1 og 2** er et eget token, `--lav`: #8A8478 om dagen (3,24:1 mot papiret) og #8FA0A8 i mørketid (5,57:1). Før var det outline-fargen (1,83:1). Tallet oppå fyllet er `--paa-lav`.
-- **Nullene** står i muted med vekt 500 og tynn ramme (hair). Aldri strek, for strek betyr «mangler».
+- **Nullene** står i muted med vekt 500 og tynn ramme (hair). Aldri strek, for strek betyr at tallet ikke vises: det mangler, eller timen er mørk (S45 5 a, se «S45» nederst).
 - **Ringen rundt «Best»** på forsiden tegnes bare når dagen har 4 eller 5, i korall. Ellers ren tekst.
 - **Etiketter** er 12/16 også på mobil (§3 sa 11/14), med sperring 0,02 em (§3 sa 0,04). 11 px brukes bare til kreditt.
 - **Faktalinja** (LYS, LUFT, VANN) og datoene i dagvelgeren står i ink.
@@ -238,7 +238,7 @@ Fase 2 (24.11.2026, «B 4.0 ferdig på mobil»). Der dette avsnittet og resten a
 
 Fase 3 (25.11.2026, «riktig tall størst», godkjent av Theodor 21.11). Der dette avsnittet og resten av fila spriker, gjelder dette.
 
-- **Det store tallet i KL.-blokka er surfehøyden ved spoten** (samme høyde som listene, regel (c) i `heightMForDisplay`), med kroppsmålet under. Et spenn («1,4–1,8») står i tre firedeler av størrelsen. Tallet står alltid på én linje, og skriften krymper når kolonnen er smal (PC 1024 til 1320 px). Er ordet Flatt eller Treffer ikke, står «–» stort og ordet under. Uten poeng vises høyden fra 0,3 m, likt i KL.-blokka, stripa og listene (`hoydeVist` i ui.js), aldri «0,0 m». I en mørk time er tallet grått, og under «–» står bare årsaken (Treffer ikke), ikke karakteren. SVELL UTE er en rad over VIND og TIDEVANN. Mangler svellet i en time med andre tall, står raden med «–» og «Mangler data», og periode og retning når de finnes.
+- **Det store tallet i KL.-blokka er surfehøyden ved spoten** (samme høyde som listene, regel (c) i `heightMForDisplay`), med kroppsmålet under. Et spenn («1,4–1,8») står i tre firedeler av størrelsen. Tallet står alltid på én linje, og skriften krymper når kolonnen er smal (PC 1024 til 1320 px). Er ordet Flatt eller Treffer ikke, står «–» stort og ordet under. Uten poeng vises høyden fra 0,3 m, likt i KL.-blokka, stripa og listene (`hoydeVist` i ui.js), aldri «0,0 m». I en mørk time står «–» uten tall og uten ord under (S45 5 a, se «S45» under). SVELL UTE er en rad over VIND og TIDEVANN. Mangler svellet i en time med andre tall, står raden med «–» og «Mangler data», og periode og retning når de finnes.
 - **To høyder står aldri umerket:** dommen har dagen under ordet («I DAG», «I MORGEN») og KL.-blokka har «KL. 09».
 - **Lister og dagkolonner viser surfehøyden ved spoten,** ikke svellet ute: favorittene og regionradene på mobil-Hjem, tabellen på PC-forsiden (kolonnen heter SURF), Søk, Utforsk (kortet og listene) og «Neste 7 dager» på PC-spotsiden. Er ordet Flatt eller Treffer ikke, står «–» der høyden skulle stått.
 - **Timestripa** har surfehøyden som stolper i blekk med fast skala per spot: 0 til `max_height` (spots.json). En tynn stiplet linje i muted står ved nedre grense i `ideal_height`, med tallet utenfor timene: i margen til høyre på mobil (44 px), i etikettkolonnen på PC. Tallet dekker aldri en stolpe. Med stor tekst på mobil står det over stripa. Mangler høyden i en time, også en time med vurdering, er stolpeplassen skravert, aldri tom eller lav. Flatt og Treffer ikke har ingen stolpe, bare grunnlinja. Mørke timer har stolpen i dim. På PC står tallet over stolpen, i raden SURF m (erstatter SVELL m).
@@ -249,6 +249,22 @@ Fase 3 (25.11.2026, «riktig tall størst», godkjent av Theodor 21.11). Der det
 - **Søk er lik Hjem** (S44 3): er timen mørk, står «Mørkt» uten tall. På kortet i Utforsk står «–» under SURF, verken høyde eller ord.
 - **Skjermleseren** får det raden i Utforsk viser: karakteren, høyden, årsaken og poengene. «Nå Flatt» i regionraden på mobil-Hjem har «–» der høyden skulle stått. «, usikkert» (lang sjø) står i Søk, Utforsk-listene og dagkolonnene på PC også.
 - **Regel 3 er uendret.** Havfargen (`--god` for 3) er bare prøvd i fase 3, med skjermbilder til Theodor. Den er ikke i appen.
+
+S45 (26.11.2026, svar.md 26.11.2026 kl. 13.10). Der dette avsnittet og fase 3 over spriker, gjelder dette.
+
+- **«Ikke surfbart» er ordet ved 0** (1 a), med årsaken (Blåst ut, Stormsjø, Treffer ikke, Grøtete …) på linja under. «Usikkert» kan stå på årsakslinja.
+- **«SJØ», ikke «SURF», når tallet er totalhøyden ved spoten** (2 a med tillegg). Regel (c) står: Stormsjø viser totalhøyden fra kystmodellen, og Blåst ut gjør det når surfehøyden er 0. I akkurat de timene heter tallet «SJØ», og det har ikke kroppsmål, så «2,7 m» ikke leses som bølgene du surfer. Etiketten åpner arket om signifikant høyde. Blåst ut med ekte surfehøyde er fortsatt «SURF» med kroppsmål. Det samme gjelder overalt tallet står:
+  - KL.-blokka: «SJØ 2,7 m», ingen linje under.
+  - Lister (Søk, Utforsk, lista utenfor kartet), dagkolonnene og tabellen på PC-forsiden: «sjø 2,7 m».
+  - Regionraden på mobil-Hjem: «Nå Stormsjø, sjø 1,4 m». Uten høyde står bare ordet («Nå Treffer ikke»), uten strek etter.
+  - Kortet i Utforsk: feltet heter «Sjø».
+  - Timestripa: stolpen er et omriss, ikke fylt, og tallet over stolpen på PC er dempet. Raden over stolpene på PC heter «SJØ m» når alle dagens lyse tall er sjø, «SURF / SJØ m» når de er blandet, ellers «SURF m». Har dagen en sjø-stolpe, står «Omriss: sjøen ved spoten, ikke surfehøyden» under stripa, på mobil og PC.
+  - Skjermleseren: «sjø 2,7 m».
+- **Nye spots i overskriften** (3 a). En ny spot (status foreløpig, de første 14 dagene) nevnes når den har minst 2 og alle de andre er under 2. Fra før nevnes den når ingen av de andre er surfbare. En spot med merkelappen «Foreløpig» i raden (status foreløpig, eller en andel satt uten observasjon) har «(foreløpig)» bak navnet i overskriften: «Ok på Breivikeidet (foreløpig) i dag.» Hovedbildet på PC-forsiden har «Foreløpig» i linja over navnet. Er det forbud på den nye spoten den timen, løftes den ikke fram. Regelen gjelder overskriften på Hjem, mobil og PC, og hovedbildet på PC-forsiden følger samme regel, så de to aldri peker på hver sin spot. En spot med status hemmelig publiseres ikke. Som ekstra vern tas den også bort der appen leser inn spotlista.
+- **Mørke timer har «–»** (5 a): KL.-blokka viser «SURF –» uten tall og uten ord under, som Hjem, Søk og Utforsk (S44 3). Streken betyr altså at tallet ikke vises, enten fordi det mangler eller fordi timen er mørk. Mangler høyden i dataene, står «Mangler data» under streken, også i en mørk time. Timestripa viser fortsatt høyden i mørke timer, som dempet stolpe (høyden er data, ikke vurdering), men tallraden på PC har «–» i mørke timer. På PC er «–» i KL.-blokka en tynn strek (40 px, vekt 500), ikke en bjelke.
+- **Småvalgene** følger anbefalingene i utviklerens rapport: ordet (Flatt, Treffer ikke) i Surf-feltet på kortet i Utforsk, linja ved nedre grense i `ideal_height` uten ord, rådet i overskriften bare når første dag har under 2 og en senere dag 2 eller mer, og dempet stolpe i mørke timer.
+- **Stor tekst på PC:** oppsettet med dommen i full bredde slår inn når innholdet er smalere enn 48rem (før 45rem), så det gjelder også 175 % tekst på 1360 og 1440 px. Uten `cqi` (Safari før 16) er det store tallet 40 px, opptil 48 px ved stor tekst, og et spenn 30 til 46 px.
+- **Lang sjø på lave skjermer:** etiketten «LANG SJØ UTE» står øverst i raden og tallet på første linje (under 700 px høyde, fra 340 px bredde), så raden er 11 px lavere.
 
 S38 2 a (25.11.2026): forklaringsarkene.
 

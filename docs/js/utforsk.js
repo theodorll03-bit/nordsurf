@@ -25,8 +25,8 @@
   // skjermleseren får det samme som raden viser (naHtml): karakteren, høyden og årsaken («Bøvær: Ikke surfbart, 1,4 m, stormsjø, 0 av 5»)
   function ariaAv(s, h, st){
     if(!h) return `${s.name}: –, ${STR.starsAria(st, 0)}`;
-    const k = karakter(h), hoyde = H().ordOgHoyde(h).hoyde;
-    return `${s.name}: ${[k.ord + H().usikkertTillegg(h), hoyde ? `${hoyde} m` : null, k.aarsak ? k.aarsak.toLowerCase() : null, STR.starsAria(st, 0)].filter(Boolean).join(", ")}`;
+    const k = karakter(h), hoyde = H().hoydeMedMerke(h);   // «sjø 1,4 m» når tallet er totalhøyden (S45 2)
+    return `${s.name}: ${[k.ord + H().usikkertTillegg(h), hoyde, k.aarsak ? k.aarsak.toLowerCase() : null, STR.starsAria(st, 0)].filter(Boolean).join(", ")}`;
   }
   // verdi per spot for valgt dag: nå = nå-timen; ellers dagens beste dagslystime (publish.best_hour)
   function valueFor(s, dayKeyOrNull){
@@ -131,10 +131,11 @@
     const t = v.t ? new Date(v.t) : null;
     const tid = S.utforskDay==null ? "nå" : t ? `${fmtWdLong.format(t)} kl. ${fmtHour.format(t)}` : cap(fmtWdLong.format(new Date(S.utforskDay + "T11:00:00Z")));
     // mørk time: verken høyde eller vurderingsord, bare «–» (S44 3, som Hjem og Søk). Ordet er karakteren, årsaken står under (fase 3 punkt 5)
-    const hoyde = v.forbud || v.rute ? null : H().ordOgHoyde(h).hoyde, k = !v.rute && h ? karakter(h) : null;
+    // Er tallet totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde), heter feltet «Sjø», og tallet etter ordet har «sjø» foran (S45 2)
+    const hoyde = v.forbud || v.rute ? null : H().ordOgHoyde(h).hoyde, k = !v.rute && h ? karakter(h) : null, sjo = !!hoyde && H().erSjo(h);
     return `<div class="topp"><div><div class="navn">${esc(s.name)}</div><div class="omr">${esc(H().stedText(s))} · ${esc(tid)}</div></div><button type="button" class="iconbtn lukk" id="kortLukk" aria-label="Lukk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
-      <div class="kk-vurd r-${min5(v.st)}">${ruteHtml(v.st, v.rute)}<span class="ord">${esc((k ? k.ord : v.word) + (v.forbud ? "" : H().usikkertTillegg(h)))}</span>${k ? `<span class="num">${hoyde ? `${esc(hoyde)} m` : "–"}</span>` : ""}${k && k.aarsak ? `<span class="omr">${esc(k.aarsak)}</span>` : ""}${v.forbud ? `<span class="omr">${esc(v.forbud.periode)}</span>` : ""}</div>
-      <div class="fakta"><div>Surf<b>${hoyde ? `${esc(hoyde)} m` : h && !v.rute && !v.forbud ? esc(ratingWord(h)) : "–"}</b></div><div>${h && h.long_sea ? esc(STR.spot.langSjo) : "Svell ute"}<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}${h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))}` : ""}` : "–"}</b></div><div>Vind<b>${h && h.wind_speed!=null ? `${windMsText(h)} m/s ${esc(windLabel(h))}` : "–"}</b></div></div>
+      <div class="kk-vurd r-${min5(v.st)}">${ruteHtml(v.st, v.rute)}<span class="ord">${esc((k ? k.ord : v.word) + (v.forbud ? "" : H().usikkertTillegg(h)))}</span>${k ? `<span class="num">${hoyde ? esc(H().hoydeMedMerke(h)) : "–"}</span>` : ""}${k && k.aarsak ? `<span class="omr">${esc(k.aarsak)}</span>` : ""}${v.forbud ? `<span class="omr">${esc(v.forbud.periode)}</span>` : ""}</div>
+      <div class="fakta"><div>${esc(sjo ? STR.sjo : STR.spot.surf)}<b>${hoyde ? `${esc(hoyde)} m` : h && !v.rute && !v.forbud ? esc(ratingWord(h)) : "–"}</b></div><div>${h && h.long_sea ? esc(STR.spot.langSjo) : "Svell ute"}<b>${h && h.swell_offshore!=null ? `${nf1.format(h.swell_offshore)} m${h.period!=null ? ` · ${nf0.format(h.period)} s` : ""}${h.dir_offshore!=null ? ` fra ${esc(compass(h.dir_offshore))}` : ""}` : "–"}</b></div><div>Vind<b>${h && h.wind_speed!=null ? `${windMsText(h)} m/s ${esc(windLabel(h))}` : "–"}</b></div></div>
       <button type="button" class="primary" id="kortApne">Se hele varselet</button>`;
   }
   function offListeHtml(region){

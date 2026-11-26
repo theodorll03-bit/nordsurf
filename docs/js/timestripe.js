@@ -54,7 +54,7 @@
     const h = s.hours[c.i]; const hh = String(c.hh).padStart(2, "0");
     const dom = h._forbud ? STR.hjem.forbud.toLowerCase() : !H.known(h) ? STR.spot.timeMangler : H.mork(h) ? STR.spot.timeMork : STR.spot.timeTall(H.stars(h), tapt(h));
     const lv = window.Tidevann ? Tidevann.nivaa(ev, c.ms) : null;
-    const surf = !h._forbud && H.known(h) && H.heightText && H.heightText(h) ? STR.spot.timeSurf(H.heightText(h)) : null;
+    const surf = !h._forbud && H.known(h) && H.heightText && H.heightText(h) ? (H.erSjo(h) ? STR.spot.timeSjo : STR.spot.timeSurf)(H.heightText(h)) : null;   // «sjø 2,7 m» når tallet er totalhøyden (S45 2)
     const rest = [surf, h.swell_offshore!=null ? (h.long_sea ? STR.spot.timeLangSjo : STR.spot.timeSvell)(nf1.format(h.swell_offshore)) : null,
       h.wind_speed!=null ? STR.spot.timeVind(windMsText(h), windLabel(h)) : null,
       lv ? STR.spot.timeTide(f1(lv.cm), lv.stiger) : null].filter(Boolean).join(", ");
@@ -94,9 +94,12 @@
       else if(mork || forbud) seg = `<div class="segs${forbud ? " forbud" : ""}"></div>`;
       else if(!kjent) seg = `<div class="segs miss"></div>`;
       else { for(let nivaa = 5; nivaa >= 1; nivaa--) seg += `<i class="${nivaa <= st ? "pa" : nivaa <= st + lostTv ? "tapt tv" : nivaa <= st + lost ? "tapt" : ""}"></i>`; seg = `<div class="segs r-${st}">${seg}</div>`; }
-      // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe
-      const v = hoydeAv(h);
-      const surf = `<div class="srf">${bred ? `<b>${v!=null ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
+      // stolpen: høyden som vises (regel (c)); tallet over stolpen på nettsiden. Mangler data: skravur, aldri en lav stolpe.
+      // Er tallet totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde), er stolpen et omriss og tallet dempet:
+      // det er sjøen, ikke surfehøyden (S45 2)
+      const v = hoydeAv(h), sjo = v!=null && H.erSjo(h);
+      // mørk time: «–» i tallraden, som i KL.-blokka (S45 5 a). Stolpen står, dempet (småvalg 4 a)
+      const surf = `<div class="srf${sjo ? " sjo" : ""}">${bred ? `<b>${v!=null && !mork ? esc(nf1.format(v)) : h && !forbud && kjent ? "–" : ""}</b>` : ""}<span class="sbx${h && (!kjent || H.hoydeMangler(h)) ? " miss" : ""}">${v!=null ? `<i style="height:${px(v)}px"></i>` : ""}</span></div>`;
       const visVind = h && h.wind_speed!=null && (c.hh % hvert === 0 || d.step !== 1);
       // retning som mangler gir ingen pil (aldri nordavind som standard), bare tallet
       const pil = visVind && h.wind_dir!=null ? `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="transform:rotate(${(Math.round(h.wind_dir) + 180) % 360}deg)"><path d="M12 2 L19.5 20 L12 15.5 L4.5 20 Z" fill="${h.wind_type==="offshore" ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/></svg>` : "";
@@ -121,10 +124,18 @@
       <div class="ring" aria-hidden="true" style="left:${(kSel / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>
       ${harNaa ? `<div class="naalinje" aria-hidden="true" style="left:${(xAv(cols, naa) * 100).toFixed(2)}%"></div>` : ""}`;
     const R = STR.web ? STR.web.rader : null;
-    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span>${esc(STR.spot.surf)} <small class="enhet">m</small></span>
+    // Raden over stolpene heter «SJØ» når alle dagens lyse tall er totalhøyden, og «SURF / SJØ» når de er blandet, så ingen
+    // sjøtall står under ordet «SURF» alene (S45 2; feiljegeren 26.11.2026, runde 4 viktig 1). Har dagen en sjø-stolpe,
+    // også i en mørk time, står forklaringen av omrisset under stripa, på mobil og nettside.
+    const medTall = cols.map(c=> c.i >= 0 ? s.hours[c.i] : null).filter(h=> h && !H.mork(h) && hoydeAv(h)!=null);
+    const nSjo = medTall.filter(h=> H.erSjo(h)).length;
+    const surfOrd = nSjo && nSjo===medTall.length ? STR.sjo : nSjo ? STR.spot.surfSjo : STR.spot.surf;
+    const harSjo = cols.some(c=> c.i >= 0 && hoydeAv(s.hours[c.i])!=null && H.erSjo(s.hours[c.i]));
+    const sjoNote = harSjo ? `<p class="tnote etikett"><i aria-hidden="true"></i>${esc(STR.spot.sjoForklar)}</p>` : "";
+    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span class="te-surf">${esc(surfOrd)} <small class="enhet">m</small></span>
       <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small class="enhet">m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
     return `<div class="tstripe${bred ? " bred" : ""}${ideal!=null ? " med-ideal" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
-      ${etiketter}<div class="tflate">${inni}</div>
+      ${etiketter}<div class="tflate">${inni}</div>${sjoNote}
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>
       <input class="sr" type="range" id="tstripeVelg" min="${valgbare[0]}" max="${valgbare[valgbare.length-1]}" step="1" value="${kSel}" aria-valuetext="${esc(ariaTime(s, cols[kSel], H, best, ev))}">
     </div>`;

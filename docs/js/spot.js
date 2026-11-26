@@ -30,9 +30,10 @@
     return {a: v, b: sets};
   }
   function kroppshoyde(h){
-    // midtpunktet mellom høyden som vises og settene (Theodors tabell 14.10.2026)
+    // midtpunktet mellom høyden som vises og settene (Theodors tabell 14.10.2026). Er tallet totalhøyden ved spoten
+    // (Stormsjø, og Blåst ut når surfehøyden er 0), er det sjøen og ikke bølgene du surfer: ikke noe kroppsmål (S45 2)
     const v = visHoyde(h);
-    if(!v) return null;
+    if(!v || visesSomSjo(h)) return null;
     const m = v.b!=null ? (v.a + v.b) / 2 : v.a;
     if(m < 0.3) return "Nesten flatt";
     if(m < 0.6) return "Ankel- til knehøyt";
@@ -232,16 +233,20 @@
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
-    const maal = (ikon, key, k, v, enhet, sub, under)=> `<div class="maal"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small class="enhet">${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
+    const maal = (ikon, key, k, v, enhet, sub, under, kl)=> `<div class="maal${kl ? " " + kl : ""}"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small class="enhet">${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
     // Surfehøyden ved spoten er det store tallet (fase 3 punkt 1), med kroppsmålet under. Høyden er den samme som
     // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
-    // time: tallet står i grått, som tallene i timestripa, og under «–» står bare årsaken («Treffer ikke»), ikke karakteren («Flatt»): ingen vurdering i mørket (SPEC §5).
-    const hoyde = H.heightText(h), mork = !!h && H.mork(h);
-    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : H.hoydeMangler(h) ? cap(STR.spot.mangler) : mork ? karakter(h).aarsak : ratingWord(h);
-    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}${mork ? " mork" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small class="enhet">m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
+    // time: «–» uten tall og uten ord under (S45 5 a, svar.md 26.11.2026 kl. 13.10; som Hjem, Søk og Utforsk, S44 3):
+    // mørke timer får ikke tall, og ingen vurdering (SPEC §5). Timestripa viser fortsatt høyden som dempet stolpe.
+    // Mangler høyden i dataene, står «Mangler data» under streken, også i en mørk time, så streken alene betyr mørkt.
+    // Er tallet totalhøyden ved spoten (Stormsjø, og Blåst ut når surfehøyden er 0), heter det «SJØ», ikke «SURF», og
+    // har ikke kroppsmål (S45 2). Etiketten åpner da arket om signifikant høyde, der tallet står.
+    const mork = !!h && H.mork(h), hoyde = mork ? null : H.heightText(h), sjo = !!hoyde && H.erSjo(h);
+    const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : H.hoydeMangler(h) ? cap(STR.spot.mangler) : mork ? null : ratingWord(h);
+    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small class="enhet">m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
       : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
       : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
-    const surf = `<div class="svell surf"><div class="etikett">${forklar("surf_height", `${PIL("", null, IK_SURF)}${esc(STR.spot.surf)}`)}</div>${stort}</div>`;
+    const surf = `<div class="svell surf${sjo ? " sjo" : ""}"><div class="etikett">${forklar(sjo ? "hs" : "surf_height", `${PIL("", null, IK_SURF)}${esc(sjo ? STR.sjo : STR.spot.surf)}`)}</div>${stort}</div>`;
     const rader = [];
     // svellet ute er en rad på linje med vind og tidevann (fase 3 punkt 1). Pila er korall bare når svellet er i
     // vinduet og timen har 4 eller mer (fase 3 punkt 4), ellers blekk i vinduet og grå utenfor.
@@ -255,7 +260,7 @@
         : [h.period!=null ? `${nf0.format(h.period)} s` : null, dir!=null ? `${STR.fromDir(compass(dir))} ${Math.round(dir)}°` : null].filter(Boolean).join(" · ");
       rader.push(maal(PIL("sv" + (inne ? " inne" : "") + (hoy ? " hoy" : ""), dir, IK_SVELL), "swell", h.long_sea ? STR.spot.langSjo : STR.spot.svell,
         h.swell_offshore!=null ? esc(nf1.format(h.swell_offshore)) : "–", h.swell_offshore!=null ? "m" : "",
-        esc([h.swell_offshore!=null ? null : cap(STR.spot.mangler), sub || null].filter(Boolean).join(" · ")), h.long_sea ? STR.spot.langSjoNote : ""));
+        esc([h.swell_offshore!=null ? null : cap(STR.spot.mangler), sub || null].filter(Boolean).join(" · ")), h.long_sea ? STR.spot.langSjoNote : "", h.long_sea ? "lang" : ""));
     }
     if(h && h.wind_speed!=null){
       const fra = h.wind_dir!=null ? `${STR.fromDir(compass(h.wind_dir))} ${Math.round(h.wind_dir)}°` : "";
@@ -381,9 +386,9 @@
     // spoten og vinden i den beste timen. Surfehøyden, ikke svellet ute (fase 3 punkt 3): «–» når ordet er Flatt eller Treffer ikke
     const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null, h = b.h;
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (x.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(h.t))) : null;   // som i domHtml: et vindu som er over, vises ikke
-    const ht = n!=null && h ? H.ordOgHoyde(h).hoyde : null, surf = n!=null ? (ht ? `${ht} m` : "–") : "", grunn = domGrunn(b), ord = domOrd(b) + (n!=null ? H.usikkertTillegg(h) : "");   // «, usikkert» ved lang sjø (S40), som i listene
+    const ht = n!=null && h ? H.hoydeMedMerke(h) : null, sjo = !!ht && H.erSjo(h), surf = n!=null ? (ht || "–") : "", grunn = domGrunn(b), ord = domOrd(b) + (n!=null ? H.usikkertTillegg(h) : "");   // «, usikkert» ved lang sjø (S40), som i listene
     const vind = h && h.wind_speed!=null ? windLabel(h) : "";
-    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${STR.spot.surf.toLowerCase()} ${surf}` : ""}`;
+    const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${sjo ? "" : STR.spot.surf.toLowerCase() + " "}${surf}` : ""}`;
     return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
         <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
         <span class="dk-v">${n!=null ? `<span class="vurd dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>

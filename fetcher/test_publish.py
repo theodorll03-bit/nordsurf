@@ -339,7 +339,18 @@ def main():
     b12 = [d["h"] for d in o12["dager"] if d.get("h") and d["h"]["t"] == d12["t"]]
     assert b12 and b12[0]["swell_offshore"] == 2.76 and b12[0]["dir_offshore"] == 359 and b12[0]["long_sea"] is True, b12
     # V1 (feiljegeren 25.11.2026): «usikkert» følger med til forsiden (bare når timen er usikker, ellers ikke noe felt)
-    assert b12[0]["uncertain"] is True and "uncertain" in publish.NAA_FIELDS and "long_sea" in publish.HOME_HOUR_FIELDS and "uncertain" in publish.HOME_HOUR_FIELDS
+    # F1 (etterkontrollen 25.11.2026): prøver det appen faktisk leser. Hjem og Utforsk leser nå-timene og dagens beste time
+    # i oversikten (begge går gjennom _naa_hour() og NAA_FIELDS; der er long_sea bare et merke), spotsiden leser detaljfila
+    # (der er long_sea hele oppføringen, sjekket over).
+    assert b12[0]["uncertain"] is True and {"long_sea", "uncertain"} <= set(publish.NAA_FIELDS)
+    n12 = publish._naa_hour(publish.vis_lang_sjo(u12["hours"][i12]))
+    assert n12["long_sea"] is True and n12["uncertain"] is True and (n12["swell_offshore"], n12["dir_offshore"]) == (2.76, 359), n12
+    for nh in o12["naa"]:
+        if nh["t"] == d12["t"]:
+            assert nh["long_sea"] is True and nh["uncertain"] is True and nh["dir_offshore"] == 359, nh
+    assert all("long_sea" not in nh and "long_sea" not in (d.get("h") or {}) for o in ov0["spots"] for nh in o["naa"] for d in o["dager"]), "uten regelen: ikke noe merke i oversikten"
+    js12 = {f: (ROOT / "docs" / "js" / f).read_text(encoding="utf-8") for f in ("ui.js", "spot.js")}
+    assert "h.long_sea" in js12["ui.js"] and "h.long_sea" in js12["spot.js"] and "h.uncertain" in js12["spot.js"], "appen leser long_sea på Hjem og long_sea/uncertain på spotsiden"
     assert publish._naa_hour({"t": "x", "stars": 2, "uncertain": False}) == {"t": "x", "stars": 2}
     # K2: merket for «regelen traff, men vanlig regning vant» er bare til læringen og går ikke ut i detaljfila
     u12["hours"][i12 + 1]["long_sea_seen"] = True

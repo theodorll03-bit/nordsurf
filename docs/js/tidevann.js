@@ -53,8 +53,8 @@
 
   function prefTekst(s){
     const r = s.tide_regel;
-    // S28: en regel på vannstanden (local_rules.tide_level, jo lavere jo bedre) er ikke «tåler alt» - se tideLowBest() i app.js
-    if(!r || !r.prefer || !r.prefer.length) return typeof tideLowBest === "function" && tideLowBest(s) ? STR.tideLowBest : STR.tidePref(null);
+    // S28: en regel på vannstanden (local_rules.tide_level) er ikke «tåler alt» - se tideLowBest() og tideLowBestTekst() i app.js
+    if(!r || !r.prefer || !r.prefer.length) return typeof tideLowBest === "function" && tideLowBest(s) ? tideLowBestTekst(s) : STR.tidePref(null);
     const rekke = ["lav", "middels", "høy"].filter(x=> r.prefer.includes(x));
     const til = rekke.length === 2 && Math.abs(["lav", "middels", "høy"].indexOf(rekke[0]) - ["lav", "middels", "høy"].indexOf(rekke[1])) === 1;
     return `${s.name} er best på ${rekke.length === 1 ? rekke[0] : til ? rekke[0] + " til " + rekke[1] : rekke.join(" og ")} vannstand`;
@@ -63,6 +63,9 @@
   // «Best på lav til middels vannstand». Tom når spoten ikke har noen tidevannsregel («tåler alt» sies ikke i raden).
   // Leser bare prefTekst(): en ny regel som gir en egen setning der (f.eks. en regel på vannstanden), kommer med hit.
   function prefKort(s){
+    // regel på vannstanden med gulv (26.11.2026): den korte formen, så setningen står på én linje på 390 px
+    const r0 = s.tide_regel;
+    if((!r0 || !r0.prefer || !r0.prefer.length) && typeof tideLowBest === "function" && tideLowBest(s)) return tideLowBestTekst(s, true);
     const t = prefTekst(s);
     if(!t || t === STR.tidePref(null)) return "";
     const foran = `${s.name} er `;

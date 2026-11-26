@@ -35,9 +35,16 @@
     wordTide: "Feil tidevann",
     wordLittleSwell: "For lite svell",
     wordNotNow: "Ikke surfbart nå",
-    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js). Ordet
-    // finnes ikke i planen: nærmeste ord appen har, «Ikke surfbart nå» uten «nå» (som overskriften alt bruker). Til Theodor.
+    // Karakteren ved 0 poeng når ordet ellers er en årsak (designrevisjonen fase 3 punkt 5, karakter() i app.js):
+    // «Ikke surfbart», med årsaken (Blåst ut, Stormsjø …) på linja under. «Usikkert» kan stå på årsakslinja
+    // (S45 1 a, svar.md 26.11.2026 kl. 13.10).
     karakter0: "Ikke surfbart",
+    // Etiketten i stedet for «Surf» når tallet er totalhøyden ved spoten og ikke surfehøyden: Stormsjø, og Blåst ut når
+    // surfehøyden er 0 (regel (c), visesSomSjo() i app.js). Foran tallet i lister og for skjermleser: «sjø 2,7 m».
+    // Uten kroppsmål (S45 2 a med tillegg, svar.md 26.11.2026 kl. 13.10).
+    sjo: "Sjø",
+    // bak navnet på en ny spot (status «forelopig») når overskriften på Hjem nevner den (S45 3 a, svar.md 26.11.2026 kl. 13.10)
+    spotForelopig: (navn) => `${navn} (foreløpig)`,
     wordUncertain: "Usikkert",
     // Sterk fralandsvind som tar poengene heter ikke «Blåst ut» (Theodor S15 a, 17.11.2026) - se windLossWord() i app.js
     wordTooMuchWind: "For mye vind",
@@ -64,6 +71,7 @@
       "Observasjoner 26.09-05.10.2026": "Grense satt ut fra observasjonene 26.09 til 05.10",
       "Lofoten Surfsenter, 09.11.2026": "Ifølge Lofoten Surfsenter",
       "Observasjoner 17.11 og 22.11.2026": "Grense satt ut fra observasjonene 17.11 og 22.11",
+      "Observasjoner 17.11-26.11.2026": "Grense satt ut fra observasjonene 17.11, 22.11 og 26.11",   // tre dager, ikke en periode (fysikk-kontrolløren 26.11.2026)
     },
     // overskriften til «Lokale regler» når tidevannsregelen har egen kilde (local_rules.tide_source)
     localSourcesBoth: (src, tideSrc)=>`${src}; tidevann: ${tideSrc}`,
@@ -180,7 +188,10 @@
       timeAria: (hh, dom, rest) => `kl. ${hh}, ${dom}${rest ? ". " + rest : ""}`,
       timeTall: (n, tapt) => `${n} av 5${tapt ? ", " + tapt : ""}`,
       timeTapt: (n, hva) => `${n} tapt på ${hva}`, timeMork: "mørkt, ingen vurdering", timeMangler: "mangler data", timeBest: "beste vindu",
-      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
+      timeSvell: (m) => `Svell ute ${m} m`, timeSurf: (m) => `surf ${m} m`, timeSjo: (m) => `sjø ${m} m`,
+      // Raden over stolpene på nettsiden når tallene er sjø (S45 2): «Sjø» når alle dagens lyse tall er totalhøyden,
+      // «Surf / sjø» når de er blandet. Linja under stripa forklarer omrisset, på mobil og nettside.
+      surfSjo: "Surf / sjø", sjoForklar: "Omriss: sjøen ved spoten, ikke surfehøyden", timeVind: (ms, ord) => `vind ${ms}${ord ? " " + ord : ""}`,
       stiger: "stigende", synker: "synkende",
       timeTide: (m, stiger) => `tidevann ${m} ${stiger ? "stigende" : "synkende"}`,
       tideAria: (deler, pref) => `Tidevann: ${deler.join(", ")}.${pref ? " " + pref + "." : ""}`,
@@ -256,7 +267,10 @@
     tideNow: (rising, state) => `${rising?"Stigende":"Fallende"}, ${state}`,
     tideNext: (type, time) => `${type} kl. ${time}`,
     tidePref: (list) => list && list.length ? `Spoten liker ${list.join(" og ")} vann` : "Spoten tåler alt tidevann",
-    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden: jo lavere, jo bedre (local_rules.tide_level, Theodor 23.11.2026, S28)
+    // 26.11.2026 (svar.md 26.11.2026 kl. 13.10): regelen har et gulv (tide_level.low_full_above_cm), så lavere er ikke alltid bedre
+    tideLowBestFloor: (m) => `Best på lavt vann, men ikke under ca. ${m} m`,
+    tideLowBestFloorKort: (m) => `Best på lavt vann, over ${m} m`,   // raden TIDEVANN på mobil: én linje på 390 px
+    tideLowBest: "Best på lavt vann",   // spoten har en regel på vannstanden uten gulv (local_rules.tide_level, Theodor 23.11.2026, S28)
     lightOnly: "Bare lyse timer får tall",
     lightNone: "Mørkt hele dagen", lightSub: (sun) => sun ? "Fra skumring til skumring" : "Mørketid, bare skumring", lightUsable: "Brukbart lys",
     temps: (water, air) => `${water} i vannet, ${air} i lufta`,

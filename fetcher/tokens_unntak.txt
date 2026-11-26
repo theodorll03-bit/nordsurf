@@ -122,6 +122,7 @@ avstand	ui.css	.sok-field	padding	0 2px
 avstand	ui.css	.soktopp	padding	calc(var(--s2) + env(safe-area-inset-top,0px)) 0 10px
 avstand	ui.css	.sp-hode	margin	0 calc(-1 * var(--s3)) 34px
 avstand	ui.css	.sp-inn	padding-top	10px
+avstand	ui.css	.sp-inn #spOver .maal.lang > .etikett	padding-top	9px
 avstand	ui.css	.sp-inn .kilder	margin-top	32px
 avstand	ui.css	.sp-inn .kilder.sikk	margin-top	18px
 avstand	ui.css	.sp-inn > .dagvelger	padding-top	2px
@@ -219,11 +220,13 @@ skrift	ui.css	.sp-inn .dom-setn	font-size	.875rem
 skrift	ui.css	.sp-inn .dom-setn	font-size	1rem
 skrift	ui.css	.spot-topp .tittel h1	font-size	1.5rem
 skrift	ui.css	.spw-om dd	font-size	1rem
+skrift	ui.css	.spw-time .t-surf.ingen	font-size	2.5rem
 skrift	ui.css	.srad .nm b	font-size	.9375rem
 skrift	ui.css	.svell .t-svell .enhet	font-size	1.25rem
 skrift	ui.css	.svell-sub	font-size	1rem
-skrift	ui.css	.t-surf	font-size	40px
-skrift	ui.css	.t-surf	font-size	min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))
+skrift	ui.css	.t-surf	font-size	clamp(40px, 2.5rem, 48px)
+skrift	ui.css	.t-surf,.t-surf.spenn	font-size	min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))
+skrift	ui.css	.t-surf.spenn	font-size	clamp(30px, 1.875rem, 46px)
 skrift	ui.css	.tetik small.u	font-size	.75rem
 skrift	ui.css	.tom h3	font-size	1.125rem
 skrift	ui.css	.tstripe .tikk	font-size	.75rem

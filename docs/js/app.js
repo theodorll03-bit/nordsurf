@@ -74,6 +74,15 @@ function heightMForDisplay(h){
   if(h.low_reason==="stormsjo") return h.bw_height!=null ? h.bw_height : h.surf_height;
   return null;
 }
+// Tallet heightMForDisplay() gir er totalhøyden ved spoten (BarentsWatch), ikke surfehøyden: «Stormsjø», og «Blåst ut»
+// når surfehøyden er 0 (regel (c)). De timene heter tallet «SJØ», ikke «SURF», og har ikke kroppsmål (S45 2,
+// svar.md 26.11.2026 kl. 13.10): 2,7 m sjø skal ikke leses som bølgene du surfer. Bare visning.
+function visesSomSjo(h){
+  if(!h || h._forbud || !h.low_reason || h.bw_height==null) return false;
+  if(h.low_reason==="stormsjo") return true;
+  if(h.low_reason==="blown_out") return !(h.surf_height!=null && h.surf_height>0) && !(!h.stars && calmWindWord(h)!=null);
+  return false;
+}
 const $ = s => document.querySelector(s);
 const nf1 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:1, minimumFractionDigits:1});
 const nf0 = new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
@@ -367,7 +376,7 @@ function windArrowHtml(h){
 }
 // Spoten har en myk regel på vannstanden der lavere vann er bedre (local_rules.tide_level i spots.json og
 // rating.tide_level_penalty(): ingen straff opp til full_below_cm, så økende mot max_at_cm). Da sies tidevannet
-// «Best på lavt vann» og ikke «tåler alt tidevann» (S28, Theodor 23.11.2026): i tidevannscella, i forklaringen og i
+// «Best på lavt vann» (med gulvet når regelen har et, se tideLowBestTekst()) og ikke «tåler alt tidevann» (S28, Theodor 23.11.2026): i tidevannscella, i forklaringen og i
 // tidevannskortet (Tidevann.prefTekst, som også står i «Om spotten» på PC). Bare Breivikeidet har regelen. Spots med
 // tide eller tide_prefer (Farstadsanden, Unstad) og spots uten tidevannsregel viser det samme som før.
 function tideLowBest(s){
@@ -378,6 +387,16 @@ function tideLowBest(s){
 // spotens lokale tidevannsregel tok (local_rules.stars_lost - rating.rate(): det tallet er bare det lokale
 // TIDEVANNSfradraget, den lokale vindregelen bokføres som vind). Tapet vises som tidevann («−1 tidevann») med
 // stiplet poeng i blekk, ikke korall. lostAll(): alt som er tapt på vind og tidevann til sammen. Bare visning.
+// Ordet for regelen. Har den et gulv (tide_level.low_full_above_cm, rating.tide_level_penalty(): fradrag under gulvet),
+// sier ordet det: «Best på lavt vann, men ikke under ca. 1,6 m» (svar.md 26.11.2026 kl. 13.10; kilde: observasjon
+// 26.11.2026, Theodor). Uten gulv: «Best på lavt vann» som før. Tom streng når spoten ikke har regelen.
+// kort: «Best på lavt vann, over 1,6 m», til raden TIDEVANN på mobil (Tidevann.prefKort), der setningen skal stå på én linje.
+function tideLowBestTekst(s, kort){
+  if(!tideLowBest(s)) return "";
+  const tl = s.local_rules.tide_level, gulv = tl.low_full_above_cm;
+  const harGulv = gulv!=null && tl.low_max_at_cm!=null && gulv > tl.low_max_at_cm && tl.low_penalty > 0;
+  return harGulv ? (kort ? STR.tideLowBestFloorKort : STR.tideLowBestFloor)((gulv / 100).toFixed(1).replace(".", ",")) : STR.tideLowBest;
+}
 function tideLost(h){
   if(!h) return 0;
   return (h.faded_tide || 0) + ((h.local_rules && h.local_rules.stars_lost) || 0);
@@ -561,7 +580,7 @@ function detailsGrid(s, h, t){
     ${tapCell("windsea", STR.cell.windsea, h.secondary_swell_height!=null?`${nf1.format(h.secondary_swell_height)} m`:"–", h.secondary_swell_height!=null?`${esc(STR.fromDir(compass(h.secondary_swell_dir)))}${h.secondary_swell_period!=null?`, ${nf0.format(h.secondary_swell_period)} s`:""}`:"")}
     ${tapCell("period", STR.cell.period, h.period!=null?`${nf0.format(h.period)} s`:"–", h.bw_period!=null?`BarentsWatch ${nf0.format(h.bw_period)} s ved punktet`:"")}
     ${tapCell("wind", STR.cell.wind, h.wind_speed!=null?`${windMsText(h)} m/s`:"–", windN)}
-    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(!(s.tide && s.tide.length) && tideLowBest(s) ? STR.tideLowBest : STR.tidePref(s.tide))}`)}
+    ${tapCell("tide", STR.cell.tide, esc(tideNow), `${tide?esc(STR.tideNext(tide.type, fmtTime.format(new Date(tide.time))))+". ":""}${esc(!(s.tide && s.tide.length) && tideLowBest(s) ? tideLowBestTekst(s) : STR.tidePref(s.tide))}`)}
     ${tapCell("sources", lt.k, esc(lt.v), esc(lt.n))}
     ${tapCell("sources", STR.cell.temps, esc(STR.temps(water, air)), "")}
     ${tapCell("sources", STR.cell.sources, h.height_source==="barentswatch" && !andelsHoyde(h)?"BarentsWatch":(h.zone==="langtid"?"Langtid (GFS)":"Reservemodell"), h.bw_interpolated?esc(STR.notice.interpolated):"")}
@@ -981,6 +1000,13 @@ function exposureChartSVG(spotId, curve, logs){
    til det). s._full === false betyr «bare oversikten ennå»; et varsel lagt
    inn helt (window.__FORECAST__, testene) har ikke feltet og regnes som fullt. */
 const _spotLoads = new Map();
+// En spot med status «hemmelig» skal aldri vises (CLAUDE.md). Det egentlige vernet er publiseringen
+// (publish.public_forecast() tar dem bort før fila skrives). Dette er et ekstra vern ett sted, der spotlista leses inn,
+// så overskrift, lister, kart og hovedbilde er like (feiljegeren 26.11.2026, runde 4 i).
+function utenHemmelige(o){
+  if(o && Array.isArray(o.spots)) o.spots = o.spots.filter(s=> s && s.status!=="hemmelig");
+  return o;
+}
 async function loadOverview(){
   const o = await (await fetch("data/oversikt.json", {cache:"no-cache"})).json();
   (o.spots||[]).forEach(s=>{ s._full = false; });
@@ -1666,7 +1692,7 @@ async function start(){
   // forklaringer, Detaljer-rutenettet og formateringen.
   const wm = $("#wordmark"); if(wm) wm.innerHTML = wordmarkSvg();
   try{
-    DATA = window.__FORECAST__ || await loadOverview();
+    DATA = utenHemmelige(window.__FORECAST__ || await loadOverview());
     if(!DATA.spots || !DATA.spots.length) throw new Error("tom");
     const gen = new Date(DATA.generated);
     $("#updated").textContent = DATA.sample ? STR.exampleSub : STR.updated(relDay(gen), fmtTime.format(gen));

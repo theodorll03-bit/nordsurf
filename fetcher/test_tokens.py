@@ -21,7 +21,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 from pikselsjekk import regler, uten_kommentarer  # noqa: E402
 
 UNNTAK = Path(__file__).resolve().parent / "tokens_unntak.txt"
-MAKS = {"avstand": 165, "skrift": 62, "vekt": 29, "js": 4}   # senkes når lista blir kortere, aldri heves
+# Senkes når lista blir kortere, aldri heves. Hevet én gang, 26.11.2026, da main (designfase 3, runde 4 og 5) ble flettet
+# inn med tre verdier som alt var på skjermen: 9 px over «LANG SJØ UTE» og reservestørrelsene for surfetallet (før 165 og 62).
+MAKS = {"avstand": 166, "skrift": 64, "vekt": 29, "js": 4}
 AVSTAND = re.compile(r"^(padding|margin)(-|$)|^(gap|row-gap|column-gap)$")
 MED_ENHET = re.compile(r"(?<![\w.#-])-?(?:\d+\.?\d*|\.\d+)(?:px|r?em|ch|ex|[dsl]?v[whib]|cq[whib]|vmin|vmax|pt|cm|mm)\b")
 VEKTER = {"400", "500", "600", "800", "normal", "inherit"}

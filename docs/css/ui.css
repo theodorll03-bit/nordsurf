@@ -582,7 +582,8 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .spw-time{grid-column:7/10}
   .spw-time > .sek-spot{margin-top:0}
   .spw-time .svell{margin-top:12px}
-  /* S40: merknaden står rett under periodelinja */
+  .spw-time .t-surf.ingen{font-size:2.5rem;line-height:1.2;font-weight:500}   /* «–» (mørk time, Flatt, Treffer ikke): en tynn strek, ikke en bjelke i 72 px (feiljegeren, runde 4 k) */
+  .spw-time .svell > .svell-sub.lang-sjo{margin-top:var(--s1)}   /* S40: merknaden står rett under periodelinja */
   .spw-time .svell > .svell-sub{margin-top:var(--s3)}   /* kommaet i 96 px går under linja */
   .spw-time .maal{grid-template-columns:104px auto 1fr}
   @media (max-width: 1359px){   /* smalere enn full bredde: forklaringa får egen linje under tallet, ellers renner den ut over skiva */
@@ -594,7 +595,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   /* stor tekst (200 % på 1024 til 1440 px): dommen får hele bredden, og timen står bredt ved siden av skiva, så surfetallet
      er klart størst og ordene i radene ikke brytes midt i (feiljegeren, runde 2 b) */
   .spw-inn{container:spw / inline-size}
-  @container spw (max-width: 45rem){
+  @container spw (max-width: 48rem){   /* 48rem (før 45): slår også inn ved 175 % på 1360 og 1440 px (feiljegeren, runde 3 k) */
     .spw-dom{grid-column:1/-1}
     .spw-time{grid-column:1/8;margin-top:var(--s5)}
     .spw-skive{grid-column:8/13;margin-top:var(--s5)}
@@ -631,6 +632,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .tetik small.u{font-family:var(--body);font-size:.75rem}
   .tflate{cursor:pointer}
   .tstripe.bred .ideal span{left:auto;right:100%;padding:0 var(--s2) 0 0}
+  .tstripe.bred .tnote{grid-column:2}
   .tstripe.bred .tikk{height:28px;font-size:var(--t-etikett);line-height:28px}
   .tstripe.bred .tikk em{line-height:28px}
   .tstripe.bred .skygge{top:28px;height:264px}
@@ -782,8 +784,9 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* Tallet står alltid på én linje («3,0–3,7 m» ble «3,0–3,» og «7 m» ved 1024 til 1280 px, feiljegeren 25.11.2026 funn 1).
    Skriften følger kolonnen: --n er antall tegn (spot.js), et tegn er høyst .54 em (målt .45 til .53), og «m» tar 2 rem. */
 .svell.surf{container-type:inline-size}
-.t-surf{white-space:nowrap;--surf:var(--t-svell);font-size:40px}   /* 40 px: reserve for nettlesere uten cqi (Safari før 16) */
-@supports (width: 1cqi){ .t-surf{font-size:min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))} }
+.t-surf{white-space:nowrap;--surf:var(--t-svell);font-size:clamp(40px, 2.5rem, 48px)}   /* reserve for nettlesere uten cqi (Safari før 16): 40 px, opptil 48 ved stor tekst, så tallet er større enn radene (runde 3 l) */
+.t-surf.spenn{font-size:clamp(30px, 1.875rem, 46px)}   /* reserven for et spenn («10,2–13,0») holder seg i kolonnen */
+@supports (width: 1cqi){ .t-surf,.t-surf.spenn{font-size:min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))} }
 .t-surf.spenn{--surf:calc(var(--t-svell) * .75)}   /* et spenn («1,4–1,7») har dobbelt så mange tegn */
 .t-surf.mork,.t-surf.ingen{color:var(--muted)}
 .svell-sub{margin-top:var(--s1);font-size:1rem;line-height:1.375}
@@ -818,6 +821,11 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .sp-inn #spOver .svell.surf .svell-sub{margin-top:0}
   .sp-inn #spOver .maalene{margin-top:var(--s2)}
   .sp-inn #spOver .maal:not(:last-child){padding-bottom:var(--s1)}   /* s1 fra 24.11.2026: «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer */
+  /* Lang sjø (S40): etiketten «LANG SJØ UTE» går over to linjer, og grunnlinja til en knapp over to linjer er den siste
+     linja, så tallet ble skjøvet 7 px ned. Her står etiketten øverst og tallet på første linje, uten luft under raden:
+     12 px lavere, så tidevannet står over fanelinja også i en time med lang sjø (feiljegeren, runde 3 m) */
+  .sp-inn #spOver .maal.lang{padding-bottom:0}
+  .sp-inn #spOver .maal.lang > .etikett{grid-row:1 / span 2;align-self:start;padding-top:9px}
 }
 @media (max-width: 379px){ .sp-inn .maal{grid-template-columns:104px auto 1fr} }
 /* iPhone SE (375 x 548 i Safari, 320 x 568): radene på 44 px skyver tidevannet under fanelinja etter dagbytte (Farstadsanden,
@@ -832,6 +840,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .sp-inn #spOver .svell.surf .t-surf{--surf:2rem}
   .sp-inn #spOver .svell.surf .t-surf.spenn{--surf:1.875rem}
   .sp-inn #spOver .svell.surf .svell-sub{font-size:.875rem;line-height:1.286}
+  .sp-inn #spOver .maal.lang > .etikett{grid-row:auto;align-self:auto;padding-top:0}   /* merknaden om lang sjø har hele bredden her, så etiketten står som før */
 }
 .dagvelger::-webkit-scrollbar{display:none}
 .dagknapp{all:unset;box-sizing:border-box;flex:none;display:flex;flex-direction:column;align-items:center;gap:var(--s1);min-width:44px;min-height:44px;padding:var(--s1) var(--s1) 6px;border-bottom:3px solid transparent;cursor:pointer}
@@ -867,6 +876,13 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .srf .sbx i{display:block;width:44%;background:var(--ink)}
 .tstripe .srf .sbx.miss{background:repeating-linear-gradient(45deg,var(--hatch) 0 1.5px,transparent 1.5px 5px)}
 .tstripe .tk.mork .srf .sbx i{background:var(--dim)}
+/* totalhøyden ved spoten (Stormsjø, Blåst ut uten surfehøyde) er sjøen, ikke surfehøyden: omriss, ikke fylt stolpe (S45 2) */
+.tstripe .srf.sjo .sbx i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tstripe .tk.mork .srf.sjo .sbx i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--dim)}
+.tstripe.bred .srf.sjo b{color:var(--muted)}
+/* forklaringen av omrisset under stripa, på dager med sjø-stolper */
+.tstripe .tnote{display:flex;align-items:center;gap:var(--s2);margin:var(--s2) 0 0;color:var(--muted);text-transform:none;letter-spacing:0}
+.tstripe .tnote i{flex:none;width:9px;height:14px;box-shadow:inset 0 0 0 1.5px var(--ink)}
 .tstripe .ideal{position:absolute;left:0;right:0;top:calc(var(--srf-bunn) - var(--y));height:0;border-top:1px dashed var(--muted);pointer-events:none}
 /* tallet står i margen til høyre på linje med streken, så det aldri dekker en stolpe (feiljegeren, funn 10). Nettsiden: i etikettkolonnen til venstre */
 .tflate{position:relative}
