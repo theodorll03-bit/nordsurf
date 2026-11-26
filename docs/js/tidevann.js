@@ -59,6 +59,15 @@
     const til = rekke.length === 2 && Math.abs(["lav", "middels", "høy"].indexOf(rekke[0]) - ["lav", "middels", "høy"].indexOf(rekke[1])) === 1;
     return `${s.name} er best på ${rekke.length === 1 ? rekke[0] : til ? rekke[0] + " til " + rekke[1] : rekke.join(" og ")} vannstand`;
   }
+  // Kortformen til mobil-spotsiden (raden TIDEVANN, designrevisjonen fase 2 og S33 a): samme setning uten spotnavnet,
+  // «Best på lav til middels vannstand». Tom når spoten ikke har noen tidevannsregel («tåler alt» sies ikke i raden).
+  // Leser bare prefTekst(): en ny regel som gir en egen setning der (f.eks. en regel på vannstanden), kommer med hit.
+  function prefKort(s){
+    const t = prefTekst(s);
+    if(!t || t === STR.tidePref(null)) return "";
+    const foran = `${s.name} er `;
+    return t.startsWith(foran) ? cap(t.slice(foran.length)) : t;
+  }
   function intervaller(r){
     // spotens foretrukne nivåer (0 = fjære, 1 = flo) som sammenhengende intervaller, fra regelens terskler
     const del = {lav: [0, r.lav_maks], middels: [r.lav_maks, r.hoy_min], "høy": [r.hoy_min, 1]};
@@ -223,5 +232,5 @@
     });
   }
 
-  window.Tidevann = { html, mount, tegn, nivaa, hendelser, dagen, prefTekst, intervaller };
+  window.Tidevann = { html, mount, tegn, nivaa, hendelser, dagen, prefTekst, prefKort, intervaller };
 })();

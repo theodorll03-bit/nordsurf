@@ -321,6 +321,24 @@ function tallHtml(n, lost, big){
 }
 // ruteHtml: tallet i en 24 px rute (korall fylt fra 4, ellers omriss). `cls` i stedet for tall: «miss» (data mangler,
 // skravur), «mork» (mørk time, ingen vurdering) eller «forbud» - da er ruta tom og ordet ved siden av sier hvorfor.
+// Seksjonsstart (SPEC §4): den doble streken, tittelen til venstre og en kommentar i dempet til høyre. Brukt av Søk,
+// Logger og Innstillinger (designrevisjonen fase 2 punkt 3)
+function sekHtml(tittel, sub){
+  return `<div class="sek"><h2 class="h2">${esc(tittel)}</h2>${sub ? `<p class="sub">${esc(sub)}</p>` : ""}</div>`;
+}
+// Tom tilstand i Logger: én linje per seksjon, ikke samme setning for hver spot (fase 2 punkt 3). `deler` er én per spot:
+// {navn, html} for en spot med innhold, {navn, tom} for en uten. Like tomme setninger slås sammen til én linje. Gjelder
+// den alle spotene, står setningen alene. Ellers står navnene foran (høyst tre), eller antallet.
+function loggSeksjon(deler){
+  const ut = deler.filter(d=> d && d.html).map(d=> d.html), tomme = new Map();
+  for(const d of deler){ if(d && d.tom){ if(!tomme.has(d.tom)) tomme.set(d.tom, []); tomme.get(d.tom).push(d.navn); } }
+  const alle = deler.filter(Boolean).length;
+  for(const [tekst, navn] of tomme){
+    const foran = navn.length===alle ? "" : `<b>${esc(navn.length <= 3 ? STR.logger.noen(navn.join(", ")) : STR.logger.antall(navn.length))}</b> `;
+    ut.push(`<p class="tomlinje">${foran}${esc(tekst)}</p>`);
+  }
+  return ut.join("");
+}
 function ruteHtml(n, cls){
   if(cls) return `<span class="rute ${cls}" aria-hidden="true"></span>`;
   const v = Math.min(5, n||0);
@@ -855,7 +873,7 @@ function reportFormHtml(){
         <option value="stille">Stille</option>
       </select>
     </div>
-    <div class="row-btns"><button class="primary" id="reportSend" style="min-height:44px">Del rapport</button></div>
+    <div class="row-btns"><button class="primary" id="reportSend">Del rapport</button></div>
   </div>`;
 }
 async function loadReportsUI(spotId){
@@ -1005,14 +1023,14 @@ async function forecastForLog(spotId, t){
 
 function renderLogs(){
   const logs = loadLogs().sort((a,b)=>b.t.localeCompare(a.t));
-  const calib = DATA.spots.map(s=>{
+  const calib = loggSeksjon(DATA.spots.map(s=>{
     const withF = logs.filter(l=>l.spot===s.id && l.forecastStars!=null);
-    if(!withF.length) return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen logger med varsel å sammenligne mot ennå.</p></div>`;
+    if(!withF.length) return {navn: s.name, tom: "Ingen logger med varsel å sammenligne mot ennå."};
     const hits = withF.filter(l=>Math.abs(l.stars-l.forecastStars)<=1).length;
     const bias = withF.reduce((a,l)=>a+(l.stars-l.forecastStars),0)/withF.length;
     const dir = Math.abs(bias)<0.5 ? "Varselet ligger omtrent riktig." : bias>0 ? `Varselet undervurderer med ${nf1.format(bias)} poeng i snitt.` : `Varselet overvurderer med ${nf1.format(-bias)} poeng i snitt.`;
-    return `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor ett poeng.</p></div>`;
-  }).join("");
+    return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: traff ${hits} av ${withF.length}</div><p>${dir} Treff betyr innenfor ett poeng.</p></div>`};
+  }));
   // 26.09.2026: transfer (modell mot modell, reserven mot BarentsWatch -
   // læres ALDRI fra loggene lenger) og surf_factor (loggene/observasjonene
   // dine mot Komar og Gaughan sin bruddhøyde-formel) er to adskilte tall,
@@ -1042,11 +1060,11 @@ function renderLogs(){
   // stiplet linje er geometrien alene (uendret), blå er lært for lang
   // periode (10 s og over), oransje prikker lært for kort periode - se
   // fetcher/exposure_learn.py sin modul-docstring for hele metoden.
-  const exposureCal = DATA.spots.map(s=>{
+  const exposureCal = loggSeksjon(DATA.spots.map(s=>{
     const cal = s.calibration || {};
     const curve = cal.exposure_curve;
     if(!curve){
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen geometrisk eksponeringsdata bygget ennå (fetcher/exposure_baseline.py må kjøres manuelt).</p></div>`;
+      return {navn: s.name, tom: "Ingen geometrisk eksponeringsdata bygget ennå (fetcher/exposure_baseline.py må kjøres manuelt)."};
     }
     const pairs = cal.exposure_pairs ?? 0;
     const bucketsLang = cal.exposure_buckets_learned_lang ?? 0;
@@ -1054,7 +1072,7 @@ function renderLogs(){
     const sugg = (cal.exposure_override_suggestions || []).map(o=>
       `<div class="sugg">Retning ${o.from}-${o.to}°: lært eksponering (${nf1.format(o.learned_max)}) ligger allerede under taket (${nf1.format(o.cap)}) i spots.json. Vurder å fjerne exposure_override for denne sektoren - fjernes aldri automatisk.</div>`
     ).join("");
-    return `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
+    return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${pairs} par, ${bucketsLang} bøtter lært (lang periode), ${bucketsKort} (kort)</div>
       <p>Eksponering per retning - hvor mye av svellet ute som når spoten. Stiplet grå: geometrien alene (del C). Blå linje/prikker: lært for lang periode. Oransje prikker: lært for kort periode. Prikkene langs bunnen er dine egne logger, farget etter poeng.</p>
       ${cal.exposure_learned_mode==="skygge" ? `<p class="muted">Skyggemodus (14.10.2026): den lærte kurven vises, men er ikke koblet inn i ratingen ennå - ratingen bruker geometrien alene. Kobles inn når testlabens variant «laert_eksponering» treffer observasjonene minst like godt og de viktigste retningene har nok par (ROADMAP oppgave O, krever Theodors ja).${cal.exposure_transfer_shadow!=null ? ` Transfer lært fra referansebøttene: ${nf0.format(cal.exposure_transfer_shadow*100)} % (i bruk: ${cal.transfer_used!=null ? nf0.format(cal.transfer_used*100) + " %" : "–"}).` : ""}</p>` : ""}
       ${exposureChartSVG(s.id, curve, logs)}
@@ -1063,41 +1081,41 @@ function renderLogs(){
         <span><i style="background:var(--ink)"></i>Lært, lang periode</span>
         <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--ink)"></i>Lært, kort periode</span>
       </div>
-      ${sugg}</div>`;
-  }).join("");
+      ${sugg}</div>`};
+  }));
   // Hvilket BarentsWatch-punkt (250 m, brukt i varselet, eller 150 m, det
   // opprinnelige) som faktisk ligger nærmest det du har logget. Bytter
   // ALDRI punkt selv - bare til orientering.
-  const bwCompare = DATA.spots.map(s=>{
+  const bwCompare = loggSeksjon(DATA.spots.map(s=>{
     const withSize = logs.filter(l=>l.spot===s.id && l.size && SIZE_M[l.size]!=null);
     if(withSize.length < MIN_SIZE_LOGS){
       const left = MIN_SIZE_LOGS - withSize.length;
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Trenger ${left} økt${left===1?"":"er"} til med størrelse valgt for å sammenligne BarentsWatch-punktene.</p></div>`;
+      return {navn: s.name, tom: `Trenger ${left} økt${left===1?"":"er"} til med størrelse valgt for å sammenligne BarentsWatch-punktene.`};
     }
     const withBoth = withSize.filter(l=>l.bwHeight!=null && l.bwHeightNear!=null && l.forecastPeriod!=null);
     if(!withBoth.length){
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen av de ${withSize.length} øktene med størrelse har data fra begge punktene ennå.</p></div>`;
+      return {navn: s.name, tom: `Ingen av de ${withSize.length} øktene med størrelse har data fra begge punktene ennå.`};
     }
     const avg = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
     const dev250 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeight,l.forecastPeriod))));
     const dev150 = avg(withBoth.map(l=>Math.abs(SIZE_M[l.size]-breakingHeight(l.bwHeightNear,l.forecastPeriod))));
     const better = dev250<=dev150 ? "250 m" : "150 m";
-    return `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
-      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`;
-  }).join("");
+    return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${better}-punktet ligger nærmest det du har logget</div>
+      <p>Snittavvik fra ${withBoth.length} økter: 250 m-punktet ${nf1.format(dev250)} m, 150 m-punktet ${nf1.format(dev150)} m. Varselet bruker fortsatt 250 m-punktet - bytt manuelt i spots.json om du vil.</p></div>`};
+  }));
   // Hvor ofte timer der kildene var uenige (BarentsWatch-høyde, men trolig
   // vindsjø eller feil retning ved spoten - kappet til maks 1 stjerne)
   // faktisk ble logget som surfbare. Mange treff her tyder på at regelen
   // er for streng.
-  const disagreeStats = DATA.spots.map(s=>{
+  const disagreeStats = loggSeksjon(DATA.spots.map(s=>{
     const flagged = logs.filter(l=>l.spot===s.id && l.sourcesDisagree);
     if(!flagged.length){
-      return `<div class="calib"><div class="t">${esc(s.name)}</div><p>Ingen økter logget når kildene var uenige ennå.</p></div>`;
+      return {navn: s.name, tom: "Ingen økter logget når kildene var uenige ennå."};
     }
     const surfable = flagged.filter(l=>l.stars>=2).length;
-    return `<div class="calib"><div class="t">${esc(s.name)}: ${surfable} av ${flagged.length} var surfbare likevel</div>
-      <p>Gjelder økter logget mens BarentsWatch-høyden trolig var mest vindsjø eller ikke traff stranda. Mange treff her betyr at regelen kanskje er for streng.</p></div>`;
-  }).join("");
+    return {navn: s.name, html: `<div class="calib"><div class="t">${esc(s.name)}: ${surfable} av ${flagged.length} var surfbare likevel</div>
+      <p>Gjelder økter logget mens BarentsWatch-høyden trolig var mest vindsjø eller ikke traff stranda. Mange treff her betyr at regelen kanskje er for streng.</p></div>`};
+  }));
   // 06.10.2026, Theodors oppgave (Magnus, lokal surfer - se CLAUDE.md
   // "Lokalkunnskap"): foreslå å myke opp en lokal regel når minst 3 gode
   // logger (3 stjerner eller mer) BRYTER den samme regelen - det er et tegn
@@ -1173,18 +1191,18 @@ function renderLogs(){
       <button class="del" data-id="${l.id}" aria-label="Slett økt ${fmtDate.format(d)}">Slett</button>
       <span class="m">${obs}${fmtDate.format(d)} kl. ${fmtTime.format(d)}. ${fc}${extra?`. ${esc(extra)}`:""}</span></div>`;
   }).join("");
-  $("#detailPane").innerHTML = `<header class="top"><h1>Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
-    <h2 class="sec">Treffsikkerhet</h2>${calib}
-    <h2 class="sec">Bølgehøyde</h2>${heightCal}
-    <h2 class="sec">Eksponering per retning</h2>${exposureCal}
-    <h2 class="sec">BarentsWatch-punkt</h2>${bwCompare}
-    <h2 class="sec">Uenige kilder</h2>${disagreeStats}
-    ${accuracyStats ? `<h2 class="sec">Treffsikkerhet per dager frem</h2>${accuracyStats}` : ""}
-    ${localRuleStats ? `<h2 class="sec">Forslag til lokale regler</h2>${localRuleStats}` : ""}
-    ${energyLearnStats ? `<h2 class="sec">Forslag til energiterskler</h2>${energyLearnStats}` : ""}
-    <h2 class="sec">Økter</h2>
-    <div class="list">${rows || `<p class="empty">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" id="newLog">Logg økt</button></div>`;
+  $("#detailPane").innerHTML = `<header class="top"><h1 class="t-overskrift">Logger</h1><p class="sub">Hver logg gjør varselet ærligere.</p></header>
+    ${sekHtml("Treffsikkerhet")}${calib}
+    ${sekHtml("Bølgehøyde")}${heightCal}
+    ${sekHtml("Eksponering per retning")}${exposureCal}
+    ${sekHtml("BarentsWatch-punkt")}${bwCompare}
+    ${sekHtml("Uenige kilder")}${disagreeStats}
+    ${accuracyStats ? `${sekHtml("Treffsikkerhet per dager frem")}${accuracyStats}` : ""}
+    ${localRuleStats ? `${sekHtml("Forslag til lokale regler")}${localRuleStats}` : ""}
+    ${energyLearnStats ? `${sekHtml("Forslag til energiterskler")}${energyLearnStats}` : ""}
+    ${sekHtml("Økter")}
+    <div class="list">${rows || `<p class="tomlinje">Ingen økter ennå. Åpne en spot og trykk Logg økt etter neste tur.</p>`}</div>
+    <div class="row-btns"><button type="button" class="knapp2" id="newLog">Logg økt</button></div>`;
   document.querySelectorAll(".del").forEach(b=>b.onclick=()=>{
     const all = loadLogs(); const removed = all.find(l=>l.id===b.dataset.id);
     saveLogs(all.filter(l=>l.id!==b.dataset.id)); markDeleted(b.dataset.id); renderLogs(); syncLogs();
@@ -1236,27 +1254,27 @@ async function syncLogs(manual){
 function accountSectionHtml(){
   const a = window.Auth && window.Auth.state;
   if(!a || !a.ready){
-    return `<h2 class="sec">Konto</h2><div class="form"><p style="color:var(--muted)">Kobler til...</p></div>`;
+    return `${sekHtml("Konto")}<div class="form"><p>Kobler til...</p></div>`;
   }
   if(!a.user){
-    return `<h2 class="sec">Konto</h2>
+    return `${sekHtml("Konto")}
       <div class="form">
         <p>Logg inn for å lagre favoritter og skrive kommentarer på spots.</p>
         <label for="authEmail">E-post</label>
         <input type="email" id="authEmail" placeholder="deg@eksempel.no" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="email">
         <p id="authMsg" style="color:var(--muted);display:none"></p>
-        <div class="row-btns"><button class="primary" id="authSend" style="min-height:44px">Send innloggingslenke</button></div>
+        <div class="row-btns"><button class="primary" id="authSend">Send innloggingslenke</button></div>
       </div>`;
   }
   const name = a.profile ? a.profile.display_name : "";
-  return `<h2 class="sec">Konto</h2>
+  return `${sekHtml("Konto")}
     <div class="form">
       <p>Innlogget som ${esc(a.user.email)}.</p>
       <label for="authName">Visningsnavn</label>
       <input type="text" id="authName" maxlength="30" placeholder="Kari" value="${esc(name)}">
-      <div class="row-btns"><button class="primary" id="authSaveName" style="min-height:44px">Lagre navn</button></div>
-      <div class="row-btns"><button class="ghost" id="authLogout" style="min-height:44px">Logg ut</button></div>
-      <div class="row-btns"><button class="ghost" id="authDelete" style="min-height:44px">Slett konto</button></div>
+      <div class="row-btns"><button class="primary" id="authSaveName">Lagre navn</button></div>
+      <div class="row-btns"><button class="ghost" id="authLogout">Logg ut</button></div>
+      <div class="row-btns"><button class="ghost" id="authDelete">Slett konto</button></div>
     </div>`;
 }
 function wireAccountSection(){
@@ -1308,27 +1326,27 @@ function renderSettings(){
   const cfg = loadSync(), n = DATA.notify || {};
   const status = cfg.error ? `Siste synk feilet: ${esc(cfg.error)}`
     : cfg.last ? `Sist synket ${relDay(new Date(cfg.last))} kl. ${fmtTime.format(new Date(cfg.last))}` : "Ikke synket ennå";
-  $("#detailPane").innerHTML = `<header class="top"><h1>Innstillinger</h1></header>
+  $("#detailPane").innerHTML = `<header class="top"><h1 class="t-overskrift">Innstillinger</h1></header>
     ${accountSectionHtml()}
-    <h2 class="sec">Område</h2>
+    ${sekHtml("Område")}
     <div class="form">
       <p>Hjem viser «Beste økt» og «Spots i …» for dette området når du ikke har favoritter.</p>
-      <label class="felt"><span>Område</span><select id="omrade">${(Front.helpers.regions()).map(r=>`<option value="${esc(r)}"${r===Front.helpers.chosenRegion() ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></label>
+      <label for="omrade">Område</label><select id="omrade">${(Front.helpers.regions()).map(r=>`<option value="${esc(r)}"${r===Front.helpers.chosenRegion() ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>
     </div>
-    <h2 class="sec">Varsler</h2>
+    ${sekHtml("Varsler")}
     <div class="form">
       <p>Du får varsel når en spot får <b>${n.min_stars??3} poeng eller mer</b> i brukbart lys, inntil <b>${n.hours_ahead??36} timer</b> frem. ${n.spots&&n.spots.length?`Gjelder ${n.spots.map(esc).join(", ")}.`:"Gjelder alle spots."}</p>
       <p>Varslene kommer i ntfy-appen. Grensen endres i notify.json.</p>
     </div>
-    <h2 class="sec">Sikkerhetskopi av logger</h2>
+    ${sekHtml("Sikkerhetskopi av logger")}
     <div class="form">
       <p>Loggene lagres i et privat GitHub-repo. Da mister du dem ikke, og varselet lærer av dem automatisk.</p>
       <label for="syncRepo">Repo</label><input type="text" id="syncRepo" placeholder="brukernavn/nordsurf-logger" value="${esc(cfg.repo||"")}" autocapitalize="off" autocorrect="off" spellcheck="false">
       <label for="syncToken">Tilgangsnøkkel</label><input type="password" id="syncToken" placeholder="github_pat_..." value="${esc(cfg.token||"")}" autocomplete="off">
       <p>${status}</p>
-      <div class="row-btns"><button class="primary" id="saveSync" style="min-height:44px">Lagre og synk</button></div>
+      <div class="row-btns"><button class="primary" id="saveSync">Lagre og synk</button></div>
     </div>
-    <h2 class="sec">Eksport</h2>
+    ${sekHtml("Eksport")}
     <div class="form"><p>${loadLogs().length} økter på denne telefonen.</p>
       <div class="row-btns"><button class="ghost" id="export">Eksporter logger</button></div></div>`;
   const om = $("#omrade"); if(om) om.onchange = ()=>{ Front.helpers.setRegion(om.value); toast(`Område: ${om.value}`); };

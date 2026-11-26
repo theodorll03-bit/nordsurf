@@ -196,7 +196,7 @@ Theodor liker kornet godt, og det skal beholdes som det er. Behandlingen er besk
 - Farge er aldri eneste bærer av mening. Tallene står i rutene, og grunnen står som tekst.
 - VoiceOver-etiketter finnes i malene: skiva, timestripa, ukeoversikten og tidevannet. Ta dem med.
 - Tekst i appen er på norsk. Enheter skrives med små bokstaver (1,7 m · 12 s · 5 m/s).
-- Vinden beskrives som fralands, pålands eller sidevind.
+- Vinden beskrives som fralands, pålands, skrått pålands eller sidevind, med de samme ordene i «Hvorfor» (S42 b, svar.md 24.11.2026 kl. 22.25).
 - Ingen pseudo-presise ord («MODELL 00Z» bare under Data/Kilder).
 - Overskrifter og setninger lages av dataene og skal aldri si noe som lista motsier.
 
@@ -215,3 +215,23 @@ Fase 1 (24.11.2026, plan i `privat/designrevisjon-2026-11-21/PLAN.md`). Der dett
 - **Dag 8 og utover** på web-spotsiden har etiketten «UKE 2 · USIKKER» og stiplede ruter.
 - **I mørketid** har toppbildene en 1 px kant i hair.
 - **Desimalkommaet** i store mono-tall står i `.des`, som trekker sifrene sammen.
+
+Fase 2 (24.11.2026, «B 4.0 ferdig på mobil»). Der dette avsnittet og resten av fila spriker, gjelder dette.
+
+- **Topplinja på mobil-Hjem (§6A punkt 1)** har to linjer: ordmerket (21 px høyt) til venstre og «FRA TROMSØ» med en vinkel ned til høyre, og datoen og lyset på linja under. «FRA TROMSØ» åpner Innstillinger, der området velges. Startstedet kan ikke byttes der ennå.
+- **Under favorittene på mobil-Hjem** står «SPOTS I <REGION>» (§6A har bare favoritter): regionene som tekstfaner med 3 px strek under den valgte, og spotene som favorittraden uten setning. Radene står etter dagens tall, så kjøretid.
+- **Er dagens lys over** for spotene mobil-Hjem viser, viser radene i morgen, og over lista står én linje: «Mørkt nå. Tallene gjelder i morgen.»
+- **Fanelinja (§6A punkt 5)** har fire faner: HJEM, UTFORSK, LOGGER og SØK. Den valgte er fet med 3 px blekkstrek under ordet. Ikonene er ikke fylt for den valgte.
+- **Én knappefamilie (§4):** primær er massiv blekk, sekundær har 2 px blekk-kant, begge med rette hjørner og Martian i versaler. Valg av én (dag og utsnitt på Utforsk, størrelse og vind i loggarket) er brikker i samme form, og den valgte er fylt. Regioner er tekstfaner.
+- **Valgt** er 3 px blekkstrek under for faner og dager, også i «Neste 7 dager» på web (§6C punkt 4 sa 4 px over). Segmentet I DAG / I MORGEN og brikkene er fortsatt fylt når de er valgt (§6D punkt 2).
+- **Tilstander:** musa over toner flaten (`--hover`) eller gir 1 px strek under tekstknapper og faner. Trykk toner sterkere (`--trykk`). Den fylte knappen snus når musa er over. Fokus er én ring, 2 px blekk med 2 px luft.
+- **Dagvelgeren på mobil-spotsiden (§6B)** står under krediteringslinja og over dommen, ikke under «Time for time» (§6B punkt 7). Den blir stående øverst når siden rulles, med 0,75 px blekkstrek under.
+- **Listeraden** i Søk, Utforsk og lista utenfor kartet: tallet i ruta, NAVN i Martian, stedet som etikett og ordet til høyre. Ingen streker mellom radene på mobil (regel 6), 1 px hair på web.
+- **Flaten over kartet** for valgt spot på Utforsk starter med seksjonsstreken og går kant til kant. Den har ingen ramme.
+- **Skjemafelt** (Innstillinger, loggarket) har 2 px blekkstrek under, som søkefeltet, og ingen boks.
+- **Tidevannsregelen på mobil-spotsiden:** en kort setning på egen linje under TIDEVANN-raden i KL.-blokka («Best på lav til middels vannstand»). Spots uten regel har ingen linje.
+- **Ikonet** (`docs/icon.svg` og PNG-ene i `docs/icons/`) bruker tokenene #F2EFE8 og #002941.
+- **Lave skjermer (under 700 px i høyden) på mobil-spotsiden:** luften mellom dom, faktalinje og KL.-blokk er 4, 8 og 16 px, og setningen under dommen er 16/22 (§3 sier 16–18/22–26). Da får dag, dom og time plass over fanelinja etter dagbytte på 360 × 640 og 390 × 663. Høyere skjermer har luften fra §6B.
+- **Nedtrekkslister** tegnes av appen (44 px, 2 px strek under, vinkel i blekk), ikke med nettleserens egen form.
+- **Metalinja i radene på mobil-Hjem** er «STED · FORELØPIG · KJØRETID · ORD · −N ÅRSAK» (§6A sier «REGION · KJØRETID · ORD · −N ÅRSAK»): merkene «Foreløpig» og forbudet står etter stedet, i favorittene og i regionradene. Linja brytes bare mellom leddene.
+- **Regionradene på mobil-Hjem har «Nå» sist i metalinja** (S38 1 b, svar.md 24.11.2026 kl. 22.25): «STED · FORELØPIG · KJØRETID · NÅ ORD HØYDE», for eksempel «Kvaløya · ca. 45 min · Nå Smått 0,6–0,8 m». Ordet og høyden gjelder nå-timen, tallet til venstre er dagens. Er nå-timen mørk, står «Nå Mørkt» uten tall. Leddet erstatter dagens ord og «−N årsak» i regionradene. Favorittradene er som før. Viser lista i morgen («Mørkt nå. Tallene gjelder i morgen.» over lista), står dagens ord uten «Nå».

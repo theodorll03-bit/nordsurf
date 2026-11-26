@@ -22,6 +22,8 @@ Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
   og sjekkes ikke her (skriftstørrelser leses ikke). WCAG regner stor tekst fra 14 pt fet (ca. 18,7 px): .rute og
   .uke i (19 px) er over, .plot .rs og .klynge .ring (14 px fet) følger bare Theodors regel.
 - --dim og --swell-miss oppå --night (tekst og pil i mørk time): krav 3:1. Dagfargen er #5E5A51 (Theodor 12.11).
+- Designrevisjonen fase 2 (24.11.2026): --ink på --hover og --trykk (toningen under musa og fingeren), og fokusringen
+  (--focus) mot de samme to flatene.
 - B4 steg 6: vindstrekene (--wind) har en glorie i --bg, så de synes over både hav og land på kartet: --wind på --bg
   og --bg mot --kartland, begge 3:1 (grafikk). Minikartet bruker kartstilen (--bg, --kartland, --data); de gamle
   kartfargene --land/--sea/--coast og parene deres er tatt bort."""
@@ -108,6 +110,10 @@ def pairs(toks, tema="lys"):
             out.append((f"tallet --r{n}-on på --r{n}" + (" (minst 14 px fet = stor tekst, Theodor 12.11)" if korall else ""),
                         col(f"r{n}-on"), col(f"r{n}"), GRAPHIC_MIN if korall else TEXT_MIN))
     out.append(("tekst --on-selected på --selected", col("on-selected"), col("selected"), TEXT_MIN))
+    # designrevisjonen fase 2 punkt 7: knapper, faner og rader tones når musa er over (--hover) og ved trykk (--trykk)
+    for bg in ("hover", "trykk"):
+        out.append((f"tekst --ink på --{bg} (knapp, fane eller rad under musa eller fingeren)", col("ink"), col(bg), TEXT_MIN))
+        out.append((f"fokusring --focus på --{bg} (grafikk)", col("focus"), col(bg), GRAPHIC_MIN))
     out.append(("stedsnavn --on-kartland på --kartland", col("on-kartland"), col("kartland"), TEXT_MIN))
     for bg in ("surface", "raised"):
         out.append((f"fokusring --focus på --{bg} (grafikk)", col("focus"), col(bg), GRAPHIC_MIN))

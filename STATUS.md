@@ -15,6 +15,156 @@ Gren `fiks/russelv-vind` fra main `1f787b9`. Oppdrag fra svar.md 25.11.2026 kl. 
 - **Tester:** `test_rating.py` (test 31 og 31.9 urørt) og de elleve andre raske testene og `tools/kontrast.py` er grønne på grenen. De fire nettlesertestene er ikke kjørt, fordi ingen kode og ingenting under `docs/` er endret. Ingen skjermbilder, fordi ingenting synes i appen.
 - **Kontrolløren:** ikke kjørt, for det er ingen kodeendring å gå gjennom.
 
+## Designrevisjonen fase 2: B 4.0 ferdig på mobil, 24.11.2026
+
+Gren `design/revisjon-fase2` fra main `30eefa3`. Plan: `privat/designrevisjon-2026-11-21/PLAN.md`, fase 2, punkt 1 til 7. Ja i svar.md 21.11.2026 kl. 18.30. Bare visning: `fetcher/rating.py`, `spots.json` og `data/` er ikke rørt. Ikke committet og ikke pushet ennå. Bilder før og etter ligger i `privat/design-b4/revisjon-2026-11-21/fase-2/` (mobil-Hjem, Utforsk, Søk, Logger, Innstillinger og Unstad på 390 × 663, Hjem og Unstad på 1440 × 900, dag og mørketid, varselet 24.11 kl. 13Z med klokka på 15.20).
+
+- **1. Mobil-Hjem:** regionlista («Spots i Troms») bruker favorittraden (tall 44 px, NAVN, metalinje, ukeoversikt), uten setning. De gamle radene med rund kant er borte. Favorittene og regionlista står etter dagens tall, så kjøretid, så navn. Tallet og ordet i regionlista er dagens, ikke nå-timen (erstatter «Nå» foran ordet, S15 b). Er dagens lys over for spotene Hjem viser, viser radene i morgen, og «Mørkt nå. Tallene gjelder i morgen.» står én gang over lista. Før sto «Nå Mørkt» og «Dagens lys er over» på hver rad.
+- **2. Én knappefamilie:** `.primary` og `.ghost` er nå bare navn på `.knapp1` og `.knapp2` (massiv blekk, eller 2 px blekk-kant, rette hjørner, Martian i versaler). Brikkene (dag og utsnitt på Utforsk, loggarket, områdene i Søk) har samme form, valgt er fylt. Regionene på Hjem er tekstfaner med 3 px strek under. Slettet i app.css: `.primary`, `.ghost`, `.btn`, `.chips button`, `.back`, `:focus-visible`, `.muted`, `nav.tabs` og `.tab`. Alle radier er `var(--radius)`, unntatt de runde kartmerkene, skiva og prikkene i eksponeringsfiguren.
+- **3. Søk, Utforsk, Logger og Innstillinger** har seksjonsstreken. Listeraden (tall i rute, NAVN i Martian, sted som etikett, ord til høyre) er lik i Søk, Utforsk og lista utenfor kartet: uten streker på mobil, med hair på nettsiden. Flaten over kartet for valgt spot starter med seksjonsstreken. Skjemafeltene har 2 px strek under som søkefeltet. Tom tilstand i Logger står én gang per seksjon.
+- **4. Dagvelgeren** på mobil-spotsiden står over dommen og blir stående øverst når siden rulles. Etter dagbytte rulles siden så dommen står under dagvelgeren og timen over fanelinja. `position:sticky` virket ikke på mobil før (`body{overflow:auto}`). Det er rettet på mobil.
+- **5. Navigasjon:** fanelinja har fire faner, HJEM, UTFORSK, LOGGER og SØK, og søk har egen aktiv tilstand. «FRA TROMSØ» øverst på mobil-Hjem åpner Innstillinger. Pilla «Innstillinger» nederst på Hjem er borte.
+- **6. Ordmerket** står øverst på mobil-Hjem (21 px høyt) og er 28 px i toppen på nettsiden, med 44 px trykkflate. `docs/icon.svg` og PNG-ikonene bruker #F2EFE8 og #002941.
+- **7. Tilstander:** musa over, trykk og fokus på knapper, brikker, faner, dager og rader. Én fokusring, 2 px blekk, definert ett sted. Valgt fane og dag har 3 px blekkstrek under, også i «Neste 7 dager» på nettsiden (før 4 px over).
+- **Tillegg (S33 a):** spotens tidevannsregel står på mobil som en kort setning under TIDEVANN-raden i KL.-blokka («Best på lav til middels vannstand», `Tidevann.prefKort()`). Unstad og Farstadsanden har den i dag.
+
+Målt (Playwright, `getBoundingClientRect`, Unstad, 390 × 663, fanelinja starter på 599 px):
+
+| Mål | Før | Etter |
+|---|---|---|
+| Etter dagbytte: dagvelgeren | 273–346 px | 0–72 px |
+| Etter dagbytte: dagens tall | −310 til −246 px (over kanten) | 80–144 px |
+| Etter dagbytte: «Kl. hh» | −110 til −71 px (over kanten) | 280–319 px |
+| Etter dagbytte: radene SURF, VIND og TIDEVANN, bunn | utenfor | 595 px |
+| Første skjermbilde, uten trykk: dagens tall | 270–334 px | 356–420 px |
+| Tidevannsregelen i raden | finnes ikke | 236 px bred, én linje, høyre kant 374 px |
+| E-postfeltet i Innstillinger | 166 × 29 px | hele bredden, 44 px høyt |
+| Tekst under 11 px (Søk) | 1 («27», 10,8 px) | 0 |
+| Ulike radier på skjermen: Hjem, Søk, Logger, Innstillinger | 2, 4, 4, 2 | 0, 0, 1, 0 |
+| `:hover` og `:active` i ui.css | 13 og 0 | 33 og 31 |
+| Fokusregler | 11 i ui.css og 1 i app.css (3 px) | 1 (2 px), pluss to unntak for avstand |
+
+Tallet i første skjermbilde står 86 px lenger ned enn etter fase 1, fordi dagvelgeren (72 px) står over dommen. Det står fortsatt over fanelinja. På en dag der både SURF og VIND har forklaring over to linjer, slutter radene på 617 px etter dagbytte, og da ligger tidevannsregelen under fanelinja (målt én gang).
+
+Tester: ny bolk for fase 2 i `fetcher/test_spotside_browser.py` (begge bredder). Oppdatert fordi utseendet er endret, ikke svekket: regionradene i samme fil (før `a.rad` med «Nå» foran ordet, nå favorittraden med dagens tall og sortering), og `fetcher/test_skalering_browser.py` (regionfaner i stedet for brikker, seksjonsstart i stedet for `h3` i søket). `tools/kontrast.py` sjekker også blekk og fokusring mot `--hover` og `--trykk`.
+
+Gjenstår:
+- Ikke committet. Fysikk-kontrolløren og feiljegeren har ikke sett endringen.
+- `position:sticky` virker fortsatt ikke på nettsiden (toppen og overskriftsraden i forsidetabellen ruller bort). Samme årsak, ikke rørt i fase 2.
+- Startstedet kan ikke byttes bak «FRA TROMSØ». Lenka går til Innstillinger.
+- Forklaringsarkene (S38) kan fortsatt ikke åpnes fra B 4.0.
+- Breivikeidets setning («Best på lavt vann») kommer med `fiks/tidevann-s28` og faller inn i samme rad når `Tidevann.prefTekst()` gir den.
+- Død CSS fra de gamle kortene står til fase 4. Bare prøvd i Chromium.
+
+### Runde 2 etter feiljegeren, 24.11.2026
+
+Oppå den lokale commiten `0d527c6`. Ucommittet, ikke pushet. Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase2-2026-11-24.md`.
+
+- **Punkt 4 på lave skjermer (viktig 1):** på skjermer under 700 px i høyden er luften mellom dom, faktalinje og KL.-blokk strammet til trinnene 4, 8 og 16 px, setningen under dommen er 16/22 (før 18/26), og etikettkolonnen i radene er 92 px under 380 px bredde (før 110). Dommen kan stå 4 px under dagvelgeren når det bare mangler noen piksler. Skjermer fra 700 px og opp er som før.
+- **Områdevelgeren (viktig 3):** nedtrekkslistene tegnes av appen (`appearance:none`, 44 px, 2 px strek under, vinkel i blekk). Det var 23 px i WebKit på main også.
+- **«Mørkt nå …»** leses mot klokka: etter midnatt, før nattas første varsel, er radene «i dag», og da står ikke linja (før sto den feil da).
+- **Ikke nytt i fase 2, ikke rørt:** siden ruller bak det åpne loggarket (900 til 500 px med musehjul, likt på main), og fokus står på `body` etter fanebytte til Hjem, Utforsk, Logger og Innstillinger (likt på main).
+
+Målt etter dagbytte fra toppen av siden, alle dager i varselet 24.11 kl. 13Z (px fra bunnen av KL.-blokka til fanelinja, minus betyr over):
+
+| Skjerm | Unstad, før runde 2 | Unstad, nå | Farstadsanden, før | Farstadsanden, nå |
+|---|---|---|---|---|
+| 360 × 640 | under på 14 av 15, verst 63 | over på alle, 8 | under på 4 av 16, verst 89 | over på alle, 8 |
+| 375 × 548 | under på alle, verst 133 | under på 13 av 15, verst 59 | under på alle, verst 133 | under på 7 av 16, verst 37 |
+| 390 × 663 | under på 1, 18 | over på alle, 8 | under på 1, 18 | over på alle, 8 |
+| 430 × 932 | over på alle | over på alle, 17–86 | over på alle | over på alle, 19–86 |
+
+WebKit gir samme tall innen 2 px. På 375 × 548 synes dagvelgeren (0–72 px), dommens tall og ord (76–140), «Kl. hh» (230–269) og det store tallet (297–349) på alle dager, 135 px over fanelinja. Det som ligger under fanelinja der, er TIDEVANN-raden med tidevannsregelen, og på de verste dagene nederste linje av VIND-raden.
+
+Tester: `test_spotside_browser.py` låser nå alle dager på 360 × 640 og 390 × 663 for Unstad og Farstadsanden, hele sorteringen (tall, kjøretid, navn) med krav om at testdataene faktisk prøver kjøretid og navn, «Mørkt nå …» der den skal stå og der den ikke skal stå (i lys og etter midnatt), og formen på feltene i Innstillinger. En egen del kjører Innstillinger i WebKit når WebKit er installert (ikke i CI, der hoppes den over med en linje i utskriften). `test_skalering_browser.py`: vakten mot «0,0» leser setningen i favorittradene, som har høyder, og krever at minst én høyde finnes.
+
+Gjenstår etter runde 2:
+- S15 b («Nå» foran ordet i regionradene) legges fram for Theodor. Bilder: `privat/design-b4/revisjon-2026-11-21/fase-2/etter/s15b/`. Om morgenen før det lysner viser grenen dagens tall og ord uten noe om at det er mørkt nå (main: «Nå Mørkt» på hver rad).
+- 375 × 548: KL.-blokka får ikke plass (se tabellen).
+- «FRA TROMSØ» er fast tekst, også for en bruker med et annet område, og startstedet kan ikke byttes.
+- Innstillinger sier «Hjem viser «Beste økt» …». «Beste økt» finnes ikke på mobil.
+- Siden ruller bak det åpne loggarket, og fokus står på `body` etter fanebytte. Begge var slik på main.
+- Maskable-ikonet: motivet når 0,85 av halve bredden (trygg sone 0,80). Formen er som på main.
+
+### Runde 3, 24.11.2026: merket «Foreløpig» og metalinja
+
+Oppå de to lokale commitene (siste `39ad464`). Ucommittet, ikke pushet.
+
+- **Merket var ikke borte fra regionradene.** S15 b-bildene er tatt med varselet 24.11 kl. 05Z, som er laget før Lyngen-endringen og ikke har `andel_forelopig` for Russelv og Lenangsøyra. Main viser heller ikke merket for de to med det varselet. Med varselet kl. 13Z står «Lyngen · Foreløpig · …» i regionradene på både main og grenen.
+- **Favorittradene har nå merket også.** Der sto det ikke på main («Lenangsøyra · Lyngen · ca. 1 t 20 min · …»). Nå står «Foreløpig» etter stedet i alle rader på mobil-Hjem.
+- **Metalinja brytes bare mellom leddene.** Hvert ledd («ca. 1 t 20 min», «Treffer ikke») holdes samlet, og linjene jevnes ut (`text-wrap: balance`). Lenangsøyra: «LYNGEN · FORELØPIG ·» og «CA. 1 T 20 MIN · TREFFER IKKE».
+
+Målt på alle 27 spots som favoritter og alle seks regioner, to klokkeslett (108 rader), varselet kl. 13Z, Chromium og WebKit:
+
+| Bredde | Over to linjer | Over tre linjer | Ett ord alene på siste linje | Ledd brutt midt i |
+|---|---|---|---|---|
+| 360 px | 34 | 2 | 0 | 0 |
+| 390 px | 30 | 2 | 0 | 0 |
+
+De to radene over tre linjer er Lenangsøyra med «Dagens lys er over» («Lyngen · Foreløpig ·», «ca. 1 t 20 min ·», «Dagens lys er over»).
+
+Hva de gamle radene viste som de nye ikke viser (mot `origin/main`, samme varsel):
+
+| Visning | Felt | Main | Grenen | Hvorfor |
+|---|---|---|---|---|
+| Hjem, regionradene | «Nå» og ordet for nå-timen | «Nå Smått», «Nå Mørkt» | dagens tall og ord | planen punkt 1 (S15 b, til Theodor) |
+| Hjem, regionradene | høyden nå | «0,7–0,9 m» | ingen høyde | følger av planen (SPEC 6A har ingen høyde i metalinja), til Theodor |
+| Hjem, regionradene | «Foreløpig» og forbudet | etter stedet | etter stedet | likt |
+| Hjem, regionradene | kjøretid, tapte poeng («−1 vind»), ukedager under rutene | ikke vist | vist | nytt, SPEC 6A |
+| Hjem, regionradene | mangler data | «–» og skravert rute | «Mangler data», tom tallplass, skravert rute | likt i innhold |
+| Hjem, regionradene | overskriften «Troms 8 spots» med ukedagene | egen linje | «8 spots» i seksjonsstarten, ukedager under hver rad | planen |
+| Hjem, favorittene | «Foreløpig» | ikke vist | vist | rettet i runde 3 |
+| Hjem | pilla «Innstillinger» nederst | vist | bak «FRA TROMSØ» | planen punkt 5 |
+| Søk, Utforsk-lista, lista utenfor kartet | sted, merke, ord nå, høyde | vist | vist | likt, bare ny form |
+| Forsidetabellen (PC) | region, kjøretid, merke | vist | vist | likt |
+| Logger | navnet på hver spot i tomme seksjoner | én blokk per spot | én linje per seksjon | planen punkt 3 |
+| Logger | «foreløpig» ved andelen | vist | vist | likt |
+
+Ingen andre glipper funnet. «Usikkert» er et vurderingsord og står som ord i raden både på main og grenen.
+
+Tester: `test_spotside_browser.py` låser «Foreløpig» én gang i metalinja for Bøvær, Breivikeidet, Russelv og Lenangsøyra (feltene leses fra spots.json) i favorittradene, regionradene og søket på mobil, og i forsidetabellen og lista på Utforsk på PC, og at Unstad ikke har det. Den låser også at metalinja bare brytes mellom leddene.
+
+
+### Runde 5, 25.11.2026: `origin/main` med PR 56 flettet inn, og feiljegerens funn
+
+Lokalt, ikke pushet (`296ceac`). Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase2-r4-2026-11-25.md`.
+
+- **Flettingen:** `fetcher/rating.py` og `fetcher/test_rating.py` er mains i sin helhet (S42 i henteren gikk inn med PR 56, med «Høyt vann», «Lavt vann» og «Middels vann»). Grenen har ingen forskjell mot main i de filene, og `test_display_only.py` er grønn igjen. I `docs/js/app.js` gjelder mains `TIDEVANN_LINJE`, `breakdownDeler()` og `zeroCause()`. Det som står om «Høyvann» og om den røde testen i runde 4 under, er dermed historie.
+- **«Usikkert» i regionraden:** nå-leddet sier «Nå Dårlig, usikkert 1,2–1,5 m» for en time regnet med lang sjø (`long_sea`, S40), som resten av Hjem.
+- **Tankestrek i notatene (funn 3):** «… uten én tydelig hovedårsak. Se regnestykket under.» og de to andre i `docs/js/strings.js`.
+- **Funn 6, hengende « · »:** skilletegnet står nå først i leddet det hører til, i luften til venstre for teksten. Brytes linja, følger det leddet ned og klippes bort der, så ingen linje slutter eller starter med « · ». Teksten i raden er den samme. Den felles klippesjekken i `test_spotside_browser.py` har unntak for selve tegnet (`.sk`), ikke for leddene, og en egen sjekk låser hvor tegnet står.
+- **Funn 9, to ord om samme spot:** ordene var ulike fordi favorittraden viser dagens ord og regionraden nå-timens. Favorittraden sier nå «I dag:» foran («LYNGEN · FORELØPIG · I DAG: SMÅTT»), og regionraden «NÅ SMÅTT 0,6–0,8 m». Viser lista i morgen, står ordet uten merke under «Mørkt nå. Tallene gjelder i morgen.» som før. Mitt valg av ord, ikke bestilt slik.
+- **Funn 12, mørketid:** er alle de neste dagene uten lyse timer, sier overskriften «Mørkt de neste 6 dagene.» Er bare noen av dem mørke, sier den ingenting om de neste dagene. Ellers som før («Ingen surf de neste …», også når alle har forbud). Låst i nettlesertesten med tre tilfeller.
+- **Ikke rørt:** høyde i mørke timer og «−1 vind» i regionradene (S44 1 og 3), iPhone SE 375 × 548, funn 8 (uten nå-time står dagens ord uten merke i regionraden), funn 11 og 13.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-2/etter/s38b/`, filene med `_r5` (regionlista i lyst og før det lysner, og favorittene sammen med regionlista).
+
+### Runde 4, 25.11.2026: `fiks/tidevann-s28` flettet inn, S38 1 b og S42
+
+Ja i svar.md 24.11.2026 kl. 22.25 (S38 1: b, og S42: ja til a, b, c og d). Lokalt, ikke pushet.
+
+- **Flettingen (`54ede93`):** `fiks/tidevann-s28` (med `origin/main` og «Best på lavt vann») er flettet inn. Konflikter i `docs/js/ui.js` (tapte poeng leses fra `lostParts()`, og merkene står i favorittraden), `docs/sw.js` og STATUS.md. «Best på lavt vann» står nå også på mobil, under raden TIDEVANN i KL.-blokka (`Tidevann.prefKort()` leser `Tidevann.prefTekst()`), så S33 a har fått plassen sin. Testen som låste at ordene ikke sto på mobil, låser nå at de står ett sted, på én linje.
+- **Følge av flettingen:** «−1 tidevann» (S33 c) kan gi «Kl.»-linja to linjer på smale skjermer. På Farstadsanden 22.10 (testfila, 360 × 640) gikk KL.-blokka da 5 px under fanelinja. Avstanden mellom radene SURF, VIND og TIDEVANN er derfor 4 px (før 8) på skjermer lavere enn 700 px. Målt etterpå: 3-8 px over fanelinja på alle 15 dager.
+- **S38 1 b, regionradene på mobil-Hjem:** tallet til venstre er dagens, som planen. Sist i metalinja står «Nå» med ordet og høyden for nå-timen: «Kvaløya · ca. 45 min · Nå Flatt», «Lyngen · Foreløpig · Nå Smått 0,6–0,8 m». Er nå-timen mørk, står «Nå Mørkt», uten høyde (se «Valg»). Leddet erstatter dagens ord og «−1 vind» i regionradene. Favorittradene er som før. Viser lista i morgen, står «Mørkt nå. Tallene gjelder i morgen.» over lista og dagens ord uten «Nå», som før. Uten nå-time (varselet er for gammelt) står dagens ord. `naaLedd()` og `favLinjeHtml()` i `docs/js/ui.js`. Skjermleseren får «Nå smått, 0,6–0,8 m» etter dagens tall.
+- **Målt (varselet 24.11 kl. 21Z, alle seks regioner, fire klokkeslett, 360, 375 og 390 px, 324 rader):** ingen metalinje går ut av raden, ingen ledd er brutt midt i, ingen vannrett rulling. Lengste linje er Lenangsøyra, «Lyngen · Foreløpig · ca. 1 t 20 min · Nå Treffer ikke»: to linjer på 375 og 390, tre på 360.
+- **S42, fire tekster i «Hvorfor» (`fetcher/rating.py`, bare tekst):**
+  - a) «Høyvann. Lokale sier lavt og middels vann er best her: −0,7 poeng.» (Farstadsanden) og «… −0,35 poeng.» (Unstad). Tallet er det vektede fradraget, det som faktisk trekkes. Før: «Tidevann (høy): ikke blant det lokale favoriserer - −1 stjerne (vektet −0,70)». Andre vannstander ville fått «Lavvann» og «Middels vannstand», og andre regler «høyt vann». Ingen spot har det i dag. I tabellen står linja som TIDEVANN, «Høyvann» og resten som virkning.
+  - b) «fralands», «pålands» og «skrått pålands» i vindlinja (`WIND_TYPE_WORD`), og «fralands» i linja om det femte poenget. I appen heter skrå pålandsvind nå «skrått pålands» overalt (`STR.wind.sideonshore`, før «pålands»), også i raden VIND. SPEC §8 er oppdatert.
+  - c) «teller 65 %» i stedet for «faktor 0.65 (potensial ganget ned)». Samme tall, i hele prosent.
+  - d) «(4 uten vind og tidevann)» når både vinden og tidevannet har tatt poeng. Tidevannet er her `faded_tide` pluss `local_rules.stars_lost`, som `tideLost()` i appen. Bare vinden: «(N uten vind)» som før. Bare tidevannet: ingen parentes, som før.
+  - I samme slengen: «Blåst ut: Bølgene er der, men vinden ødelegger dem.» øverst i «Hvorfor» har kolon i stedet for tankestrek.
+- **Ratingen er uendret:** tre lagrede varsler (24.11 kl. 05Z, 13Z og 21Z, 16 287 timer, alle spots) er spilt av gjennom `rate()` før og etter. Alle felt utenom tekstlinjene (`breakdown` og `local_rules.lines`) er like i alle timene. De 15 faste observasjonene i `test_display_only.py` gir samme poeng og surfehøyde.
+- **Fysikk-kontrolløren 25.11.2026 (før commit, bare `fetcher/rating.py` og `test_rating.py`):** ingen stoppere. Henteren endrer bare tekst, og de faste observasjonene holder. Ett viktig funn i appen, rettet: `zeroCause()` i `docs/js/app.js` kjente igjen tidevannslinja på «Tidevann» først i linja, så en time der den lokale tidevannsregelen alene tar siste poeng (Farstadsanden med potensial 1 på høyvann), ville fått ordet «Ikke nå» i stedet for tidevannsordet. Den leser nå begge formene, og nettlesertesten låser det. Kontrolløren bekrefter at tallet i d) alltid er potensialet, at `local_rules.stars_lost` alltid er tidevann, og at a) er det rå fradraget før avrunding. Ikke gjort: forslaget om å skrive `potential` direkte i d). `tools/femstjerner_rapport.py` leter fortsatt etter «Tidevann (» (rapportverktøy, ikke ratingen).
+- **`test_display_only.py` feiler på grenen, med vilje ikke endret:** den krever at en designgren har `fetcher/rating.py` byte for byte lik utgangspunktet på main. Grunnen er S42, som endrer tekst i `rating.py`. (Rett etter flettingen feilet den også fordi S28 ikke var på `origin/main`. Det er den nå, `459497f`.) Del 3 i testen (de 15 faste observasjonene) er kjørt for seg og er grønn. Hvordan S42 skal gå gjennom denne testen, må avgjøres før PR-en. Hentersiden av S42 (`rating.py` og `test_rating.py`) ligger derfor i en egen commit, så den kan gå i en gren som ikke er en designgren. Appen leser både gamle og nye linjer, så rekkefølgen er fri.
+- **Valg:**
+  - Mørk nå-time står uten høyde («Nå Mørkt»). Svaret sier «Mørke timer får ikke tall». På main sto høyden også i mørke («Nå Mørkt 0,7–0,9 m»), og Søk og Utforsk viser den fortsatt. Én linje i `naaLedd()` å snu.
+  - «−1 vind» står ikke lenger i regionradene. Den hører til dagens tall, og sist i linja står nå nå-timen. Den står på spotsiden og i favorittradene.
+  - «Dagens lys er over», «Mangler data» og forbud står som før, uten «Nå».
+  - «skrått pålands» i hele appen går lenger enn SPEC §8 fra 16.11 («Skrå pålandsvind sies som pålands»). Svaret sier «overalt». Ett ord i `strings.js` å snu.
+  - Varsler som er hentet før denne koden, har de gamle ordene til neste henting. Appen leser begge.
+- **Ikke rørt:** «Tidevann (lav): foretrukket lokalt, ingen straff», linja for vannstanden på Breivikeidet («jo lavere vann, jo bedre her (vektet −0,45)»), den lokale vindlinja i `local_rules.lines` («strengere lokal grense … - −1 stjerne (vektet −0.7)», tegnes ikke på spotsiden) og «Retning ved spoten: ikke brukt - svellet ute treffer godt». De har fortsatt bindestrek som tankestrek eller «vektet», men var ikke blant de fire.
+- **Tester:** `test_rating.py` test 44 (ordene for vinden i 60 timer, «uten vind og tidevann» med tallet lik timen i svak vind og lavt vann i 17 timer, «teller N %» lik faktoren) og 42.9 (nye tidevannslinjer, fradraget lik vekt × straff, andre vannstander). `test_spotside_browser.py`: regionradene i lys, før det lysner og etter midnatt (ordet og høyden lik nå-timen, «Nå Mørkt» uten tall, tallet til venstre er dagens, «m» ikke i versaler, ingenting ut av raden), uten nå-time som før, «Hvorfor»-tabellen med de nye linjene og de gamle, og «Best på lavt vann» på mobil.
+- **Bilder:** `privat/design-b4/revisjon-2026-11-21/fase-2/etter/s38b/`. Regionlista i lys og før det lysner er bygd fra det publiserte varselet 24.11 kl. 21Z, med oversikten laget som om kjøringen var 25.11 kl. 09Z og 06Z (ellers finnes ingen nå-time i lyset). Natt- og kveldsbildene bruker varselet som det er. «Hvorfor» d) er en syntetisk time (Farstadsanden 28.11 kl. 10Z med 9 m/s pålands), for ingen time i de tre varslene har tap på både vind og tidevann.
+
 ## S29 c: samlet sjø og vindsjø-del ute lagres (del 1), regel for lang sjø som forslag bak bryter (del 2), 24.11.2026
 
 Gren `fiks/unstad-s29c` fra main `11c5df2`. Ja i svar.md 23.11.2026 kl. 11.20 (S29 c: «lagre total periode og retning ute, og prøv regelen for lang nordsjø fra havsiden med tabell og nytt S-spørsmål før noe går live»). Endrer `fetcher/sources.py`, `fetch.py`, `publish.py`, `backtest_inputs.py`, `rating.py`, `exposure_learn.py`, `calibrate.py`, `tools/kallregnskap.py` og testene. Ikke `spots.json`, ikke `data/`, ingen filer under `docs/` i git. **Ingen poeng, høyder eller ord endres:** `rate()` gir byte-like svar som main for alle 5 454 og 5 481 timer i varslene 21.11 kl. 11Z og 24.11 kl. 05Z, med og uten de nye feltene. Runde 2 samme dag etter fysikk-kontrollørens gjennomgang (`privat/kontor/observasjoner/kontrollor-s29c-2026-11-24.md`: del 1 godkjent med vilkår, del 2 i rettet form A′).
@@ -114,6 +264,7 @@ Timer som endrer poeng, surfehøyde eller noe annet i svaret fra `rate()`: **16*
 - **Usikkert:** én hendelse (21.–22.11), én observasjon uten klokkeslett og én uten høyde. Feltene for 21.–22.11 er hentet i ettertid, ikke fra kjøringene den gang. Kl. 12Z 21.11 er høyden ved punktet 0,37 m, 0,02 m over flat-sperren. Grensa på 30° utenfor vinduet er tilpasset hendelsen: med 20° slår regelen aldri til på Unstad. H i surfehøyde-formelen er hele BarentsWatch-høyden ved punktet, også den lokale sjøen, koblet med den lange sjøens periode. Surfehøyden 1,15 m av 0,43 m ved punktet bygger på Unstads `surf_factor_prior`, som er satt fra 15 s svell.
 - **Før regelen kan slås på:** Theodors ja. Appen må vise den lange sjøen («svell 0,6 m fra 250°» ville stått ved siden av 3 poeng). Regelen bør stå i `spots.json` for Unstad og i CLAUDE.md med kilde. Spør Theodor om han har sett Unstad flat med lang nordsjø. Kontrolløren på nytt.
 - **Rapport og tabeller:** `privat/kontor/observasjoner/utvikler-s29c-2026-11-24.md` og mappa `s29c-2026-11-24/` (ikke i git).
+
 
 ## «Best på lavt vann», tidevannet får poenget det tar, og tapet i blekk (S28 og S33 c), 24.11.2026
 

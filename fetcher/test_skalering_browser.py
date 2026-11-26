@@ -127,14 +127,14 @@ def main():
                 # 6. Hjem: mobil «Spots i Troms»; PC (B4 steg 6): forsiden starter på regionfanen fra Innstillinger -> Område
                 troms = sum(1 for s in overview["spots"] if s["region"] == "Troms")
                 if mobile:
-                    n_rows = page.evaluate("document.querySelectorAll('#viewHjem .rader .rad').length")
+                    n_rows = page.evaluate("document.querySelectorAll('#viewHjem .regionliste a.favlinje').length")   # fase 2: regionlista bruker favorittraden
                     assert n_rows == min(troms, 5) or n_rows == troms, (n_rows, troms)
                     assert page.text_content("#viewHjem").count("Spots i Troms") == 1
                     # PR #12 punkt a: valgt regionbrikke synlig, rekkefølge som oversikt.regions (spots.json, nord til sør)
                     chip = page.evaluate("""() => { const row = document.querySelector('#viewHjem .regionvelger'); const c = row && row.querySelector('[aria-pressed="true"]');
                         if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
                         return {txt: c.textContent.trim(), inside: b.left >= r.left - 1 && b.right <= r.right + 1,
-                                order: [...row.querySelectorAll('.chip')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")
+                                order: [...row.querySelectorAll('button')].map(x => x.textContent.trim()).filter(t => t !== 'Alle')}; }""")   # fase 2: tekstfaner, ikke brikker
                 else:
                     chip = page.evaluate("""() => { const row = document.querySelector('#forside .fs-faner'); const c = row && row.querySelector('[aria-pressed="true"]');
                         if(!c) return null; const r = row.getBoundingClientRect(), b = c.getBoundingClientRect();
@@ -147,11 +147,20 @@ def main():
                 # PR #12 punkt b/c: aldri «0,0» i ukerutene/tabellen; dagens lys er over kl. 22:10 → ingen «I dag».
                 # B4 steg 2: rutene viser tallet 0-5, så «0» er en ekte vurdering der (aldri en høyde)
                 if mobile:
-                    # «Nå» står foran ordet (S15 b): se på teksten etter merket og på høyden alene, ellers kan ikke vakten slå til
-                    txt = page.evaluate("[...document.querySelectorAll('#viewHjem .rad .na')].flatMap(e => [e.textContent.trim().replace(/^Nå\\s*/, ''), ...[...e.querySelectorAll('.num')].map(n => n.textContent.trim())])")
+                    # Runde 2 (feiljegeren 24.11.2026): regionradene har ingen høyde lenger, så vakten mot «0,0» ser på feltet som har
+                    # en: setningen i favorittradene («1,1–1,5 m, 11 s fra VSV …»). De 30 første spotene gjøres til favoritter mens
+                    # det leses, og minst én setning må ha en høyde, ellers kan ikke vakten slå til.
+                    page.evaluate("() => { window.__authV = window.Auth; window.Auth = {state: {ready: true, user: {id: 't'}, profile: null, favorites: new Set(DATA.spots.slice(0, 30).map(s => s.id))}, toggleFavorite: async () => {}}; Front.refresh(); }")
+                    page.wait_for_selector("#viewHjem .favliste:not(.regionliste) a.favlinje")
+                    setn = page.evaluate("[...document.querySelectorAll('#viewHjem .favliste:not(.regionliste) a.favlinje .setn')].map(e => e.textContent.trim())")
+                    hoyder = [m for t in setn for m in re.findall(r"\d+(?:,\d)?(?:–\d+(?:,\d)?)? m(?![/\w])", t)]
+                    assert hoyder, f"ingen av favorittsetningene har en høyde, så vakten mot «0,0» prøver ingenting: {setn[:5]}"
+                    txt = hoyder + [d for t in setn for d in t.replace(".", "").split(", ")]
+                    page.evaluate("() => { window.Auth = window.__authV; delete window.__authV; Front.refresh(); }")
+                    page.wait_for_function("!document.querySelector('#viewHjem .favliste:not(.regionliste)')")
                     uke = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i')].map(e => e.textContent.trim())")
                     tomme = page.evaluate("[...document.querySelectorAll('#viewHjem .uke i.miss, #viewHjem .uke i.dark, #viewHjem .uke i.forbud, #viewHjem .uke i.over')].map(e => e.textContent.trim())")
-                    heads = page.evaluate("[...document.querySelectorAll('#viewHjem .gruppe-topp .uke b')].map(e => e.textContent.trim())")
+                    heads = page.evaluate("[...document.querySelectorAll('#viewHjem .regionliste .uke b')].map(e => e.textContent.trim())")
                     idag = page.query_selector("#viewHjem .uke b.idag, #viewHjem .uke i.over")
                 else:
                     txt = page.evaluate("[...document.querySelectorAll('#forside td.fs-sv, #forside td.fs-bst, #forside .fs-fakta')].map(e => e.textContent.trim())")
@@ -172,8 +181,8 @@ def main():
                 assert bool(page.query_selector("#viewHjem #bestKort, #viewHjem .fs-helt")) == (vp[0] >= 1024), f"dagens beste skal bare vises på PC ({label})"
                 if not mobile and page.query_selector("#fsAlle"):
                     page.click("#fsAlle"); page.wait_for_selector("#forside table.fs-tabell"); page.wait_for_timeout(150)
-                lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem a.rad, #forside table.fs-tabell tr.s')]
-                    .map(r => [r.querySelector('b, a.t-navn').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
+                lbl = page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#viewHjem .regionliste a.favlinje, #forside table.fs-tabell tr.s')]
+                    .map(r => [r.querySelector('.t-navn').textContent.trim(), r.textContent]).filter(([n]) => n === 'Testspot 078' || n === 'Testspot 079'))""")
                 if lbl:   # radene vises (mobil: 5 beste; PC: tabellen etter «Vis alle»)
                     assert all(("Foreløpig" in t) if n == "Testspot 078" else ("Surfing forbudt" in t) for n, t in lbl.items()), lbl
                 assert mobile or len(lbl) == 2, f"Testspot 078/079 mangler i forsidetabellen etter «Vis alle»: {sorted(lbl)}"
@@ -239,7 +248,7 @@ def main():
                     page.fill("#sokPC", "a"); page.wait_for_selector("#sokDrop:not([hidden]) .srad")
                     root = "#sokDrop"
                 n_hits = page.evaluate(f"document.querySelectorAll('{root} .srad').length")
-                n_groups = page.evaluate(f"document.querySelectorAll('{root} h3').length")
+                n_groups = page.evaluate(f"document.querySelectorAll('{root} .sokgrupper .sek h2').length")   # fase 2: gruppene starter med seksjonsstreken (før h3)
                 assert n_hits <= 20 and n_groups >= 2 and page.query_selector(f"{root} #sokFlere"), (n_hits, n_groups)
                 shot("sok-a")
                 page.click(f"{root} #sokFlere"); page.wait_for_timeout(200)

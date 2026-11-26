@@ -123,7 +123,7 @@
         ["Poeng tapt på vind", h.faded_wind!=null ? String(h.faded_wind) : (h.faded!=null ? String(h.faded) : "mangler")],
         ["Kilde", h.wind_source==="openmeteo" ? "Open-Meteo GFS (langtid)" : h.wind_source==="metno" ? "met.no" + (h.wind_interpolated ? ", jevnet ut mellom 6-timersverdier" : "") : "mangler"],
       ],
-      how: () => ["Fralands avgjøres av spotens fralandssektor. Ellers måles vinden mot retningen stranda vender: innenfor 45° er rett pålands, 45–80° skrått pålands, over 80° sidevind. Begge sies som «pålands», men vindtabellen skiller dem.",
+      how: () => ["Fralands avgjøres av spotens fralandssektor. Ellers måles vinden mot retningen stranda vender: innenfor 45° er rett pålands, 45–80° skrått pålands, over 80° sidevind.",
                   "Vindtabellen trekker poeng etter styrke og type - vist som stiplede ruter i timestripa."],
     },
     tide: {
