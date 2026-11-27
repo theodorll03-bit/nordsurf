@@ -68,7 +68,7 @@
       vinduer.length ? linje(STR.spot.vindu, "exposure", esc(vinduer.map(([a, b])=> `${a}–${b}°`).join(", ")), "") : "",
     ].join("");
     return `<div class="skive-rad${stor ? " stor" : ""}"><div class="skive" role="img" aria-label="${esc(etikett)}">${harBilde(s.id) ? bilde("trykk") + bilde("lodd") : ""}${svg}</div><div class="skive-forkl">${forkl}</div></div>
-      ${harBilde(s.id) ? `<p class="kredit liten">${esc(window.SPOTBILDER.kort)}</p>` : ""}`;
+      ${harBilde(s.id) ? `<p class="kredit liten">${typeof kredTekst==="function" ? kredTekst(window.SPOTBILDER.kort) : esc(window.SPOTBILDER.kort)}</p>` : ""}`;
   }
   window.Skive = { html, harBilde };
 })();

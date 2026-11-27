@@ -130,6 +130,10 @@ def pairs(toks, tema="lys"):
     out.append(("tekst --muted oppå --night", col("muted"), col("night"), TEXT_MIN))
     out.append(("stiplet ramme --muted på --raised (grafikk)", col("muted"), col("raised"), GRAPHIC_MIN))
     out.append(("tidevannskurven --water på --raised (grafikk)", col("water"), col("raised"), GRAPHIC_MIN))
+    # S49 a (svar.md 26.11.2026 kl. 20.20): havfargen --god er fyllet for 3 (--r3, voktes også i løkka over). Rutene bærer
+    # tallet --paa-god (tekst), ringen på kartet står på --bg, og «3» i matrisen på PC er stor tekst i --god.
+    out.append(("tallet --paa-god på havfargen --god (ruta for 3)", col("paa-god"), col("god"), TEXT_MIN))
+    out.append(("havfargen --god på --bg (fyll, ring og stor tekst)", col("god"), col("bg"), GRAPHIC_MIN))
     return out
 
 
