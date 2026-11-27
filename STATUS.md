@@ -14,6 +14,78 @@ Gren `design/revisjon-fase4`, med main `76afc7f` flettet inn (designfase 3 runde
 - **Fysikk-kontrolløren (26.11):** godkjent, ingen stoppere eller viktige funn. Kosmetisk, ikke rettet: `.vurd-s i` gjelder nå alle bredder (stripa finnes bare på PC), `.enh` har ingen CSS lenger, og `pikselsjekk.py` har ingen stoppklokke for hele kjøringen.
 - **Gjenstår:** PR 2 (avstander og skrift utenfor skalaen, `.vurd` i fire størrelser, ett pilsett, ett kompass på PC) etter svar på tre spørsmål. Død JS står.
 
+## Høyst 3 poeng for nye spots uten observasjon, i timer uten BarentsWatch (S48 a), 26.11.2026
+
+**Fysikk-kontrolløren 27.11.2026 (begge endringene): godkjent, ingen stoppere.** Den spilte av det publiserte varselet 26.11 kl. 18Z (5 427 timer) og de seks inndatafilene (8 856 timer) og fikk de samme tabellene. Merknader som står igjen:
+- Taket gjelder også et eventuelt hull i BarentsWatch-dagene (0 timer i dagens varsel). CLAUDE.md er presisert.
+- Unstad-left og Unstad-right er av i dag, men ville fått taket hvis de slås på. Avgjøres da.
+- Om tallet 3 skal få et merke ved seg når det er kappet, kan bli et eget spørsmål. I dag står det bare i «Hvorfor».
+- Ersfjordstranda: vind fra 155–180° er nå sidevind, ikke fralands. Det er ikke bekreftet av noen observasjon (sørlig vind kan komme ned fjorden) og må bekreftes lokalt.
+- Ersfjordstranda: BarentsWatch-punktet ligger langs 315°, ca. 105 m til siden for 290°. Et nytt snitt langs 290° bør bli et eget spørsmål. Det haster ikke.
+
+Gren `fiks/ersfjord-tak`, oppå Ersfjordstranda-commiten under. Lokalt, ikke pushet. Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 20.20 (S48 a): «Høyst 3 poeng i sluttsummen for de 18 spotene uten observasjon utenfor BarentsWatch-dagene. Appen skal ikke love 4 der ingen har surfet og kystmodellen mangler. Taket løftes for en spot når den får sin første observasjon.»
+
+- **Regelen (`rating.unconfirmed_cap_applies()`, `UNCONFIRMED_MAX_STARS` = 3):** spoten har `status` `forelopig`, mangler feltet `forste_observasjon`, og høyden i timen kommer ikke fra BarentsWatch. Taket settes på sluttsummen i `rate()`, etter energiregelen, vinden og tidevannet. En time med 3 eller færre er urørt. Timen merkes ikke usikker.
+- **Hvordan koden vet at en spot har observasjon:** nytt felt `forste_observasjon` (dato) i `spots.json`. Breivikeidet har fått `"2026-11-17"`. Feltet settes for hånd når en ny spot får sin første observasjon, sammen med `_observasjon`. Test 49 feiler hvis en spot har `_observasjon` uten `forste_observasjon`. Står i CLAUDE.md under «Konvensjoner». De åtte første spotene har ingen `status` og har aldri taket.
+- **Hvem taket gjelder i dag:** de 18 nye spotene som er på i appen (Berlevåg Sandfjorden, Bleik, Bøvær, Bunes, Ducks, Eggum, Haukland, Horseid, Høyvika, Kvalnes, Kvalvika, Persfjord, Seines, Skagsanden, Stave, The Frog, Utakleiv, Vikten). Fem nye spots som ikke er slått på, får det også den dagen de slås på.
+- **I timen:** «Hvorfor» får linja «Ny spot: kappet fra 4 til maks 3 stjerner (ingen har surfet her ennå, og BarentsWatch mangler)» rett over «Totalt» (appen skriver «poeng»). Timen får feltet `unconfirmed_cap_from` (poengene før taket), og poenget bokføres under `zero_losses.cap`, ikke som vind eller tidevann. Ingen kode i `docs/` er endret: tabellen i «Hvorfor» deler linja ved kolon som de andre («NY SPOT» til venstre). Bilde: `privat/design-b4/ersfjord-tak-2026-11-26/bovaer_03-12_kl10_hvorfor_slutten_390.png`.
+- **Bokføringen (S28, test 42):** poengene pluss det vinden, tidevannet, de lokale reglene og taket tok, er det samme som uten taket, i alle 21 060 regnede reservetimer i test 49. Det femte poenget krever BarentsWatch, så reserven gir aldri 5, og taket tar aldri mer enn ett poeng.
+
+**Før og etter**, samme avspilling som i avsnittet under (det publiserte varselet 26.11 kl. 18Z og de seks filene i `data/backtest/inputs/`), regnet oppå Ersfjordstranda-endringen.
+
+| Datasett | Timer | 4 → 3 | Lyse | Opp | 2 poeng eller mer | Andre felt endret |
+|---|---|---|---|---|---|---|
+| Varselet 26.11 kl. 18Z | 5 427 | 32 | 2 | 0 | 0 | 0 |
+| Inndata 26.11 kl. 12Z | 1 944 | 5 | 1 | 0 | 0 | 0 |
+| Inndata 07.10, 12.10, 16.11, 23.11 og 25.11 | 6 912 | 0 | 0 | 0 | 0 | 0 |
+
+| Spot | Varselet 26.11 kl. 18Z | Lyse | Sone | Inndata 26.11 kl. 12Z |
+|---|---|---|---|---|
+| Seines | 18 | 0 | 17 reserve, 1 langtid | 0 |
+| Bøvær | 11 | 2 | reserve | 3 |
+| Høyvika | 2 | 0 | reserve | 1 |
+| Stave | 1 | 0 | reserve | 1 |
+| Sum | 32 | 2 | | 5 |
+
+- Analytikeren fikk 36 timer på varselet 25.11 kl. 15Z (Seines 18, Bøvær 15, Høyvika 2, Stave 1). Dette er et nyere varsel: de samme fire spotene, 32 timer.
+- I de 37 timene er bare poengene, `zero_losses.cap`, `unconfirmed_cap_from` og regnestykket endret. Surfehøyden, høyden, `low_reason`, vindtypen, `uncertain` og tapte poeng på vind og tidevann er like. Ingen av timene var merket usikre fra før.
+- De to lyse timene er Bøvær 03.12 kl. 09Z og 10Z (1,9–2,0 m, sidevind).
+- Ingen andre spots har én endring. Breivikeidet og de åtte første er urørt. Etter endringen har de 18 fortsatt 4 poeng i 58 timer med BarentsWatch-tall i varselet (Skagsanden 21, Haukland 16, Horseid 15, Utakleiv 4, The Frog 1, Bøvær 1), og Unstad har 16 timer med 4 i reserven.
+- **Faste observasjoner:** alle holder (`test_rating.py` og `test_backtest.py` er grønne). Ingen av dem ligger på en ny spot uten observasjon.
+- **Tester:** ny test 49 i `test_rating.py`. Alle 17 er grønne med begge endringene: de tolv raske og `tools/kontrast.py` på første kjøring, `test_kart_browser.py` på første. Macen sto på batteri med lokket igjen og sovnet under nettlesertestene: `test_svgtekst_browser.py` og `test_skalering_browser.py` ble grønne på andre kjøring, `test_spotside_browser.py` på femte (de fire første stoppet på ulike steder: heng, tidsgrense på et klikk i Utforsk, filas egen vakt på 300 s, tidsgrense på et klikk i forklaringsarket). Den testen kaller ikke `rate()` og leser verken Ersfjordstrandas facing eller `forste_observasjon`.
+- **Fysikk-kontrolløren:** ikke kjørt ennå. Ingenting går live før den har godkjent.
+- **Gjenstår:** fysikk-kontrolløren på begge commitene. Bildet viser en lys time på Bøvær. Appen har ingen egen forklaring av taket utenom linja i «Hvorfor».
+
+## Ersfjordstranda vender 290° (S47 b), 26.11.2026
+
+Gren `fiks/ersfjord-tak`, fra main `d1f0c2e`. Lokalt, ikke pushet. Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 20.20 (S47 b): «290° og fralandsvind 65–155°.» Vilkåret i svaret: fysikk-kontrolløren skal godkjenne før det går live. Spoten har fortsatt ingen observasjon.
+
+- **Endret i `spots.json`:** `facing` 315 → 290 og `offshore_wind` [90, 180] → [65, 155] for Ersfjordstranda (Senja), med kilde og dato i `_facing` og `_offshore_vind`.
+- **Bygget på nytt:** `data/exposure_baseline.json` for Ersfjordstranda med `exposure_baseline.build_spot_baseline()`. `facing` er med i sjekksummen (`exposure.spot_checksum()`), men ikke i selve geometrien: alle fire kurvene (rå, glattet, avstand og bredde, 360 grader hver) er like som før, og bare sjekksummen er ny (`64b61c10e630c84b` → `b7655e408a9ed723`). Uten dette ville henteren falt tilbake til vindu og skyggekurve og skrevet feil i kilderapporten. De andre spotene i fila er ikke rørt.
+- **Hva `facing` styrer i koden:** vindordet utenfor fralandssektoren (`rating.wind_type()`), retningsfaktoren og `bw_confirms` ved BarentsWatch-punktet (`barentswatch_height()`, `spot_direction_factor()`), regelen om svelldominans (`bw_swell_dominates()`, under 60° fra facing), sjekksummen for eksponeringen, og «Vender» og fralandsbuen i appen (leses fra varselet, ingen kode i `docs/` er endret). Lært eksponering (`data/exposure.json`), kalibreringen og svellvinduet leser ikke `facing`.
+- **Ikke rørt (krever eget ja):** `swell_window` (294–320; facing ligger nå 4° utenfor vestkanten av det), havpunktet, og de tre BarentsWatch-punktene. Alle tre ligger langs 315° fra pinnen (251, 150 og 501 m ut, regnet fra koordinatene). Et nytt snitt langs 290° er ikke kjørt: «Finn BarentsWatch-punkt» går i Actions og trenger en pushet gren, og å flytte punktet er uansett et eget spørsmål. `data/kandidater/KONVENSJON.md` og `triage.json` er daterte målinger fra 16.10 og står som de er.
+
+**Før og etter**, avspilt med `rating.rate()` på det publiserte varselet 26.11 kl. 18Z (27 spots, 5 427 timer; avspillingen før endringen gir 0 avvik mot de publiserte tallene i poeng, surfehøyde, vindtype og `low_reason`) og alle seks filene i `data/backtest/inputs/` (8 856 spot-timer). Inndata-timene er ratet med dagens `spots.json` og dagens lærte verdier.
+
+| Datasett | Timer, Ersfjordstranda | Poeng endret | Surfehøyde endret | `low_reason` endret | Vindord endret (lyse) | Høyde ved spoten endret |
+|---|---|---|---|---|---|---|
+| Varselet 26.11 kl. 18Z | 201 | 0 | 0 | 0 | 50 (6) | 16 |
+| Inndata 07.10 kl. 12Z | 72 | 0 | 0 | 0 | 10 (5) | 0 |
+| Inndata 12.10 kl. 03Z | 72 | 0 | 0 | 0 | 29 (12) | 4 |
+| Inndata 16.11 kl. 12Z | 72 | 0 | 0 | 0 | 43 (10) | 5 |
+| Inndata 23.11 kl. 12Z | 72 | 0 | 0 | 0 | 17 (5) | 0 |
+| Inndata 25.11 kl. 02Z | 72 | 0 | 0 | 0 | 24 (3) | 0 |
+| Inndata 26.11 kl. 12Z | 72 | 0 | 0 | 0 | 31 (4) | 4 |
+
+- Vindordene i varselet 26.11 kl. 18Z: 37 timer fra fralands til sidevind, 5 fra pålands til skrått pålands, 4 fra sidevind til skrått pålands, 3 fra skrått pålands til pålands og 1 fra skrått pålands til sidevind. Analytikeren fikk 44 av 201 på varselet 25.11 kl. 15Z; dette er et nyere varsel.
+- «Høyde ved spoten endret» er signifikant høyde etter retningsfaktoren i timer som er flate før og etter (surfehøyde 0,0 og `flat` begge veier). Største endring er 0,05 m. `bw_confirms` er lik i alle timene.
+- Spoten har 0 poeng i 199 av 201 timer i varselet og i alle 432 inndata-timene. De to timene med 2 poeng er uendret.
+- Ingen annen spot har én endring i noe felt (poeng, høyder, ord, vindtype, bokføring, regnestykket), i noen av de 14 283 timene.
+- Regnet eksempel (test 48): svell 2,0 m fra 305° med 12 s, punktet 1,0 m fra 296°, alle vindretninger i ti graders steg og 0–14 m/s, begge soner. Høyden og surfehøyden er like, 70 av 432 timer flytter ett poeng, ingen flytter mer, og ingen flytter seg ved 5 m/s eller mindre. Vindordet er nytt for 150 av 360 vindretninger.
+- **Tester:** ny test 48 i `test_rating.py`. De tolv raske testene og `tools/kontrast.py` er grønne etter denne delen. Alle 17: se avsnittet over.
+- **Fysikk-kontrolløren:** ikke kjørt ennå. Ingenting går live før den har godkjent.
+- **Svakhet:** sektoren 160–180° (sør) er ikke lenger fralands, og ingen har sett vinden der. BarentsWatch-punktet er valgt langs 315° og er ikke vurdert langs 290°.
+
 ## Designrevisjonen fase 3, runde 5: feiljegerens funn i runde 4, 26.11.2026
 
 Gren `design/revisjon-fase3`, oppå `20f48a7`, med ny main flettet inn (`8b8a241`: PR 58 og nye varsler; konflikt bare i STATUS.md og `docs/sw.js`). Bare visning: `fetcher/rating.py` er mains. Lokalt, ikke pushet. Feiljegerens rapport: `privat/kontor/observasjoner/feiljeger-design-fase3-r4-2026-11-26.md`.
