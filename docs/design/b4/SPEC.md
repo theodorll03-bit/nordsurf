@@ -22,6 +22,8 @@ Godkjent av Theodor 09.11.2026 («Det ser veldig bra ut»). Laget i samtale med 
 | outline (ruter, tomme felt) | #B9B2A4 | #5D6F78 |
 | signal (korall) | #C05151 | #FD6E6E |
 | on-signal (tall i korallrute) | #F2EFE8 | #002941 |
+| god (havfargen, fyllet for 3) | #1F6E78 | #2F9BA2 |
+| paa-god (tall i ruta for 3) | #F2EFE8 | #002941 |
 | data/vann | #B6DFED | #B6DFED |
 | tidevannsbånd, opasitet | 0,55 | 0,16 |
 | kartland | #002941 | #E3D3B0 (sand) |
@@ -33,7 +35,7 @@ Godkjent av Theodor 09.11.2026 («Det ser veldig bra ut»). Laget i samtale med 
 | tekst/pil i mørk time | #8A8478 | #7E8A8F |
 | svell utenfor vinduet (pil) | #8A8478 | #8C9AA0 |
 
-Kontrast (WCAG): ink på bg 13,1:1. Muted på bg er 5,98:1 om dagen og 6,98:1 i mørketid. #C05151 på Skum er 4,03:1, så det holder bare for stor tekst (minst 24 px fet) og grafikk. Liten tekst i korall er ikke lov i dagtema. Sand er aldri bakgrunn for tekst i en annen farge enn navy (10,2:1).
+Kontrast (WCAG): ink på bg 13,1:1. Muted på bg er 5,98:1 om dagen og 6,98:1 i mørketid. #C05151 på Skum er 4,03:1, så det holder bare for stor tekst (minst 24 px fet) og grafikk. Liten tekst i korall er ikke lov i dagtema. Havfargen på bg er 5,14:1 om dagen og 4,54:1 i mørketid, og tallet i ruta har det samme mot fyllet. Sand er aldri bakgrunn for tekst i en annen farge enn navy (10,2:1).
 
 ## 3. Skrift
 
@@ -68,6 +70,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
 
 - **Tall fra 0 til 5 i stedet for stjerneikoner** i lister, på kart og i ukeoversikter. Tallet er det samme som dagens stjerner, så ingenting i modellen endres. Ordet etter tallet hentes fra ordene appen allerede har i strings.js. Ordene i skissene (FLATT, KNAPT, SURFBART, BRA, VELDIG BRA, TA FRI) er bare plassholdere, og Theodor velger.
 - **Korall fra 4 og opp:** tallet, ruta i ukeoversikten, ringen på kartet og beste vindu. Fra 0 til 3 er det ink.
+- **3 har havfargen som fyll** (S49 a, svar.md 26.11.2026 kl. 20.20): #1F6E78 om dagen og #2F9BA2 i mørketid. Det gjelder ruta (ukeradene, dagvelgeren, KL.-blokka), segmentene i timestripa, rutene i tabellen og «3» i «Neste 7 dager» på PC, og ringen på kartet. Ordet («Bra») og det store tallet alene er fortsatt ink. 1 og 2 er omriss som før, og korall er fortsatt bare 4 og 5.
 - **Tapte poeng:** stiplet blekk-omriss i timestripa, bare for valgt time, og grunnen skrevet ut som tekst i KL.-blokka («−1 TIDEVANN», «−2 VIND»). Aldri korall (designrevisjonen fase 3).
 - **Data mangler:** skravur.
 - **Mørke timer** (sola lavere enn −6°, borgerlig skumring) får ingen vurdering på skjermen. Kolonnen skygges, piler og tall blir grå, og overskriften sier «BARE LYSE TIMER FÅR TALL». Modellen kan regne som før, dette er bare visning.
@@ -271,3 +274,9 @@ S38 2 a (25.11.2026): forklaringsarkene.
 - **Etikettene som forklarer** (SURF, SVELL UTE, VIND og TIDEVANN i KL.-blokka, SVELL FRA, VIND FRA og VINDU ved skiva, sikkerheten og «kystmodell 100 m» i kildelinja, og sikkerheten under Data i «Om spotten» på web) er knapper som åpner forklaringsarket. Prikkete strek under ordet, 44 px høy trykkflate uten at teksten flytter seg, og den felles fokusringen. Escape lukker arket, og fokus går tilbake til etiketten. Tab og Shift+Tab blir i arket så lenge det er åpent (det gjelder også loggarket og regnestykket). Radene i KL.-blokka er minst 44 px, så trykkflatene ikke ligger oppå hverandre. Unntak: telefoner under 380 px bredde og 600 px høyde, der radene er så høye som teksten, for at KL.-blokka skal stå over fanelinja etter dagbytte.
 - **Lave skjermer (under 700 px):** kroppsmålet står ved siden av det store tallet (40 px, et spenn 36 px), og teksten til høyre i radene er 14/18. Da står KL.-blokka over fanelinja etter dagbytte også på 375 × 548 (iPhone SE med verktøylinja i Safari). Under 340 px bredde er tallet 32 px (spenn 30 px), setningen under dommen og kroppsmålet 14/18, og tidevannsregelen går over hele bredden (320 × 568).
 - **Stor tekst (200 %):** i smale lister (Søk, Utforsk) står ordet, høyden og årsaken under navnet.
+
+Etter fase 3 (26.11.2026, svar.md 26.11.2026 kl. 20.20: S46 2 a, S49 a og S50 3 a).
+
+- **Tidevannet tok de siste poengene** (S46 2 a): en time med 0 poeng som hadde minst ett før tidevannet, heter «Ikke surfbart» med «Feil tidevann» på linja under, uansett surfehøyde og periode. Øverst i «Hvorfor» står tidevannslinja («Feil tidevann: Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her (−1,75 poeng).»). Tok vinden flere poeng enn tidevannet, gjelder ikke regelen. Timer som var 0 også før vind og tidevann, heter «Flatt» eller «Smått» som før.
+- **Havfargen for 3** (S49 a): se §2 og §5.
+- **Stor tekst på mobil** (S50 3 a): når radene i KL.-blokka er smalere enn 13rem (200 % tekst på 320 til 430 px, og 150 % på 320 px), står etiketten (SVELL UTE, VIND, TIDEVANN) på egen linje over tallet, så ingen ord brytes midt i. Krediteringen kan brytes etter skråstreken i «Copernicus/Kartverket».

@@ -119,11 +119,14 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 function desTall(txt){ return esc(txt).replace(/,/g, '<span class="des">,</span>'); }
 // Krediteringen for kornfotoene (docs/js/spotbilder.js): under bildet står bare kortformen på én linje, hele
 // henvisningen står under Kilder nederst. Lisensnavnet er lenke begge steder (CC BY 4.0 punkt 3a).
+// kredTekst: linjen kan brytes etter skråstreken i «Copernicus/Kartverket», så stor tekst på smal skjerm ikke bryter midt i
+// «Kartverket» (S50 3 a; feiljegeren 26.11.2026, kosmetisk a).
+function kredTekst(t){ return esc(t).replace(/\//g, "/<wbr>"); }
 function fotoKreditHtml(hele){
   const B = window.SPOTBILDER; if(!B) return "";
   const t = hele ? B.kredit : (B.linje || B.kort), i = B.lisens && B.lisens_url ? t.indexOf(B.lisens) : -1;
-  if(i < 0) return esc(t);
-  return `${esc(t.slice(0, i))}<a href="${esc(B.lisens_url)}" target="_blank" rel="noopener license">${esc(B.lisens)}</a>${esc(t.slice(i + B.lisens.length))}`;
+  if(i < 0) return kredTekst(t);
+  return `${kredTekst(t.slice(0, i))}<a href="${esc(B.lisens_url)}" target="_blank" rel="noopener license">${esc(B.lisens)}</a>${kredTekst(t.slice(i + B.lisens.length))}`;
 }
 
 
@@ -254,7 +257,38 @@ function lowReasonNotice(h){
 }
 // S42 a: den lokale tidevannslinja fra henteren (rating.TIDE_STATE_WORD), nye og eldre ord for vannstanden
 const TIDEVANN_LINJE = /^(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?$/;
+// Tidevannet tok de siste poengene (S46 2 a, svar.md 26.11.2026 kl. 20.20; feiljegeren 26.11.2026, Breivikeidet 26.11 kl. 08Z:
+// 2 poeng før tidevannet, 0 etter, og appen sa «Smått: Litt bølger, men for lite til ett poeng»). Timen har 0 poeng, den
+// hadde minst ett før tidevannet (tideLost(): faded_tide og den lokale tidevannsregelen), og vinden tok ikke mer enn
+// tidevannet. Da er ordet «Feil tidevann» uansett surfehøyde og periode, på alle spots. Timer som var 0 også før vind og
+// tidevann, har ikke tapt noe og er som før («Flatt», «Smått» osv.). Bare visningsordet.
+// Uavgjort mellom vind og tidevann går til tidevannet her, mens henteren gir vinden skylda (rating.py: «Uavgjort: vinden»).
+// De to møtes ikke: tok vinden minst like mye og styrken er kjent, er low_reason «blown_out», og da gjelder ikke denne
+// regelen. Uavgjort hit kommer bare når vindstyrken mangler eller timen er «flat» (fysikk-kontrolløren 27.11.2026).
+function tideTookLast(h){
+  if(!h || h.stars!==0 || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return false;
+  // Det lokale fradraget leses fra zero_losses.local når timen har den bokføringen: det er det regelen faktisk tok. I eldre
+  // varsler (før november 2026) kunne local_rules.stars_lost stå på 1 i en flat time der ingenting ble tatt.
+  const z = h.zero_losses, tv = z ? (h.faded_tide || 0) + (z.local || 0) : tideLost(h);
+  return tv > 0 && tv >= (h.faded_wind || 0);
+}
+// Setningen til «Feil tidevann»: den lokale tidevannslinja når det er den ene som trakk, ellers den vanlige forklaringen.
+// S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyt vann. Lokale sier lavt og middels vann er best
+// her: −0,7 poeng.»; «Høyvann.» i varsler fra før 25.11.2026). Linja nevner kilden selv, så den står alene, med fradraget i
+// parentes: ett kolon i «Feil tidevann: Høyt vann. Lokale sier … (−0,7 poeng).» (feiljegeren 25.11.2026, funn 10).
+// Eldre varsler («Tidevann (høy): …») leses som før. null når linja ikke er en tidevannslinje.
+function tideLineCause(line, spot, h){
+  if(TIDEVANN_LINJE.test(line)) return {word: STR.wordTide, explain: line.replace(/: (−[\d,]+ poeng)\.?$/, " ($1).")};
+  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${line.charAt(0).toLowerCase() + line.slice(1)}`};
+  return null;
+}
+function tideCause(h){
+  const lr = h.local_rules || null, spot = spotOfHour(h);
+  const linjer = lr && lr.stars_lost && !h.faded_tide ? (lr.lines||[]).filter(l=> /−/.test(l)).map(l=> tideLineCause(l, spot, h)).filter(Boolean) : [];
+  return linjer.length===1 ? linjer[0] : {word: STR.wordTide, explain: STR.wordExplain[STR.wordTide]};
+}
 function zeroCause(h){
+  if(tideTookLast(h)) return tideCause(h);
   const per = h.period;
   const shortPer = per!=null && per < MUSHY_PERIOD_MAX_S;
   const mushy = {word: STR.wordMushy, explain: shortPer ? STR.mushyShort : STR.mushyLong};
@@ -286,13 +320,8 @@ function zeroCause(h){
   // lokale regler: linjene som faktisk trakk (inneholder «−»)
   const pen = (lr.lines||[]).filter(l=>/−/.test(l));
   if(pen.length!==1) return notNow;
-  const line = pen[0], rest = line.charAt(0).toLowerCase() + line.slice(1);
-  // S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyt vann. Lokale sier lavt og middels vann er best
-  // her: −0,7 poeng.»; «Høyvann.» i varsler fra før 25.11.2026). Linja nevner kilden selv, så den står alene, med fradraget i
-  // parentes: ett kolon i «Feil tidevann: Høyt vann. Lokale sier … (−0,7 poeng).» (feiljegeren 25.11.2026, funn 10).
-  // Eldre varsler («Tidevann (høy): …») leses som før.
-  if(TIDEVANN_LINJE.test(line)) return {word: STR.wordTide, explain: line.replace(/: (−[\d,]+ poeng)\.?$/, " ($1).")};
-  if(/^Tidevann/.test(line)) return {word: STR.wordTide, explain: `${localSourceText(spot, h, "tide")}: ${rest}`};
+  const line = pen[0], tv = tideLineCause(line, spot, h);   // tidevannslinja: se tideLineCause() over
+  if(tv) return tv;
   if(/^Vind/.test(line)){
     // «Vind 5 m/s sidevind: strengere lokal grense …» → spoten trenger fralandsvind, nå 5 m/s sidevind
     const now = line.split(":")[0].replace(/^Vind\s*/, "").trim();
@@ -303,7 +332,7 @@ function zeroCause(h){
 function zeroWord(h){
   // null når regelen ikke gjelder (stjerner, annen low_reason, eller tallet mangler)
   if(!h || h.stars || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return null;
-  if(h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).word;
+  if(h.surf_height >= MUSHY_SURF_MIN_M || tideTookLast(h)) return zeroCause(h).word;
   return h.surf_height >= SMALL_SURF_MIN_M ? STR.wordSmall : STR.starWords[0];
 }
 function ratingWord(h){
@@ -332,7 +361,7 @@ function karakter(h){
 }
 // Forklaringen bak ordet (vises øverst i «Hvorfor denne ratingen?»)
 function ratingWordExplain(h){
-  if(h && !h.stars && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && h.surf_height >= MUSHY_SURF_MIN_M) return zeroCause(h).explain;
+  if(h && !h.stars && (h.low_reason==="flat" || !h.low_reason) && h.surf_height!=null && (h.surf_height >= MUSHY_SURF_MIN_M || tideTookLast(h))) return zeroCause(h).explain;
   const w = ratingWord(h); return (STR.wordExplain && STR.wordExplain[w]) || null;
 }
 // Vurderingen vises som tallet 0-5 (design B 4.0, SPEC §5): det samme tallet som stjernene var, bare vist som tall.

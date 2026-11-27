@@ -8,6 +8,7 @@
   /* B 4.0-tokenene (SPEC §2) */
   --bg:#F2EFE8; --ink:#002941; --muted:#5E5A51; --hair:#D8D2C6; --outline:#B9B2A4;
   --lav:#8A8478; --paa-lav:#00131F;   /* fyllet for 1 og 2 (3,2:1 mot papiret, designrevisjonen 21.11.2026 fase 1) og tallet oppå det */
+  --god:#1F6E78; --paa-god:#F2EFE8;   /* havfargen: fyllet for 3 og tallet oppå det (S49 a, svar.md 26.11.2026 kl. 20.20). Ordet og tallet alene er fortsatt blekk */
   --bildekant:transparent;            /* i mørketid får bildene en tynn kant, ellers flyter de ut i bakgrunnen */
   --signal:#C05151; --on-signal:#F2EFE8;
   --data:#B6DFED; --tide-band:rgba(182,223,237,.55);
@@ -23,13 +24,13 @@
   --water:var(--ink); --water-soft:var(--tide-band); --water-top:var(--tide-band);   /* tidevann: kurven i blekk, båndet i --data */
   --selected:var(--ink); --on-selected:var(--bg);
   --accent:var(--ink); --focus:var(--ink); --warn:var(--ink);
-  /* vurdering (SPEC §5): 0-3 er blekk, korall fra 4. Fyllet for 1 og 2 er --lav (minst 3:1 mot flaten), ikke --outline. --rN er fyll (ruter, søyler, prikker), --rN-ink er ordet
+  /* vurdering (SPEC §5): 0-2 er blekk, 3 er fylt i havfargen (--god), korall fra 4. Fyllet for 1 og 2 er --lav (minst 3:1 mot flaten), ikke --outline. --rN er fyll (ruter, søyler, prikker), --rN-ink er ordet
      (liten tekst, derfor aldri korall), --rN-on er tallet oppå fyllet, --rN-tall er tallet alene (stor tekst).
      Tall oppå korall er alltid minst 14 px fet (Theodor 12.11). */
   --r0:var(--hair); --r0-ink:var(--muted); --r0-on:var(--ink); --r0-tall:var(--muted);
   --r1:var(--lav); --r1-ink:var(--ink); --r1-on:var(--paa-lav); --r1-tall:var(--ink);
   --r2:var(--lav); --r2-ink:var(--ink); --r2-on:var(--paa-lav); --r2-tall:var(--ink);
-  --r3:var(--ink); --r3-ink:var(--ink); --r3-on:var(--bg); --r3-tall:var(--ink);
+  --r3:var(--god); --r3-ink:var(--ink); --r3-on:var(--paa-god); --r3-tall:var(--ink);
   --r4:var(--signal); --r4-ink:var(--ink); --r4-on:var(--on-signal); --r4-tall:var(--signal);
   --r5:var(--signal); --r5-ink:var(--ink); --r5-on:var(--on-signal); --r5-tall:var(--signal);
   --star:var(--ink);
@@ -66,7 +67,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
-    --lav:#8FA0A8; --paa-lav:#002941; --bildekant:#244D63;
+    --lav:#8FA0A8; --paa-lav:#002941; --god:#2F9BA2; --paa-god:#002941; --bildekant:#244D63;
     --signal:#FD6E6E; --on-signal:#002941;
     --tide-band:rgba(182,223,237,.16);
     --kartland:#E3D3B0; --on-kartland:#002941;
@@ -79,7 +80,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#002941; --ink:#F2EFE8; --muted:#B5B0A6; --hair:#244D63; --outline:#5D6F78;
-  --lav:#8FA0A8; --paa-lav:#002941; --bildekant:#244D63;
+  --lav:#8FA0A8; --paa-lav:#002941; --god:#2F9BA2; --paa-god:#002941; --bildekant:#244D63;
   --signal:#FD6E6E; --on-signal:#002941;
   --tide-band:rgba(182,223,237,.16);
   --kartland:#E3D3B0; --on-kartland:#002941;
@@ -256,6 +257,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .rtall.big{font-size:3rem}
 .rute{flex:none;display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;font-family:var(--mono);font-stretch:75%;font-size:1.1875rem;font-weight:800;line-height:1;color:var(--rc-tall);box-shadow:inset 0 0 0 1px var(--outline)}
 .rute.r-4,.rute.r-5{background:var(--signal);color:var(--on-signal);box-shadow:none}
+.rute.r-3,.uke i.r-3{background:var(--god);color:var(--paa-god);box-shadow:none}   /* 3 er fylt i havfargen (S49 a): skiller seg fra 1 og 2, korall er fortsatt sterkest */
 .rute.r-0,.uke i.r-0{font-weight:500;box-shadow:inset 0 0 0 1px var(--hair)}   /* nullene roligere: dempet, vekt 500, tynn ramme. Aldri strek, strek betyr «mangler» */
 .rute.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
 .rute.mork{background:var(--night);box-shadow:none}
@@ -380,6 +382,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 /* Vinduet-merket (SPEC §6A): ring 18 pt, strek 3 pt, åpning mot svellvinduet, papirskive 26 pt bak. Korall fra 4. */
 .mk,.klynge,.hk-mk{--mk-ring:var(--ink)}
 .mk.r-4,.mk.r-5,.klynge.r-4,.klynge.r-5,.hk-mk.r-4,.hk-mk.r-5{--mk-ring:var(--signal)}
+.mk.r-3,.klynge.r-3,.hk-mk.r-3{--mk-ring:var(--god)}
 .mk.miss,.hk-mk.miss{--mk-ring:var(--outline)}
 .hk-mk.miss .ring{stroke-dasharray:3 3}
 .mk-dot{position:absolute;left:9px;top:9px;width:26px;height:26px;transition:transform .2s ease}
@@ -456,7 +459,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .dagfane[aria-pressed="true"]{background:var(--selected);color:var(--on-selected)}
 .dagfane[aria-pressed="true"] .d small,.dagfane[aria-pressed="true"] .h small,.dagfane[aria-pressed="true"] .h.ord,.dagfane[aria-pressed="true"] .o,.dagfane[aria-pressed="true"] .piler,.dagfane[aria-pressed="true"] .us{color:var(--on-selected);opacity:.85}
 .dagfane[aria-pressed="true"] .felt i.r-0{background:transparent;box-shadow:inset 0 0 0 1px rgba(127,127,127,.7)}
-.dagfane[aria-pressed="true"] .felt i.r-3{background:var(--on-selected)}   /* --r3 er blekk, som den valgte fanen */
+.dagfane[aria-pressed="true"] .felt i.r-3{background:var(--on-selected)}   /* den valgte fanen er fylt i blekk: 3 står i fanens tekstfarge der, ikke i havfargen */
 /* dagsgraf */
 .graf{padding:14px 12px 10px}
 .graf-topp{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
@@ -710,7 +713,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-stripe{display:grid;grid-template-columns:repeat(13,14px);gap:5px}
   .fs-stripe i,.fs-tegn i{display:block;width:14px;height:14px;background:var(--rc,transparent)}
   .fs-stripe i.r-0,.fs-tegn i.r-0{background:transparent;box-shadow:inset 0 0 0 1px var(--outline)}
-  .fs-stripe i.r-3,.fs-tegn i.r-3{background:var(--ink)}
+  .fs-stripe i.r-3,.fs-tegn i.r-3{background:var(--god)}
   .fs-stripe i.mork,.fs-tegn i.mork{background:var(--night)}
   .fs-stripe i.miss,.fs-tegn i.miss{background:repeating-linear-gradient(135deg,var(--hatch) 0 1px,transparent 1px 4px);box-shadow:inset 0 0 0 1px var(--hair)}
   .fs-stripe i.vaert{background:transparent}
@@ -726,7 +729,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .fs-matrise td{text-align:center;border-bottom:1px solid var(--hair);font-family:var(--mono);font-stretch:87.5%;font-weight:800;color:var(--muted)}
   .fs-matrise .mx{font-size:1.125rem;line-height:1}
   .fs-matrise .r-0 .mx{font-weight:500}
-  .fs-matrise .mx.tre{font-size:1.875rem;color:var(--ink)}
+  .fs-matrise .mx.tre{font-size:1.875rem;color:var(--god)}
   .fs-matrise .mx.hoy{font-size:3rem;color:var(--signal)}
   .fs-matrise td.tom{font-size:var(--t-etikett);font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase}
 
@@ -1024,6 +1027,15 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
   .sp-inn #spOver .svell.surf .svell-sub{font-size:.875rem;line-height:1.286}
   .sp-inn #spOver .maal.lang > .etikett{grid-row:auto;align-self:auto;padding-top:0}   /* merknaden om lang sjø har hele bredden her, så etiketten står som før */
 }
+/* Stor tekst på mobil (S50 3 a, svar.md 26.11.2026 kl. 20.20; feiljegeren 26.11.2026, kosmetisk a): ved 200 % tekst er «TIDEVANN»
+   bredere enn etikettkolonnen på 110 px og ble brutt midt i ordet. Når radene er smalere enn 13rem (200 % tekst på 320 til
+   430 px, 150 % på 320 px; ved 100 % er de minst 18rem), står etiketten på egen linje over tallet, med hele bredden. */
+.sp-inn .maalene{container:maal / inline-size}
+@container maal (max-width: 13rem){
+  .sp-inn #spOver .maal{grid-template-columns:auto minmax(0,1fr)}
+  .sp-inn #spOver .maal > .etikett,.sp-inn #spOver .maal .mu-pref{grid-column:1 / -1}
+  .sp-inn #spOver .maal.lang > .etikett{grid-row:auto;align-self:auto;padding-top:0}
+}
 .dagvelger::-webkit-scrollbar{display:none}
 .dagknapp{all:unset;box-sizing:border-box;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;min-height:44px;padding:4px 4px 6px;border-bottom:3px solid transparent;cursor:pointer}
 .dagknapp .ud,.dagknapp .dt{font-family:var(--mono);font-stretch:87.5%;font-size:var(--t-etikett);line-height:1;font-weight:500;letter-spacing:var(--sperr);text-transform:uppercase;color:var(--muted)}
@@ -1048,6 +1060,7 @@ h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02
 .tstripe .segs i{background:var(--unreached)}
 .tstripe .segs i.pa{background:var(--ink)}
 .tstripe .segs.r-4 i.pa,.tstripe .segs.r-5 i.pa{background:var(--signal)}
+.tstripe .segs.r-3 i.pa{background:var(--god)}
 .tstripe .segs i.tapt{box-sizing:border-box}
 /* tapte poeng: stiplet blekk, og bare på valgt time (designrevisjon fase 3 punkt 4); teksten står i KL.-blokka */
 .tstripe .tk.valgt .segs i.tapt{background:none;border:1px dashed var(--ink)}

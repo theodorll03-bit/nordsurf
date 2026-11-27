@@ -1069,17 +1069,23 @@ def main():
                     hoye = page.evaluate("""[...document.querySelectorAll('#viewSpot .t-tall, #viewSpot .t-svell, #viewSpot .mv, #viewSpot .t-vindu, #viewSpot .dagknapp .rute')]
                         .filter(el => el.getBoundingClientRect().height > 1.6 * parseFloat(getComputedStyle(el).fontSize)).map(el => el.className + ' «' + el.textContent.trim() + '»')""")
                     assert not hoye, f"tall brutt over flere linjer ({scheme}): {hoye}"
-                    # korall fra 4, blekk til og med 3, tapte poeng stiplet, og ingen segmenter i mørke, forbudte eller tomme timer
+                    # korall fra 4, havfargen for 3, tapte poeng stiplet, og ingen segmenter i mørke, forbudte eller tomme timer
                     syn = page.evaluate(SYN_STRIPE_JS); kol = syn["kol"]
                     assert sorted(kol) == [f"{x:02d}" for x in range(6, 20)], sorted(kol)   # 06 og 07 har vært: varselet starter kl. 08
                     assert kol["06"]["cls"] == kol["07"]["cls"] == "vaert" and kol["07"]["n"] == 0, kol["07"]
                     assert (kol["08"]["cls"], kol["08"]["pa"], kol["08"]["tapt"]) == ("r-3", 3, 0) and (kol["09"]["cls"], kol["09"]["pa"], kol["09"]["tapt"]) == ("r-3", 3, 1), (kol["08"], kol["09"])
                     assert (kol["10"]["cls"], kol["10"]["pa"], kol["10"]["tapt"]) == ("r-4", 4, 1) and (kol["11"]["cls"], kol["11"]["pa"], kol["11"]["tapt"]) == ("r-5", 5, 0), (kol["10"], kol["11"])
-                    assert kol["08"]["farge"] == kol["09"]["farge"] != kol["10"]["farge"] == kol["11"]["farge"], f"blekk til og med 3 og korall fra 4: {[kol[x]['farge'] for x in ('08', '09', '10', '11')]}"
+                    # S49 a (svar.md 26.11.2026 kl. 20.20): 3 er fylt i havfargen (--god: #1F6E78 om dagen, #2F9BA2 i mørketid), ikke blekk og ikke korall
+                    farger49 = page.evaluate("""() => { const p = document.createElement('i'); document.body.appendChild(p); const f = (v) => { p.style.background = `var(${v})`; return getComputedStyle(p).backgroundColor; };
+                        const ut = {blekk: f('--ink'), god: f('--god'), paaGod: f('--paa-god'), korall: f('--signal')}; p.remove();
+                        const r3 = document.querySelector('#viewSpot .dagknapp .rute.r-3, #viewSpot .rute.r-3'); if(r3){ const c = getComputedStyle(r3); ut.rute3 = [c.backgroundColor, c.color]; } return ut; }""")
+                    assert farger49["god"] == ("rgb(47, 155, 162)" if scheme == "mork" else "rgb(31, 110, 120)") and farger49["paaGod"] == ("rgb(0, 41, 65)" if scheme == "mork" else "rgb(242, 239, 232)"), farger49
+                    assert kol["08"]["farge"] == kol["09"]["farge"] == farger49["god"] and kol["10"]["farge"] == kol["11"]["farge"] == farger49["korall"] and len({farger49["god"], farger49["korall"], farger49["blekk"]}) == 3, f"havfargen for 3 og korall fra 4: {[kol[x]['farge'] for x in ('08', '09', '10', '11')]} {farger49}"
+                    assert "rute3" not in farger49 or farger49["rute3"] == [farger49["god"], farger49["paaGod"]], f"ruta for 3 skal være fylt i havfargen ({scheme}): {farger49}"
                     # designrevisjon fase 3 punkt 4: tapte poeng (vind og tidevann) er stiplet i blekk, ikke korall, og vises bare for valgt time
                     vg = syn["valgt"]
                     assert (kol["09"]["tv"], kol["10"]["tv"]) == (0, 1) and kol["09"]["vist"]["stil"] == kol["10"]["vist"]["stil"] == "none", f"tapte poeng skal bare vises for valgt time ({scheme}): {kol['09']} {kol['10']}"
-                    assert vg["09"]["stil"] == vg["10"]["stil"] == "dashed" and vg["09"]["farge"] == vg["10"]["farge"] == kol["08"]["farge"] != kol["10"]["farge"] and vg["09"]["andre"] == vg["10"]["andre"] == 0, f"tapt skal være stiplet blekk på valgt time ({scheme}): {vg}"
+                    assert vg["09"]["stil"] == vg["10"]["stil"] == "dashed" and vg["09"]["farge"] == vg["10"]["farge"] == farger49["blekk"] != kol["10"]["farge"] and vg["09"]["andre"] == vg["10"]["andre"] == 0, f"tapt skal være stiplet blekk på valgt time ({scheme}): {vg}"
                     # surfehøyden som stolpe: fast skala 0 til max_height (2 m = 48 px), linje ved ideal_height (1 m), ingen stolpe ved flatt
                     # eller forbud, skravur når data mangler (aldri en lav stolpe), og stolpen finnes også i en mørk time
                     assert [kol[x]["stolpe"] for x in ("08", "11", "12", "13", "14", "15")] == [24, 24, 24, None, None, None] and kol["08"]["boks"] == 48, [(x, kol[x]["stolpe"]) for x in kol]
@@ -1763,6 +1769,26 @@ def main():
                         page.set_viewport_size({"width": 320, "height": 568}); page.wait_for_timeout(250)
                         kr_ = page.evaluate("[...document.querySelectorAll('#viewSpot .kredit')].map(k => { const r = document.createRange(); r.selectNodeContents(k); return [Math.round(r.getBoundingClientRect().right), Math.round(k.getBoundingClientRect().right)]; })")
                         assert kr_ and all(a_ <= b_ + 1 for a_, b_ in kr_), f"krediteringen går ut av kolonnen ved 200 % tekst på 320 px: {kr_}"
+                        # S50 3 a (svar.md 26.11.2026 kl. 20.20; feiljegeren 26.11.2026, kosmetisk a): «Tidevann» ble brutt midt i ordet ved
+                        # 200 % tekst (375 til 430 px; på 320 px også «pålands», «fralands», «kast» og «Kartverket»). Ingen ord på spotsiden
+                        # brytes midt i, ingenting går ut av skjermen og siden ruller ikke sidelengs, på 320, 375x548, 390 og 430 px ved
+                        # 100, 150 og 200 %. Ved 100 % står etiketten ved siden av tallet som før, ved 200 % over det.
+                        for bw50, bh50 in ((320, 568), (375, 548), (390, 844), (430, 932)):
+                            page.set_viewport_size({"width": bw50, "height": bh50})
+                            for pst50 in (100, 150, 200):
+                                page.evaluate("(p) => { document.documentElement.style.fontSize = p + '%'; }", pst50); page.wait_for_timeout(200)
+                                m50 = page.evaluate("""() => { const rot = document.querySelector('#viewSpot'), brutt = [], ute = [];
+                                    const tw = document.createTreeWalker(rot, NodeFilter.SHOW_TEXT); let nd;
+                                    while(nd = tw.nextNode()){ const el = nd.parentElement; if(!el || !el.offsetParent || el.closest('details:not([open])') || el.closest('.sr') || el.closest('svg')) continue;
+                                        const t = nd.textContent, re = /[A-Za-zÆØÅæøå0-9,]{3,}/g; let m;
+                                        while(m = re.exec(t)){ const r = document.createRange(); r.setStart(nd, m.index); r.setEnd(nd, m.index + m[0].length); const rs = [...r.getClientRects()].filter(x => x.width > 0);
+                                            if(new Set(rs.map(x => Math.round(x.top))).size > 1) brutt.push(m[0]);
+                                            if(!el.closest('.dagvelger, .tstripe') && rs.some(x => x.right > innerWidth + 1 || x.left < -1)) ute.push(m[0]); } }
+                                    const rad = [...rot.querySelectorAll('#spOver .maal')].pop(), e = rad.querySelector('.etikett').getBoundingClientRect(), v = rad.querySelector('.mv').getBoundingClientRect();
+                                    return {brutt: [...new Set(brutt)], ute: [...new Set(ute)], rull: document.documentElement.scrollWidth - innerWidth, etikett: rad.querySelector('.etikett').textContent.trim(), over: e.bottom <= v.top + 2}; }""")
+                                assert not m50["brutt"] and not m50["ute"] and m50["rull"] <= 0, f"stor tekst på mobil, {bw50}x{bh50} ved {pst50} %: {m50}"
+                                vent50 = pst50 == 200 or (bw50 == 320 and pst50 == 150)   # radene er smalere enn 13rem
+                                assert m50["etikett"].lower() == "tidevann" and m50["over"] == vent50, f"etiketten TIDEVANN skal stå over tallet bare med stor tekst, {bw50}x{bh50} ved {pst50} %: {m50}"
                         page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
                         page.evaluate("document.documentElement.style.fontSize = ''")
                     else:
@@ -1871,6 +1897,45 @@ def main():
                 # fysikk-kontrolløren 25.11.2026: ordet ved 0 poeng («tidevannsordet») leser den samme linja, ny og gammel form
                 assert hv_["nullord"] == [hv_["tideord"], hv_["tideord"]] and hv_["tideord"], f"0 poeng tatt av den lokale tidevannsregelen skal få tidevannsordet: {hv_['nullord']}"
                 assert hv_["total"]["etikett"] == "Totalt" and hv_["total"]["verdi"] == "1 av 5 poeng (3 uten vind og tidevann)", hv_["total"]
+                # S46 2 a (svar.md 26.11.2026 kl. 20.20; feiljegeren 26.11.2026): tidevannet tok de siste poengene. Timen er Breivikeidet
+                # 26.11.2026 kl. 08Z slik den står i varselet 25.11 kl. 23Z (2 poeng før tidevannet, 0 etter; appen sa «Smått: Litt
+                # bølger, men for lite til ett poeng»). Ordet er «Ikke surfbart» med «Feil tidevann» under, og setningen i «Hvorfor»
+                # er tidevannslinja, uansett surfehøyde og periode (fra 0,8 m ble det «Grøtete», perioden er under 9 s). Timer som
+                # var 0 også før vind og tidevann, er som før. Vinden har ikke samme hull: henteren gir «blown_out» når vinden tar
+                # poengene (0 slike timer uten i 16 200 lagrede og 32 562 prøvde), og ordet er «Blåst ut» også under 0,8 m.
+                s46t = {"t": "2026-11-26T08:00Z", "period": 7.45, "wind_speed": 1.7, "wind_dir": 95.0, "gust": 2.8, "stars": 0, "faded": 0, "faded_wind": 0, "faded_tide": 0,
+                        "zero_losses": {"energy": 0, "wind": 0, "tide": 0, "local": 2, "cap": 0}, "wind_type": "sideonshore", "wind_calm_ms": 8.0, "surf_height": 0.64,
+                        "surf_height_sets": 0.81, "low_reason": None, "energy_swell_kj": 589, "sources_disagree": False,
+                        "local_rules": {"source": "Observasjoner 17.11-26.11.2026", "stars_lost": 2, "lines": ["Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."]}}
+                s46 = page.evaluate("""(t) => { const vis = (h) => ({ord: ratingWord(h), kar: karakter(h), fork: ratingWordExplain(h)}), m = (o) => Object.assign({}, t, o);
+                    const utenTap = {faded_wind: 0, faded_tide: 0, local_rules: null, zero_losses: {energy: 0, wind: 0, tide: 0, local: 0, cap: 0}};
+                    return {ekte: vis(t), stor: vis(m({surf_height: 1.0})), lang: vis(m({surf_height: 1.0, period: 12})), flat: vis(m({low_reason: 'flat', surf_height: 0.35})),
+                        vanlig: vis(m({faded: 1, faded_tide: 1, local_rules: null, zero_losses: {energy: 0, wind: 0, tide: 1, local: 0, cap: 0}})),
+                        toLinjer: vis(m({local_rules: {source: 'x', stars_lost: 1, lines: ['Høyt vann. Lokale sier lavt og middels vann er best her: −0,7 poeng.', 'Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s): −0,7 poeng, erstatter den generelle vindstraffen hvis strengere']}})),
+                        smatt: vis(m(utenTap)), flatt: vis(m(Object.assign({surf_height: 0.1, low_reason: 'flat'}, utenTap))), grot: vis(m(Object.assign({surf_height: 1.0}, utenTap))),
+                        gammelFlat: vis(m({low_reason: 'flat', surf_height: 0, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1}), zero_losses: {energy: 0, wind: 0, tide: 0, local: 0, cap: 0}})),
+                        setn: Front.helpers.favSetning({}, {h: t, st: 0, cls: ''}, true),
+                        ett: vis(m({stars: 1, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1})})), mangler: vis(m({stars: null})),
+                        vindMest: vis(m({faded: 2, faded_wind: 2, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1}), zero_losses: {energy: 0, wind: 2, tide: 0, local: 1, cap: 0}})),
+                        blaast: vis(m(Object.assign({}, utenTap, {low_reason: 'blown_out', faded: 2, faded_wind: 2, wind_speed: 10, gust: 13, wind_type: 'onshore', wind_calm_ms: undefined, zero_losses: {energy: 0, wind: 2, tide: 0, local: 0, cap: 0}}))),
+                        k0: STR.karakter0, tide: STR.wordTide, tideFork: STR.wordExplain[STR.wordTide], smattOrd: STR.wordSmall, flattOrd: STR.starWords[0], grotOrd: STR.wordMushy, ut: STR.lowReason.blown_out, utFork: STR.wordExplain[STR.lowReason.blown_out], daarlig: STR.starWords[1]}; }""", s46t)
+                assert (s46["k0"], s46["tide"]) == ("Ikke surfbart", "Feil tidevann"), s46
+                s46linje = "Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her (−1,75 poeng)."
+                for k46 in ("ekte", "stor", "lang", "flat"):
+                    assert s46[k46] == {"ord": "Feil tidevann", "kar": {"ord": "Ikke surfbart", "aarsak": "Feil tidevann"}, "fork": s46linje}, f"tidevannet tok de siste poengene ({k46}): {s46[k46]}"
+                assert s46["vanlig"] == {"ord": "Feil tidevann", "kar": {"ord": "Ikke surfbart", "aarsak": "Feil tidevann"}, "fork": s46["tideFork"]}, s46["vanlig"]
+                assert s46["toLinjer"]["ord"] == "Feil tidevann" and s46["toLinjer"]["fork"] == "Høyt vann. Lokale sier lavt og middels vann er best her (−0,7 poeng).", s46["toLinjer"]
+                # 0 også før vind og tidevann: som før
+                assert s46["smatt"]["kar"] == {"ord": s46["smattOrd"], "aarsak": None} and s46["flatt"]["kar"] == {"ord": s46["flattOrd"], "aarsak": None}, (s46["smatt"], s46["flatt"])
+                assert s46["grot"]["kar"] == {"ord": "Ikke surfbart", "aarsak": s46["grotOrd"]}, s46["grot"]
+                # eldre varsel: stars_lost kunne stå i en flat time der ingenting ble tatt (zero_losses.local 0). Da er timen flat som før
+                assert s46["gammelFlat"]["kar"] == {"ord": s46["flattOrd"], "aarsak": None}, s46["gammelFlat"]
+                # setningen om dagen (dommen på spotsiden og radene på Hjem) er den korte; tidevannslinja med tall står i «Hvorfor»
+                assert s46["setn"] == s46["tideFork"] == "Bølgene er der, men tidevannet passer ikke spoten nå.", s46["setn"]
+                assert s46["ett"]["kar"] == {"ord": s46["daarlig"], "aarsak": None} and s46["mangler"]["ord"] != "Feil tidevann", (s46["ett"], s46["mangler"])
+                # vinden: tok den mest, får ikke tidevannet skylda, og en blåst ut-time under 0,8 m heter «Blåst ut»
+                assert s46["vindMest"]["ord"] != "Feil tidevann", s46["vindMest"]
+                assert s46["blaast"] == {"ord": s46["ut"], "kar": {"ord": "Ikke surfbart", "aarsak": s46["ut"]}, "fork": s46["utFork"]}, s46["blaast"]
                 assert hv_["vindord"] == {"offshore": "fralands", "side": "sidevind", "sideonshore": "skrått pålands", "onshore": "pålands"} and hv_["vindord"] == rating.WIND_TYPE_WORD, hv_["vindord"]
                 assert hv_["komma"] == ["faktor 0,65", "−0,5 stjerne (vektet −0,3)", "faktor 1,00", "kl. 08.02", "17.11.2026", "observasjonene 17.11 og 22.11", "kl. 09.30-09.50Z", "5.10", "0,65"], hv_["komma"]
                 # S37 a, b og c (svar.md 24.11.2026 kl. 10.25): når høyden er andelshøyden (share_height eller gap_floor), står «–» i stedet

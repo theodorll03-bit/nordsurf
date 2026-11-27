@@ -304,6 +304,8 @@
     if(b.cls==="dark") return STR.lightOnly + ".";
     if(!h) return null;
     if(b.st < 1){
+      // tidevannet tok de siste poengene (S46 2 a): den korte setningen her, selve tidevannslinja med tall står i «Hvorfor»
+      if(typeof tideTookLast==="function" && tideTookLast(h)) return STR.wordExplain[STR.wordTide];
       const e = ratingWordExplain(h);
       if(e) return e.replace(/\s+[–-] se regnestykket under\.?$/, ".");
       return lowReasonNotice(h);
@@ -846,6 +848,6 @@
   }
   function refresh(){ if(DATA && started && S.view!=="sok") redraw(true); }
   function goLegacy(mode){ const map = {home:"hjem", list:"hjem", peek:"hjem", half:"hjem", map:"utforsk", logger:"logger", innstillinger:"innstillinger"}; go(map[mode] || "hjem"); }
-  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, fsHelt, fsHeltHtml, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
+  window.Front = { start, refresh, openSpot, go: goLegacy, state: S, closeSpot, helpers: {favSetning, usikkertTillegg, lysIDag, kjoreText, vinduKl, regionOf, stedText, forbudNa, forbudInfo, forbudLinje, naaVisning, iBesteOkt, nowIdx, usable, mork, known, stars, lightOf, dayBest, overskrift, fsHelt, fsHeltHtml, heightText, hoydeVist, hoydeMangler, erSjo, hoydeMedMerke, ordOgHoyde, naHtml, windText, weekDays, search, norm, byRatingNow, dkOf, isDesktop, naaOf, regions, chosenRegion, setRegion, scope} };
   window.start();
 })();
