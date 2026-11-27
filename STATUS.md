@@ -2,6 +2,13 @@
 
 ## Høyst 3 poeng for nye spots uten observasjon, i timer uten BarentsWatch (S48 a), 26.11.2026
 
+**Fysikk-kontrolløren 27.11.2026 (begge endringene): godkjent, ingen stoppere.** Den spilte av det publiserte varselet 26.11 kl. 18Z (5 427 timer) og de seks inndatafilene (8 856 timer) og fikk de samme tabellene. Merknader som står igjen:
+- Taket gjelder også et eventuelt hull i BarentsWatch-dagene (0 timer i dagens varsel). CLAUDE.md er presisert.
+- Unstad-left og Unstad-right er av i dag, men ville fått taket hvis de slås på. Avgjøres da.
+- Om tallet 3 skal få et merke ved seg når det er kappet, kan bli et eget spørsmål. I dag står det bare i «Hvorfor».
+- Ersfjordstranda: vind fra 155–180° er nå sidevind, ikke fralands. Det er ikke bekreftet av noen observasjon (sørlig vind kan komme ned fjorden) og må bekreftes lokalt.
+- Ersfjordstranda: BarentsWatch-punktet ligger langs 315°, ca. 105 m til siden for 290°. Et nytt snitt langs 290° bør bli et eget spørsmål. Det haster ikke.
+
 Gren `fiks/ersfjord-tak`, oppå Ersfjordstranda-commiten under. Lokalt, ikke pushet. Svaret står i `privat/kontor/svar.md` 26.11.2026 kl. 20.20 (S48 a): «Høyst 3 poeng i sluttsummen for de 18 spotene uten observasjon utenfor BarentsWatch-dagene. Appen skal ikke love 4 der ingen har surfet og kystmodellen mangler. Taket løftes for en spot når den får sin første observasjon.»
 
 - **Regelen (`rating.unconfirmed_cap_applies()`, `UNCONFIRMED_MAX_STARS` = 3):** spoten har `status` `forelopig`, mangler feltet `forste_observasjon`, og høyden i timen kommer ikke fra BarentsWatch. Taket settes på sluttsummen i `rate()`, etter energiregelen, vinden og tidevannet. En time med 3 eller færre er urørt. Timen merkes ikke usikker.
