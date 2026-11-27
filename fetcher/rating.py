@@ -1534,6 +1534,21 @@ def disagree_reason(hour, dir_hit, bw_detail, fjord=False):
     return f"Kildene er uenige. BarentsWatch viser {bw_txt}, men {' og '.join(reasons)}. Trolig ikke surfbart. Logg gjerne hva du ser."
 
 
+# S48 a (svar.md 26.11.2026 kl. 20.20): en ny spot som ingen har surfet, får høyst 3 poeng i timer uten BarentsWatch.
+UNCONFIRMED_MAX_STARS = 3
+
+
+def unconfirmed_cap_applies(spot, source):
+    """S48 a (svar.md 26.11.2026 kl. 20.20): «Høyst 3 poeng i sluttsummen for de 18 spotene uten observasjon utenfor
+    BarentsWatch-dagene. Appen skal ikke love 4 der ingen har surfet og kystmodellen mangler. Taket løftes for en
+    spot når den får sin første observasjon.»
+    Sann når spoten er ny (status «forelopig» i spots.json), ikke har feltet `forste_observasjon`, og høyden i timen
+    ikke kommer fra BarentsWatch (reserven og langtidssonen). Taket settes på sluttsummen i rate(), etter
+    energiregelen, vinden og tidevannet, så en time som alt har 3 eller færre, er urørt. Timen merkes ikke usikker.
+    Spots uten status (de åtte første) og spots med `forste_observasjon` (Breivikeidet) har aldri taket."""
+    return spot.get("status") == "forelopig" and not spot.get("forste_observasjon") and source != "barentswatch"
+
+
 def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_height,
                      surf_height_sets, low_hs, blown_out, hb_damping, period, hs, ps, dir_hit,
                      wind_speed, wind_dir, gust, wt, wp, tide, tide_pen,
@@ -1542,7 +1557,7 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
                      energy_swell_kj=None, energy_factor_value=1.0,
                      energy_period_value=None, energy_period_source=None,
                      five_open=False, five_fails=None, five_lost=None, wind_took_points=True, tide_level_line=None,
-                     fjord_wind_block=False, tide_lost_local=0):
+                     fjord_wind_block=False, tide_lost_local=0, unconfirmed_from=None):
     items = []
     # 27.09.2026 (Theodors rettelse, Unstad for lav - se STATUS.md): tallet
     # vi regner videre med (h) er JUSTERT for BarentsWatch (svellandel,
@@ -1751,6 +1766,10 @@ def build_breakdown(hour, spot, h, source, bw_detail, hb, surf_factor, surf_heig
             items.append("Femte stjerne holdes tilbake: tidevannet er ikke det spoten liker")
     elif five_fails:
         items.append("Ikke Rått: " + ", ".join(five_fails[:3]))
+    if unconfirmed_from is not None:
+        # S48 a: taket for en ny spot uten observasjon, se unconfirmed_cap_applies(). Samme form som linja for usikkert varsel.
+        items.append(f"Ny spot: kappet fra {unconfirmed_from} til maks {UNCONFIRMED_MAX_STARS} stjerner "
+                     "(ingen har surfet her ennå, og BarentsWatch mangler)")
     without_wind = min(potential, solid + lost_wind)
     total = f"Totalt: {solid} av 5 stjerner"
     tide_lost = lost_tide + tide_lost_local   # som tideLost() i docs/js/app.js: faded_tide og local_rules.stars_lost
@@ -2484,12 +2503,19 @@ def rate(hour, spot, _long_sea=True):
     # usikkert varsel og ikke for vind vi har sett. Det bokføres under "cap", så ordet ved 0 poeng blir «Ikke surfbart
     # nå» og ikke «Blåst ut». Stjernene og faded_wind er uendret.
     wind_alone = min(potential_before_energy, math.floor(wp + 0.5))
+    # S48 a (svar.md 26.11.2026 kl. 20.20): taket for en ny spot uten observasjon i timer uten BarentsWatch, se
+    # unconfirmed_cap_applies(). Det settes på sluttsummen, etter energiregelen, vinden og tidevannet. Poenget taket
+    # tar, bokføres under "cap" (ikke som vind eller tidevann), så poengene pluss alle fradragene fortsatt summerer.
+    unconfirmed_from = None
+    if unconfirmed_cap_applies(spot, source) and solid > UNCONFIRMED_MAX_STARS:
+        unconfirmed_from, solid = solid, UNCONFIRMED_MAX_STARS
+    unconfirmed_lost = 0 if unconfirmed_from is None else unconfirmed_from - solid
     zero_losses = {
         "energy": faded_energy,
         "wind": 0 if wind_speed is None else wind_alone,
         "tide": min(potential_before_energy, tide_pen),
         "local": local_extra_stars,
-        "cap": faded_cap + (wind_alone if wind_speed is None else 0),
+        "cap": faded_cap + (wind_alone if wind_speed is None else 0) + unconfirmed_lost,
     }
     local_rules_source = None
     if spot.get("local_rules"):
@@ -2510,7 +2536,7 @@ def rate(hour, spot, _long_sea=True):
         five_open=five_open, five_fails=five_fails if potential_before_energy >= 4 or potential >= 4 else None, five_lost=five_lost,
         wind_took_points=lost_wind > 0 or zero_losses["wind"] > 0,
         tide_level_line=tide_level_penalty(hour, spot, potential)[1] or local_tide_prefer_line(spot, local_rules_lines),
-        fjord_wind_block=fjord_wind_block, tide_lost_local=local_extra_stars,
+        fjord_wind_block=fjord_wind_block, tide_lost_local=local_extra_stars, unconfirmed_from=unconfirmed_from,
     )
 
     result = {
@@ -2534,6 +2560,9 @@ def rate(hour, spot, _long_sea=True):
         "surf_factor": round(surf_factor, 3),
         "transfer": spot.get("transfer", DEFAULT_TRANSFER),
         "uncertain": uncertain,
+        # S48 a: feltet finnes bare når taket for en ny spot uten observasjon tok poeng i timen (tallet er poengene
+        # før taket). Se unconfirmed_cap_applies(). Timen er ikke merket usikker av det.
+        **({"unconfirmed_cap_from": unconfirmed_from} if unconfirmed_from is not None else {}),
         "breakdown": breakdown,
         # Hvor stor andel av svellet ved direkte treff som når spoten akkurat
         # nå. Brukes til å justere selve høyden (for svell_ute), og vises i
