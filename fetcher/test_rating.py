@@ -2965,7 +2965,7 @@ print("42: S28 bokføringen - tidevannet får poenget når det er størst og ing
 
 # 43: S28 (Theodor 23.11.2026; feiljegeren 23.11.2026). Vindtallet i regnestykket rett under spotens egen grense: én
 # desimal, rundet ned, når avrundingen ellers ville vist grensa (7,5-7,99 m/s på Breivikeidet, 13,5-13,99 på Unstad).
-# Alle andre tall og spots som før. Samme regel som windMsText() i docs/js/app.js (test_spotside_browser.py).
+# Alle andre tall og spots som før. Samme regel som windMsText() i docs/js/app.js (spotside_felles.py, kjørt av test_spotside_mobil_browser.py og test_spotside_pc_browser.py).
 assert [wind_ms_text(v, 8.0) for v in (7.0, 7.49, 7.5, 7.95, 7.99, 7.999999, 8.0, 8.49, 12.6)] == ["7", "7", "7,5", "7,9", "7,9", "7,9", "8", "8", "13"]
 assert [wind_ms_text(v, 14.0) for v in (7.6, 13.49, 13.5, 13.99, 14.0, 14.6)] == ["8", "13", "13,5", "13,9", "14", "15"]
 assert [wind_ms_text(v) for v in (7.5, 7.99, 13.5, 13.99)] == ["8", "8", "14", "14"]

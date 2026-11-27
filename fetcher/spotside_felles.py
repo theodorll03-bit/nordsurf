@@ -1,4 +1,14 @@
-"""Nettlesertest for den nye strukturen (Theodor 14./15.10.2026, gren design/spotside):
+"""Felles kode for nettlesertestene av søk, Utforsk og spotsiden. Dette er IKKE en testfil: den kjøres av
+fetcher/test_spotside_mobil_browser.py (390x844) og fetcher/test_spotside_pc_browser.py (1440x900 + tilleggene),
+som hver har sin egen tidsgrense. Til 27.11.2026 var dette én fil, test_spotside_browser.py, som brukte 253-294 s av
+300 i CI og gikk over grensa på main. Alle påstandene står her, i samme rekkefølge som før (se STATUS.md 27.11.2026).
+
+Hvor nye sjekker skal inn: i løkka per bredde i kjor() (`for label, vp in bredder`), der de sto før. Det som står under
+`if mobile:` kjøres bare av mobil-fila, `if not mobile:` / `else:` bare av PC-fila, resten av begge. Det som står under
+`if tillegg:` etter løkka (svak vind, S28 «Om spotten», WebKit, tools/kontrast.py) kjøres én gang, av PC-fila. En helt
+ny, tung del som ikke hører til en bredde, bør få sin egen testfil med egen grense i stedet for å legges i `tillegg`.
+
+Nettlesertest for den nye strukturen (Theodor 14./15.10.2026, gren design/spotside):
 søk først, kartet som Utforsk, spotside med mye info. Åpner den faktiske docs/index.html
 i Chromium med den faste testfila fetcher/fixtures/forecast.json (ekte varsel 14.10.2026
 kl. 19Z) servert slik appen får den (data/oversikt.json og data/spots/<id>.json fra
@@ -41,9 +51,10 @@ korall bare fra 4 poeng, tapte poeng stiplet, og mørke, forbudte og tomme timer
 dagkolonner, etikettkolonnen i «time for time», musa over en time velger den, «Om spotten» med sikkerheten og
 minikartet med kystlinje.
 
-Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hele fila maks 5 minutter (hardkill),
-testserveren stoppes uansett utfall. Trenger: pip install playwright && playwright install chromium.
-Kjør: python fetcher/test_spotside_browser.py"""
+Tidsgrenser (CLAUDE.md): hvert Playwright-steg maks 15 s, hver av de to testfilene har sin egen harde grense
+(GRENSE_S i fila, hardkill fra _watchdog() her), testserveren stoppes uansett utfall (finally i kjor()).
+Trenger: pip install playwright && playwright install chromium.
+Kjør: python fetcher/test_spotside_mobil_browser.py og python fetcher/test_spotside_pc_browser.py"""
 import datetime as dt
 import http.server
 import json
@@ -52,10 +63,12 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from functools import partial
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,7 +77,6 @@ SHOT_DIR = DOCS / "design" / "spotside" / "etter"
 SHOT_DIR.mkdir(parents=True, exist_ok=True)
 ELEMENT_TIMEOUT_MS = 15_000
 SF_ID = "farstadsanden"   # spoten som får svak vind uten svell i alle timer, med ny retning hver time (S21 a, S24 a og S26)
-FILE_TIMEOUT_S = 300
 OSLO = ZoneInfo("Europe/Oslo")
 FIXTURE = ROOT / "fetcher" / "fixtures" / "forecast.json"
 FORECAST = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -95,11 +107,11 @@ FAV_IDS = ["grotfjord", "unstad", MISS_ID]
 assert MISS_ID not in KJORETID and all(i in KJORETID for i in FAV_IDS[:2])
 
 
-def _watchdog():
+def _watchdog(navn, grense_s):
     def _kill():
-        print(f"TIDSAVBRUDD: test_spotside_browser.py brukte over {FILE_TIMEOUT_S}s - avbrutt (se CLAUDE.md).", file=sys.stderr, flush=True)
+        print(f"TIDSAVBRUDD: {navn} brukte over {grense_s}s - avbrutt (se CLAUDE.md).", file=sys.stderr, flush=True)
         os._exit(124)
-    t = threading.Timer(FILE_TIMEOUT_S, _kill); t.daemon = True; t.start(); return t
+    t = threading.Timer(grense_s, _kill); t.daemon = True; t.start(); return t
 
 
 def serve():
@@ -111,6 +123,15 @@ def route(page):
     for pat in ("https://cdn.jsdelivr.net/**", "https://*.supabase.co/**", "https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**",
                     "https://cache.kartverket.no/**"):   # Kartverket blokkert: Utforsk viser OSM-reserven, likt lokalt og i CI
         page.route(pat, lambda r, req: r.abort())
+
+
+def vent_til(page, js, arg):
+    """Venter (høyst ELEMENT_TIMEOUT_MS) på noe som SKAL skje, før en fast venting. Under last var 200 ms for kort (Hjem tegnet på
+    nytt ved ny bredde, 27.11.2026). Skjer det ikke, sier påstanden etterpå hva som mangler, som før."""
+    try:
+        page.wait_for_function(js, arg=arg)
+    except PlaywrightTimeout:   # bare tidsavbruddet svelges: en feil i uttrykket selv skal stoppe testen
+        pass
 
 
 def r0(v):
@@ -326,8 +347,14 @@ AUDIT_JS = r"""() => {
 }"""
 
 
-def main():
-    watchdog = _watchdog()
+MOBIL, PC = ("mobil", (390, 844)), ("pc", (1440, 900))
+
+
+def kjor(fil_navn, grense_s, bredder, tillegg):
+    """Kjører delen av testen som fila `fil_navn` eier, med hard vaktpost på `grense_s` sekunder. `bredder`: MOBIL og/eller PC (hele
+    løkka per bredde). `tillegg`: delene etter løkka (svak vind, S28 «Om spotten», WebKit og tools/kontrast.py)."""
+    t_start = time.time()
+    watchdog = _watchdog(fil_navn, grense_s)
     srv, port = serve()
     import publish
     overview, details = publish.split(FORECAST)
@@ -357,7 +384,7 @@ def main():
             exe = os.environ.get("NORDSURF_CHROMIUM")
             nb_env = {**os.environ, "LANG": "nb_NO.UTF-8", "LANGUAGE": "nb_NO", "LC_ALL": "nb_NO.UTF-8"}
             browser = p.chromium.launch(args=["--lang=nb-NO", *testserver.WEBGL_ARGS], env=nb_env, **({"executable_path": exe} if exe else {}))
-            for label, vp in (("mobil", (390, 844)), ("pc", (1440, 900))):
+            for label, vp in bredder:
                 mobile = vp[0] < 1024
                 ctx = browser.new_context(viewport={"width": vp[0], "height": vp[1]}, color_scheme="dark", locale="nb-NO", timezone_id="Europe/Oslo",
                                           device_scale_factor=2 if mobile else 1, is_mobile=mobile, has_touch=mobile)
@@ -554,7 +581,9 @@ def main():
                         for lr in ("blown_out", "flat") for st in (0, 1) for wt in ("offshore", "side", "sideonshore", "onshore", None)
                         for ws in (None, 0, 5, 6.5, 7, 7.9, 8, 9, 11, 11.9, 12, 13.9, 14) for gu in (None, 5, 10.3, 11.4, 11.5, 12, 14, 14.4, 20) for cm in (None, 8, 14)
                         for sh in (None, 0, 0.29, 0.5, 0.79, 0.8) for zw, fw in ((0, 0), (1, 0), (0, 1)) if lr == "blown_out" or (wt == "side" and zw == fw == 0)]
-                js_wb = page.evaluate("(g) => g.map(h => [windBlamed(h), ratingWord(h)])", grid)
+                # rutenettet går som én JSON-streng begge veier: som objekter gjennom Playwright tok det 30 s per bredde (27.11.2026)
+                js_wb = json.loads(page.evaluate("(g) => JSON.stringify(JSON.parse(g).map(h => [windBlamed(h), ratingWord(h)]))", json.dumps(grid)))
+                assert len(js_wb) == len(grid) > 50_000, (len(js_wb), len(grid))
                 avvik = [(h, j) for h, j in zip(grid, js_wb) if j[0] != _pub_s26.wind_blamed(h)]
                 assert not avvik, f"windBlamed (app.js) og publish.wind_blamed ulike i {len(avvik)} av {len(grid)} timer, f.eks. {avvik[:3]}"
                 assert all(j[0] == (j[1] in (sf["ut"], sf["mye"])) for h, j in zip(grid, js_wb) if h["low_reason"] == "blown_out"), "windBlamed skal være sann nøyaktig når ordet skylder på vinden"
@@ -866,7 +895,7 @@ def main():
                     assert hjem_na()["y"] >= 140, f"Hjem er for kort til å prøve rullingen ({label})"
                     page.set_viewport_size({"width": vp[0], "height": vp[1] - 80}); page.wait_for_timeout(200)
                     st = hjem_na(); assert st["gammel"] and st["y"] >= 140, f"Hjem ble tegnet på nytt eller hoppet til toppen da bare høyden endret seg ({label}): {st}"
-                    page.set_viewport_size({"width": vp[0] + 10, "height": vp[1] - 80}); page.wait_for_timeout(200)
+                    page.set_viewport_size({"width": vp[0] + 10, "height": vp[1] - 80}); vent_til(page, "(hm) => !document.querySelector(hm + '[data-gammel]')", HM); page.wait_for_timeout(200)
                     st = hjem_na(); assert not st["gammel"] and st["y"] >= 140, f"Hjem skal tegnes på nytt ved ny bredde og bli stående ({label}): {st}"
                     page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(200)
                     page.evaluate("window.scrollTo(0, 0)")
@@ -1652,7 +1681,7 @@ def main():
                     page.evaluate("(um) => { document.querySelector(um).dataset.gammel = '1'; }", UM)
                     page.set_viewport_size({"width": vp[0] + 10, "height": vp[1] - 80}); page.wait_for_timeout(200)
                     assert u_gammel() and page.query_selector("#viewUtforsk:not([hidden]) :is(.mk, .klynge)"), f"Utforsk ble tegnet på nytt, eller kartet mistet spotene, ved ny størrelse ({label})"
-                    page.set_viewport_size({"width": 800 if not mobile else 1100, "height": vp[1]}); page.wait_for_timeout(300)
+                    page.set_viewport_size({"width": 800 if not mobile else 1100, "height": vp[1]}); vent_til(page, "(um) => !document.querySelector(um + '[data-gammel]')", UM); page.wait_for_timeout(300)
                     assert not u_gammel(), f"Utforsk skal tegnes på nytt når oppsettet byttes ved 1024 px ({label})"
                     page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_selector("#viewUtforsk:not([hidden]) :is(.mk, .klynge)"); page.wait_for_timeout(500)
                     # kartet står der brukeren la det ved ny time og Front.refresh() (innlogging, synk ferdig): før hoppet det tilbake til
@@ -2293,120 +2322,122 @@ def main():
                     ring(["#viewSpot .dagknapp.stor", "#viewSpot .fav-btn", "#viewSpot #loggHer", "#spotRegion"], "spotsiden")
                 print(f"designrevisjonen fase 2 ({label}): én knappefamilie og én fokusring, {'fire faner, «Fra Tromsø» til Innstillinger, regionfaner, seksjonsstreken i Søk, Logger og Innstillinger, dagvelgeren øverst' if mobile else 'ordmerket 28 px, hover og valgt dag med 3 px strek under'} - OK")
                 ctx.close()
-            # ---- S21 a, S24 a og S26 på skjermen: alle timene på én spot er svak vind uten svell og uten poengtap, og vinden dreier fra
-            # time til time (fralands, side, pålands, skrått pålands, 3 m/s med kast 5). Spotsiden sier «Flatt» for dagen og for timen,
-            # uten høydetall og uten setningen «Sterk vind ødelegger bølgene» (ui.js favSetning). Runde 2 (S26, dagens time): hver tredje
-            # time er 7,9 m/s pålands med kast 12 (teller som 9,1, ikke svak). Da heter hver dag med en slik lys time «Blåst ut», og
-            # dagens ord (dayBest fra publish.best_hour), timen dagen åpnes på (bestOfDay) og ordet i dagfanen (spanOfDay) er samme time. ----
-            for runde in ("svak", "dagsregel"):
-                fc_sf = json.loads(json.dumps(FORECAST))
-                for s in fc_sf["spots"]:
-                    if s["id"] == SF_ID:
-                        for i, h in enumerate(s["hours"]):
-                            h.update(stars=0, faded=0, faded_wind=0, faded_tide=0, low_reason="blown_out", wind_type=("offshore", "side", "onshore", "sideonshore")[i % 4], wind_speed=3.0, gust=5.0, surf_height=0.0, surf_height_sets=0.0, bw_height=1.0,
-                                     zero_losses={"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0})
-                            if runde == "dagsregel" and i % 3 == 2:
-                                h.update(wind_type="onshore", wind_speed=7.9, gust=12.0)
-                ov_sf, det_sf = publish.split(fc_sf)
-                ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo", device_scale_factor=2, is_mobile=True, has_touch=True)
+            if tillegg:
+                # ---- S21 a, S24 a og S26 på skjermen: alle timene på én spot er svak vind uten svell og uten poengtap, og vinden dreier fra
+                # time til time (fralands, side, pålands, skrått pålands, 3 m/s med kast 5). Spotsiden sier «Flatt» for dagen og for timen,
+                # uten høydetall og uten setningen «Sterk vind ødelegger bølgene» (ui.js favSetning). Runde 2 (S26, dagens time): hver tredje
+                # time er 7,9 m/s pålands med kast 12 (teller som 9,1, ikke svak). Da heter hver dag med en slik lys time «Blåst ut», og
+                # dagens ord (dayBest fra publish.best_hour), timen dagen åpnes på (bestOfDay) og ordet i dagfanen (spanOfDay) er samme time. ----
+                for runde in ("svak", "dagsregel"):
+                    fc_sf = json.loads(json.dumps(FORECAST))
+                    for s in fc_sf["spots"]:
+                        if s["id"] == SF_ID:
+                            for i, h in enumerate(s["hours"]):
+                                h.update(stars=0, faded=0, faded_wind=0, faded_tide=0, low_reason="blown_out", wind_type=("offshore", "side", "onshore", "sideonshore")[i % 4], wind_speed=3.0, gust=5.0, surf_height=0.0, surf_height_sets=0.0, bw_height=1.0,
+                                         zero_losses={"energy": 0, "wind": 0, "tide": 0, "local": 0, "cap": 0})
+                                if runde == "dagsregel" and i % 3 == 2:
+                                    h.update(wind_type="onshore", wind_speed=7.9, gust=12.0)
+                    ov_sf, det_sf = publish.split(fc_sf)
+                    ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale="nb-NO", timezone_id="Europe/Oslo", device_scale_factor=2, is_mobile=True, has_touch=True)
+                    page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
+                    page.on("pageerror", lambda e, r=runde: errors.append(f"svak vind ({r}): {e}"))
+                    route(page)
+                    def sf_route(rt, req, ov_sf=ov_sf, det_sf=det_sf):
+                        path = req.url.split("?")[0]
+                        if path.endswith("/data/oversikt.json"):
+                            return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_sf, ensure_ascii=False))
+                        rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_sf[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
+                    page.route("**/data/oversikt.json", sf_route)
+                    page.route("**/data/spots/*.json", sf_route)
+                    page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
+                    page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
+                    dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), grunn: (document.querySelector('#viewSpot .dom-grunn') || {}).textContent || null, setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
+                        vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
+                    # dag for dag: dagens time fra oversikten (publish.best_hour), timen dagen åpnes på og ordet i dagfanen
+                    dager = page.evaluate("""([det, ov]) => { const s = {...det, ...ov, hours: det.hours}, Hh = Front.helpers; SpotGraf.defaultDay(s, Hh.nowIdx(s), Hh);
+                        return SpotGraf.days(s).map(d => { const b = Hh.dayBest(s, d.key), i = SpotGraf.bestOfDay(s, d), lys = d.idxs.map(j => s.hours[j]).filter(h => Hh.usable(h) && Hh.known(h));
+                            return {key: d.key, b: b.h ? b.h.t : null, b_ord: b.h ? ratingWord(b.h) : null, vist: s.hours[i].t, vist_ord: ratingWord(s.hours[i]), fane: SpotGraf.spanOfDay(s, d).word,
+                                blaast: lys.some(h => windBlamed(h)), lys: lys.length}; }); }""", [det_sf[SF_ID], next(x for x in ov_sf["spots"] if x["id"] == SF_ID)])
+                    med_tall = [d for d in dager if d["b"] is not None]
+                    assert med_tall, dager
+                    for d in med_tall:
+                        assert d["b"] == d["vist"] and d["b_ord"] == d["vist_ord"] == d["fane"], f"{runde}: dagens ord, timen som vises og dagfanen skal være samme time: {d}"
+                        assert d["b_ord"] == ("Blåst ut" if d["blaast"] else "Flatt"), f"{runde}: {d}"
+                    if runde == "svak":
+                        assert not any(d["blaast"] for d in dager), dager
+                        assert dom["ord"] == "Flatt" and dom["setn"] is None and dom["vindu"] is None, f"dagens beste time i svak vind uten svell skal hete «Flatt» uten setning om vinden: {dom['ord']!r}, {dom['setn']!r}, {dom['vindu']!r}"
+                        assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak vind uten svell, uansett retning"
+                    else:
+                        assert sum(d["blaast"] for d in med_tall) >= 2, f"testdataene skal ha minst to dager med en blåst lys time: {dager}"
+                        # fase 3 punkt 5: ordet etter tallet er karakteren, årsaken «Blåst ut» står på egen linje
+                        assert dom["ord"] == "Ikke surfbart" and (dom["grunn"] or "").lower() == "blåst ut", f"dagens årsak skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}, {dom['grunn']!r}"
+                    ctx.close()
+                # ---- S28 på skjermen (PC, «Om spotten»): en Breivikeidet laget av Lenangsøyra-timene i fiksturen med metaen fra
+                # spots.json (local_rules.tide_level) sier «Best på lavt vann». Grøtfjord (ingen regel) og Farstadsanden (tide_prefer)
+                # sier det samme som før. ----
+                fc_b = json.loads(json.dumps(FORECAST))
+                bre_cfg = next(x for x in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"] if x["id"] == "breivikeidet")
+                bre_fc = json.loads(json.dumps(next(x for x in fc_b["spots"] if x["id"] == "lenangsoyra")))
+                bre_fc.update({k: bre_cfg[k] for k in ("id", "name", "facing", "swell_window", "offshore_wind", "local_rules") if k in bre_cfg})
+                fc_b["spots"].append(bre_fc)
+                ov_b, det_b = publish.split(fc_b)
+                assert det_b["breivikeidet"]["tide_regel"] is None and det_b["breivikeidet"]["local_rules"]["tide_level"]
+                ctx = browser.new_context(viewport={"width": 1440, "height": 900}, locale="nb-NO", timezone_id="Europe/Oslo", color_scheme="light")
                 page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
-                page.on("pageerror", lambda e, r=runde: errors.append(f"svak vind ({r}): {e}"))
+                page.on("pageerror", lambda e: errors.append(f"S28 Om spotten: {e}"))
                 route(page)
-                def sf_route(rt, req, ov_sf=ov_sf, det_sf=det_sf):
+                def b_route(rt, req, ov_b=ov_b, det_b=det_b):
                     path = req.url.split("?")[0]
                     if path.endswith("/data/oversikt.json"):
-                        return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_sf, ensure_ascii=False))
-                    rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_sf[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
-                page.route("**/data/oversikt.json", sf_route)
-                page.route("**/data/spots/*.json", sf_route)
-                page.goto(f"http://127.0.0.1:{port}/index.html#spot={SF_ID}")
-                page.wait_for_selector("#viewSpot:not([hidden]) .dom"); page.wait_for_selector("#viewSpot #tstripe .tk")
-                dom = page.evaluate("""() => ({ord: document.querySelector('#viewSpot .dom-ord b').textContent.trim(), grunn: (document.querySelector('#viewSpot .dom-grunn') || {}).textContent || null, setn: (document.querySelector('#viewSpot .dom-setn') || {}).textContent || null,
-                    vindu: (document.querySelector('#viewSpot .dom .t-vindu') || {}).textContent || null, tekst: document.querySelector('#viewSpot').innerText})""")
-                # dag for dag: dagens time fra oversikten (publish.best_hour), timen dagen åpnes på og ordet i dagfanen
-                dager = page.evaluate("""([det, ov]) => { const s = {...det, ...ov, hours: det.hours}, Hh = Front.helpers; SpotGraf.defaultDay(s, Hh.nowIdx(s), Hh);
-                    return SpotGraf.days(s).map(d => { const b = Hh.dayBest(s, d.key), i = SpotGraf.bestOfDay(s, d), lys = d.idxs.map(j => s.hours[j]).filter(h => Hh.usable(h) && Hh.known(h));
-                        return {key: d.key, b: b.h ? b.h.t : null, b_ord: b.h ? ratingWord(b.h) : null, vist: s.hours[i].t, vist_ord: ratingWord(s.hours[i]), fane: SpotGraf.spanOfDay(s, d).word,
-                            blaast: lys.some(h => windBlamed(h)), lys: lys.length}; }); }""", [det_sf[SF_ID], next(x for x in ov_sf["spots"] if x["id"] == SF_ID)])
-                med_tall = [d for d in dager if d["b"] is not None]
-                assert med_tall, dager
-                for d in med_tall:
-                    assert d["b"] == d["vist"] and d["b_ord"] == d["vist_ord"] == d["fane"], f"{runde}: dagens ord, timen som vises og dagfanen skal være samme time: {d}"
-                    assert d["b_ord"] == ("Blåst ut" if d["blaast"] else "Flatt"), f"{runde}: {d}"
-                if runde == "svak":
-                    assert not any(d["blaast"] for d in dager), dager
-                    assert dom["ord"] == "Flatt" and dom["setn"] is None and dom["vindu"] is None, f"dagens beste time i svak vind uten svell skal hete «Flatt» uten setning om vinden: {dom['ord']!r}, {dom['setn']!r}, {dom['vindu']!r}"
-                    assert "Sterk vind" not in dom["tekst"] and "Blåst ut" not in dom["tekst"] and "BLÅST UT" not in dom["tekst"], "spotsiden skal ikke skylde på vinden når alle timene er svak vind uten svell, uansett retning"
-                else:
-                    assert sum(d["blaast"] for d in med_tall) >= 2, f"testdataene skal ha minst to dager med en blåst lys time: {dager}"
-                    # fase 3 punkt 5: ordet etter tallet er karakteren, årsaken «Blåst ut» står på egen linje
-                    assert dom["ord"] == "Ikke surfbart" and (dom["grunn"] or "").lower() == "blåst ut", f"dagens årsak skal være «Blåst ut» når en like god lys time samme dag er blåst ut (S26): {dom['ord']!r}, {dom['grunn']!r}"
+                        return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_b, ensure_ascii=False))
+                    rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_b[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
+                page.route("**/data/oversikt.json", b_route)
+                page.route("**/data/spots/*.json", b_route)
+                # Det brukeren faktisk ser (feiljegeren V1, 24.11.2026): ordene står ett sted på spotsiden, i «Om spotten» (#spOm) på 1440, for
+                # Breivikeidet og ikke for Unstad. Tidevannskortet og forklaringen tegnes ikke på spotsiden nå (designfase 2), så testene
+                # over som kaller funksjonene direkte, sier ikke at ordene synes. Skjermleseren får setningen i tidevannskurvens etikett.
+                om_b, sett_b, kurve_b = {}, {}, {}
+                for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
+                    page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}")
+                    page.wait_for_selector("#viewSpot:not([hidden]) #spOm .spw-om")
+                    om_b[sid_] = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))").get("Tidevann")
+                    sett_b[sid_] = page.evaluate("[document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1, document.querySelector('#spOm').innerText.split('Best på lavt vann').length - 1]")
+                    page.wait_for_selector("#tstripe .tsvg")
+                    kurve_b[sid_] = page.get_attribute("#tstripe .tsvg", "aria-label")
+                assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann, men ikke under ca. 1,6 m", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
+                assert sett_b["breivikeidet"] == [1, 1], f"«Best på lavt vann» skal stå ett sted på Breivikeidets spotside på 1440, i «Om spotten»: {sett_b}"
+                assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
+                assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann, men ikke under ca. 1,6 m."), kurve_b["breivikeidet"]
+                assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
+                # på 390 (S33 a, plassen kom med designrevisjonen fase 2): ordene står ett sted, under raden TIDEVANN i KL.-blokka
+                # (Tidevann.prefKort() leser Tidevann.prefTekst()), på én linje og innenfor skjermen. De andre spotene har sin egen
+                # setning eller ingen, aldri Breivikeidets.
+                page.set_viewport_size({"width": 390, "height": 844})
+                mob_b = {}
+                for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
+                    page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}"); page.reload()
+                    page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
+                    mob_b[sid_] = page.evaluate("""() => { const p = [...document.querySelectorAll('#viewSpot .maal .mu-pref')], b = p[0] ? p[0].getBoundingClientRect() : null;
+                        return {pref: p.map(e => e.textContent.trim()), antall: document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1,
+                                linjer: b ? Math.round(b.height / parseFloat(getComputedStyle(p[0]).lineHeight)) : 0, hoyre: b ? Math.round(b.right) : 0, bredde: innerWidth}; }""")
+                assert mob_b["breivikeidet"]["pref"] == ["Best på lavt vann, over 1,6 m"] and mob_b["breivikeidet"]["antall"] == 1, f"«Best på lavt vann» skal stå ett sted på mobil, under raden TIDEVANN: {mob_b['breivikeidet']}"
+                assert mob_b["breivikeidet"]["linjer"] == 1 and mob_b["breivikeidet"]["hoyre"] <= mob_b["breivikeidet"]["bredde"] - 16, f"«Best på lavt vann» skal stå på én linje innenfor skjermen: {mob_b['breivikeidet']}"
+                # (Unstad har ingen tidevannsregel i testfila fra 14.10.2026: ingen linje der. Regelen kom 10.11.2026.)
+                assert mob_b["grotfjord"]["pref"] == [] and mob_b["farstadsanden"]["pref"] == ["Best på lav til middels vannstand"] and mob_b["unstad"]["pref"] in ([], ["Best på lav til middels vannstand"]), mob_b
+                assert mob_b["grotfjord"]["antall"] == mob_b["farstadsanden"]["antall"] == mob_b["unstad"]["antall"] == 0, f"«Best på lavt vann» står bare for Breivikeidet: {mob_b}"
+                page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload(); page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
+                assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann, men ikke under ca. 1,6 m.")
                 ctx.close()
-            # ---- S28 på skjermen (PC, «Om spotten»): en Breivikeidet laget av Lenangsøyra-timene i fiksturen med metaen fra
-            # spots.json (local_rules.tide_level) sier «Best på lavt vann». Grøtfjord (ingen regel) og Farstadsanden (tide_prefer)
-            # sier det samme som før. ----
-            fc_b = json.loads(json.dumps(FORECAST))
-            bre_cfg = next(x for x in json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))["spots"] if x["id"] == "breivikeidet")
-            bre_fc = json.loads(json.dumps(next(x for x in fc_b["spots"] if x["id"] == "lenangsoyra")))
-            bre_fc.update({k: bre_cfg[k] for k in ("id", "name", "facing", "swell_window", "offshore_wind", "local_rules") if k in bre_cfg})
-            fc_b["spots"].append(bre_fc)
-            ov_b, det_b = publish.split(fc_b)
-            assert det_b["breivikeidet"]["tide_regel"] is None and det_b["breivikeidet"]["local_rules"]["tide_level"]
-            ctx = browser.new_context(viewport={"width": 1440, "height": 900}, locale="nb-NO", timezone_id="Europe/Oslo", color_scheme="light")
-            page = ctx.new_page(); page.set_default_timeout(ELEMENT_TIMEOUT_MS); page.clock.set_fixed_time(T0)
-            page.on("pageerror", lambda e: errors.append(f"S28 Om spotten: {e}"))
-            route(page)
-            def b_route(rt, req, ov_b=ov_b, det_b=det_b):
-                path = req.url.split("?")[0]
-                if path.endswith("/data/oversikt.json"):
-                    return rt.fulfill(status=200, content_type="application/json", body=json.dumps(ov_b, ensure_ascii=False))
-                rt.fulfill(status=200, content_type="application/json", body=json.dumps(det_b[path.rsplit("/", 1)[-1][:-5]], ensure_ascii=False))
-            page.route("**/data/oversikt.json", b_route)
-            page.route("**/data/spots/*.json", b_route)
-            # Det brukeren faktisk ser (feiljegeren V1, 24.11.2026): ordene står ett sted på spotsiden, i «Om spotten» (#spOm) på 1440, for
-            # Breivikeidet og ikke for Unstad. Tidevannskortet og forklaringen tegnes ikke på spotsiden nå (designfase 2), så testene
-            # over som kaller funksjonene direkte, sier ikke at ordene synes. Skjermleseren får setningen i tidevannskurvens etikett.
-            om_b, sett_b, kurve_b = {}, {}, {}
-            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
-                page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}")
-                page.wait_for_selector("#viewSpot:not([hidden]) #spOm .spw-om")
-                om_b[sid_] = page.evaluate("Object.fromEntries([...document.querySelectorAll('#spOm .spw-om > div')].map(d => [d.querySelector('dt').textContent.trim(), d.querySelector('dd').textContent.trim()]))").get("Tidevann")
-                sett_b[sid_] = page.evaluate("[document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1, document.querySelector('#spOm').innerText.split('Best på lavt vann').length - 1]")
-                page.wait_for_selector("#tstripe .tsvg")
-                kurve_b[sid_] = page.get_attribute("#tstripe .tsvg", "aria-label")
-            assert {k: om_b[k] for k in ("breivikeidet", "grotfjord", "farstadsanden")} == {"breivikeidet": "Best på lavt vann, men ikke under ca. 1,6 m", "grotfjord": "Spoten tåler alt tidevann", "farstadsanden": "Farstadsanden er best på lav til middels vannstand"}, om_b
-            assert sett_b["breivikeidet"] == [1, 1], f"«Best på lavt vann» skal stå ett sted på Breivikeidets spotside på 1440, i «Om spotten»: {sett_b}"
-            assert sett_b["unstad"] == sett_b["grotfjord"] == sett_b["farstadsanden"] == [0, 0] and "Best på lavt vann" not in (om_b["unstad"] or ""), f"«Best på lavt vann» står bare for Breivikeidet: {sett_b} {om_b}"
-            assert kurve_b["breivikeidet"].startswith("Tidevann: ") and kurve_b["breivikeidet"].endswith(" Best på lavt vann, men ikke under ca. 1,6 m."), kurve_b["breivikeidet"]
-            assert "Best på lavt vann" not in kurve_b["unstad"] + kurve_b["grotfjord"] + kurve_b["farstadsanden"] and kurve_b["farstadsanden"].endswith(" Farstadsanden er best på lav til middels vannstand."), kurve_b
-            # på 390 (S33 a, plassen kom med designrevisjonen fase 2): ordene står ett sted, under raden TIDEVANN i KL.-blokka
-            # (Tidevann.prefKort() leser Tidevann.prefTekst()), på én linje og innenfor skjermen. De andre spotene har sin egen
-            # setning eller ingen, aldri Breivikeidets.
-            page.set_viewport_size({"width": 390, "height": 844})
-            mob_b = {}
-            for sid_ in ("breivikeidet", "grotfjord", "farstadsanden", "unstad"):
-                page.goto(f"http://127.0.0.1:{port}/index.html#spot={sid_}"); page.reload()
-                page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
-                mob_b[sid_] = page.evaluate("""() => { const p = [...document.querySelectorAll('#viewSpot .maal .mu-pref')], b = p[0] ? p[0].getBoundingClientRect() : null;
-                    return {pref: p.map(e => e.textContent.trim()), antall: document.querySelector('#viewSpot').innerText.split('Best på lavt vann').length - 1,
-                            linjer: b ? Math.round(b.height / parseFloat(getComputedStyle(p[0]).lineHeight)) : 0, hoyre: b ? Math.round(b.right) : 0, bredde: innerWidth}; }""")
-            assert mob_b["breivikeidet"]["pref"] == ["Best på lavt vann, over 1,6 m"] and mob_b["breivikeidet"]["antall"] == 1, f"«Best på lavt vann» skal stå ett sted på mobil, under raden TIDEVANN: {mob_b['breivikeidet']}"
-            assert mob_b["breivikeidet"]["linjer"] == 1 and mob_b["breivikeidet"]["hoyre"] <= mob_b["breivikeidet"]["bredde"] - 16, f"«Best på lavt vann» skal stå på én linje innenfor skjermen: {mob_b['breivikeidet']}"
-            # (Unstad har ingen tidevannsregel i testfila fra 14.10.2026: ingen linje der. Regelen kom 10.11.2026.)
-            assert mob_b["grotfjord"]["pref"] == [] and mob_b["farstadsanden"]["pref"] == ["Best på lav til middels vannstand"] and mob_b["unstad"]["pref"] in ([], ["Best på lav til middels vannstand"]), mob_b
-            assert mob_b["grotfjord"]["antall"] == mob_b["farstadsanden"]["antall"] == mob_b["unstad"]["antall"] == 0, f"«Best på lavt vann» står bare for Breivikeidet: {mob_b}"
-            page.goto(f"http://127.0.0.1:{port}/index.html#spot=breivikeidet"); page.reload(); page.wait_for_selector("#viewSpot:not([hidden]) #tstripe .tsvg")
-            assert page.get_attribute("#tstripe .tsvg", "aria-label").endswith(" Best på lavt vann, men ikke under ca. 1,6 m.")
-            ctx.close()
             browser.close()
             # ---- Designrevisjonen fase 2, runde 2: skjemafeltene i WebKit (Safari). Nedtrekkslista var 23 px høy der med
             # nettleserens egen form (feiljegeren 24.11.2026). WebKit er ikke installert i CI (bare Chromium): da hoppes delen
             # over med en linje i utskriften, og formen er uansett låst i Chromium-delen over (appearance: none, 44 px).
-            try:
-                wk = p.webkit.launch()
-            except Exception as e:   # noqa: BLE001
-                wk = None
-                print(f"fase 2 runde 2: WebKit er ikke installert her ({str(e).splitlines()[0][:80]}) - WebKit-delen er hoppet over")
+            wk = None
+            if tillegg:
+                try:
+                    wk = p.webkit.launch()
+                except Exception as e:   # noqa: BLE001
+                    print(f"fase 2 runde 2: WebKit er ikke installert her ({str(e).splitlines()[0][:80]}) - WebKit-delen er hoppet over")
             if wk:
                 try:
                     ctx = wk.new_context(viewport={"width": 390, "height": 663}, has_touch=True, locale="nb-NO", timezone_id="Europe/Oslo")
@@ -2427,11 +2458,10 @@ def main():
         srv.shutdown()
         watchdog.cancel()
     assert not errors, "JavaScript-feil: " + "\n".join(errors[:10])
-    # ---- 15. kontrast ----
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "kontrast.py"), "-q"], capture_output=True, text=True, timeout=60)
-    assert r.returncode == 0, "kontrast: " + r.stdout[-800:] + r.stderr[-300:]
-    print(f"OK: test_spotside_browser ({len(list(SHOT_DIR.glob('*.png')))} skjermbilder i {SHOT_DIR.relative_to(ROOT)})")
-
-
-if __name__ == "__main__":
-    main()
+    if tillegg:
+        # ---- 15. kontrast ----
+        r = subprocess.run([sys.executable, str(ROOT / "tools" / "kontrast.py"), "-q"], capture_output=True, text=True, timeout=60)
+        assert r.returncode == 0, "kontrast: " + r.stdout[-800:] + r.stderr[-300:]
+    hvem = [b[0] for b in bredder]
+    egne = [f for f in SHOT_DIR.glob("*.png") if f.stat().st_mtime >= t_start - 1 and any(f.stem.split("_")[-2] == b for b in hvem)]
+    print(f"OK: {fil_navn[:-3]} ({len(egne)} skjermbilder i {SHOT_DIR.relative_to(ROOT)}, {time.time() - t_start:.0f} s av {grense_s})")
