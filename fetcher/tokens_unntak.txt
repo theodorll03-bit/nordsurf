@@ -1,0 +1,266 @@
+# Dagens unntak fra reglene i test_tokens.py (designfase 4, PR 1, 25.11.2026): slag, fil, selektor, egenskap, verdi, med tabulator mellom.
+# Lista kan bare krympe. Tas en verdi bort: ta ut linja og senk MAKS i test_tokens.py (python3 fetcher/test_tokens.py --skriv skriver lista på nytt).
+# PR 2 gir verdiene et trinn fra skalaen eller et navngitt unntak i :root (docs/css/ui.css).
+avstand	app.css	#detailPane	padding	var(--s3) var(--s5) 60px
+avstand	app.css	.accrow	gap	6px
+avstand	app.css	.accrow .acc	padding	3px var(--s2)
+avstand	app.css	.banner	margin	12px 0 0
+avstand	app.css	.banner	padding	12px 14px
+avstand	app.css	.bd-note	margin	0 0 12px
+avstand	app.css	.calib .sugg	margin	6px 0 0
+avstand	app.css	.calib .sugg	padding	var(--s2) 10px
+avstand	app.css	.ex-h	margin	18px 0 6px
+avstand	app.css	.ex-p	margin	10px 0 0
+avstand	app.css	.ex-row	gap	12px
+avstand	app.css	.ex-rows	padding	var(--s1) 12px
+avstand	app.css	.expo-legend	gap	14px
+avstand	app.css	.expo-legend	margin-top	6px
+avstand	app.css	.expo-legend span	gap	5px
+avstand	app.css	.field	margin	18px 0 0
+avstand	app.css	.field .hint	margin	6px 0 0
+avstand	app.css	.form input:not([type=checkbox]):not([type=radio])	padding	0 2px
+avstand	app.css	.list	gap	10px
+avstand	app.css	.list	margin	14px 0 0
+avstand	app.css	.logrow	gap	2px 12px
+avstand	app.css	.logrow	padding	12px 0
+avstand	app.css	.photo-row	gap	10px
+avstand	app.css	.row-btns	gap	10px
+avstand	app.css	.row-btns	margin-top	12px
+avstand	app.css	.sheet	padding	var(--s2) var(--s3) calc(20px + env(safe-area-inset-bottom,0px))
+avstand	app.css	.starpick	gap	6px
+avstand	app.css	.starpick button	gap	2px
+avstand	app.css	.toast	padding	10px 18px
+avstand	app.css	.top .sub	margin-top	6px
+avstand	app.css	select	padding-right	28px
+avstand	app.css	select,input[type="datetime-local"]	padding	0 2px
+avstand	ui.css	#viewUtforsk	padding	var(--s4) 32px 60px
+avstand	ui.css	.back	padding	0 12px 0 0
+avstand	ui.css	.bunn p	margin	12px 0 0
+avstand	ui.css	.bunn ul	gap	6px
+avstand	ui.css	.chip,.chips button	gap	6px
+avstand	ui.css	.chip,.chips button	padding	0 14px
+avstand	ui.css	.chips	padding	2px 0
+avstand	ui.css	.dagknapp	padding	var(--s1) var(--s1) 6px
+avstand	ui.css	.dagknapp.stor	gap	6px
+avstand	ui.css	.dagknapp.stor	padding	14px 0 var(--s2)
+avstand	ui.css	.dagvelger	gap	2px
+avstand	ui.css	.des	margin	0 -.2em
+avstand	ui.css	.dk-v	gap	2px var(--s2)
+avstand	ui.css	.dk-v	margin-top	6px
+avstand	ui.css	.dom	gap	12px
+avstand	ui.css	.dom	margin-top	20px
+avstand	ui.css	.dom-h	gap	3px
+avstand	ui.css	.dom-ord	gap	3px
+avstand	ui.css	.dom-setn	margin	20px 0 0
+avstand	ui.css	.dom-v	gap	12px
+avstand	ui.css	.etikett.tapt	margin-top	6px
+avstand	ui.css	.fakta-linje	gap	var(--s1) 14px
+avstand	ui.css	.fakta-linje	margin	14px 0 0
+avstand	ui.css	.faner button,.fs-faner button	gap	6px
+avstand	ui.css	.favlinje .etikett .ledd	margin-left	1.2em
+avstand	ui.css	.favlinje .etikett .meta	margin-left	-1.2em
+avstand	ui.css	.favlinje .etikett .sk	margin-left	-1.2em
+avstand	ui.css	.favlinje .setn	margin-top	6px
+avstand	ui.css	.favlinje .uke	margin-top	12px
+avstand	ui.css	.favlinje > .ghost	margin-top	12px
+avstand	ui.css	.feil	gap	10px
+avstand	ui.css	.forklar	margin	-14px 0
+avstand	ui.css	.forklar	padding	14px 0
+avstand	ui.css	.fs-best	padding	10px 0
+avstand	ui.css	.fs-best.medring	padding	10px 22px
+avstand	ui.css	.fs-helt + .kredit.linje	margin-top	36px
+avstand	ui.css	.fs-knapper	gap	12px
+avstand	ui.css	.fs-matrise tbody th	padding	0 12px 0 0
+avstand	ui.css	.fs-plate	padding	20px 32px 0 0
+avstand	ui.css	.fs-rad	gap	var(--s2) 20px
+avstand	ui.css	.fs-stripe	gap	5px
+avstand	ui.css	.fs-tabell .fs-dom .ord	gap	2px
+avstand	ui.css	.fs-tabell .fs-dom .t-listetall	margin-right	10px
+avstand	ui.css	.fs-tabell :is(.fs-dom,.fs-sv)	padding-right	calc(var(--s3) - .25rem)
+avstand	ui.css	.fs-tabell td	padding	var(--s3) 12px var(--s3) 0
+avstand	ui.css	.fs-tabell th,.fs-matrise thead th	padding	0 12px 10px 0
+avstand	ui.css	.fs-tabell thead th	padding-top	10px
+avstand	ui.css	.fs-tegn	gap	6px 18px
+avstand	ui.css	.fs-tegn span	gap	6px
+avstand	ui.css	.hv-tab > div	gap	2px 12px
+avstand	ui.css	.hv-tab > div	padding	10px 0
+avstand	ui.css	.hv-tab > div	padding	12px 0
+avstand	ui.css	.hv-tab dt	padding-top	3px
+avstand	ui.css	.hvorfor	margin-top	18px
+avstand	ui.css	.hvorfor summary	gap	10px
+avstand	ui.css	.ik	margin-right	6px
+avstand	ui.css	.kartkilde	padding	3px var(--s2)
+avstand	ui.css	.kartkort	margin-top	12px
+avstand	ui.css	.kartkort	padding	12.75px var(--s3) var(--s3)
+avstand	ui.css	.kartkort .fakta	margin-top	10px
+avstand	ui.css	.kartkort .fakta b	margin-top	2px
+avstand	ui.css	.kartkort .kk-vurd	gap	var(--s1) 10px
+avstand	ui.css	.kartkort .primary	margin-top	12px
+avstand	ui.css	.kartkort .topp	gap	10px
+avstand	ui.css	.kartkort .topp	padding-right	44px
+avstand	ui.css	.kilder	margin	18px 0 0
+avstand	ui.css	.kilder.sikk + .kilder	margin-top	14px
+avstand	ui.css	.knapp1,.knapp2,.primary,.ghost	padding	0 18px
+avstand	ui.css	.kredit	margin	6px 0 0
+avstand	ui.css	.kredit.linje + .dom	margin-top	6px
+avstand	ui.css	.kredit.liten	margin-top	10px
+avstand	ui.css	.logg-her	margin-top	18px
+avstand	ui.css	.maal	column-gap	12px
+avstand	ui.css	.maal .mv .enhet	margin-left	3px
+avstand	ui.css	.maal:not(:last-child)	padding-bottom	10px
+avstand	ui.css	.mk-pill	gap	0.6em
+avstand	ui.css	.mk-pill	padding	0 5px
+avstand	ui.css	.pagebar	margin	0 0 6px
+avstand	ui.css	.sek,.sek-spot	padding-top	12.75px
+avstand	ui.css	.skip	padding	var(--s2) 12px
+avstand	ui.css	.skive-forkl	gap	14px
+avstand	ui.css	.skive-forkl > span	gap	3px
+avstand	ui.css	.skive-rad	gap	18px
+avstand	ui.css	.sok-drop	padding	0 12px 12px
+avstand	ui.css	.sok-field	gap	10px
+avstand	ui.css	.sok-field	padding	0 2px
+avstand	ui.css	.soktopp	padding	calc(var(--s2) + env(safe-area-inset-top,0px)) 0 10px
+avstand	ui.css	.sp-hode	margin	0 calc(-1 * var(--s3)) 34px
+avstand	ui.css	.sp-inn	padding-top	10px
+avstand	ui.css	.sp-inn #spOver .maal.lang > .etikett	padding-top	9px
+avstand	ui.css	.sp-inn .kilder	margin-top	32px
+avstand	ui.css	.sp-inn .kilder.sikk	margin-top	18px
+avstand	ui.css	.sp-inn > .dagvelger	padding-top	2px
+avstand	ui.css	.sp-navn	padding	12px var(--s3) 0
+avstand	ui.css	.sp-tilbake > span	padding	0 12px 0 var(--s2)
+avstand	ui.css	.sp-tilbakena	margin-top	12px
+avstand	ui.css	.sp-tilbakena .tilbakena	padding	0 18px
+avstand	ui.css	.spot-topp	gap	6px
+avstand	ui.css	.spot-topp	padding	calc(6px + env(safe-area-inset-top,0px)) 0 var(--s2)
+avstand	ui.css	.spot-topp	padding-left	10px
+avstand	ui.css	.spot-topp	padding-right	12px
+avstand	ui.css	.spw-fig figcaption	margin-top	12px
+avstand	ui.css	.spw-inn	padding	0 32px
+avstand	ui.css	.spw-knapper	gap	12px
+avstand	ui.css	.spw-meta span + span::before	margin	0 .6em
+avstand	ui.css	.spw-om div	gap	12px
+avstand	ui.css	.spw-om div	padding	12px 0
+avstand	ui.css	.spw-om dt	padding-top	2px
+avstand	ui.css	.spw-reg	margin	-12px 0 calc(-1 * var(--s1))
+avstand	ui.css	.spw-time .svell	margin-top	12px
+avstand	ui.css	.srad	gap	12px
+avstand	ui.css	.srad .nm small	margin-top	2px
+avstand	ui.css	.svell	margin-top	18px
+avstand	ui.css	.svell .t-svell	margin-top	6px
+avstand	ui.css	.tabs a	gap	2px
+avstand	ui.css	.tabs a span	padding	0 1px 3px
+avstand	ui.css	.tabs a:not([aria-current="page"]):hover span	padding-bottom	5px
+avstand	ui.css	.temaknapp	padding	0 14px
+avstand	ui.css	.tgrunn .tapt	gap	5px
+avstand	ui.css	.tide .k	margin-bottom	2px
+avstand	ui.css	.tom p	margin	6px 0 var(--s3)
+avstand	ui.css	.topbar	gap	0 32px
+avstand	ui.css	.topnav	gap	28px
+avstand	ui.css	.topnav a	padding	0 2px
+avstand	ui.css	.tstripe	margin-top	14px
+avstand	ui.css	.tstripe .segs	gap	2px
+avstand	ui.css	.tstripe .segs	margin	5px 15% 0
+avstand	ui.css	.tstripe .srf	margin-top	6px
+avstand	ui.css	.tstripe.bred .srf	margin-top	10px
+avstand	ui.css	.tstripe.med-ideal:not(.bred)	margin-top	2rem
+avstand	ui.css	.tstripe.med-ideal:not(.bred) .tflate	margin-right	2.75rem
+avstand	ui.css	.uke	gap	2px
+avstand	ui.css	.uke > :nth-child(7n+4)	margin-left	12px
+avstand	ui.css	.vindlag	margin	-1000px 0 0 -1000px
+js	app.js	style	padding	14px 0
+js	app.js	style	padding	14px 0
+js	app.js	style	padding	14px 0
+js	app.js	style	padding	14px 0
+skrift	app.css	.bd-note	font-size	14px
+skrift	app.css	.form input:not([type=checkbox]):not([type=radio])	font-size	1rem
+skrift	app.css	.starpick button	font-size	12px
+skrift	app.css	.starpick button b	font-size	20px
+skrift	app.css	select	font-size	1rem
+skrift	ui.css	.bunn ul	font-size	.875rem
+skrift	ui.css	.dk-sub	font-size	.9375rem
+skrift	ui.css	.dk-tall	font-size	3rem
+skrift	ui.css	.dom-ord b	font-size	.8125rem
+skrift	ui.css	.dom-setn	font-size	1.125rem
+skrift	ui.css	.favlinje .setn	font-size	1rem
+skrift	ui.css	.favlinje .uke b	font-size	min(0.75rem, calc(var(--uw) * .5))
+skrift	ui.css	.favlinje .uke i	font-size	min(1.1875rem, calc(var(--uw) * .79))
+skrift	ui.css	.fs-best	font-size	1.75rem
+skrift	ui.css	.fs-fakta	font-size	1.125rem
+skrift	ui.css	.fs-matrise .mx	font-size	1.125rem
+skrift	ui.css	.fs-matrise .mx.hoy	font-size	3rem
+skrift	ui.css	.fs-matrise .mx.tre	font-size	1.875rem
+skrift	ui.css	.fs-matrise tbody th	font-size	.875rem
+skrift	ui.css	.fs-navn	font-size	min(7.5rem, calc((100vw - 64px) * .6 / (var(--n, 8) * .66)))
+skrift	ui.css	.fs-ord	font-size	.8125rem
+skrift	ui.css	.fs-tabell .fs-bst	font-size	1rem
+skrift	ui.css	.fs-tabell .fs-nr	font-size	.875rem
+skrift	ui.css	.fs-tall	font-size	4.75rem
+skrift	ui.css	.h1	font-size	1.875rem
+skrift	ui.css	.hjem-merk	font-size	1rem
+skrift	ui.css	.hjemkart-kilde	font-size	0.6875rem
+skrift	ui.css	.hk-lapp	font-size	12px
+skrift	ui.css	.hv-tab .hel dt	font-size	1rem
+skrift	ui.css	.hv-tab dd	font-size	1rem
+skrift	ui.css	.kartkilde	font-size	0.75rem
+skrift	ui.css	.klynge .ring	font-size	0.75rem
+skrift	ui.css	.kredit	font-size	.6875rem
+skrift	ui.css	.maal .mu	font-size	1rem
+skrift	ui.css	.maal .mu-pref	font-size	1rem
+skrift	ui.css	.maal .mv	font-size	1.375rem
+skrift	ui.css	.maal .mv .enhet	font-size	.8125rem
+skrift	ui.css	.maal .mv .ordv	font-size	.8125rem
+skrift	ui.css	.minikart .komp text	font-size	17px
+skrift	ui.css	.mk-pill	font-size	0.75rem
+skrift	ui.css	.skive .hr text	font-size	12px
+skrift	ui.css	.skive-forkl .v	font-size	1rem
+skrift	ui.css	.sok-field input	font-size	1.0625rem
+skrift	ui.css	.sp-inn #spOver .maal .mu,.sp-inn #spOver .maal .mu-pref	font-size	.875rem
+skrift	ui.css	.sp-inn #spOver .svell.surf .svell-sub	font-size	.875rem
+skrift	ui.css	.sp-inn .dom-setn	font-size	.875rem
+skrift	ui.css	.sp-inn .dom-setn	font-size	1rem
+skrift	ui.css	.spot-topp .tittel h1	font-size	1.5rem
+skrift	ui.css	.spw-om dd	font-size	1rem
+skrift	ui.css	.spw-time .t-surf.ingen	font-size	2.5rem
+skrift	ui.css	.srad .nm b	font-size	.9375rem
+skrift	ui.css	.svell .t-svell .enhet	font-size	1.25rem
+skrift	ui.css	.svell-sub	font-size	1rem
+skrift	ui.css	.t-surf	font-size	clamp(40px, 2.5rem, 48px)
+skrift	ui.css	.t-surf,.t-surf.spenn	font-size	min(var(--surf), (100cqi - 2rem) / (var(--n, 3) * .54))
+skrift	ui.css	.t-surf.spenn	font-size	clamp(30px, 1.875rem, 46px)
+skrift	ui.css	.tetik small.u	font-size	.75rem
+skrift	ui.css	.tom h3	font-size	1.125rem
+skrift	ui.css	.tstripe .tikk	font-size	.75rem
+skrift	ui.css	.tstripe .tsvg text	font-size	12px
+skrift	ui.css	.tstripe .vnd b	font-size	.75rem
+skrift	ui.css	.uke b	font-size	0.75rem
+skrift	ui.css	.vurd-m	font-size	1.1875rem
+skrift	ui.css	html	font-size	100%
+vekt	app.css	.calib .t	font-weight	700
+vekt	app.css	.del	font-weight	700
+vekt	app.css	.link	font-weight	700
+vekt	app.css	h2	font-weight	700
+vekt	app.css	h3	font-weight	700
+vekt	ui.css	.avbryt	font-weight	700
+vekt	ui.css	.back	font-weight	700
+vekt	ui.css	.bunn-tittel	font-weight	700
+vekt	ui.css	.dom-grunn	font-weight	700
+vekt	ui.css	.faner button,.fs-faner button	font-weight	700
+vekt	ui.css	.hjem-fra	font-weight	700
+vekt	ui.css	.hv-tab .total dt,.hv-tab .total dd	font-weight	700
+vekt	ui.css	.hvorfor summary	font-weight	700
+vekt	ui.css	.maal .mv .enhet	font-weight	700
+vekt	ui.css	.minikart .komp text	font-weight	700
+vekt	ui.css	.sek > .h2,.sek-spot > .h2	font-weight	700
+vekt	ui.css	.sekknapp[aria-pressed="true"]	font-weight	700
+vekt	ui.css	.skive .hr text	font-weight	700
+vekt	ui.css	.sp-tilbake > span	font-weight	700
+vekt	ui.css	.sp-tilbakena .tilbakena	font-weight	700
+vekt	ui.css	.spw-reg	font-weight	700
+vekt	ui.css	.srad .na	font-weight	700
+vekt	ui.css	.svell .t-svell .enhet	font-weight	700
+vekt	ui.css	.tdom .to	font-weight	700
+vekt	ui.css	.tgrunn	font-weight	700
+vekt	ui.css	.topnav a	font-weight	700
+vekt	ui.css	.tstripe .tsvg text	font-weight	700
+vekt	ui.css	.tstripe .vnd b	font-weight	700
+vekt	ui.css	.tstripe.bred .srf b,.tstripe.bred .sfr b	font-weight	700

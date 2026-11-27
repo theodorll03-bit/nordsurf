@@ -1705,7 +1705,7 @@ def main():
                     # kortet i en mørk time: «Mørkt», og verken høyde eller vurderingsord i Surf (S44 3; feiljegeren 25.11.2026, funn 2)
                     for m in [m_ for m_ in mk if known(naa_of(OV[m_["id"]])) and light_of(naa_of(OV[m_["id"]])) == "mørkt"][:3]:
                         click_mk(m["id"]); page.wait_for_selector("#kartKort:not([hidden])")
-                        kt = page.evaluate("[document.querySelector('#kartKort .vurd .ord').textContent.trim(), document.querySelector('#kartKort .fakta div:first-child b').textContent.trim(), document.querySelector('#kartKort .vurd').textContent]")
+                        kt = page.evaluate("[document.querySelector('#kartKort .kk-vurd .ord').textContent.trim(), document.querySelector('#kartKort .fakta div:first-child b').textContent.trim(), document.querySelector('#kartKort .kk-vurd').textContent]")
                         assert kt[0] == "Mørkt" and kt[1] == "–" and not re.search(r"\d", kt[2]), f"kortet i en mørk time ({m['id']}): {kt}"
                         page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     # kortet for en spot med ekte 0 nå i lys: Surf = ordet, aldri «–»/«null»
@@ -1773,10 +1773,13 @@ def main():
                         # 200 % tekst (375 til 430 px; på 320 px også «pålands», «fralands», «kast» og «Kartverket»). Ingen ord på spotsiden
                         # brytes midt i, ingenting går ut av skjermen og siden ruller ikke sidelengs, på 320, 375x548, 390 og 430 px ved
                         # 100, 150 og 200 %. Ved 100 % står etiketten ved siden av tallet som før, ved 200 % over det.
-                        for bw50, bh50 in ((320, 568), (375, 548), (390, 844), (430, 932)):
+                        # Runde 2 (feiljegeren 27.11.2026, viktig 1): ordet var fortsatt brutt ved 160 til 190 % på 393 til 430 px. Terskelen
+                        # er 16rem, og rutenettet er sju bredder ganger sju tekststørrelser. Samme side hele veien, bare vindu og tekststørrelse
+                        # endres, og bare i lyst tema (oppsettet er likt i mørketid): ca. 7 s.
+                        for bw50, bh50 in (((320, 568), (360, 640), (375, 548), (390, 844), (393, 852), (412, 915), (430, 932)) if scheme == "lys" else ()):
                             page.set_viewport_size({"width": bw50, "height": bh50})
-                            for pst50 in (100, 150, 200):
-                                page.evaluate("(p) => { document.documentElement.style.fontSize = p + '%'; }", pst50); page.wait_for_timeout(200)
+                            for pst50 in (100, 130, 150, 160, 175, 190, 200):
+                                page.evaluate("(p) => { document.documentElement.style.fontSize = p + '%'; }", pst50); page.wait_for_timeout(100)
                                 m50 = page.evaluate("""() => { const rot = document.querySelector('#viewSpot'), brutt = [], ute = [];
                                     const tw = document.createTreeWalker(rot, NodeFilter.SHOW_TEXT); let nd;
                                     while(nd = tw.nextNode()){ const el = nd.parentElement; if(!el || !el.offsetParent || el.closest('details:not([open])') || el.closest('.sr') || el.closest('svg')) continue;
@@ -1787,7 +1790,8 @@ def main():
                                     const rad = [...rot.querySelectorAll('#spOver .maal')].pop(), e = rad.querySelector('.etikett').getBoundingClientRect(), v = rad.querySelector('.mv').getBoundingClientRect();
                                     return {brutt: [...new Set(brutt)], ute: [...new Set(ute)], rull: document.documentElement.scrollWidth - innerWidth, etikett: rad.querySelector('.etikett').textContent.trim(), over: e.bottom <= v.top + 2}; }""")
                                 assert not m50["brutt"] and not m50["ute"] and m50["rull"] <= 0, f"stor tekst på mobil, {bw50}x{bh50} ved {pst50} %: {m50}"
-                                vent50 = pst50 == 200 or (bw50 == 320 and pst50 == 150)   # radene er smalere enn 13rem
+                                vent50 = (bw50 - 32) / (16 * pst50 / 100) <= 16   # radene (vinduet uten 16 px marg på hver side) er smalere enn 16rem
+                                assert pst50 != 100 or not vent50
                                 assert m50["etikett"].lower() == "tidevann" and m50["over"] == vent50, f"etiketten TIDEVANN skal stå over tallet bare med stor tekst, {bw50}x{bh50} ved {pst50} %: {m50}"
                         page.set_viewport_size({"width": vp[0], "height": vp[1]}); page.wait_for_timeout(150)
                         page.evaluate("document.documentElement.style.fontSize = ''")
@@ -1908,6 +1912,7 @@ def main():
                         "surf_height_sets": 0.81, "low_reason": None, "energy_swell_kj": 589, "sources_disagree": False,
                         "local_rules": {"source": "Observasjoner 17.11-26.11.2026", "stars_lost": 2, "lines": ["Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her: −1,75 poeng."]}}
                 s46 = page.evaluate("""(t) => { const vis = (h) => ({ord: ratingWord(h), kar: karakter(h), fork: ratingWordExplain(h)}), m = (o) => Object.assign({}, t, o);
+                    const farstad = 'Høyt vann. Lokale sier lavt og middels vann er best her: −0,7 poeng.';
                     const utenTap = {faded_wind: 0, faded_tide: 0, local_rules: null, zero_losses: {energy: 0, wind: 0, tide: 0, local: 0, cap: 0}};
                     return {ekte: vis(t), stor: vis(m({surf_height: 1.0})), lang: vis(m({surf_height: 1.0, period: 12})), flat: vis(m({low_reason: 'flat', surf_height: 0.35})),
                         vanlig: vis(m({faded: 1, faded_tide: 1, local_rules: null, zero_losses: {energy: 0, wind: 0, tide: 1, local: 0, cap: 0}})),
@@ -1915,6 +1920,14 @@ def main():
                         smatt: vis(m(utenTap)), flatt: vis(m(Object.assign({surf_height: 0.1, low_reason: 'flat'}, utenTap))), grot: vis(m(Object.assign({surf_height: 1.0}, utenTap))),
                         gammelFlat: vis(m({low_reason: 'flat', surf_height: 0, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1}), zero_losses: {energy: 0, wind: 0, tide: 0, local: 0, cap: 0}})),
                         setn: Front.helpers.favSetning({}, {h: t, st: 0, cls: ''}, true),
+                        // runde 2 (feiljegeren 27.11.2026, viktig 2): regelen er smal. Farstadsanden 05.12 kl. 18Z (energi 2 mot tidevann 1) og
+                        // 03.12 kl. 20Z (9 m/s pålands, vind 2 mot tidevann 1) i varslene 25.11 og 27.11, likt (1 mot 1), kappet, og en time fra
+                        // før 15.10 der zero_losses.local er den lokale vindregelen og ingen tidevannslinje trakk
+                        energi: vis(m({surf_height: 0.98, period: 14.55, energy_swell_kj: 900, zero_losses: {energy: 2, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {source: 'Magnus, lokal surfer (Molde)', stars_lost: 1, lines: [farstad]}})),
+                        vind: vis(m({surf_height: 1.0, period: 13, wind_speed: 9, wind_type: 'onshore', wind_calm_ms: undefined, zero_losses: {energy: 0, wind: 2, tide: 0, local: 1, cap: 0}, local_rules: {source: 'x', stars_lost: 1, lines: [farstad]}})),
+                        likt: vis(m({zero_losses: {energy: 1, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {source: 'x', stars_lost: 1, lines: [farstad]}})),
+                        kappet: vis(m({surf_height: 1.0, period: 12, sources_disagree: true, zero_losses: {energy: 0, wind: 0, tide: 0, local: 1, cap: 2}, local_rules: {source: 'x', stars_lost: 1, lines: [farstad]}})),
+                        gammelVind: vis(m({zero_losses: {energy: 0, wind: 0, tide: 0, local: 1, cap: 0}, local_rules: {source: 'x', stars_lost: 1, lines: ['Tidevann (lav): foretrukket lokalt, ingen straff', 'Vind 5 m/s sidevind: strengere lokal grense (over 4 m/s): −0,7 poeng, erstatter den generelle vindstraffen hvis strengere']}})),
                         ett: vis(m({stars: 1, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1})})), mangler: vis(m({stars: null})),
                         vindMest: vis(m({faded: 2, faded_wind: 2, local_rules: Object.assign({}, t.local_rules, {stars_lost: 1}), zero_losses: {energy: 0, wind: 2, tide: 0, local: 1, cap: 0}})),
                         blaast: vis(m(Object.assign({}, utenTap, {low_reason: 'blown_out', faded: 2, faded_wind: 2, wind_speed: 10, gust: 13, wind_type: 'onshore', wind_calm_ms: undefined, zero_losses: {energy: 0, wind: 2, tide: 0, local: 0, cap: 0}}))),
@@ -1932,6 +1945,11 @@ def main():
                 assert s46["gammelFlat"]["kar"] == {"ord": s46["flattOrd"], "aarsak": None}, s46["gammelFlat"]
                 # setningen om dagen (dommen på spotsiden og radene på Hjem) er den korte; tidevannslinja med tall står i «Hvorfor»
                 assert s46["setn"] == s46["tideFork"] == "Bølgene er der, men tidevannet passer ikke spoten nå.", s46["setn"]
+                # runde 2: tidevannet får bare ordet når det tok mer enn energien, vinden og kappingen hver for seg, og bare når en tidevannslinje trakk
+                for k46 in ("energi", "vind", "likt", "kappet", "gammelVind"):
+                    assert s46[k46]["ord"] != "Feil tidevann" and s46[k46]["fork"] != s46["tideFork"], f"tidevannet tok ikke mest ({k46}): {s46[k46]}"
+                assert s46["likt"]["kar"] == {"ord": s46["smattOrd"], "aarsak": None} and s46["gammelVind"]["kar"] == {"ord": s46["smattOrd"], "aarsak": None}, (s46["likt"], s46["gammelVind"])
+                assert s46["kappet"]["kar"]["aarsak"] == "Usikkert" and s46["vind"]["kar"]["aarsak"] == s46["ut"], (s46["kappet"], s46["vind"])
                 assert s46["ett"]["kar"] == {"ord": s46["daarlig"], "aarsak": None} and s46["mangler"]["ord"] != "Feil tidevann", (s46["ett"], s46["mangler"])
                 # vinden: tok den mest, får ikke tidevannet skylda, og en blåst ut-time under 0,8 m heter «Blåst ut»
                 assert s46["vindMest"]["ord"] != "Feil tidevann", s46["vindMest"]

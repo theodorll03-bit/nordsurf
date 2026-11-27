@@ -132,8 +132,8 @@
     const surfOrd = nSjo && nSjo===medTall.length ? STR.sjo : nSjo ? STR.spot.surfSjo : STR.spot.surf;
     const harSjo = cols.some(c=> c.i >= 0 && hoydeAv(s.hours[c.i])!=null && H.erSjo(s.hours[c.i]));
     const sjoNote = harSjo ? `<p class="tnote etikett"><i aria-hidden="true"></i>${esc(STR.spot.sjoForklar)}</p>` : "";
-    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span class="te-surf">${esc(surfOrd)} <small>m</small></span>
-      <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small>m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
+    const etiketter = bred && R ? `<div class="tetik" aria-hidden="true"><span>${esc(R.kl)}</span><span>${esc(R.vurdering)}</span><span class="te-surf">${esc(surfOrd)} <small class="enhet">m</small></span>
+      <span>${esc(STR.spot.svellFra)}</span><span>${esc(STR.spot.vind)} <small class="enhet">m/s</small></span><span>${esc(STR.spot.tidevann)}<small class="u">${esc(R.tideSub)}</small></span></div>` : "";
     return `<div class="tstripe${bred ? " bred" : ""}${ideal!=null ? " med-ideal" : ""}" id="tstripe" data-day="${d.key}" data-n="${n}">
       ${etiketter}<div class="tflate">${inni}</div>${sjoNote}
       <label class="sr" for="tstripeVelg">${esc(STR.spot.velgTime)}</label>

@@ -185,7 +185,7 @@
     const vindu = n!=null && n >= 1 && H.fsApent(b) ? (d.step===1 ? H.vinduKl(b.start, b.slutt).join("–") : fmtHour.format(new Date(b.h.t))) : null;
     const setn = H.favSetning(s, b, true);
     return `<div class="dom r-${n!=null ? n : 0}">
-        <div class="dom-v">${n!=null ? `<span class="t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b) + (n!=null ? H.usikkertTillegg(b.h) : ""))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
+        <div class="dom-v">${n!=null ? `<span class="vurd vurd-xl t-tall" role="img" aria-label="${esc(starsAriaLost(n, b.h))}">${n}</span>` : ""}<span class="dom-ord"><b>${esc(domOrd(b) + (n!=null ? H.usikkertTillegg(b.h) : ""))}</b>${domGrunn(b) ? `<span class="dom-grunn">${esc(domGrunn(b))}</span>` : ""}<span class="etikett">${esc(relDay(midtPaa(d.key)))}</span></span></div>
         ${vindu ? `<div class="dom-h"><span class="etikett">${esc(STR.spot.best)}</span><span class="t-vindu">${esc(vindu)}</span></div>` : ""}
       </div>${setn ? `<p class="dom-setn">${esc(setn)}</p>` : ""}`;
   }
@@ -220,7 +220,7 @@
     if(!h || !H.known(h)) return `<p class="sub">${esc(STR.hjem.mangler)}</p>`;
     if(H.mork(h)) return `<p class="sub">${esc(STR.lightOnly)}</p>`;
     const st = Math.min(5, H.stars(h));
-    return `<p class="sub tdom r-${st}"><span class="rute r-${st}" role="img" aria-label="${esc(starsAriaLost(st, h))}">${st}</span><span class="to">${esc(karakter(h).ord)}</span></p>`;
+    return `<p class="sub tdom r-${st}"><span class="vurd vurd-m rute r-${st}" role="img" aria-label="${esc(starsAriaLost(st, h))}">${st}</span><span class="to">${esc(karakter(h).ord)}</span></p>`;
   }
   function timeGrunnHtml(s, h, t){
     // årsaken og hvert tap med sitt stiplede poeng i blekk (fase 3 punkt 4: tapte poeng i blekk, ikke korall).
@@ -233,7 +233,7 @@
   }
   function timeHtml(s, h, t, ev){
     const hh = fmtHour.format(t);
-    const maal = (ikon, key, k, v, enhet, sub, under, kl)=> `<div class="maal${kl ? " " + kl : ""}"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small>${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
+    const maal = (ikon, key, k, v, enhet, sub, under, kl)=> `<div class="maal${kl ? " " + kl : ""}"><span class="etikett">${forklar(key, `${ikon}${esc(k)}`)}</span><span class="mv">${v}${enhet ? `<small class="enhet">${enhet}</small>` : ""}</span><span class="mu">${sub || ""}</span>${under ? `<span class="mu-pref">${esc(under)}</span>` : ""}</div>`;
     // Surfehøyden ved spoten er det store tallet (fase 3 punkt 1), med kroppsmålet under. Høyden er den samme som
     // listene viser (hoydeVist i ui.js, regel (c)): FLATT og TREFFER IKKE har ingen høyde, da står «–» og ordet. Mørk
     // time: «–» uten tall og uten ord under (S45 5 a, svar.md 26.11.2026 kl. 13.10; som Hjem, Søk og Utforsk, S44 3):
@@ -243,7 +243,7 @@
     // har ikke kroppsmål (S45 2). Etiketten åpner da arket om signifikant høyde, der tallet står.
     const mork = !!h && H.mork(h), hoyde = mork ? null : H.heightText(h), sjo = !!hoyde && H.erSjo(h);
     const underStrek = !h ? null : h._forbud ? STR.hjem.forbud : H.hoydeMangler(h) ? cap(STR.spot.mangler) : mork ? null : ratingWord(h);
-    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small>m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
+    const stort = hoyde ? `<div class="t-svell t-surf${hoyde.includes("–") ? " spenn" : ""}" style="--n:${hoyde.length}">${desTall(hoyde)}<small class="enhet">m</small></div>${kroppshoyde(h) ? `<div class="svell-sub">${esc(kroppshoyde(h))}</div>` : ""}`
       : h && H.known(h) ? `<div class="t-svell t-surf ingen">–</div>${underStrek ? `<div class="svell-sub">${esc(underStrek)}</div>` : ""}`
       : `<div class="svell-sub">${esc(cap(STR.spot.mangler))}</div>`;
     const surf = `<div class="svell surf${sjo ? " sjo" : ""}"><div class="etikett">${forklar(sjo ? "hs" : "surf_height", `${PIL("", null, IK_SURF)}${esc(sjo ? STR.sjo : STR.spot.surf)}`)}</div>${stort}</div>`;
@@ -287,7 +287,7 @@
       const b = dagsdom(s, x), at = midtPaa(x.key), n = b.st!=null ? Math.min(5, b.st) : null;
       const cls = n!=null ? `r-${n}` : b.cls==="dark" ? "mork" : b.cls;
       const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) : domOrd(b).toLowerCase()}`;
-      return `<button type="button" class="dagknapp" data-day="${x.key}" aria-pressed="${x.key===d.key}" aria-label="${esc(aria)}"><span class="ud">${esc(ukedagKort(at))}</span><span class="rute ${cls}">${n!=null ? n : ""}</span><span class="dt">${at.getUTCDate()}</span></button>`;
+      return `<button type="button" class="dagknapp" data-day="${x.key}" aria-pressed="${x.key===d.key}" aria-label="${esc(aria)}"><span class="ud">${esc(ukedagKort(at))}</span><span class="vurd vurd-m rute ${cls}">${n!=null ? n : ""}</span><span class="dt">${at.getUTCDate()}</span></button>`;
     }).join("")}</div>`;
   }
   function renderMobil(root, s, S){
@@ -313,7 +313,7 @@
     const tilbakeNa = ()=> S.idx!=null ? `<button type="button" class="tilbakena" id="tilbakeNa">${esc(STR.spot.tilbakeNa)}</button>` : "";
     root.innerHTML = `${typeof staleBanner==="function" ? staleBanner() : ""}<div class="sp-hode${foto ? "" : " uten"}">
         ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="${esc(STR.spot.bildeAlt(s.name))}" loading="lazy" decoding="async">` : ""}
-        <div class="sp-knapper"><button type="button" class="sp-tilbake" id="spotBack" aria-label="${esc(fra ? STR.spot.tilbakeTil(fra) : STR.spot.tilbake)}"><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>${esc(fra || STR.spot.tilbake)}</span></button><span class="sp-fav">${favBtnHtml(s.id, false)}</span></div>
+        <div class="sp-knapper"><button type="button" class="sp-tilbake" id="spotBack" aria-label="${esc(fra ? STR.spot.tilbakeTil(fra) : STR.spot.tilbake)}"><span>${vinkel(16)}${esc(fra || STR.spot.tilbake)}</span></button><span class="sp-fav">${favBtnHtml(s.id, false)}</span></div>
         <div class="sp-navn"><h1 class="t-hero${lengsteOrd(s.name) > 8 ? " lang" : ""}" style="--n:${lengsteOrd(s.name)}">${esc(s.name)}</h1></div>
       </div>
       <div class="sp-inn">
@@ -391,7 +391,7 @@
     const aria = `${cap(fmtDato.format(at))}: ${n!=null ? STR.starsAria(n, 0) + ", " + ord + (grunn ? ", " + grunn.toLowerCase() : "") : domOrd(b).toLowerCase()}${vindu ? `, ${STR.spot.best.toLowerCase()} ${vindu}` : ""}${surf && surf!=="–" ? `, ${sjo ? "" : STR.spot.surf.toLowerCase() + " "}${surf}` : ""}`;
     return `<button type="button" class="dagknapp stor r-${n!=null ? n : 0}${n==null ? " " + b.cls : ""}" data-day="${x.key}" aria-pressed="${x.key===valgt}" aria-label="${esc(aria)}">
         <span class="ud">${esc(ukedagKort(at))} ${x.key.slice(8, 10)}.${x.key.slice(5, 7)}</span>
-        <span class="dk-v">${n!=null ? `<span class="dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
+        <span class="dk-v">${n!=null ? `<span class="vurd dk-tall">${n}</span>` : ""}<span class="dk-ord">${esc(ord)}</span></span>
         ${grunn ? `<span class="dk-grunn">${esc(grunn)}</span>` : ""}<span class="dk-best">${vindu ? `${esc(STR.spot.best)} ${esc(vindu)}` : "–"}</span>
         <span class="dk-sub">${esc(surf)}</span><span class="dk-sub">${esc(vind)}</span></button>`;
   }

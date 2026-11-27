@@ -70,7 +70,7 @@ Høyst rundt 8 etiketter med versaler per mobilskjerm. Minste tekst er 11 px.
 
 - **Tall fra 0 til 5 i stedet for stjerneikoner** i lister, på kart og i ukeoversikter. Tallet er det samme som dagens stjerner, så ingenting i modellen endres. Ordet etter tallet hentes fra ordene appen allerede har i strings.js. Ordene i skissene (FLATT, KNAPT, SURFBART, BRA, VELDIG BRA, TA FRI) er bare plassholdere, og Theodor velger.
 - **Korall fra 4 og opp:** tallet, ruta i ukeoversikten, ringen på kartet og beste vindu. Fra 0 til 3 er det ink.
-- **3 har havfargen som fyll** (S49 a, svar.md 26.11.2026 kl. 20.20): #1F6E78 om dagen og #2F9BA2 i mørketid. Det gjelder ruta (ukeradene, dagvelgeren, KL.-blokka), segmentene i timestripa, rutene i tabellen og «3» i «Neste 7 dager» på PC, og ringen på kartet. Ordet («Bra») og det store tallet alene er fortsatt ink. 1 og 2 er omriss som før, og korall er fortsatt bare 4 og 5.
+- **3 har havfargen som fyll** (S49 a, svar.md 26.11.2026 kl. 20.20): #1F6E78 om dagen og #2F9BA2 i mørketid. Det gjelder ruta (`.vurd-m`: ukeradene, dagvelgeren, KL.-blokka), segmentene i timestripa, rutene i tabellen og «3» i «Neste 7 dager» på PC, og ringen på kartet. Ordet («Bra») og det store tallet alene er fortsatt ink. 1 og 2 er omriss som før, og korall er fortsatt bare 4 og 5.
 - **Tapte poeng:** stiplet blekk-omriss i timestripa, bare for valgt time, og grunnen skrevet ut som tekst i KL.-blokka («−1 TIDEVANN», «−2 VIND»). Aldri korall (designrevisjonen fase 3).
 - **Data mangler:** skravur.
 - **Mørke timer** (sola lavere enn −6°, borgerlig skumring) får ingen vurdering på skjermen. Kolonnen skygges, piler og tall blir grå, og overskriften sier «BARE LYSE TIMER FÅR TALL». Modellen kan regne som før, dette er bare visning.
@@ -277,6 +277,15 @@ S38 2 a (25.11.2026): forklaringsarkene.
 
 Etter fase 3 (26.11.2026, svar.md 26.11.2026 kl. 20.20: S46 2 a, S49 a og S50 3 a).
 
-- **Tidevannet tok de siste poengene** (S46 2 a): en time med 0 poeng som hadde minst ett før tidevannet, heter «Ikke surfbart» med «Feil tidevann» på linja under, uansett surfehøyde og periode. Øverst i «Hvorfor» står tidevannslinja («Feil tidevann: Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her (−1,75 poeng).»). Tok vinden flere poeng enn tidevannet, gjelder ikke regelen. Timer som var 0 også før vind og tidevann, heter «Flatt» eller «Smått» som før.
+- **Tidevannet tok de siste poengene** (S46 2 a): en time med 0 poeng der tidevannet tok mer enn energien, vinden og kappingen hver for seg, heter «Ikke surfbart» med «Feil tidevann» på linja under, uansett surfehøyde og periode. Ved likt, eller når noe annet trakk mer, følger ordet det som trekker mest som før (regelen fra 09.10.2026), så Farstadsanden med lite energi heter «For lite svell». Øverst i «Hvorfor» står tidevannslinja («Feil tidevann: Lavt vann. 0,99 m kl. 09.30, og under ca. 1,6 m er det for lite vann her (−1,75 poeng).»). Timer som var 0 også før vind og tidevann, heter «Flatt» eller «Smått» som før.
 - **Havfargen for 3** (S49 a): se §2 og §5.
-- **Stor tekst på mobil** (S50 3 a): når radene i KL.-blokka er smalere enn 13rem (200 % tekst på 320 til 430 px, og 150 % på 320 px), står etiketten (SVELL UTE, VIND, TIDEVANN) på egen linje over tallet, så ingen ord brytes midt i. Krediteringen kan brytes etter skråstreken i «Copernicus/Kartverket».
+- **Stor tekst på mobil** (S50 3 a): når radene i KL.-blokka er smalere enn 16rem (fra ca. 155 % tekst på 430 px, 138 % på 390 px og 113 % på 320 px), står etiketten (SVELL UTE, VIND, TIDEVANN) på egen linje over tallet, så ingen ord brytes midt i. Krediteringen kan brytes etter skråstreken i «Copernicus/Kartverket».
+
+Fase 4, PR 1 (26.11.2026, rydding som ikke synes). Ingenting på skjermen er endret: samme tall, ord, størrelser og luft som før. Dette avsnittet sier bare hvor verdiene bor.
+
+- **Avstand (§4):** 4, 8, 16, 24, 40, 64, 96 og 144 px i padding, margin og gap er `var(--s1)` til `var(--s8)`. Verdiene utenfor skalaen (12, 6, 10, 2 px og flere) står som før og er listet i `fetcher/tokens_unntak.txt`. De får et trinn eller et navn i PR 2.
+- **Skrift (§3):** `--fs-*` er borte. Størrelsene mellom trinnene heter midlertidig `--t-gml-13`, `-15`, `-16`, `-22` og `-32`, med samme verdi som før. `--fs-secondary` lever som alias til lanseringspakken er flettet.
+- **Vurderingen (§5)** er klassen `.vurd` (Martian Mono 87,5 %, 800, korall fra 4), med størrelsen i `.vurd-xl` (dommen), `.vurd-l` (listene), `.vurd-m` (ruta på 24 px) og `.vurd-s` (rutene på 14 px uten tall). Forsidetallet, «Neste 7 dager» og matrisen har `.vurd`, men egen størrelse til PR 2. Kartmerkene er ikke med.
+- **Enheten** («m», «m/s», «s») er `.enhet`. **Etikettstilen** står i to regler (med og uten 87,5 % bredde). Like brede tall (`tabular-nums`) står på tall, tabeller og felt, ikke på all tekst.
+- **Testen** `fetcher/test_tokens.py` (kalles fra `test_docs_cache.py`) blir rød ved en ny rå verdi i padding, margin eller gap, en skriftstørrelse uten `--t-*`, en vekt utenfor 400, 500, 600 og 800, og en `var()` som aldri får verdi. Unntakslista kan bare krympe.
+- **Bevis:** `tools/pikselsjekk.py` tar bilder av skjermene i ti oppsett med fast klokke og sammenlikner piksler og beregnede stiler. Lokalt verktøy, ikke i CI.

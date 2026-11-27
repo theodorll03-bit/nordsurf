@@ -55,4 +55,9 @@ for _wf in sorted((_root / ".github" / "workflows").glob("*.yml")):
             _mangler.append(f"{_wf.name}: {_f}")
 assert not _mangler, f"workflows kjører skript som ikke finnes: {_mangler}"
 print("Alle skript workflowene kjører finnes - OK")
+# Designfase 4 (25.11.2026): avstander, skrift og vekter kommer fra variablene, og alle variabler er definert. Kjøres
+# herfra fordi denne testen alt går i CI. Ikke i «Hent varsel»: en regel om utseende skal aldri stoppe varselet.
+if os.environ.get("GITHUB_WORKFLOW") != "Hent varsel":
+    import test_tokens   # noqa: E402
+    test_tokens.main()
 print("Alle tester ok")

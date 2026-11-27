@@ -164,7 +164,7 @@
     return {cls:`r-${min5(st)}`, st, h:d.h, t:d.h.t, start:d.start || d.h.t, slutt:d.slutt || d.h.t, lo:d.lo, hi:d.hi};
   }
   function ukeHtml(s, days, withLetters){
-    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null ? b.st : ""; const title = b.cls==="forbud" ? `${d.lang}: surfing forbudt` : b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${STR.starsAria(b.st, 0)}`; return `<i class="${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
+    const cells = days.map(d=>{ const b = dayBest(s, d.key); const n = b.st!=null ? b.st : ""; const title = b.cls==="forbud" ? `${d.lang}: surfing forbudt` : b.cls==="over" ? `${d.lang}: dagens lys er over` : b.cls==="miss" ? `${d.lang}: mangler data` : b.cls==="dark" ? `${d.lang}: mørkt` : `${d.lang}: ${STR.starsAria(b.st, 0)}`; return `<i class="vurd vurd-m ${b.cls}" title="${esc(title)}">${n}</i>`; }).join("");
     // withLetters: true = dagnavnene over rutene, "under" = under (favorittradene på Hjem, SPEC §6A)
     const letters = withLetters ? days.map((d, k)=>`<b class="${d.idag?"idag":""}">${esc(d.kort)}</b>`).join("") : "";
     return `<span class="uke" aria-hidden="true">${withLetters===true ? letters : ""}${cells}${withLetters==="under" ? letters : ""}</span>`;
@@ -347,7 +347,7 @@
     const ord = ord0 + (v.rute==="mork" ? "" : usikkertTillegg(hn));   // «, usikkert» for en time regnet med lang sjø (S40)
     const hoyde = v.rute==="mork" ? null : v.oh.hoyde, sjo = hoyde && v.oh.sjo ? `${STR.sjo.toLowerCase()} ` : "";   // «Nå Stormsjø, sjø 1,4 m» (S45 2)
     return {tekst: `${STR.spot.naa} ${ord.toLowerCase()}${hoyde ? `, ${sjo}${hoyde} m` : ""}`,
-      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? `${sjo ? ", " + esc(sjo.trim()) : ""} <span class="num">${esc(hoyde)}</span> <span class="enh">m</span>` : ""}`};   // uten høyde (Flatt, Treffer ikke): bare ordet, ingen hengende strek (runde 4, viktig 2)
+      html: `${esc(STR.spot.naa)} ${esc(ord)}${hoyde ? `${sjo ? ", " + esc(sjo.trim()) : ""} <span class="num">${esc(hoyde)}</span> <span class="enh enhet">m</span>` : ""}`};   // uten høyde (Flatt, Treffer ikke): bare ordet, ingen hengende strek (runde 4, viktig 2)
   }
   function favLinjeHtml(s, days, rediger, kort){
     // kort: raden i regionlista - samme form, uten setningen og siste observasjon
@@ -370,7 +370,7 @@
     const naa = kort && b.st!=null && dagOrd(d0)==="i dag" ? naaLedd(s) : null;
     const aria = [`${s.name}, ${[sted, kj && K ? STR.hjem.kjoreAria(kj, K.fra.navn) : null].filter(Boolean).join(", ")}`,
       `${dag}${b.st!=null ? starsAriaLost(b.st, h) + ", " : ""}${ordU}${grunn ? ", " + grunn.toLowerCase() : ""}`, naa ? naa.tekst : null, setn ? setn.replace(/\.$/, "") : null, obs, ukeAria(s, days)].filter(Boolean).join(". ");
-    const inni = `<span class="t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
+    const inni = `<span class="vurd vurd-l t-listetall" aria-hidden="true">${b.st!=null ? b.st : ""}</span>
       <span class="favtekst"><span class="t-navn${s.name.length > 12 ? " lang" : ""}">${esc(s.name)}</span>
         <span class="etikett">${metaHtml([...stedDeler, kj, naa || dagSynlig + ordU, naa ? null : grunn, naa ? null : tapt])}</span>
         ${setn ? `<span class="setn">${numHtml(setn)}</span>` : ""}
@@ -449,7 +449,7 @@
     const d = (s.dager || []).find(x=> x.d===key);
     if(!d || !d.timer || b.cls==="forbud") return "";
     const naaKl = key===dayKey(new Date()) ? +fmtHour.format(new Date()) : -1;
-    return `<span class="fs-stripe">${[...d.timer].map((c, i)=> `<i class="${6 + i < naaKl ? "vaert" : /[0-5]/.test(c) ? "r-" + c : c==="m" ? "mork" : c==="x" ? "miss" : "vaert"}"></i>`).join("")}</span>`;
+    return `<span class="vurd-s fs-stripe">${[...d.timer].map((c, i)=> `<i class="${6 + i < naaKl ? "vaert" : /[0-5]/.test(c) ? "r-" + c : c==="m" ? "mork" : c==="x" ? "miss" : "vaert"}"></i>`).join("")}</span>`;
   }
   function fsRadHtml(r, nr, key){
     const {s, b} = r, h = b.h, n = b.st!=null ? min5(b.st) : null, kj = kjoreText(s.id);
@@ -459,7 +459,7 @@
     return `<tr class="s r-${n!=null ? n : 0}" data-spot="${esc(s.id)}" data-href="${esc(href)}">
       <td class="fs-nr">${esc(STR.web.nr(nr))}</td>
       <td class="fs-nm"><a class="t-navn${s.name.length > 12 ? " lang" : ""}" href="${esc(href)}" aria-label="${esc(aria)}">${esc(s.name)}</a><span class="etikett">${esc([regionOf(s), kj, ...merker(s)].filter(Boolean).join(" · "))}</span></td>
-      <td class="fs-dom"><span class="fs-domv">${n!=null ? `<span class="t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></span></td>
+      <td class="fs-dom"><span class="fs-domv">${n!=null ? `<span class="vurd vurd-l t-listetall">${n}</span>` : ""}<span class="ord"><b>${esc(fsOrd(b))}</b>${fsTapt(h) && n!=null ? `<span class="etikett">${esc(fsTapt(h))}</span>` : ""}</span></span></td>
       <td class="fs-bst">${esc(vindu)}</td>
       <td class="fs-sv">${esc(n!=null ? fsSurf(h) : "–")}</td>
       <td class="fs-tim">${fsStripe(s, key, b)}</td></tr>`;
@@ -475,7 +475,7 @@
     return `<a class="fs-helt r-${n}${foto ? "" : " uten"}" href="#spot=${id}&t=${encodeURIComponent(b.t)}" aria-label="${esc(`${linje}. ${s.name}: ${starsAriaLost(n, h)}, ${fsOrd(b)}. ${vindu ? `${STR.spot.best} ${vindu}. ` : ""}${STR.hjem.apne}`)}">
         ${foto ? `<img class="sp-foto trykk" src="img/spots/${id}-trykk.jpg" alt="" decoding="async"><img class="sp-foto lodd" src="img/spots/${id}-lodd.jpg" alt="" decoding="async">` : ""}
         <span class="fs-plate"><span class="etikett">${esc(linje)}</span><span class="t-hero fs-navn${lengste(s.name) > 8 ? " lang" : ""}">${esc(s.name)}</span>
-          <span class="fs-rad"><span class="fs-tall">${n}</span><b class="fs-ord">${esc(fsOrd(b))}</b>${fakta ? `<span class="fs-fakta">${esc(fakta)}</span>` : ""}${vindu ? `<span class="fs-best${ring ? " medring" : ""}">${esc(STR.spot.best)} ${esc(vindu)}${ring}</span>` : ""}</span></span></a>
+          <span class="fs-rad"><span class="vurd fs-tall">${n}</span><b class="fs-ord">${esc(fsOrd(b))}</b>${fakta ? `<span class="fs-fakta">${esc(fakta)}</span>` : ""}${vindu ? `<span class="fs-best${ring ? " medring" : ""}">${esc(STR.spot.best)} ${esc(vindu)}${ring}</span>` : ""}</span></span></a>
       ${foto ? `<p class="kredit linje">${fotoKreditHtml(false)}</p>` : ""}`;
   }
   const lengste = (navn)=> Math.max(...String(navn).split(/[\s-]+/).map(o=> o.length), 1);
@@ -491,7 +491,7 @@
         return `<td class="tom">${esc(ord)}</td>`;
       }
       const n = min5(Math.max(...med.map(b=> b.st)));
-      return `<td class="r-${n}"><span class="mx${n >= 4 ? " hoy" : n===3 ? " tre" : ""}">${n}</span></td>`;
+      return `<td class="r-${n}"><span class="vurd mx${n >= 4 ? " hoy" : n===3 ? " tre" : ""}">${n}</span></td>`;
     };
     const dagTxt = (d)=>{ const at = new Date(d.key + "T11:00:00Z"); return `${fmtDayShort.format(at).replace(/\.$/, "")} ${d.dato}`; };
     return `<section class="sek"><h2 class="h2">${esc(STR.web.neste7)}</h2><p class="sub">${esc(perSpot ? STR.web.perSpot : STR.web.perRegion)}</p></section>
@@ -516,7 +516,7 @@
     const rader = dag ? fsRader(spots, dag.key) : [], helt = fsHelt(rader);
     const resten = rader.filter(r=> r!==helt), surf = resten.filter(r=> r.b.st!=null && r.b.st >= 1);
     const vis = S.fsAlle ? resten : surf.length ? surf.slice(0, FS_RADER) : resten.slice(0, 5);
-    const tegn = `<p class="fs-tegn etikett"><span><i class="r-4"></i>${esc(STR.web.tegn.hoy)}</span><span><i class="r-3"></i>${esc(STR.web.tegn.tre)}</span><span><i class="r-1"></i>${esc(STR.web.tegn.lav)}</span><span><i class="r-0"></i>${esc(STR.web.tegn.null)}</span><span><i class="mork"></i>${esc(STR.hjem.morktOrd)}</span><span><i class="miss"></i>${esc(STR.hjem.mangler)}</span></p>`;
+    const tegn = `<p class="vurd-s fs-tegn etikett"><span><i class="r-4"></i>${esc(STR.web.tegn.hoy)}</span><span><i class="r-3"></i>${esc(STR.web.tegn.tre)}</span><span><i class="r-1"></i>${esc(STR.web.tegn.lav)}</span><span><i class="r-0"></i>${esc(STR.web.tegn.null)}</span><span><i class="mork"></i>${esc(STR.hjem.morktOrd)}</span><span><i class="miss"></i>${esc(STR.hjem.mangler)}</span></p>`;
     root.innerHTML = `${typeof staleBanner==="function" ? staleBanner() : ""}<div id="forside">
       <p class="etikett fs-dato">${esc(dato)}</p>
       ${dag ? overskriftHtml(spots, days.slice(valg), false) : ""}
@@ -747,7 +747,7 @@
         $("#loggForste").onclick = ()=> openSheet();
       }
     } else {
-      bar.innerHTML = `<button type="button" class="back" id="sideBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>Hjem</button>`;
+      bar.innerHTML = `<button type="button" class="back" id="sideBack">${vinkel()}Hjem</button>`;
       $("#sideBack").onclick = ()=> go("hjem");
       renderSettings();
     }

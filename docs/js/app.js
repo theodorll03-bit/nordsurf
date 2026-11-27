@@ -258,19 +258,23 @@ function lowReasonNotice(h){
 // S42 a: den lokale tidevannslinja fra henteren (rating.TIDE_STATE_WORD), nye og eldre ord for vannstanden
 const TIDEVANN_LINJE = /^(Høyt vann|Lavt vann|Middels vann|Høyvann|Lavvann|Middels vannstand)\. (.+?)\.?$/;
 // Tidevannet tok de siste poengene (S46 2 a, svar.md 26.11.2026 kl. 20.20; feiljegeren 26.11.2026, Breivikeidet 26.11 kl. 08Z:
-// 2 poeng før tidevannet, 0 etter, og appen sa «Smått: Litt bølger, men for lite til ett poeng»). Timen har 0 poeng, den
-// hadde minst ett før tidevannet (tideLost(): faded_tide og den lokale tidevannsregelen), og vinden tok ikke mer enn
-// tidevannet. Da er ordet «Feil tidevann» uansett surfehøyde og periode, på alle spots. Timer som var 0 også før vind og
-// tidevann, har ikke tapt noe og er som før («Flatt», «Smått» osv.). Bare visningsordet.
-// Uavgjort mellom vind og tidevann går til tidevannet her, mens henteren gir vinden skylda (rating.py: «Uavgjort: vinden»).
-// De to møtes ikke: tok vinden minst like mye og styrken er kjent, er low_reason «blown_out», og da gjelder ikke denne
-// regelen. Uavgjort hit kommer bare når vindstyrken mangler eller timen er «flat» (fysikk-kontrolløren 27.11.2026).
+// 2 poeng før tidevannet, 0 etter, og appen sa «Smått: Litt bølger, men for lite til ett poeng»). Regelen er smal
+// (feiljegeren 27.11.2026, viktig 2): timen har 0 poeng, tidevannet tok minst ett, og tidevannstapet er større enn hvert av
+// de andre tapene i zero_losses (energi, vind og kapping) og større enn faded_wind. Da er ordet «Feil tidevann» uansett
+// surfehøyde og periode. Ved likt, eller når noe annet trakk mer, gjelder regelen fra 09.10.2026 som før (zeroCause(): ordet
+// følger det som trekker mest), så Farstadsanden med energi 2 mot tidevann 1 heter «For lite svell» og ikke «Feil tidevann».
+// Tidevannstapet er faded_tide pluss det lokale fradraget, og det lokale teller bare når en tidevannslinje faktisk trakk
+// (local_rules.lines): i varsler fra før 15.10.2026 kunne zero_losses.local være den lokale vindregelen, og
+// local_rules.stars_lost kunne stå på 1 i en flat time der ingenting ble tatt. Timer som var 0 også før vind og tidevann,
+// har ikke tapt noe og er som før («Flatt», «Smått» osv.). Bare visningsordet.
 function tideTookLast(h){
   if(!h || h.stars!==0 || !(h.low_reason==="flat" || !h.low_reason) || h.surf_height==null) return false;
-  // Det lokale fradraget leses fra zero_losses.local når timen har den bokføringen: det er det regelen faktisk tok. I eldre
-  // varsler (før november 2026) kunne local_rules.stars_lost stå på 1 i en flat time der ingenting ble tatt.
-  const z = h.zero_losses, tv = z ? (h.faded_tide || 0) + (z.local || 0) : tideLost(h);
-  return tv > 0 && tv >= (h.faded_wind || 0);
+  const z = h.zero_losses || null, lr = h.local_rules || null;
+  const linje = !!lr && (lr.lines||[]).some(l=> /−/.test(l) && (TIDEVANN_LINJE.test(l) || /^Tidevann/.test(l)));
+  const lokal = linje ? (z ? (z.local || 0) : (lr.stars_lost || 0)) : 0;
+  const tv = (h.faded_tide || 0) + lokal;
+  if(tv <= 0) return false;
+  return tv > Math.max(h.faded_wind || 0, z ? (z.wind || 0) : 0, z ? (z.energy || 0) : 0, z ? (z.cap || 0) : 0);
 }
 // Setningen til «Feil tidevann»: den lokale tidevannslinja når det er den ene som trakk, ellers den vanlige forklaringen.
 // S42 a: linja for den lokale tidevannsregelen starter med vannstanden («Høyt vann. Lokale sier lavt og middels vann er best
@@ -391,10 +395,12 @@ function loggSeksjon(deler){
   }
   return ut.join("");
 }
+// Vinkelen til venstre («tilbake»). Størrelsen styres av CSS, eller settes her i px.
+function vinkel(px){ return `<svg viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ""} aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>`; }
 function ruteHtml(n, cls){
-  if(cls) return `<span class="rute ${cls}" aria-hidden="true"></span>`;
+  if(cls) return `<span class="vurd vurd-m rute ${cls}" aria-hidden="true"></span>`;
   const v = Math.min(5, n||0);
-  return `<span class="rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
+  return `<span class="vurd vurd-m rute r-${v}" role="img" aria-label="${esc(STR.starsAria(v, 0))}">${v}</span>`;
 }
 function windArrowHtml(h){
   if(!h || h.wind_dir==null) return "";
