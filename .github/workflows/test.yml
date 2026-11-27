@@ -70,8 +70,12 @@ jobs:
           python fetcher/test_display_only.py
       - name: Kontrast i fargevariablene (tekst 4,5:1, grafikk 3:1, lys og mørk)
         run: python tools/kontrast.py -q
-      - name: Nettlesertest for søk, Utforsk og spotsiden (design/spotside, Playwright)
-        run: timeout 330 python fetcher/test_spotside_browser.py
+      # Delt i to 27.11.2026: én fil brukte 253-294 s av 300 og gikk over grensa på main. Hver fil har sin egen vaktpost
+      # (GRENSE_S, 240 s); `timeout` her er bare sikkerhetsnettet over den. Påstandene står i fetcher/spotside_felles.py.
+      - name: Nettlesertest for søk, Utforsk og spotsiden, mobil (design/spotside, Playwright)
+        run: timeout 270 python fetcher/test_spotside_mobil_browser.py
+      - name: Nettlesertest for søk, Utforsk og spotsiden, PC og tilleggene (design/spotside, Playwright)
+        run: timeout 270 python fetcher/test_spotside_pc_browser.py
       - name: Skalering til 100+ spots (Tillegg 2, Playwright med 100 syntetiske spots)
         run: timeout 330 python fetcher/test_skalering_browser.py
       - name: MapLibre-kartet (S3, 500 syntetiske spots, WebGL via SwiftShader - testen sender Chromium-argumentene selv)

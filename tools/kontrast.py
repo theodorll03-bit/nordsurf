@@ -2,7 +2,7 @@
 er lagt om til design B 4.0 «Papir» 12.11.2026, docs/design/b4/SPEC.md §2): tekst mot flate minst 4,5:1,
 grafikk og stor tekst minst 3:1 - i både dag og mørketid. Leser tokenene rett fra CSS-en (ingen nettleser),
 så en endret farge fanges her med en gang.
-Kjør: python tools/kontrast.py (exit 1 ved brudd). Kjøres også av fetcher/test_spotside_browser.py.
+Kjør: python tools/kontrast.py (exit 1 ved brudd). Kjøres også av fetcher/test_spotside_pc_browser.py (fetcher/spotside_felles.py).
 
 Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
 - tekst: --ink og --muted på --surface/--raised/--sunken og på glasset (blandet over --surface);
