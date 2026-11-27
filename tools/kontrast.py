@@ -18,9 +18,9 @@ Parene som sjekkes er de som faktisk brukes i appen (se ui.css):
   meningen (SPEC §8: farge er aldri eneste bærer), og tallet sjekkes over.
 - Tallet i korallruta (--on-signal på --signal) er 4,03:1 om dagen. Theodor 12.11.2026: fargen beholdes, og
   tallet oppå korall er alltid minst 14 px fet, så det regnes som stor tekst (krav 3:1). Gjelder --rN-on på
-  --rN der --rN er korall, i begge temaer. Størrelsen står i ui.css (.rute, .uke i, .plot .rs, .klynge .ring)
+  --rN der --rN er korall, i begge temaer. Størrelsen står i ui.css (.vurd-m, .klynge .ring)
   og sjekkes ikke her (skriftstørrelser leses ikke). WCAG regner stor tekst fra 14 pt fet (ca. 18,7 px): .rute og
-  .uke i (19 px) er over, .plot .rs og .klynge .ring (14 px fet) følger bare Theodors regel.
+  .uke i (19 px) er over, .klynge .ring (14 px fet) følger bare Theodors regel.
 - --dim og --swell-miss oppå --night (tekst og pil i mørk time): krav 3:1. Dagfargen er #5E5A51 (Theodor 12.11).
 - Designrevisjonen fase 2 (24.11.2026): --ink på --hover og --trykk (toningen under musa og fingeren), og fokusringen
   (--focus) mot de samme to flatene.

@@ -1699,7 +1699,7 @@ def main():
                     # kortet i en mørk time: «Mørkt», og verken høyde eller vurderingsord i Surf (S44 3; feiljegeren 25.11.2026, funn 2)
                     for m in [m_ for m_ in mk if known(naa_of(OV[m_["id"]])) and light_of(naa_of(OV[m_["id"]])) == "mørkt"][:3]:
                         click_mk(m["id"]); page.wait_for_selector("#kartKort:not([hidden])")
-                        kt = page.evaluate("[document.querySelector('#kartKort .vurd .ord').textContent.trim(), document.querySelector('#kartKort .fakta div:first-child b').textContent.trim(), document.querySelector('#kartKort .vurd').textContent]")
+                        kt = page.evaluate("[document.querySelector('#kartKort .kk-vurd .ord').textContent.trim(), document.querySelector('#kartKort .fakta div:first-child b').textContent.trim(), document.querySelector('#kartKort .kk-vurd').textContent]")
                         assert kt[0] == "Mørkt" and kt[1] == "–" and not re.search(r"\d", kt[2]), f"kortet i en mørk time ({m['id']}): {kt}"
                         page.click("#kortLukk"); page.wait_for_selector("#kartKort", state="hidden")
                     # kortet for en spot med ekte 0 nå i lys: Surf = ordet, aldri «–»/«null»
